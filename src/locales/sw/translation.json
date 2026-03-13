@@ -1,0 +1,183 @@
+{
+  "nav": {
+    "home": "Nyumbani",
+    "markets": "Masoko",
+    "offers": "Ofa",
+    "orders": "Maagizo"
+  },
+  "common": {
+    "noResults": "Hakuna matokeo",
+    "addToCart": "Ongeza kwenye Kikapu",
+    "viewMore": "Tazama Zaidi",
+    "learnMore": "Jifunze Zaidi",
+    "exploreNow": "Chunguza Sasa",
+    "bookNow": "Weka Nafasi Sasa",
+    "voteNow": "Piga Kura Sasa",
+    "openMarket": "Fungua Soko",
+    "addToBasket": "Ongeza Kikapuni",
+    "deliveryOptions": "Chaguo za Uwasilishaji",
+    "orderNow": "Agiza Sasa",
+    "viewMeal": "Tazama Mlo",
+    "viewDetails": "Tazama Maelezo",
+    "add": "Ongeza",
+    "uploadPrescription": "Pakia Dawa ya Daktari",
+    "chatWithProvider": "Ongea na Mtoa Huduma",
+    "continue": "Endelea"
+  },
+  "search": {
+    "placeholder": "Tafuta Bidhaa, Chakula, Dawa, Tiketi...",
+    "globalAria": "Utafutaji wa jumla",
+    "mobileAria": "Utafutaji wa jumla kwenye simu"
+  },
+  "profile": {
+    "defaultName": "Mtumiaji wa SVS",
+    "signedInAs": "Umeingia kama",
+    "logout": "Toka",
+    "signIn": "Ingia",
+    "signUp": "Jisajili"
+  },
+  "theme": {
+    "toggleAria": "Badilisha mandhari ya rangi",
+    "light": "Mwanga",
+    "dark": "Giza",
+    "switchTo": "Badilisha hadi Hali ya {{mode}}"
+  },
+  "languageModal": {
+    "title": "Chagua Lugha",
+    "back": "Rudi",
+    "select": "Chagua Lugha"
+  },
+  "pricing": {
+    "was": "Was {{price}}",
+    "now": "Sasa {{price}}"
+  },
+  "ecommercePage": {
+    "subtitle": "Vinjari makundi, ofa za wiki, na mapendekezo binafsi kwa malipo salama."
+  },
+  "ticketsPage": {
+    "subtitle": "Weka nafasi za filamu, tamasha, michezo na safari mara moja kwa vichujio vya tarehe na eneo.",
+    "bookNow": "Weka Nafasi Sasa",
+    "upcomingHighlight": "Vivutio Vinavyokuja",
+    "types": {
+      "concert": "Tamasha",
+      "movie": "Filamu",
+      "sports": "Michezo",
+      "travel": "Safari"
+    },
+    "filters": {
+      "all": "Yote",
+      "typeAria": "Chuja aina ya tukio",
+      "locationAria": "Chuja eneo"
+    },
+    "locations": {
+      "capeTown": "Cape Town",
+      "nuMetro": "Nu Metro",
+      "kings": "Kings",
+      "durban": "Durban"
+    },
+    "events": {
+      "t1": {
+        "title": "Tamasha la Muziki wa Kiangazi 2026",
+        "location": "Uwanja wa Cape Town"
+      },
+      "t2": {
+        "title": "Onyesho la Kwanza la Filamu Usiku wa Manane",
+        "location": "Nu Metro"
+      },
+      "t3": {
+        "title": "Siku ya Derby ya Jiji",
+        "location": "Uwanja wa Kings"
+      },
+      "t4": {
+        "title": "Ofa Moto ya Safari ya Wikendi",
+        "location": "Ghuba ya Durban"
+      }
+    }
+  },
+  "pageSubtitles": {
+    "bookings": "Chuja kwa tarehe, eneo, na aina kwa uhifadhi wa huduma wa haraka na upakuaji wa tiketi za kielektroniki.",
+    "votingClients": "Piga kura kwa matokeo ya mechi, fuatilia asilimia za mgawanyo wa moja kwa moja, na upokee uthibitisho wa papo hapo.",
+    "votingProviders": "Viwango vya jedwali la viongozi hubadilishwa kwa usahihi wa wataalam, kura, na kasi ya utabiri wa moja kwa moja.",
+    "groceries": "Pata mazao na mahitaji muhimu kwa chaguo za uwasilishaji, punguzo na mtiririko wa kuongeza kikapuni.",
+    "fastFood": "Agiza milo ya haraka, vitafunio na vinywaji kwa muda mfupi wa maandalizi na malipo rahisi.",
+    "beverages": "Chunguza vinywaji baridi na pombe bora kwa malipo salama yanayozingatia umri.",
+    "wellness": "Vinjari bidhaa za afya na famasia, uwasilishaji wa dharura, na chaguo rafiki kwa maagizo.",
+    "homeCare": "Tafuta watoa huduma kwa eneo na aina ya huduma, kisha weka nafasi au ongea mara moja.",
+    "hardwareSoftware": "Vifaa vya teknolojia, vifurushi vya programu, na ununuzi salama wa vifaa vya kielektroniki.",
+    "bettingHub": "Muhtasari wa kura na ubashiri wenye mechi maarufu na vivutio vya ofa za safari.",
+    "bettingVoting": "Uzoefu wa pamoja wa utabiri, maarifa ya odds, na njia za wataalam waliothibitishwa.",
+    "safety": "Viwango vya utii, vizuizi vya umri, na dhamana za miamala salama."
+  },
+  "searchResults": {
+    "title": "Matokeo ya Utafutaji",
+    "subtitle": "Pata bidhaa, tiketi, na vitu vya soko mara moja kote SVS E-Commerce.",
+    "noResults": "Hakuna matokeo yaliyopatikana."
+  },
+  "offers": {
+    "title": "Ofa na Punguzo",
+    "subtitle": "Ofa za wiki, bei za kifurushi, na promosheni za Nunua 1 Pata 1 Bure."
+  },
+  "orders": {
+    "title": "Maagizo",
+    "subtitle": "Fuatilia ununuzi, uhifadhi wa huduma, tiketi, na masasisho ya uwasilishaji katika mwonekano mmoja.",
+    "empty": "Bado hakuna maagizo yanayoendelea. Historia na masasisho ya hali yataonekana hapa."
+  },
+  "simplePages": {
+    "about": "Taarifa za kampuni na dhamira ya jukwaa.",
+    "blog": "Masasisho ya bidhaa, mitindo, na hadithi.",
+    "careers": "Fursa wazi na mchakato wa kuajiri.",
+    "help": "Makala za msaada na miongozo ya utatuzi wa matatizo.",
+    "contact": "Njia za huduma kwa wateja na usaidizi wa washirika.",
+    "terms": "Masharti ya matumizi na sera ya miamala.",
+    "privacy": "Matumizi ya data, vidakuzi, na haki za faragha."
+  },
+  "markets": {
+    "ecommerce": "Soko la E-Commerce la Plenty",
+    "tickets": "Kituo cha Uuzaji wa Tiketi",
+    "bookings": "Kituo cha Uhifadhi na Tiketi",
+    "votingClients": "Kituo cha Wateja wa Upigaji Kura",
+    "votingProviders": "Kituo cha Watoa Huduma wa Upigaji Kura",
+    "groceries": "Kituo cha Vyakula",
+    "fastFood": "Kituo cha Vyakula vya Haraka",
+    "beverages": "Kituo cha Vinywaji na Pombe",
+    "wellness": "Kituo cha Bidhaa za Afya",
+    "homeCare": "Kituo cha Huduma za Nyumbani",
+    "hardwareSoftware": "Kituo cha Vifaa na Programu",
+    "bettingHub": "Kituo cha Kubashiri",
+    "bettingVoting": "Kubashiri na Kupiga Kura",
+    "safety": "Usalama na Uwajibikaji"
+  },
+  "marketsPage": {
+    "title": "Masoko Yote",
+    "subtitle": "Tembelea jukwaa lote la masoko mengi la SVS.",
+    "marketLabel": "Soko {{number}}",
+    "openMarket": "Fungua soko",
+    "enterMarket": "Ingia Sokoni",
+    "quickTip": "Dokezo la haraka: Tumia utafutaji wa juu kuruka moja kwa moja hadi bidhaa, tiketi, dawa au vifaa kwa hatua moja.",
+    "tags": {
+      "superShopping": "UnunuziBora",
+      "superService": "HudumaBora",
+      "intelligentPlatform": "Jukwaa Moja Mahiri"
+    }
+  },
+  "site": {
+    "tagline": "Nunua, Agiza na Hifadhi Watoa Huduma Mara Moja - Wakati Wowote, Mahali Popote.",
+    "address": "Beachy Head Drive, Pietermaritzburg Bay 6600"
+  },
+  "footer": {
+    "quickLinks": "Viungo vya Haraka",
+    "support": "Msaada",
+    "subscribe": "Jiunge",
+    "subscribePlaceholder": "Barua pepe au Simu",
+    "subscribeAria": "Jiunge kwa barua pepe au simu",
+    "last": "Mwaka {{year}}",
+    "securePayments": "Malipo Salama na Miamala Iliyothibitishwa",
+    "about": "Kuhusu Sisi",
+    "careers": "Ajira",
+    "blog": "Blogu",
+    "help": "Kituo cha Msaada",
+    "contact": "Wasiliana Nasi",
+    "terms": "Masharti ya Huduma",
+    "privacy": "Sera ya Faragha"
+  }
+}

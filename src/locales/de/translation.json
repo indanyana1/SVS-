@@ -1,0 +1,183 @@
+{
+  "nav": {
+    "home": "Heim",
+    "markets": "Märkte",
+    "offers": "Angebote",
+    "orders": "Bestellungen"
+  },
+  "common": {
+    "noResults": "Keine Ergebnisse",
+    "addToCart": "in den Warenkorb legen",
+    "viewMore": "Mehr anzeigen",
+    "learnMore": "Erfahren Sie mehr",
+    "exploreNow": "Jetzt entdecken",
+    "bookNow": "Jetzt buchen",
+    "voteNow": "Jetzt abstimmen",
+    "openMarket": "Offener Markt",
+    "addToBasket": "Zum Warenkorb hinzufügen",
+    "deliveryOptions": "Lieferoptionen",
+    "orderNow": "Jetzt bestellen",
+    "viewMeal": "Mahlzeit ansehen",
+    "viewDetails": "Details anzeigen",
+    "add": "Hinzufügen",
+    "uploadPrescription": "Rezept hochladen",
+    "chatWithProvider": "Chatten Sie mit dem Anbieter",
+    "continue": "Weitermachen"
+  },
+  "search": {
+    "placeholder": "Suchen Sie nach Produkten, Lebensmitteln, Medikamenten, Tickets ...",
+    "globalAria": "Globale Suche",
+    "mobileAria": "Mobile globale Suche"
+  },
+  "profile": {
+    "defaultName": "SVS Benutzer",
+    "signedInAs": "Angemeldet als",
+    "logout": "Abmelden",
+    "signIn": "Anmelden",
+    "signUp": "Melden Sie sich an"
+  },
+  "theme": {
+    "toggleAria": "Farbthema umschalten",
+    "light": "Licht",
+    "dark": "Dunkel",
+    "switchTo": "Wechseln Sie in den {{mode}}-Modus"
+  },
+  "languageModal": {
+    "title": "Wählen Sie Sprache aus",
+    "back": "Zurück",
+    "select": "Wählen Sie Sprache aus"
+  },
+  "pricing": {
+    "was": "War {{price}}",
+    "now": "Jetzt {{price}}"
+  },
+  "markets": {
+    "ecommerce": "Viel E-Commerce-Markt",
+    "tickets": "Ticketverkaufszentrum",
+    "bookings": "Buchungs- und Ticket-Hub",
+    "votingClients": "Abstimmungskunden-Hub",
+    "votingProviders": "Hub für Abstimmungsanbieter",
+    "groceries": "Lebensmittel-Hub",
+    "fastFood": "Fast-Food-Hub",
+    "beverages": "Getränke- und Spirituosen-Hub",
+    "wellness": "Hub für Wellness-Produkte",
+    "homeCare": "Hub für häusliche Pflege",
+    "hardwareSoftware": "Hardware- und Software-Hub",
+    "bettingHub": "Wett-Hub",
+    "bettingVoting": "Wetten und Abstimmen",
+    "safety": "Sicherheit und Verantwortung"
+  },
+  "footer": {
+    "about": "Über uns",
+    "careers": "Karrieren",
+    "blog": "Blog",
+    "help": "Hilfecenter",
+    "contact": "Kontaktieren Sie uns",
+    "terms": "Nutzungsbedingungen",
+    "privacy": "Datenschutzrichtlinie",
+    "quickLinks": "Quicklinks",
+    "support": "Unterstützung",
+    "subscribe": "Abonnieren",
+    "subscribePlaceholder": "E-Mail oder Handy",
+    "subscribeAria": "Abonnieren Sie per E-Mail oder Handy",
+    "last": "Letzte {{year}}",
+    "securePayments": "Sichere Zahlungen und verifizierte Transaktionen"
+  },
+  "ecommercePage": {
+    "subtitle": "Durchsuchen Sie Kategorien, wöchentliche Angebote und personalisierte Empfehlungen mit sicherem Checkout."
+  },
+  "ticketsPage": {
+    "subtitle": "Buchen Sie Filme, Konzerte, Sportveranstaltungen und Reisen sofort mit Datums- und Ortsfiltern.",
+    "bookNow": "Jetzt buchen",
+    "upcomingHighlight": "Kommendes Highlight",
+    "types": {
+      "concert": "Konzert",
+      "movie": "Film",
+      "sports": "Sport",
+      "travel": "Reisen"
+    },
+    "filters": {
+      "all": "Alle",
+      "typeAria": "Ereignistyp filtern",
+      "locationAria": "Standort filtern"
+    },
+    "locations": {
+      "capeTown": "Kapstadt",
+      "nuMetro": "Nu Metro",
+      "kings": "Könige",
+      "durban": "Durban"
+    },
+    "events": {
+      "t1": {
+        "title": "Sommermusikfestival 2026",
+        "location": "Kapstadt-Arena"
+      },
+      "t2": {
+        "title": "Mitternachtsfilmpremiere",
+        "location": "Nu Metro"
+      },
+      "t3": {
+        "title": "Spieltag des Stadtderbys",
+        "location": "Kings-Stadion"
+      },
+      "t4": {
+        "title": "Heißes Reise-Wochenendangebot",
+        "location": "Durban-Bucht"
+      }
+    }
+  },
+  "pageSubtitles": {
+    "bookings": "Filtern Sie nach Datum, Ort und Typ, um schnelle Servicebuchungen und E-Ticket-Downloads zu ermöglichen.",
+    "votingClients": "Stimmen Sie über Spielergebnisse ab, verfolgen Sie Live-Split-Prozentsätze und erhalten Sie eine sofortige Bestätigung.",
+    "votingProviders": "Die Rangliste der Bestenliste wird mit Expertengenauigkeit, Stimmen und Live-Vorhersagedynamik aktualisiert.",
+    "groceries": "Finden Sie Produkte und Grundnahrungsmittel mit Lieferoptionen, Rabatten und Add-to-Warenkorb-Flow.",
+    "fastFood": "Bestellen Sie schnelle Mahlzeiten, Snacks und Getränke mit kurzen Vorbereitungszeiten und einfacher Kasse.",
+    "beverages": "Entdecken Sie erfrischende Getränke und Premium-Spirituosen mit sicherer, altersgerechter Kasse.",
+    "wellness": "Entdecken Sie Apotheken- und Gesundheitsprodukte, Notfalllieferungen und verschreibungspflichtige Optionen.",
+    "homeCare": "Suchen Sie nach Anbietern nach Standort und Servicetyp und buchen oder chatten Sie dann sofort.",
+    "hardwareSoftware": "Technische Gadgets, Softwarepakete und sicherer Elektronikeinkauf.",
+    "bettingHub": "Aggregierte Abstimmungs- und Wettvorschau mit beliebten Spielen und aktuellen Highlights zu Reiseangeboten.",
+    "bettingVoting": "Einheitliche Erfahrung für Vorhersagen, Quoteneinblicke und verifizierte Expertenkanäle.",
+    "safety": "Compliance-Standards, Altersbeschränkungen und sichere Transaktionsgarantien."
+  },
+  "searchResults": {
+    "title": "Suchergebnisse",
+    "subtitle": "Finden Sie Produkte, Tickets und Marktartikel sofort im gesamten SVS E-Commerce.",
+    "noResults": "Keine Ergebnisse gefunden."
+  },
+  "offers": {
+    "title": "Angebote und Rabatte",
+    "subtitle": "Wöchentliche Angebote, Bundle-Preise und „Buy 1 Get 1 Free“-Aktionen."
+  },
+  "orders": {
+    "title": "Bestellungen",
+    "subtitle": "Verfolgen Sie Einkäufe, Servicebuchungen, Tickets und Lieferaktualisierungen in einer Ansicht.",
+    "empty": "Noch keine aktiven Bestellungen. Ihr Verlauf und Ihre Statusaktualisierungen werden hier angezeigt."
+  },
+  "simplePages": {
+    "about": "Unternehmensinformationen und Plattformmission.",
+    "blog": "Produktaktualisierungen, Trends und Geschichten.",
+    "careers": "Offene Stellen und Einstellungsprozess.",
+    "help": "Support-Artikel und Anleitungen zur Fehlerbehebung.",
+    "contact": "Kundendienst- und Partner-Supportkanäle.",
+    "terms": "Nutzungsbedingungen und Transaktionsrichtlinien.",
+    "privacy": "Datennutzung, Cookies und Datenschutzrechte."
+  },
+  "marketsPage": {
+    "title": "Alle Märkte",
+    "subtitle": "Navigieren Sie durch die vollständige Multi-Marktplatz-Plattform SVS.",
+    "marketLabel": "Markt {{number}}",
+    "openMarket": "Offener Markt",
+    "enterMarket": "Betreten Sie den Markt",
+    "quickTip": "Kurzer Tipp: Nutzen Sie die Top-Suche, um in einem Schritt direkt zu Produkten, Tickets, Medikamenten oder Hardware zu gelangen.",
+    "tags": {
+      "superShopping": "SuperShopping",
+      "superService": "SuperService",
+      "intelligentPlatform": "Eine intelligente Plattform"
+    }
+  },
+  "site": {
+    "tagline": "Kaufen, bestellen und buchen Sie Dienstleister sofort – jederzeit und überall.",
+    "address": "Beachy Head Drive, Pietermaritzburg Bay 6600"
+  }
+}

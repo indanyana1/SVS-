@@ -1,0 +1,183 @@
+{
+  "nav": {
+    "home": "Tuis",
+    "markets": "Markte",
+    "offers": "Aanbiedinge",
+    "orders": "Bestellings"
+  },
+  "common": {
+    "noResults": "Geen resultate",
+    "addToCart": "Voeg by mandjie",
+    "viewMore": "Bekyk meer",
+    "learnMore": "Leer meer",
+    "exploreNow": "Verken nou",
+    "bookNow": "Bespreek nou",
+    "voteNow": "Stem nou",
+    "openMarket": "Maak mark oop",
+    "addToBasket": "Voeg by mandjie",
+    "deliveryOptions": "Afleweringsopsies",
+    "orderNow": "Bestel nou",
+    "viewMeal": "Bekyk ete",
+    "viewDetails": "Bekyk besonderhede",
+    "add": "Voeg by",
+    "uploadPrescription": "Laai voorskrif op",
+    "chatWithProvider": "Gesels met verskaffer",
+    "continue": "Gaan voort"
+  },
+  "search": {
+    "placeholder": "Soek vir Produkte, Kos, Medisyne, Kaartjies...",
+    "globalAria": "Globale soek",
+    "mobileAria": "Mobiele globale soek"
+  },
+  "profile": {
+    "defaultName": "SVS Gebruiker",
+    "signedInAs": "Aangemeld as",
+    "logout": "Teken uit",
+    "signIn": "Teken in",
+    "signUp": "Registreer"
+  },
+  "theme": {
+    "toggleAria": "Wissel kleurtema",
+    "light": "Lig",
+    "dark": "Donker",
+    "switchTo": "Skakel na {{mode}} modus"
+  },
+  "languageModal": {
+    "title": "Kies Taal",
+    "back": "Terug",
+    "select": "Kies Taal"
+  },
+  "pricing": {
+    "was": "Was {{price}}",
+    "now": "Nou {{price}}"
+  },
+  "markets": {
+    "ecommerce": "Plenty E-Handelsmark",
+    "tickets": "Kaartjieverkope Sentrum",
+    "bookings": "Besprekings- en Kaartjiesentrum",
+    "votingClients": "Stemkliënte Sentrum",
+    "votingProviders": "Stemverskaffers Sentrum",
+    "groceries": "Kruideniersentrum",
+    "fastFood": "Kitskos Sentrum",
+    "beverages": "Drankies- en Likeursentrum",
+    "wellness": "Welstandsprodukte Sentrum",
+    "homeCare": "Tuisversorging Sentrum",
+    "hardwareSoftware": "Hardeware- en Sagteware Sentrum",
+    "bettingHub": "Weddenskapsentrum",
+    "bettingVoting": "Weddenskappe en Stem",
+    "safety": "Veiligheid en Verantwoordelikheid"
+  },
+  "footer": {
+    "about": "Oor Ons",
+    "careers": "Loopbane",
+    "blog": "Blog",
+    "help": "Hulpsentrum",
+    "contact": "Kontak Ons",
+    "terms": "Diensvoorwaardes",
+    "privacy": "Privaatheidsbeleid",
+    "quickLinks": "Vinnige skakels",
+    "support": "Ondersteuning",
+    "subscribe": "Teken in",
+    "subscribePlaceholder": "E-pos of selfoon",
+    "subscribeAria": "Teken in met e-pos of selfoon",
+    "last": "Laaste {{year}}",
+    "securePayments": "Veilige betalings en geverifieerde transaksies"
+  },
+  "ecommercePage": {
+    "subtitle": "Blaai deur kategoriee, weeklikse aanbiedinge en persoonlike aanbevelings met veilige afhandeling."
+  },
+  "ticketsPage": {
+    "subtitle": "Bespreek flieks, konserte, sport en reis onmiddellik met datum- en liggingfilters.",
+    "bookNow": "Bespreek nou",
+    "upcomingHighlight": "Komende hoogtepunt",
+    "types": {
+      "concert": "Konsert",
+      "movie": "Fliek",
+      "sports": "Sport",
+      "travel": "Reis"
+    },
+    "filters": {
+      "all": "Alles",
+      "typeAria": "Filtreer gebeurtenistipe",
+      "locationAria": "Filtreer ligging"
+    },
+    "locations": {
+      "capeTown": "Kaapstad",
+      "nuMetro": "Nu Metro",
+      "kings": "Konings",
+      "durban": "Durban"
+    },
+    "events": {
+      "t1": {
+        "title": "Somer Musiekfees 2026",
+        "location": "Kaapstad Arena"
+      },
+      "t2": {
+        "title": "Middernag Fliekpremiere",
+        "location": "Nu Metro"
+      },
+      "t3": {
+        "title": "Stadsderby Wedstryddag",
+        "location": "Kings Stadion"
+      },
+      "t4": {
+        "title": "Warm Reisnaweek-aanbod",
+        "location": "Durbanbaai"
+      }
+    }
+  },
+  "pageSubtitles": {
+    "bookings": "Filtreer volgens datum, ligging en tipe vir vinnige diensbesprekings en e-kaartjie aflaaie.",
+    "votingClients": "Stem oor wedstryduitslae, volg lewendige persentasies en ontvang onmiddellike bevestiging.",
+    "votingProviders": "Ranglysopdaterings met kundige akkuraatheid, stemme en lewendige voorspellingsmomentum.",
+    "groceries": "Vind produkte en noodsaaklikhede met afleweringsopsies, afslag en mandjie-vloei.",
+    "fastFood": "Bestel vinnige etes, peuselhappies en drankies met kort voorbereidingstye en maklike afhandeling.",
+    "beverages": "Verken verfrissende drankies en premium likeur met veilige, ouderdomsbewuste afhandeling.",
+    "wellness": "Blaai deur apteek- en gesondheidsprodukte met noodaflewering en voorskrifvriendelike opsies.",
+    "homeCare": "Soek verskaffers volgens ligging en dienstipe, en bespreek of gesels onmiddellik.",
+    "hardwareSoftware": "Tegnologie-gadgets, sagtewarebundels en veilige elektroniese aankope.",
+    "bettingHub": "Saamgestelde weddery- en stemoorsig met gewilde wedstryde en warm reisaanbiedinge.",
+    "bettingVoting": "Verenigde ervaring vir voorspellings, odds-insigte en geverifieerde kundige kanale.",
+    "safety": "Nakomingstandaarde, ouderdomsbeperkings en veilige transaksiewaarborge."
+  },
+  "searchResults": {
+    "title": "Soekresultate",
+    "subtitle": "Vind produkte, kaartjies en markitems onmiddellik oor SVS E-Commerce.",
+    "noResults": "Geen resultate gevind nie."
+  },
+  "offers": {
+    "title": "Aanbiedinge en afslag",
+    "subtitle": "Weeklikse aanbiedinge, bondelpryse en koop-1-kry-1-gratis promosies."
+  },
+  "orders": {
+    "title": "Bestellings",
+    "subtitle": "Volg aankope, diensbesprekings, kaartjies en afleweringsopdaterings in een aansig.",
+    "empty": "Nog geen aktiewe bestellings nie. Jou geskiedenis en statusopdaterings sal hier verskyn."
+  },
+  "simplePages": {
+    "about": "Maatskappy-inligting en platformmissie.",
+    "blog": "Produkopdaterings, neigings en stories.",
+    "careers": "Beskikbare geleenthede en die aanstellingsproses.",
+    "help": "Ondersteuningsartikels en foutopsporingsgidse.",
+    "contact": "Kliëntediens- en vennootondersteuningskanale.",
+    "terms": "Gebruiksterme en transaksiebeleid.",
+    "privacy": "Datagebruik, koekies en privaatheidsregte."
+  },
+  "marketsPage": {
+    "title": "Alle markte",
+    "subtitle": "Navigeer die volledige SVS multi-markplatform.",
+    "marketLabel": "Mark {{number}}",
+    "openMarket": "Maak mark oop",
+    "enterMarket": "Betree mark",
+    "quickTip": "Vinnige wenk: Gebruik die boonste soek om direk na produkte, kaartjies, medisyne of hardeware te spring in een stap.",
+    "tags": {
+      "superShopping": "Superinkopies",
+      "superService": "Superservice",
+      "intelligentPlatform": "Een slim platform"
+    }
+  },
+  "site": {
+    "tagline": "Koop, bestel en bespreek diensverskaffers onmiddellik - enige tyd, enige plek.",
+    "address": "Beachy Head Drive, Pietermaritzburgbaai 6600"
+  }
+}

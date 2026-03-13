@@ -1,0 +1,183 @@
+{
+  "nav": {
+    "home": "Home",
+    "markets": "Markets",
+    "offers": "Offers",
+    "orders": "Orders"
+  },
+  "common": {
+    "noResults": "No results",
+    "addToCart": "Add to Cart",
+    "viewMore": "View More",
+    "learnMore": "Learn More",
+    "exploreNow": "Explore Now",
+    "bookNow": "Book Now",
+    "voteNow": "Vote Now",
+    "openMarket": "Open Market",
+    "addToBasket": "Add to Basket",
+    "deliveryOptions": "Delivery Options",
+    "orderNow": "Order Now",
+    "viewMeal": "View Meal",
+    "viewDetails": "View Details",
+    "add": "Add",
+    "uploadPrescription": "Upload Prescription",
+    "chatWithProvider": "Chat with Provider",
+    "continue": "Continue"
+  },
+  "search": {
+    "placeholder": "Search for Products, Food, Medicines, Tickets...",
+    "globalAria": "Global search",
+    "mobileAria": "Mobile global search"
+  },
+  "profile": {
+    "defaultName": "SVS User",
+    "signedInAs": "Signed in as",
+    "logout": "Logout",
+    "signIn": "Sign In",
+    "signUp": "Sign Up"
+  },
+  "theme": {
+    "toggleAria": "Toggle color theme",
+    "light": "Light",
+    "dark": "Dark",
+    "switchTo": "Switch to {{mode}} Mode"
+  },
+  "languageModal": {
+    "title": "Select Language",
+    "back": "Back",
+    "select": "Select Language"
+  },
+  "pricing": {
+    "was": "Was {{price}}",
+    "now": "Now {{price}}"
+  },
+  "ecommercePage": {
+    "subtitle": "Browse categories, weekly deals, and personalized recommendations with secure checkout."
+  },
+  "ticketsPage": {
+    "subtitle": "Book movies, concerts, sports, and travel instantly with date and location filters.",
+    "bookNow": "Book Now",
+    "upcomingHighlight": "Upcoming Highlight",
+    "types": {
+      "concert": "Concert",
+      "movie": "Movie",
+      "sports": "Sports",
+      "travel": "Travel"
+    },
+    "filters": {
+      "all": "All",
+      "typeAria": "Filter event type",
+      "locationAria": "Filter location"
+    },
+    "locations": {
+      "capeTown": "Cape Town",
+      "nuMetro": "Nu Metro",
+      "kings": "Kings",
+      "durban": "Durban"
+    },
+    "events": {
+      "t1": {
+        "title": "Summer Music Festival 2026",
+        "location": "Cape Town Arena"
+      },
+      "t2": {
+        "title": "Midnight Movie Premiere",
+        "location": "Nu Metro"
+      },
+      "t3": {
+        "title": "City Derby Match Day",
+        "location": "Kings Stadium"
+      },
+      "t4": {
+        "title": "Hot Travel Weekend Deal",
+        "location": "Durban Bay"
+      }
+    }
+  },
+  "pageSubtitles": {
+    "bookings": "Filter by date, location, and type for quick service bookings and e-ticket downloads.",
+    "votingClients": "Vote on match outcomes, track live split percentages, and receive instant confirmation.",
+    "votingProviders": "Leaderboard rankings update with expert accuracy, votes, and live prediction momentum.",
+    "groceries": "Find produce and essentials with delivery options, discounts, and add-to-basket flow.",
+    "fastFood": "Order quick meals, snacks, and drinks with fast prep times and easy checkout.",
+    "beverages": "Explore refreshing beverages and premium liquors with secure, age-aware checkout.",
+    "wellness": "Browse pharmacy and health products, emergency delivery, and prescription-friendly options.",
+    "homeCare": "Search providers by location and service type, then book or chat instantly.",
+    "hardwareSoftware": "Tech gadgets, software bundles, and secure electronics purchasing.",
+    "bettingHub": "Aggregated voting and betting preview with popular matches and hot travel deal highlights.",
+    "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
+    "safety": "Compliance standards, age restrictions, and secure transaction guarantees."
+  },
+  "searchResults": {
+    "title": "Search Results",
+    "subtitle": "Find products, tickets, and market items instantly across SVS E-Commerce.",
+    "noResults": "No results found."
+  },
+  "offers": {
+    "title": "Offers and Discounts",
+    "subtitle": "Weekly deals, bundle pricing, and Buy 1 Get 1 Free promotions."
+  },
+  "orders": {
+    "title": "Orders",
+    "subtitle": "Track purchases, service bookings, tickets, and delivery updates in one view.",
+    "empty": "No active orders yet. Your history and status updates will appear here."
+  },
+  "simplePages": {
+    "about": "Company information and platform mission.",
+    "blog": "Product updates, trends, and stories.",
+    "careers": "Open opportunities and hiring process.",
+    "help": "Support articles and troubleshooting guides.",
+    "contact": "Customer service and partner support channels.",
+    "terms": "Usage terms and transaction policy.",
+    "privacy": "Data usage, cookies, and privacy rights."
+  },
+  "markets": {
+    "ecommerce": "Plenty E-Commerce Market",
+    "tickets": "Tickets Sales Hub",
+    "bookings": "Bookings & Tickets Hub",
+    "votingClients": "Voting Clients Hub",
+    "votingProviders": "Voting Providers Hub",
+    "groceries": "Groceries Hub",
+    "fastFood": "Fast Foods Hub",
+    "beverages": "Beverages & Liquors Hub",
+    "wellness": "Wellness Products Hub",
+    "homeCare": "Home Care Hub",
+    "hardwareSoftware": "Hardwares & Softwares Hub",
+    "bettingHub": "Betting Hub",
+    "bettingVoting": "Betting and Voting",
+    "safety": "Safety and Responsibility"
+  },
+  "marketsPage": {
+    "title": "All Markets",
+    "subtitle": "Navigate the full SVS multi-marketplace platform.",
+    "marketLabel": "Market {{number}}",
+    "openMarket": "Open market",
+    "enterMarket": "Enter Market",
+    "quickTip": "Quick tip: Use the top search to jump directly to products, tickets, medicines, or hardware in a single step.",
+    "tags": {
+      "superShopping": "SuperShopping",
+      "superService": "SuperService",
+      "intelligentPlatform": "One Intelligent Platform"
+    }
+  },
+  "site": {
+    "tagline": "Shop, Order and Book Service Providers Instantly - Anytime, Anywhere.",
+    "address": "Beachy Head Drive, Pietermaritzburg Bay 6600"
+  },
+  "footer": {
+    "quickLinks": "Quick Links",
+    "support": "Support",
+    "subscribe": "Subscribe",
+    "subscribePlaceholder": "Email or Mobile",
+    "subscribeAria": "Subscribe email or mobile",
+    "last": "Last {{year}}",
+    "securePayments": "Secure Payments and Verified Transactions",
+    "about": "About Us",
+    "careers": "Careers",
+    "blog": "Blog",
+    "help": "Help Center",
+    "contact": "Contact Us",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy"
+  }
+}
