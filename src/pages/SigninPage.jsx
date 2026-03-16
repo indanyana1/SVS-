@@ -92,6 +92,7 @@ const SigninPage = () => {
 		window.localStorage.setItem('svs-authenticated', 'true');
 		window.localStorage.setItem('svs-user-email', data.email_address);
 		window.localStorage.setItem('svs-user-name', data.full_name);
+		window.dispatchEvent(new Event('svs-auth-changed'));
 		setFormData({ email: '', password: '' });
 		setIsSubmitting(false);
 

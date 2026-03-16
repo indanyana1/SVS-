@@ -7,7 +7,7 @@
 	- `REACT_APP_SUPABASE_URL`
 	- `REACT_APP_SUPABASE_ANON_KEY`
 3. Start the app with `npm start`.
-4. To enable persistent seller uploads, run the SQL in `supabase/seller-marketplace.sql` inside the Supabase SQL editor.
+4. To enable persistent seller uploads, user carts, and wishlists, run the SQL in `supabase/seller-marketplace.sql` inside the Supabase SQL editor.
 
 Do not use your Supabase service role (secret) key in this React app.
 
@@ -16,6 +16,12 @@ Do not use your Supabase service role (secret) key in this React app.
 - Item details are stored in Supabase Postgres table `marketplace_items`.
 - Item images are stored in Supabase Storage bucket `marketplace-items`.
 - Uploaded items continue to appear after terminal restarts because they are stored in Supabase, not in local component state.
+
+## User Cart And Wishlist Storage
+
+- Cart items are stored in Supabase Postgres table `cart_items`.
+- Wishlist items are stored in Supabase Postgres table `wishlist_items`.
+- The React app filters both tables by the signed-in user's email so each user sees only their own saved items in the UI.
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 

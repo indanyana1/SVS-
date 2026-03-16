@@ -72,6 +72,7 @@ const SignupPage = () => {
 		window.localStorage.setItem('svs-authenticated', 'true');
 		window.localStorage.setItem('svs-user-email', email);
 		window.localStorage.setItem('svs-user-name', name);
+		window.dispatchEvent(new Event('svs-auth-changed'));
 		setFormData({ name: '', email: '', contact: '', password: '' });
 		setIsSubmitting(false);
 

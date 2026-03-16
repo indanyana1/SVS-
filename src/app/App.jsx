@@ -709,9 +709,12 @@ const getThemePreference = () => {
 };
 
 const CART_STORAGE_KEY = 'svs-cart-items';
+const WISHLIST_STORAGE_KEY = 'svs-wishlist-items';
 const ORDERS_STORAGE_KEY = 'svs-orders';
 const ORDER_STATUS_FLOW = ['Confirmed', 'Processing', 'Ready', 'Completed'];
 const SELLER_ITEMS_TABLE = 'marketplace_items';
+const CART_ITEMS_TABLE = 'cart_items';
+const WISHLIST_ITEMS_TABLE = 'wishlist_items';
 const SELLER_IMAGES_BUCKET = 'marketplace-items';
 
 const getStoredCollection = (storageKey) => {
@@ -733,8 +736,25 @@ const getStoredCollection = (storageKey) => {
   }
 };
 
-const getStoredCartItems = () => getStoredCollection(CART_STORAGE_KEY);
-const getStoredOrders = () => getStoredCollection(ORDERS_STORAGE_KEY);
+const getCurrentUserEmail = () => {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  return window.localStorage.getItem('svs-user-email') || '';
+};
+
+const getUserScopedStorageKey = (storageKey, userEmail = getCurrentUserEmail()) => {
+  const normalizedEmail = String(userEmail || '').trim().toLowerCase();
+  return `${storageKey}:${normalizedEmail || 'guest'}`;
+};
+
+const getStoredCartItems = (userEmail = getCurrentUserEmail()) =>
+  getStoredCollection(getUserScopedStorageKey(CART_STORAGE_KEY, userEmail));
+const getStoredWishlistItems = (userEmail = getCurrentUserEmail()) =>
+  getStoredCollection(getUserScopedStorageKey(WISHLIST_STORAGE_KEY, userEmail));
+const getStoredOrders = (userEmail = getCurrentUserEmail()) =>
+  getStoredCollection(getUserScopedStorageKey(ORDERS_STORAGE_KEY, userEmail));
 
 const sanitizeStorageSegment = (value) => String(value || 'seller')
   .toLowerCase()
@@ -799,18 +819,89 @@ const getOrderStatusStep = (status) => {
   return ORDER_STATUS_FLOW[nextIndex] || ORDER_STATUS_FLOW[0];
 };
 
-const createCartItem = ({ id, title, image, price, route, marketName, details = '' }) => ({
-  id: `${route}:${id}`,
+const getCollectionItemId = (route, id) => `${route}:${id}`;
+
+const createSavedItem = ({ id, title, image, price, route, marketName, details = '' }) => ({
+  id: getCollectionItemId(route, id),
   sku: id,
   title,
   image,
   route,
   marketName,
   details,
-  quantity: 1,
   unitPrice: getNumericPriceValue(price),
   unitPriceLabel: getSalePrices(price).nowPrice,
 });
+
+const createCartItem = (item) => ({
+  ...createSavedItem(item),
+  quantity: 1,
+});
+
+const createWishlistItem = (item) => createSavedItem(item);
+
+const mapCartItemRecord = (record) => ({
+  id: record.item_key,
+  sku: record.sku,
+  title: record.title,
+  image: record.image_url || '',
+  route: record.route,
+  marketName: record.market_name,
+  details: record.details || '',
+  quantity: Math.max(Number(record.quantity) || 1, 1),
+  unitPrice: Number(record.unit_price) || 0,
+  unitPriceLabel: record.unit_price_label,
+});
+
+const mapWishlistItemRecord = (record) => ({
+  id: record.item_key,
+  sku: record.sku,
+  title: record.title,
+  image: record.image_url || '',
+  route: record.route,
+  marketName: record.market_name,
+  details: record.details || '',
+  unitPrice: Number(record.unit_price) || 0,
+  unitPriceLabel: record.unit_price_label,
+});
+
+const toCartItemRecord = (userEmail, item) => ({
+  user_email: userEmail,
+  item_key: item.id,
+  sku: item.sku,
+  title: item.title,
+  image_url: item.image,
+  route: item.route,
+  market_name: item.marketName,
+  details: item.details,
+  quantity: item.quantity,
+  unit_price: item.unitPrice,
+  unit_price_label: item.unitPriceLabel,
+});
+
+const toWishlistItemRecord = (userEmail, item) => ({
+  user_email: userEmail,
+  item_key: item.id,
+  sku: item.sku,
+  title: item.title,
+  image_url: item.image,
+  route: item.route,
+  market_name: item.marketName,
+  details: item.details,
+  unit_price: item.unitPrice,
+  unit_price_label: item.unitPriceLabel,
+});
+
+const syncUserCollection = async ({ tableName, userEmail, records }) => {
+  const { error: deleteError } = await supabase.from(tableName).delete().eq('user_email', userEmail);
+
+  if (deleteError || !records.length) {
+    return deleteError || null;
+  }
+
+  const { error: insertError } = await supabase.from(tableName).insert(records);
+  return insertError || null;
+};
 
 const getStatusClasses = (status) => {
   switch (status) {
@@ -942,7 +1033,7 @@ const LanguageSelectorPopover = ({
   );
 };
 
-const Shell = ({ children, cartItemCount = 0 }) => {
+const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0 }) => {
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -1131,9 +1222,20 @@ const Shell = ({ children, cartItemCount = 0 }) => {
   };
 
   const handleLogout = () => {
+    const userEmail = getCurrentUserEmail();
+
+    window.localStorage.removeItem(getUserScopedStorageKey(CART_STORAGE_KEY, userEmail));
+    window.localStorage.removeItem(getUserScopedStorageKey(WISHLIST_STORAGE_KEY, userEmail));
+    window.localStorage.removeItem(getUserScopedStorageKey(ORDERS_STORAGE_KEY, userEmail));
+    window.localStorage.removeItem(getUserScopedStorageKey(CART_STORAGE_KEY, 'guest'));
+    window.localStorage.removeItem(getUserScopedStorageKey(WISHLIST_STORAGE_KEY, 'guest'));
+    window.localStorage.removeItem(getUserScopedStorageKey(ORDERS_STORAGE_KEY, 'guest'));
+    window.localStorage.removeItem(ORDERS_STORAGE_KEY);
+
     window.localStorage.removeItem('svs-authenticated');
     window.localStorage.removeItem('svs-user-email');
     window.localStorage.removeItem('svs-user-name');
+    window.dispatchEvent(new Event('svs-auth-changed'));
     setIsAuthenticated(false);
     setProfileName(t('profile.defaultName'));
     setProfileOpen(false);
@@ -1218,9 +1320,14 @@ const Shell = ({ children, cartItemCount = 0 }) => {
                 </span>
               ) : null}
             </Link>
-            <button type="button" aria-label="Wishlist" className="rounded-full p-1.5 transition hover:bg-[var(--svs-cyan-surface)]">
+            <Link to="/wishlist" aria-label="Open wishlist" className="relative rounded-full p-1.5 transition hover:bg-[var(--svs-cyan-surface)]">
               <Heart className={`h-5 w-5 ${cudyBluePrimaryIconClassName}`} />
-            </button>
+              {wishlistItemCount > 0 ? (
+                <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[var(--svs-primary)] px-1 text-[10px] font-bold text-white">
+                  {wishlistItemCount}
+                </span>
+              ) : null}
+            </Link>
             <button type="button" aria-label="Notifications" className="rounded-full p-1.5 transition hover:bg-[var(--svs-cyan-surface)]">
               <Bell className={`h-5 w-5 ${cudyBluePrimaryIconClassName}`} />
             </button>
@@ -1544,7 +1651,7 @@ const KpiCard = ({ label, value }) => (
   </div>
 );
 
-const ECommercePage = ({ onAddToCart, sellerItems = [] }) => {
+const ECommercePage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [] }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'ecommerce'), ...productCards], [sellerItems]);
 
@@ -1564,13 +1671,20 @@ const ECommercePage = ({ onAddToCart, sellerItems = [] }) => {
           marketName: t('markets.ecommerce'),
           details: item.subtitle || item.description || item.sellerName,
         }))}
+        onToggleWishlist={(item) => onToggleWishlist(createWishlistItem({
+          ...item,
+          route: '/e-commerce',
+          marketName: t('markets.ecommerce'),
+          details: item.subtitle || item.description || item.sellerName,
+        }))}
+        isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/e-commerce', item.id))}
         metaRenderer={(item) => <p className="text-sm text-slate-500">{item.subtitle || item.description || item.sellerName || 'Seller item'} • <SalePrice price={item.price} /></p>}
       />
     </PageFrame>
   );
 };
 
-const TicketsPage = ({ onAddToCart }) => {
+const TicketsPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [] }) => {
   const { t, i18n } = useTranslation();
   const [typeFilter, setTypeFilter] = useState('All');
   const [locationFilter, setLocationFilter] = useState('All');
@@ -1637,18 +1751,34 @@ const TicketsPage = ({ onAddToCart }) => {
               <p className="mt-1 flex items-center gap-1 text-sm text-slate-600"><CalendarDays className="h-4 w-4" /> {formatDate(event.date, currentLocale)}</p>
               <p className="mt-1 flex items-center gap-1 text-sm text-slate-600"><MapPin className="h-4 w-4" /> {t(event.locationKey, { defaultValue: event.location })}</p>
               <p className="mt-2 text-sm text-[var(--svs-primary-strong)]">{t(event.typeKey, { defaultValue: event.type })} • <SalePrice price={event.price} /></p>
-              <button
-                type="button"
-                onClick={() => onAddToCart(createCartItem({
-                  ...event,
-                  route: '/tickets',
-                  marketName: t('markets.tickets'),
-                  details: `${formatDate(event.date, currentLocale)} • ${t(event.locationKey, { defaultValue: event.location })}`,
-                }))}
-                className={`${cudyBluePrimaryButtonClassName} mt-3 rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}
-              >
-                {t('ticketsPage.bookNow')}
-              </button>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => onAddToCart(createCartItem({
+                    ...event,
+                    route: '/tickets',
+                    marketName: t('markets.tickets'),
+                    details: `${formatDate(event.date, currentLocale)} • ${t(event.locationKey, { defaultValue: event.location })}`,
+                  }))}
+                  className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}
+                >
+                  {t('ticketsPage.bookNow')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onToggleWishlist(createWishlistItem({
+                    ...event,
+                    route: '/tickets',
+                    marketName: t('markets.tickets'),
+                    details: `${formatDate(event.date, currentLocale)} • ${t(event.locationKey, { defaultValue: event.location })}`,
+                  }))}
+                  aria-pressed={wishlistItemIds.includes(getCollectionItemId('/tickets', event.id))}
+                  className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition ${wishlistItemIds.includes(getCollectionItemId('/tickets', event.id)) ? 'border-rose-200 bg-rose-50 text-rose-600' : 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)] text-[var(--svs-text)]'}`}
+                >
+                  <Heart className={`h-4 w-4 ${wishlistItemIds.includes(getCollectionItemId('/tickets', event.id)) ? 'fill-current' : ''}`} />
+                  Wishlist
+                </button>
+              </div>
             </div>
           </article>
         ))}
@@ -1668,7 +1798,7 @@ const TicketsPage = ({ onAddToCart }) => {
   );
 };
 
-const BookingsTicketsPage = ({ onAddToCart }) => {
+const BookingsTicketsPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [] }) => {
   const { t } = useTranslation();
 
   return (
@@ -1684,18 +1814,34 @@ const BookingsTicketsPage = ({ onAddToCart }) => {
         <article key={`booking-${event.id}`} className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
           <h3 className="text-lg font-bold">{event.title}</h3>
           <p className="mt-1 text-sm text-slate-600">{formatDate(event.date)} • {event.location}</p>
-          <button
-            type="button"
-            onClick={() => onAddToCart(createCartItem({
-              ...event,
-              route: '/bookings-tickets',
-              marketName: t('markets.bookings'),
-              details: `${formatDate(event.date)} • ${event.location}`,
-            }))}
-            className={`${cudyBluePrimaryButtonClassName} mt-3 rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white`}
-          >
-            {t('common.bookNow')}
-          </button>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => onAddToCart(createCartItem({
+                ...event,
+                route: '/bookings-tickets',
+                marketName: t('markets.bookings'),
+                details: `${formatDate(event.date)} • ${event.location}`,
+              }))}
+              className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white`}
+            >
+              {t('common.bookNow')}
+            </button>
+            <button
+              type="button"
+              onClick={() => onToggleWishlist(createWishlistItem({
+                ...event,
+                route: '/bookings-tickets',
+                marketName: t('markets.bookings'),
+                details: `${formatDate(event.date)} • ${event.location}`,
+              }))}
+              aria-pressed={wishlistItemIds.includes(getCollectionItemId('/bookings-tickets', event.id))}
+              className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition ${wishlistItemIds.includes(getCollectionItemId('/bookings-tickets', event.id)) ? 'border-rose-200 bg-rose-50 text-rose-600' : 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)] text-[var(--svs-text)]'}`}
+            >
+              <Heart className={`h-4 w-4 ${wishlistItemIds.includes(getCollectionItemId('/bookings-tickets', event.id)) ? 'fill-current' : ''}`} />
+              Wishlist
+            </button>
+          </div>
         </article>
       ))}
     </div>
@@ -1816,7 +1962,7 @@ const VotingProvidersPage = () => {
   );
 };
 
-const GroceriesPage = ({ onAddToCart, sellerItems = [] }) => {
+const GroceriesPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [] }) => {
   const { t } = useTranslation();
   const [tab, setTab] = useState('Fruits');
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'groceries'), ...groceries], [sellerItems]);
@@ -1845,13 +1991,20 @@ const GroceriesPage = ({ onAddToCart, sellerItems = [] }) => {
           marketName: t('markets.groceries'),
           details: item.discount || item.description || item.sellerName,
         }))}
+        onToggleWishlist={(item) => onToggleWishlist(createWishlistItem({
+          ...item,
+          route: '/groceries',
+          marketName: t('markets.groceries'),
+          details: item.discount || item.description || item.sellerName,
+        }))}
+        isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/groceries', item.id))}
         metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} /> • {item.discount || item.description || item.sellerName || 'Seller item'}</p>}
       />
     </PageFrame>
   );
 };
 
-const FastFoodPage = ({ onAddToCart, sellerItems = [] }) => {
+const FastFoodPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [] }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'fastFood'), ...fastFoodItems], [sellerItems]);
 
@@ -1870,13 +2023,20 @@ const FastFoodPage = ({ onAddToCart, sellerItems = [] }) => {
         marketName: t('markets.fastFood'),
         details: `${item.category || 'Seller item'} • ${item.prepTime || item.description || 'Ready to order'}`,
       }))}
+      onToggleWishlist={(item) => onToggleWishlist(createWishlistItem({
+        ...item,
+        route: '/fast-food',
+        marketName: t('markets.fastFood'),
+        details: `${item.category || 'Seller item'} • ${item.prepTime || item.description || 'Ready to order'}`,
+      }))}
+      isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/fast-food', item.id))}
       metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.prepTime || item.description || 'Ready to order'} • <SalePrice price={item.price} /></p>}
     />
   </PageFrame>
   );
 };
 
-const BeveragesLiquorsPage = ({ onAddToCart, sellerItems = [] }) => {
+const BeveragesLiquorsPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [] }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'beverages'), ...beveragesLiquorItems], [sellerItems]);
 
@@ -1899,13 +2059,20 @@ const BeveragesLiquorsPage = ({ onAddToCart, sellerItems = [] }) => {
         marketName: t('markets.beverages'),
         details: `${item.category || 'Seller item'} • ${item.volume || item.description || item.sellerName || 'Marketplace listing'}`,
       }))}
+      onToggleWishlist={(item) => onToggleWishlist(createWishlistItem({
+        ...item,
+        route: '/beverages-liquors',
+        marketName: t('markets.beverages'),
+        details: `${item.category || 'Seller item'} • ${item.volume || item.description || item.sellerName || 'Marketplace listing'}`,
+      }))}
+      isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/beverages-liquors', item.id))}
       metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.volume || item.description || item.sellerName || 'Marketplace listing'} • <SalePrice price={item.price} /></p>}
     />
   </PageFrame>
   );
 };
 
-const WellnessPage = ({ onAddToCart, sellerItems = [] }) => {
+const WellnessPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [] }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'wellness'), ...wellnessItems], [sellerItems]);
 
@@ -1921,6 +2088,13 @@ const WellnessPage = ({ onAddToCart, sellerItems = [] }) => {
         marketName: t('markets.wellness'),
         details: item.description || item.sellerName,
       }))}
+      onToggleWishlist={(item) => onToggleWishlist(createWishlistItem({
+        ...item,
+        route: '/wellness',
+        marketName: t('markets.wellness'),
+        details: item.description || item.sellerName,
+      }))}
+      isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/wellness', item.id))}
       metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} />{item.description ? ` • ${item.description}` : ''}</p>}
     />
   </PageFrame>
@@ -1960,7 +2134,7 @@ const HomeCarePage = () => {
   );
 };
 
-const HardwareSoftwarePage = ({ onAddToCart, sellerItems = [] }) => {
+const HardwareSoftwarePage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [] }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'hardwareSoftware'), ...techItems], [sellerItems]);
 
@@ -1976,6 +2150,13 @@ const HardwareSoftwarePage = ({ onAddToCart, sellerItems = [] }) => {
         marketName: t('markets.hardwareSoftware'),
         details: item.description || item.subtitle || item.sellerName,
       }))}
+      onToggleWishlist={(item) => onToggleWishlist(createWishlistItem({
+        ...item,
+        route: '/hardware-software',
+        marketName: t('markets.hardwareSoftware'),
+        details: item.description || item.subtitle || item.sellerName,
+      }))}
+      isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/hardware-software', item.id))}
       metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} />{item.description ? ` • ${item.description}` : ''}</p>}
     />
   </PageFrame>
@@ -2406,11 +2587,13 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
           </form>
 
           <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
-            <h2 className="text-xl font-bold text-[var(--svs-text)]">Storage Setup</h2>
+            <h2 className="text-xl font-bold text-[var(--svs-text)]">Listing Tips</h2>
             <div className="mt-4 space-y-3 text-sm text-[var(--svs-muted)]">
-              <p>Use Supabase Postgres for the item details and Supabase Storage for the uploaded image files.</p>
-              <p>The app expects a table named <span className="font-semibold text-[var(--svs-text)]">{SELLER_ITEMS_TABLE}</span> and a public storage bucket named <span className="font-semibold text-[var(--svs-text)]">{SELLER_IMAGES_BUCKET}</span>.</p>
-              <p>Run the SQL in <span className="font-semibold text-[var(--svs-text)]">supabase/seller-marketplace.sql</span> before using this feature in production.</p>
+              <p>Use a clear product title and include important details buyers search for.</p>
+              <p>Add a short description with size, condition, and key features to reduce buyer questions.</p>
+              <p>Use a clean, bright image where the product fills most of the frame.</p>
+              <p>Set a realistic price so your listing performs better in market results.</p>
+              <p>After publishing, you can edit or remove the item anytime from My Store.</p>
             </div>
           </section>
         </div>
@@ -2716,6 +2899,54 @@ const OffersPage = () => {
   );
 };
 
+const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem }) => (
+  <PageFrame title="Wishlist" subtitle="Save items you want to come back to later.">
+    {!wishlistItems.length ? (
+      <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 text-sm text-[var(--svs-text)]">
+        <p>Your wishlist is empty. Save products or tickets from any market to find them quickly later.</p>
+        <Link to="/markets" className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
+          Browse Markets
+        </Link>
+      </div>
+    ) : (
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {wishlistItems.map((item) => (
+          <article key={item.id} className="overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
+            {item.image ? <img src={item.image} alt={item.title} className="h-44 w-full object-cover" loading="lazy" /> : null}
+            <div className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-bold text-[var(--svs-text)]">{item.title}</h3>
+                  <p className="mt-1 text-sm text-[var(--svs-muted)]">{item.marketName}</p>
+                </div>
+                <Heart className="h-5 w-5 fill-current text-rose-500" />
+              </div>
+              {item.details ? <p className="mt-2 text-sm text-[var(--svs-muted)]">{item.details}</p> : null}
+              <p className="mt-3 text-sm font-semibold text-[var(--svs-primary-strong)]">{item.unitPriceLabel}</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => onAddToCart({ ...item, quantity: 1 })}
+                  className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white`}
+                >
+                  Add to cart
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onRemoveWishlistItem(item.id)}
+                  className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    )}
+  </PageFrame>
+);
+
 const CheckoutPage = ({ cartItems, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder }) => {
   const navigate = useNavigate();
   const [formState, setFormState] = useState({
@@ -2934,7 +3165,7 @@ const PageFrame = ({ title, subtitle, children, darkHero = false }) => (
   </section>
 );
 
-const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer, onPrimaryAction }) => {
+const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer, onPrimaryAction, onToggleWishlist, isItemWishlisted }) => {
   const { t } = useTranslation();
 
   return (
@@ -2944,7 +3175,20 @@ const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer, onPr
 
         return (
           <article key={item.id} className="overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-card-bg)] shadow-[0_4px_8px_rgba(0,0,0,0.1)] transition hover:scale-[1.03]">
-            <img src={item.image} alt={itemTitle} className="h-40 w-full object-cover" loading="lazy" />
+            <div className="relative">
+              <img src={item.image} alt={itemTitle} className="h-40 w-full object-cover" loading="lazy" />
+              {onToggleWishlist ? (
+                <button
+                  type="button"
+                  onClick={() => onToggleWishlist(item)}
+                  aria-pressed={isItemWishlisted?.(item) || false}
+                  aria-label={isItemWishlisted?.(item) ? 'Remove from wishlist' : 'Add to wishlist'}
+                  className={`absolute right-3 top-3 rounded-full border p-2 transition ${isItemWishlisted?.(item) ? 'border-rose-200 bg-rose-50 text-rose-600' : 'border-white/70 bg-white/90 text-slate-700 hover:bg-white'}`}
+                >
+                  <Heart className={`h-4 w-4 ${isItemWishlisted?.(item) ? 'fill-current' : ''}`} />
+                </button>
+              ) : null}
+            </div>
             <div className="p-4">
               <h3 className="text-lg font-bold">{itemTitle}</h3>
               <div className="mt-1">{metaRenderer(item)}</div>
@@ -3020,7 +3264,7 @@ const SiteFooter = () => {
   );
 };
 
-const AppRoutes = ({ cartItems, orders, sellerItems, onAddToCart, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder, onAdvanceOrderStatus, onSellerItemCreated, onDeleteSellerItem, onUpdateSellerItem }) => {
+const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerItems, onAddToCart, onToggleWishlist, onRemoveWishlistItem, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder, onAdvanceOrderStatus, onSellerItemCreated, onDeleteSellerItem, onUpdateSellerItem }) => {
   const { t } = useTranslation();
 
   return (
@@ -3029,20 +3273,21 @@ const AppRoutes = ({ cartItems, orders, sellerItems, onAddToCart, onUpdateCartQu
     <Route path="/markets" element={<MarketsPage />} />
     <Route path="/offers" element={<OffersPage />} />
     <Route path="/orders" element={<OrdersPage orders={orders} cartItems={cartItems} onAdvanceOrderStatus={onAdvanceOrderStatus} />} />
+    <Route path="/wishlist" element={<WishlistPage wishlistItems={wishlistItems} onAddToCart={onAddToCart} onRemoveWishlistItem={onRemoveWishlistItem} />} />
     <Route path="/checkout" element={<CheckoutPage cartItems={cartItems} onUpdateCartQuantity={onUpdateCartQuantity} onRemoveCartItem={onRemoveCartItem} onPlaceOrder={onPlaceOrder} />} />
     <Route path="/search" element={<SearchResultsPage />} />
 
-    <Route path="/e-commerce" element={<ECommercePage onAddToCart={onAddToCart} sellerItems={sellerItems} />} />
-    <Route path="/tickets" element={<TicketsPage onAddToCart={onAddToCart} />} />
-    <Route path="/bookings-tickets" element={<BookingsTicketsPage onAddToCart={onAddToCart} />} />
+    <Route path="/e-commerce" element={<ECommercePage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} />} />
+    <Route path="/tickets" element={<TicketsPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} />} />
+    <Route path="/bookings-tickets" element={<BookingsTicketsPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} />} />
     <Route path="/voting-clients" element={<VotingClientsPage />} />
     <Route path="/voting-providers" element={<VotingProvidersPage />} />
-    <Route path="/groceries" element={<GroceriesPage onAddToCart={onAddToCart} sellerItems={sellerItems} />} />
-    <Route path="/fast-food" element={<FastFoodPage onAddToCart={onAddToCart} sellerItems={sellerItems} />} />
-    <Route path="/beverages-liquors" element={<BeveragesLiquorsPage onAddToCart={onAddToCart} sellerItems={sellerItems} />} />
-    <Route path="/wellness" element={<WellnessPage onAddToCart={onAddToCart} sellerItems={sellerItems} />} />
+    <Route path="/groceries" element={<GroceriesPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} />} />
+    <Route path="/fast-food" element={<FastFoodPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} />} />
+    <Route path="/beverages-liquors" element={<BeveragesLiquorsPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} />} />
+    <Route path="/wellness" element={<WellnessPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} />} />
     <Route path="/home-care" element={<HomeCarePage />} />
-    <Route path="/hardware-software" element={<HardwareSoftwarePage onAddToCart={onAddToCart} sellerItems={sellerItems} />} />
+    <Route path="/hardware-software" element={<HardwareSoftwarePage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} />} />
     <Route path="/seller/upload" element={<SellerUploadPage onSellerItemCreated={onSellerItemCreated} />} />
     <Route path="/seller/dashboard" element={<SellerDashboardPage onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} />} />
     <Route path="/property-hub" element={<PropertyHubPage />} />
@@ -3070,16 +3315,103 @@ const AppRoutes = ({ cartItems, orders, sellerItems, onAddToCart, onUpdateCartQu
 
 const App = () => {
   const [cartItems, setCartItems] = useState(getStoredCartItems);
+  const [wishlistItems, setWishlistItems] = useState(getStoredWishlistItems);
   const [orders, setOrders] = useState(getStoredOrders);
   const [sellerItems, setSellerItems] = useState([]);
+  const [activeUserEmail, setActiveUserEmail] = useState(getCurrentUserEmail);
+  const [hasLoadedUserCollections, setHasLoadedUserCollections] = useState(false);
+  const wishlistItemIds = useMemo(() => wishlistItems.map((item) => item.id), [wishlistItems]);
 
   useEffect(() => {
-    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
-  }, [cartItems]);
+    const handleAuthChange = () => {
+      setActiveUserEmail(getCurrentUserEmail());
+    };
+
+    window.addEventListener('svs-auth-changed', handleAuthChange);
+    window.addEventListener('storage', handleAuthChange);
+
+    return () => {
+      window.removeEventListener('svs-auth-changed', handleAuthChange);
+      window.removeEventListener('storage', handleAuthChange);
+    };
+  }, []);
 
   useEffect(() => {
-    window.localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
-  }, [orders]);
+    // Remove old shared keys so cart/wishlist no longer leak between users.
+    window.localStorage.removeItem(CART_STORAGE_KEY);
+    window.localStorage.removeItem(WISHLIST_STORAGE_KEY);
+
+    window.localStorage.setItem(getUserScopedStorageKey(CART_STORAGE_KEY, activeUserEmail), JSON.stringify(cartItems));
+  }, [activeUserEmail, cartItems]);
+
+  useEffect(() => {
+    window.localStorage.setItem(getUserScopedStorageKey(WISHLIST_STORAGE_KEY, activeUserEmail), JSON.stringify(wishlistItems));
+  }, [activeUserEmail, wishlistItems]);
+
+  useEffect(() => {
+    // Remove old shared key so orders no longer leak between users.
+    window.localStorage.removeItem(ORDERS_STORAGE_KEY);
+
+    window.localStorage.setItem(getUserScopedStorageKey(ORDERS_STORAGE_KEY, activeUserEmail), JSON.stringify(orders));
+  }, [activeUserEmail, orders]);
+
+  useEffect(() => {
+    const localCartItems = getStoredCartItems(activeUserEmail);
+    const localWishlistItems = getStoredWishlistItems(activeUserEmail);
+    const localOrders = getStoredOrders(activeUserEmail);
+
+    // Clear previous user's state immediately before loading the current user's records.
+    setCartItems([]);
+    setWishlistItems([]);
+    setOrders([]);
+    setCartItems(localCartItems);
+    setWishlistItems(localWishlistItems);
+    setOrders(localOrders);
+
+    if (!getAuthState() || !activeUserEmail || !hasSupabaseEnv || !supabase) {
+      setHasLoadedUserCollections(true);
+      return;
+    }
+
+    let isCancelled = false;
+
+    const loadUserCollections = async () => {
+      setHasLoadedUserCollections(false);
+
+      const [cartResponse, wishlistResponse] = await Promise.all([
+        supabase
+          .from(CART_ITEMS_TABLE)
+          .select('item_key, sku, title, image_url, route, market_name, details, quantity, unit_price, unit_price_label')
+          .eq('user_email', activeUserEmail)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from(WISHLIST_ITEMS_TABLE)
+          .select('item_key, sku, title, image_url, route, market_name, details, unit_price, unit_price_label')
+          .eq('user_email', activeUserEmail)
+          .order('created_at', { ascending: false }),
+      ]);
+
+      if (isCancelled) {
+        return;
+      }
+
+      if (!cartResponse.error) {
+        setCartItems((cartResponse.data || []).map(mapCartItemRecord));
+      }
+
+      if (!wishlistResponse.error) {
+        setWishlistItems((wishlistResponse.data || []).map(mapWishlistItemRecord));
+      }
+
+      setHasLoadedUserCollections(true);
+    };
+
+    loadUserCollections();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [activeUserEmail]);
 
   const loadSellerItems = useCallback(async () => {
     if (!hasSupabaseEnv || !supabase) {
@@ -3102,6 +3434,30 @@ const App = () => {
   useEffect(() => {
     loadSellerItems();
   }, [loadSellerItems]);
+
+  useEffect(() => {
+    if (!hasLoadedUserCollections || !getAuthState() || !activeUserEmail || !hasSupabaseEnv || !supabase) {
+      return;
+    }
+
+    syncUserCollection({
+      tableName: CART_ITEMS_TABLE,
+      userEmail: activeUserEmail,
+      records: cartItems.map((item) => toCartItemRecord(activeUserEmail, item)),
+    });
+  }, [activeUserEmail, cartItems, hasLoadedUserCollections]);
+
+  useEffect(() => {
+    if (!hasLoadedUserCollections || !getAuthState() || !activeUserEmail || !hasSupabaseEnv || !supabase) {
+      return;
+    }
+
+    syncUserCollection({
+      tableName: WISHLIST_ITEMS_TABLE,
+      userEmail: activeUserEmail,
+      records: wishlistItems.map((item) => toWishlistItemRecord(activeUserEmail, item)),
+    });
+  }, [activeUserEmail, hasLoadedUserCollections, wishlistItems]);
 
   const handleAddToCart = useCallback((cartItem) => {
     setCartItems((currentItems) => {
@@ -3138,6 +3494,18 @@ const App = () => {
 
   const handleRemoveCartItem = useCallback((itemId) => {
     setCartItems((currentItems) => currentItems.filter((item) => item.id !== itemId));
+  }, []);
+
+  const handleToggleWishlist = useCallback((wishlistItem) => {
+    setWishlistItems((currentItems) => (
+      currentItems.some((item) => item.id === wishlistItem.id)
+        ? currentItems.filter((item) => item.id !== wishlistItem.id)
+        : [wishlistItem, ...currentItems]
+    ));
+  }, []);
+
+  const handleRemoveWishlistItem = useCallback((itemId) => {
+    setWishlistItems((currentItems) => currentItems.filter((item) => item.id !== itemId));
   }, []);
 
   const handlePlaceOrder = useCallback((customer) => {
@@ -3232,12 +3600,16 @@ const App = () => {
   }, []);
 
   return (
-    <Shell cartItemCount={getCartCount(cartItems)}>
+    <Shell cartItemCount={getCartCount(cartItems)} wishlistItemCount={wishlistItems.length}>
       <AppRoutes
         cartItems={cartItems}
+        wishlistItems={wishlistItems}
+        wishlistItemIds={wishlistItemIds}
         orders={orders}
         sellerItems={sellerItems}
         onAddToCart={handleAddToCart}
+        onToggleWishlist={handleToggleWishlist}
+        onRemoveWishlistItem={handleRemoveWishlistItem}
         onUpdateCartQuantity={handleUpdateCartQuantity}
         onRemoveCartItem={handleRemoveCartItem}
         onPlaceOrder={handlePlaceOrder}
