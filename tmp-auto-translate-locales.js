@@ -8,6 +8,7 @@ const onlyPrefixes = String(process.env.ONLY_PREFIXES || '')
   .split(',')
   .map((value) => value.trim())
   .filter(Boolean);
+const forceTranslate = String(process.env.FORCE_TRANSLATE || '').toLowerCase() === 'true';
 
 const langMap = {
   af: 'af', ar: 'ar', bn: 'bn', de: 'de', es: 'es', fil: 'tl', fr: 'fr', hi: 'hi',
@@ -108,9 +109,9 @@ async function translateText(input, targetLang) {
     const locale = JSON.parse(fs.readFileSync(filePath, 'utf8'));
     const localeFlat = flatten(locale);
 
-    const keysToTranslate = filteredKeys.filter((k) => {
-      return localeFlat[k] === undefined || String(localeFlat[k]) === String(enFlat[k]);
-    });
+    const keysToTranslate = forceTranslate
+      ? filteredKeys
+      : filteredKeys.filter((k) => localeFlat[k] === undefined || String(localeFlat[k]) === String(enFlat[k]));
 
     if (keysToTranslate.length === 0) {
       console.log(`${code}: nothing to translate`);

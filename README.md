@@ -7,8 +7,15 @@
 	- `REACT_APP_SUPABASE_URL`
 	- `REACT_APP_SUPABASE_ANON_KEY`
 3. Start the app with `npm start`.
+4. To enable persistent seller uploads, run the SQL in `supabase/seller-marketplace.sql` inside the Supabase SQL editor.
 
 Do not use your Supabase service role (secret) key in this React app.
+
+## Seller Upload Storage
+
+- Item details are stored in Supabase Postgres table `marketplace_items`.
+- Item images are stored in Supabase Storage bucket `marketplace-items`.
+- Uploaded items continue to appear after terminal restarts because they are stored in Supabase, not in local component state.
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 

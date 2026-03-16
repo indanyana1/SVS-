@@ -8,6 +8,7 @@ import {
   MapPin,
   Menu,
   Moon,
+  Plus,
   Search,
   ShieldCheck,
   ShoppingCart,
@@ -34,23 +35,37 @@ const navItems = [
 
 const marketLinks = [
   { labelKey: 'markets.ecommerce', href: '/e-commerce' },
-  { labelKey: 'markets.tickets', href: '/tickets' },
-  { labelKey: 'markets.bookings', href: '/bookings-tickets' },
-  { labelKey: 'markets.votingClients', href: '/voting-clients' },
-  { labelKey: 'markets.votingProviders', href: '/voting-providers' },
-  { labelKey: 'markets.groceries', href: '/groceries' },
-  { labelKey: 'markets.fastFood', href: '/fast-food' },
   { labelKey: 'markets.beverages', href: '/beverages-liquors' },
-  { labelKey: 'markets.wellness', href: '/wellness' },
-  { labelKey: 'markets.homeCare', href: '/home-care' },
-  { labelKey: 'markets.hardwareSoftware', href: '/hardware-software' },
   { labelKey: 'markets.bettingHub', href: '/betting-hub' },
   { labelKey: 'markets.bettingVoting', href: '/betting-voting' },
-  { labelKey: 'markets.safety', href: '/safety' },
-  { labelKey: 'markets.propertyHub', href: '/property-hub' },
+  { labelKey: 'markets.bookings', href: '/bookings-tickets' },
+  { labelKey: 'markets.fastFood', href: '/fast-food' },
+  { labelKey: 'markets.groceries', href: '/groceries' },
+  { labelKey: 'markets.hardwareSoftware', href: '/hardware-software' },
   { labelKey: 'markets.internationalLotteryGames', href: '/international-lottery-games' },
   { labelKey: 'markets.livestockHub', href: '/livestock-hub' },
+  { labelKey: 'markets.homeCare', href: '/home-care' },
+  { labelKey: 'markets.propertyHub', href: '/property-hub' },
+  { labelKey: 'markets.safety', href: '/safety' },
+  { labelKey: 'markets.tickets', href: '/tickets' },
+  { labelKey: 'markets.votingClients', href: '/voting-clients' },
+  { labelKey: 'markets.votingProviders', href: '/voting-providers' },
+  { labelKey: 'markets.wellness', href: '/wellness' },
 ];
+
+const sellerMarketOptions = [
+  { key: 'ecommerce', labelKey: 'markets.ecommerce', route: '/e-commerce' },
+  { key: 'groceries', labelKey: 'markets.groceries', route: '/groceries' },
+  { key: 'fastFood', labelKey: 'markets.fastFood', route: '/fast-food' },
+  { key: 'beverages', labelKey: 'markets.beverages', route: '/beverages-liquors' },
+  { key: 'wellness', labelKey: 'markets.wellness', route: '/wellness' },
+  { key: 'hardwareSoftware', labelKey: 'markets.hardwareSoftware', route: '/hardware-software' },
+];
+
+const sellerMarketConfig = sellerMarketOptions.reduce((accumulator, option) => {
+  accumulator[option.key] = option;
+  return accumulator;
+}, {});
 
 const productCards = [
   {
@@ -693,15 +708,38 @@ const getThemePreference = () => {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 };
 
-const CUDY_BLUE_TEST_STORAGE_KEY = 'svs-test-cudy-blue';
+const CART_STORAGE_KEY = 'svs-cart-items';
+const ORDERS_STORAGE_KEY = 'svs-orders';
+const ORDER_STATUS_FLOW = ['Confirmed', 'Processing', 'Ready', 'Completed'];
+const SELLER_ITEMS_TABLE = 'marketplace_items';
+const SELLER_IMAGES_BUCKET = 'marketplace-items';
 
-const getCudyBlueTestPreference = () => {
+const getStoredCollection = (storageKey) => {
   if (typeof window === 'undefined') {
-    return false;
+    return [];
   }
 
-  return window.localStorage.getItem(CUDY_BLUE_TEST_STORAGE_KEY) === 'true';
+  try {
+    const storedValue = window.localStorage.getItem(storageKey);
+
+    if (!storedValue) {
+      return [];
+    }
+
+    const parsedValue = JSON.parse(storedValue);
+    return Array.isArray(parsedValue) ? parsedValue : [];
+  } catch {
+    return [];
+  }
 };
+
+const getStoredCartItems = () => getStoredCollection(CART_STORAGE_KEY);
+const getStoredOrders = () => getStoredCollection(ORDERS_STORAGE_KEY);
+
+const sanitizeStorageSegment = (value) => String(value || 'seller')
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/^-+|-+$/g, '') || 'seller';
 
 const cudyBluePrimaryButtonClassName = 'svs-test-primary-button';
 const cudyBluePrimaryOutlineClassName = 'svs-test-primary-outline';
@@ -720,6 +758,92 @@ const formatSaleAmount = (amount, decimals) => new Intl.NumberFormat('en-US', {
   minimumFractionDigits: decimals,
   maximumFractionDigits: decimals,
 }).format(amount);
+
+const formatCheckoutAmount = (amount) => formatSaleAmount(amount, 2);
+
+const getNumericPriceValue = (price, discountRate = SALE_DISCOUNT_RATE) => {
+  const text = String(price ?? '').trim();
+  const match = text.match(/^([^\d-]*)(\d[\d,]*(?:\.\d+)?)(.*)$/);
+
+  if (!match) {
+    return 0;
+  }
+
+  const amount = Number(match[2].replace(/,/g, ''));
+
+  if (Number.isNaN(amount)) {
+    return 0;
+  }
+
+  return Math.max(amount * (1 - discountRate), 0);
+};
+
+const getCartCount = (cartItems) => cartItems.reduce((total, item) => total + item.quantity, 0);
+const getCartSubtotal = (cartItems) => cartItems.reduce((total, item) => total + (item.unitPrice * item.quantity), 0);
+const getServiceFee = (subtotal) => subtotal * 0.03;
+
+const getCartTotals = (cartItems) => {
+  const subtotal = getCartSubtotal(cartItems);
+  const serviceFee = getServiceFee(subtotal);
+
+  return {
+    subtotal,
+    serviceFee,
+    total: subtotal + serviceFee,
+  };
+};
+
+const getOrderStatusStep = (status) => {
+  const currentIndex = ORDER_STATUS_FLOW.indexOf(status);
+  const nextIndex = Math.min(currentIndex + 1, ORDER_STATUS_FLOW.length - 1);
+  return ORDER_STATUS_FLOW[nextIndex] || ORDER_STATUS_FLOW[0];
+};
+
+const createCartItem = ({ id, title, image, price, route, marketName, details = '' }) => ({
+  id: `${route}:${id}`,
+  sku: id,
+  title,
+  image,
+  route,
+  marketName,
+  details,
+  quantity: 1,
+  unitPrice: getNumericPriceValue(price),
+  unitPriceLabel: getSalePrices(price).nowPrice,
+});
+
+const getStatusClasses = (status) => {
+  switch (status) {
+    case 'Completed':
+      return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+    case 'Ready':
+      return 'border-cyan-200 bg-cyan-50 text-cyan-700';
+    case 'Processing':
+      return 'border-amber-200 bg-amber-50 text-amber-700';
+    default:
+      return 'border-slate-200 bg-slate-100 text-slate-700';
+  }
+};
+
+const mapSellerItemRecord = (record) => {
+  const marketConfig = sellerMarketConfig[record.market_key] || sellerMarketOptions[0];
+
+  return {
+    id: `seller-${record.id}`,
+    dbId: record.id,
+    title: record.title,
+    description: record.description || '',
+    price: record.price,
+    image: record.image_url,
+    marketKey: record.market_key,
+    route: marketConfig.route,
+    sellerName: record.seller_name || record.seller_email || 'Seller',
+    sellerEmail: record.seller_email || '',
+    createdAt: record.created_at,
+  };
+};
+
+const getSellerItemsForMarket = (items, marketKey) => items.filter((item) => item.marketKey === marketKey);
 
 const getSalePrices = (price, discountRate = SALE_DISCOUNT_RATE) => {
   const text = String(price ?? '').trim();
@@ -818,7 +942,7 @@ const LanguageSelectorPopover = ({
   );
 };
 
-const Shell = ({ children }) => {
+const Shell = ({ children, cartItemCount = 0 }) => {
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -831,7 +955,6 @@ const Shell = ({ children }) => {
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileName, setProfileName] = useState('SVS User');
   const [theme, setTheme] = useState(getThemePreference);
-  const [isCudyBlueTestEnabled, setIsCudyBlueTestEnabled] = useState(getCudyBlueTestPreference);
   const languageCardRefs = useRef([]);
   const desktopLanguageMenuRef = useRef(null);
   const mobileLanguageMenuRef = useRef(null);
@@ -869,10 +992,6 @@ const Shell = ({ children }) => {
   useEffect(() => {
     window.localStorage.setItem('svs-theme', theme);
   }, [theme]);
-
-  useEffect(() => {
-    window.localStorage.setItem(CUDY_BLUE_TEST_STORAGE_KEY, String(isCudyBlueTestEnabled));
-  }, [isCudyBlueTestEnabled]);
 
   useEffect(() => {
     const loadProfileName = async () => {
@@ -1025,12 +1144,8 @@ const Shell = ({ children }) => {
     setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'));
   };
 
-  const toggleCudyBlueTest = () => {
-    setIsCudyBlueTestEnabled((currentValue) => !currentValue);
-  };
-
   return (
-    <div className={`min-h-screen bg-[var(--svs-bg)] text-[var(--svs-text)] ${isDarkMode ? 'theme-dark' : 'theme-light'} ${isCudyBlueTestEnabled ? 'test-cudy-blue' : ''}`.trim()}>
+    <div className={`min-h-screen bg-[var(--svs-bg)] text-[var(--svs-text)] ${isDarkMode ? 'theme-dark' : 'theme-light'}`.trim()}>
       <header className="fixed top-0 z-50 w-full border-b border-[var(--svs-border)] bg-[var(--svs-nav-bg)]/95 text-[var(--svs-nav-text)] backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-3">
           <Link to="/" className="shrink-0">
@@ -1095,8 +1210,13 @@ const Shell = ({ children }) => {
           </form>
 
           <div className="ml-auto hidden items-center gap-3 text-[var(--svs-nav-text)] sm:flex">
-            <Link to="/orders" aria-label={t('nav.orders')} className="rounded-full p-1.5 transition hover:bg-[var(--svs-cyan-surface)]">
+            <Link to="/checkout" aria-label="Open cart and checkout" className="relative rounded-full p-1.5 transition hover:bg-[var(--svs-cyan-surface)]">
               <ShoppingCart className={`h-5 w-5 ${cudyBluePrimaryIconClassName}`} />
+              {cartItemCount > 0 ? (
+                <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[var(--svs-primary)] px-1 text-[10px] font-bold text-white">
+                  {cartItemCount}
+                </span>
+              ) : null}
             </Link>
             <button type="button" aria-label="Wishlist" className="rounded-full p-1.5 transition hover:bg-[var(--svs-cyan-surface)]">
               <Heart className={`h-5 w-5 ${cudyBluePrimaryIconClassName}`} />
@@ -1141,16 +1261,6 @@ const Shell = ({ children }) => {
               {isDarkMode ? <Sun className="h-4 w-4 text-[var(--svs-primary)]" /> : <Moon className="h-4 w-4 text-[var(--svs-primary-strong)]" />}
               <span>{isDarkMode ? t('theme.light') : t('theme.dark')}</span>
             </button>
-            <button
-              type="button"
-              onClick={toggleCudyBlueTest}
-              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold transition ${isCudyBlueTestEnabled ? 'border-[var(--svs-primary)] bg-[var(--svs-cyan-surface)] text-[var(--svs-primary-strong)]' : 'border-[var(--svs-border)] bg-[var(--svs-surface)] text-[var(--svs-nav-text)] hover:border-[var(--svs-primary)]'}`}
-              aria-pressed={isCudyBlueTestEnabled}
-              aria-label="Toggle Cudy blue test"
-            >
-              <span className={`h-2.5 w-2.5 rounded-full ${isCudyBlueTestEnabled ? 'bg-[var(--svs-primary)]' : 'bg-[var(--svs-border)]'}`} />
-              <span>Test Blue</span>
-            </button>
             <div className="relative">
               <button
                 type="button"
@@ -1172,6 +1282,13 @@ const Shell = ({ children }) => {
                 <div className="absolute right-0 top-[calc(100%+8px)] w-56 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3 shadow-xl">
                   <p className="text-xs uppercase tracking-wide text-[var(--svs-muted)]">{t('profile.signedInAs')}</p>
                   <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{profileName}</p>
+                  <Link
+                    to="/seller/dashboard"
+                    onClick={() => setProfileOpen(false)}
+                    className="mt-3 block w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-center text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)]"
+                  >
+                    My Store
+                  </Link>
                   <button
                     type="button"
                     onClick={handleLogout}
@@ -1213,16 +1330,6 @@ const Shell = ({ children }) => {
             >
               {isDarkMode ? <Sun className="h-4 w-4 text-[var(--svs-primary)]" /> : <Moon className="h-4 w-4 text-[var(--svs-primary-strong)]" />}
               {t('theme.switchTo', { mode: isDarkMode ? t('theme.light') : t('theme.dark') })}
-            </button>
-            <button
-              type="button"
-              onClick={toggleCudyBlueTest}
-              className={`mb-3 inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold ${isCudyBlueTestEnabled ? 'border-[var(--svs-primary)] bg-[var(--svs-cyan-surface)] text-[var(--svs-primary-strong)]' : 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)] text-[var(--svs-text)]'}`}
-              aria-pressed={isCudyBlueTestEnabled}
-              aria-label="Toggle Cudy blue test"
-            >
-              <span className={`h-2.5 w-2.5 rounded-full ${isCudyBlueTestEnabled ? 'bg-[var(--svs-primary)]' : 'bg-[var(--svs-border)]'}`} />
-              <span>Test Blue</span>
             </button>
             <div className="relative mb-3" ref={mobileLanguageMenuRef}>
               <button
@@ -1272,7 +1379,11 @@ const Shell = ({ children }) => {
                     {t('profile.signUp')}
                   </Link>
                 </>
-              ) : null}
+              ) : (
+                <Link to="/seller/dashboard" onClick={() => setMobileOpen(false)} className="block rounded-md bg-[var(--svs-surface-soft)] px-3 py-2">
+                  My Store
+                </Link>
+              )}
             </div>
           </div>
         ) : null}
@@ -1433,8 +1544,9 @@ const KpiCard = ({ label, value }) => (
   </div>
 );
 
-const ECommercePage = () => {
+const ECommercePage = ({ onAddToCart, sellerItems = [] }) => {
   const { t } = useTranslation();
+  const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'ecommerce'), ...productCards], [sellerItems]);
 
   return (
     <PageFrame
@@ -1443,16 +1555,22 @@ const ECommercePage = () => {
       darkHero
     >
       <CardGrid
-        items={productCards}
+        items={marketItems}
         buttonLabel={t('common.addToCart')}
         secondaryButtonLabel={t('common.viewMore')}
-        metaRenderer={(item) => <p className="text-sm text-slate-500">{item.subtitle} • <SalePrice price={item.price} /></p>}
+        onPrimaryAction={(item) => onAddToCart(createCartItem({
+          ...item,
+          route: '/e-commerce',
+          marketName: t('markets.ecommerce'),
+          details: item.subtitle || item.description || item.sellerName,
+        }))}
+        metaRenderer={(item) => <p className="text-sm text-slate-500">{item.subtitle || item.description || item.sellerName || 'Seller item'} • <SalePrice price={item.price} /></p>}
       />
     </PageFrame>
   );
 };
 
-const TicketsPage = () => {
+const TicketsPage = ({ onAddToCart }) => {
   const { t, i18n } = useTranslation();
   const [typeFilter, setTypeFilter] = useState('All');
   const [locationFilter, setLocationFilter] = useState('All');
@@ -1519,7 +1637,16 @@ const TicketsPage = () => {
               <p className="mt-1 flex items-center gap-1 text-sm text-slate-600"><CalendarDays className="h-4 w-4" /> {formatDate(event.date, currentLocale)}</p>
               <p className="mt-1 flex items-center gap-1 text-sm text-slate-600"><MapPin className="h-4 w-4" /> {t(event.locationKey, { defaultValue: event.location })}</p>
               <p className="mt-2 text-sm text-[var(--svs-primary-strong)]">{t(event.typeKey, { defaultValue: event.type })} • <SalePrice price={event.price} /></p>
-              <button type="button" className={`${cudyBluePrimaryButtonClassName} mt-3 rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}>
+              <button
+                type="button"
+                onClick={() => onAddToCart(createCartItem({
+                  ...event,
+                  route: '/tickets',
+                  marketName: t('markets.tickets'),
+                  details: `${formatDate(event.date, currentLocale)} • ${t(event.locationKey, { defaultValue: event.location })}`,
+                }))}
+                className={`${cudyBluePrimaryButtonClassName} mt-3 rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}
+              >
                 {t('ticketsPage.bookNow')}
               </button>
             </div>
@@ -1541,7 +1668,7 @@ const TicketsPage = () => {
   );
 };
 
-const BookingsTicketsPage = () => {
+const BookingsTicketsPage = ({ onAddToCart }) => {
   const { t } = useTranslation();
 
   return (
@@ -1557,7 +1684,18 @@ const BookingsTicketsPage = () => {
         <article key={`booking-${event.id}`} className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
           <h3 className="text-lg font-bold">{event.title}</h3>
           <p className="mt-1 text-sm text-slate-600">{formatDate(event.date)} • {event.location}</p>
-          <button type="button" className={`${cudyBluePrimaryButtonClassName} mt-3 rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white`}>{t('common.bookNow')}</button>
+          <button
+            type="button"
+            onClick={() => onAddToCart(createCartItem({
+              ...event,
+              route: '/bookings-tickets',
+              marketName: t('markets.bookings'),
+              details: `${formatDate(event.date)} • ${event.location}`,
+            }))}
+            className={`${cudyBluePrimaryButtonClassName} mt-3 rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white`}
+          >
+            {t('common.bookNow')}
+          </button>
         </article>
       ))}
     </div>
@@ -1678,9 +1816,10 @@ const VotingProvidersPage = () => {
   );
 };
 
-const GroceriesPage = () => {
+const GroceriesPage = ({ onAddToCart, sellerItems = [] }) => {
   const { t } = useTranslation();
   const [tab, setTab] = useState('Fruits');
+  const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'groceries'), ...groceries], [sellerItems]);
 
   return (
     <PageFrame title={t('markets.groceries')} subtitle={t('pageSubtitles.groceries')}>
@@ -1697,17 +1836,24 @@ const GroceriesPage = () => {
         ))}
       </div>
       <CardGrid
-        items={groceries}
+        items={marketItems}
         buttonLabel={t('common.addToBasket')}
         secondaryButtonLabel={t('common.deliveryOptions')}
-        metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} /> • {item.discount}</p>}
+        onPrimaryAction={(item) => onAddToCart(createCartItem({
+          ...item,
+          route: '/groceries',
+          marketName: t('markets.groceries'),
+          details: item.discount || item.description || item.sellerName,
+        }))}
+        metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} /> • {item.discount || item.description || item.sellerName || 'Seller item'}</p>}
       />
     </PageFrame>
   );
 };
 
-const FastFoodPage = () => {
+const FastFoodPage = ({ onAddToCart, sellerItems = [] }) => {
   const { t } = useTranslation();
+  const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'fastFood'), ...fastFoodItems], [sellerItems]);
 
   return (
   <PageFrame
@@ -1715,17 +1861,24 @@ const FastFoodPage = () => {
     subtitle={t('pageSubtitles.fastFood')}
   >
     <CardGrid
-      items={fastFoodItems}
+      items={marketItems}
       buttonLabel={t('common.orderNow')}
       secondaryButtonLabel={t('common.viewMeal')}
-      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category} • {item.prepTime} • <SalePrice price={item.price} /></p>}
+      onPrimaryAction={(item) => onAddToCart(createCartItem({
+        ...item,
+        route: '/fast-food',
+        marketName: t('markets.fastFood'),
+        details: `${item.category || 'Seller item'} • ${item.prepTime || item.description || 'Ready to order'}`,
+      }))}
+      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.prepTime || item.description || 'Ready to order'} • <SalePrice price={item.price} /></p>}
     />
   </PageFrame>
   );
 };
 
-const BeveragesLiquorsPage = () => {
+const BeveragesLiquorsPage = ({ onAddToCart, sellerItems = [] }) => {
   const { t } = useTranslation();
+  const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'beverages'), ...beveragesLiquorItems], [sellerItems]);
 
   return (
   <PageFrame
@@ -1737,25 +1890,38 @@ const BeveragesLiquorsPage = () => {
     </div>
 
     <CardGrid
-      items={beveragesLiquorItems}
+      items={marketItems}
       buttonLabel={t('common.addToCart')}
       secondaryButtonLabel={t('common.viewDetails')}
-      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category} • {item.volume} • <SalePrice price={item.price} /></p>}
+      onPrimaryAction={(item) => onAddToCart(createCartItem({
+        ...item,
+        route: '/beverages-liquors',
+        marketName: t('markets.beverages'),
+        details: `${item.category || 'Seller item'} • ${item.volume || item.description || item.sellerName || 'Marketplace listing'}`,
+      }))}
+      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.volume || item.description || item.sellerName || 'Marketplace listing'} • <SalePrice price={item.price} /></p>}
     />
   </PageFrame>
   );
 };
 
-const WellnessPage = () => {
+const WellnessPage = ({ onAddToCart, sellerItems = [] }) => {
   const { t } = useTranslation();
+  const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'wellness'), ...wellnessItems], [sellerItems]);
 
   return (
   <PageFrame title={t('markets.wellness')} subtitle={t('pageSubtitles.wellness')}>
     <CardGrid
-      items={wellnessItems}
+      items={marketItems}
       buttonLabel={t('common.add')}
       secondaryButtonLabel={t('common.uploadPrescription')}
-      metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} /></p>}
+      onPrimaryAction={(item) => onAddToCart(createCartItem({
+        ...item,
+        route: '/wellness',
+        marketName: t('markets.wellness'),
+        details: item.description || item.sellerName,
+      }))}
+      metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} />{item.description ? ` • ${item.description}` : ''}</p>}
     />
   </PageFrame>
   );
@@ -1794,18 +1960,462 @@ const HomeCarePage = () => {
   );
 };
 
-const HardwareSoftwarePage = () => {
+const HardwareSoftwarePage = ({ onAddToCart, sellerItems = [] }) => {
   const { t } = useTranslation();
+  const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'hardwareSoftware'), ...techItems], [sellerItems]);
 
   return (
   <PageFrame title={t('markets.hardwareSoftware')} subtitle={t('pageSubtitles.hardwareSoftware')}>
     <CardGrid
-      items={techItems}
+      items={marketItems}
       buttonLabel={t('common.addToCart')}
       secondaryButtonLabel={t('common.viewMore')}
-      metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} /></p>}
+      onPrimaryAction={(item) => onAddToCart(createCartItem({
+        ...item,
+        route: '/hardware-software',
+        marketName: t('markets.hardwareSoftware'),
+        details: item.description || item.subtitle || item.sellerName,
+      }))}
+      metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} />{item.description ? ` • ${item.description}` : ''}</p>}
     />
   </PageFrame>
+  );
+};
+
+const MARKET_BADGE_COLORS = {
+  ecommerce: 'bg-blue-100 text-blue-700',
+  groceries: 'bg-green-100 text-green-700',
+  fastFood: 'bg-orange-100 text-orange-700',
+  beverages: 'bg-purple-100 text-purple-700',
+  wellness: 'bg-teal-100 text-teal-700',
+  hardwareSoftware: 'bg-slate-100 text-slate-700',
+};
+
+const SellerDashboardPage = ({ onDeleteSellerItem, onUpdateSellerItem }) => {
+  const { t } = useTranslation();
+  const isAuthenticated = getAuthState();
+  const userEmail = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || '');
+
+  const [myListings, setMyListings] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({ title: '', description: '', price: '', marketKey: '', imageFile: null });
+  const [editMessage, setEditMessage] = useState('');
+  const [editMessageType, setEditMessageType] = useState('idle');
+  const [isSaving, setIsSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
+  useEffect(() => {
+    if (!isAuthenticated || !hasSupabaseEnv || !supabase) return;
+
+    const fetchMyListings = async () => {
+      setIsLoading(true);
+      setLoadError('');
+
+      const { data, error } = await supabase
+        .from(SELLER_ITEMS_TABLE)
+        .select('*')
+        .eq('seller_email', userEmail)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        setLoadError('Could not load your listings. Check your connection and try again.');
+      } else {
+        setMyListings((data || []).map(mapSellerItemRecord));
+      }
+
+      setIsLoading(false);
+    };
+
+    fetchMyListings();
+  }, [isAuthenticated, userEmail]);
+
+  const openEdit = (item) => {
+    setEditingId(item.dbId);
+    setEditForm({ title: item.title, description: item.description, price: item.price, marketKey: item.marketKey, imageFile: null });
+    setEditMessage('');
+    setEditMessageType('idle');
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditForm({ title: '', description: '', price: '', marketKey: '', imageFile: null });
+    setEditMessage('');
+  };
+
+  const handleEditChange = (event) => {
+    const { name, value } = event.target;
+    setEditForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleSaveEdit = async (item) => {
+    setIsSaving(true);
+    setEditMessage('');
+    setEditMessageType('idle');
+
+    const result = await onUpdateSellerItem(
+      item.dbId,
+      { title: editForm.title, description: editForm.description, price: editForm.price, marketKey: editForm.marketKey, imageUrl: item.image },
+      editForm.imageFile || null,
+    );
+
+    if (result.error) {
+      setEditMessage(`Failed to save changes: ${result.error}`);
+      setEditMessageType('error');
+      setIsSaving(false);
+      return;
+    }
+
+    setMyListings((current) =>
+      current.map((listing) => (listing.dbId === item.dbId ? mapSellerItemRecord(result.data) : listing)),
+    );
+    setEditingId(null);
+    setIsSaving(false);
+  };
+
+  const handleDelete = async (item) => {
+    setDeletingId(item.dbId);
+    await onDeleteSellerItem(item.dbId, item.image);
+    setMyListings((current) => current.filter((listing) => listing.dbId !== item.dbId));
+    setConfirmDeleteId(null);
+    setDeletingId(null);
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <PageFrame title="My Store" subtitle="Sign in to manage your product listings.">
+        <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-6 text-sm text-[var(--svs-text)]">
+          <p className="mb-4">You need to be signed in to view and manage your listings.</p>
+          <Link to="/signin" className={`${cudyBluePrimaryButtonClassName} inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
+            Sign In
+          </Link>
+        </div>
+      </PageFrame>
+    );
+  }
+
+  const uniqueMarketCount = new Set(myListings.map((item) => item.marketKey)).size;
+
+  return (
+    <PageFrame title="My Store" subtitle="View, edit, and remove your product listings across all markets.">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-[var(--svs-muted)]">
+          {isLoading
+            ? 'Loading your listings\u2026'
+            : myListings.length === 0
+              ? 'No listings yet. Add your first product to get started.'
+              : `${myListings.length} listing${myListings.length !== 1 ? 's' : ''} across ${uniqueMarketCount} market${uniqueMarketCount !== 1 ? 's' : ''}`}
+        </p>
+        <Link
+          to="/seller/upload"
+          className={`${cudyBluePrimaryButtonClassName} inline-flex items-center gap-2 rounded-lg bg-[var(--svs-primary)] px-4 py-2.5 text-sm font-semibold text-white`}
+        >
+          <Plus className="h-4 w-4" /> Add New Listing
+        </Link>
+      </div>
+
+      {loadError ? (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{loadError}</div>
+      ) : isLoading ? (
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="h-72 animate-pulse rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)]" />
+          ))}
+        </div>
+      ) : myListings.length === 0 ? (
+        <div className="rounded-2xl border-2 border-dashed border-[var(--svs-border)] bg-[var(--svs-surface-soft)] py-16 text-center">
+          <p className="text-base font-semibold text-[var(--svs-text)]">Your store is empty</p>
+          <p className="mt-1 text-sm text-[var(--svs-muted)]">Start by adding your first product listing.</p>
+          <Link
+            to="/seller/upload"
+            className={`${cudyBluePrimaryButtonClassName} mt-5 inline-flex items-center gap-2 rounded-lg bg-[var(--svs-primary)] px-5 py-3 text-sm font-semibold text-white`}
+          >
+            <Plus className="h-4 w-4" /> Add New Listing
+          </Link>
+        </div>
+      ) : (
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {myListings.map((item) => (
+            <article key={item.dbId} className="overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+              <div className="relative h-48 overflow-hidden bg-[var(--svs-surface-soft)]">
+                <img src={item.image} alt={item.title} className="h-full w-full object-cover" loading="lazy" />
+                <span className={`absolute left-3 top-3 rounded-full px-2.5 py-0.5 text-xs font-semibold ${MARKET_BADGE_COLORS[item.marketKey] || 'bg-slate-100 text-slate-700'}`}>
+                  {t(sellerMarketConfig[item.marketKey]?.labelKey || '')}
+                </span>
+              </div>
+
+              <div className="p-4">
+                <h3 className="text-base font-bold leading-tight text-[var(--svs-text)]">{item.title}</h3>
+                <p className="mt-0.5 text-sm font-semibold text-[var(--svs-primary-strong)]"><SalePrice price={item.price} /></p>
+                {item.description ? (
+                  <p className="mt-1.5 line-clamp-2 text-xs text-[var(--svs-muted)]">{item.description}</p>
+                ) : null}
+
+                {editingId === item.dbId ? (
+                  <div className="mt-4 space-y-3 border-t border-[var(--svs-border)] pt-4">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Product Name</label>
+                      <input name="title" value={editForm.title} onChange={handleEditChange} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Price</label>
+                        <input name="price" value={editForm.price} onChange={handleEditChange} placeholder="e.g. 29.99" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Market</label>
+                        <select name="marketKey" value={editForm.marketKey} onChange={handleEditChange} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none">
+                          {sellerMarketOptions.map((option) => (
+                            <option key={option.key} value={option.key}>{t(option.labelKey)}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Description</label>
+                      <textarea name="description" value={editForm.description} onChange={handleEditChange} rows={3} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Replace Image <span className="font-normal text-[var(--svs-muted)]">(optional)</span></label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(event) => setEditForm((current) => ({ ...current, imageFile: event.target.files?.[0] || null }))}
+                        className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-xs text-[var(--svs-text)] outline-none"
+                      />
+                    </div>
+                    {editMessage ? (
+                      <div className={`rounded-lg px-3 py-2 text-xs ${editMessageType === 'error' ? 'border border-rose-200 bg-rose-50 text-rose-700' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+                        {editMessage}
+                      </div>
+                    ) : null}
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => handleSaveEdit(item)} disabled={isSaving} className={`${cudyBluePrimaryButtonClassName} flex-1 rounded-lg bg-[var(--svs-primary)] px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-60`}>
+                        {isSaving ? 'Saving\u2026' : 'Save Changes'}
+                      </button>
+                      <button type="button" onClick={cancelEdit} disabled={isSaving} className="rounded-lg border border-[var(--svs-border)] px-3 py-2.5 text-sm font-semibold text-[var(--svs-text)]">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-4 flex gap-2">
+                    {confirmDeleteId === item.dbId ? (
+                      <>
+                        <span className="flex-1 self-center text-xs text-[var(--svs-muted)]">Remove this listing?</span>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(item)}
+                          disabled={deletingId === item.dbId}
+                          className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-60"
+                        >
+                          {deletingId === item.dbId ? 'Removing\u2026' : 'Yes, Remove'}
+                        </button>
+                        <button type="button" onClick={() => setConfirmDeleteId(null)} className="rounded-lg border border-[var(--svs-border)] px-3 py-2 text-xs font-semibold text-[var(--svs-text)]">
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => openEdit(item)}
+                          className="flex-1 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)]"
+                        >
+                          Edit Listing
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteId(item.dbId)}
+                          className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
+                        >
+                          Remove
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </PageFrame>
+  );
+};
+
+const SellerUploadPage = ({ onSellerItemCreated }) => {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    price: '',
+    marketKey: sellerMarketOptions[0].key,
+  });
+  const [imageFile, setImageFile] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState('idle');
+  const isAuthenticated = getAuthState();
+  const userEmail = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || '');
+  const userName = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-name') || 'SVS Seller');
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setFormData((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!isAuthenticated) {
+      navigate('/signin');
+      return;
+    }
+
+    if (!hasSupabaseEnv || !supabase) {
+      setMessage('Supabase is not configured. Add the environment values first so seller uploads can be stored.');
+      setMessageType('error');
+      return;
+    }
+
+    if (!imageFile) {
+      setMessage('Select an image before uploading your item.');
+      setMessageType('error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setMessage('');
+    setMessageType('idle');
+
+    const selectedMarket = sellerMarketConfig[formData.marketKey];
+    const fileExtension = imageFile.name.split('.').pop() || 'jpg';
+    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExtension}`;
+    const filePath = `${sanitizeStorageSegment(userEmail)}/${formData.marketKey}/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from(SELLER_IMAGES_BUCKET)
+      .upload(filePath, imageFile, { cacheControl: '3600', upsert: false });
+
+    if (uploadError) {
+      setMessage(`Image upload failed: ${uploadError.message}. Make sure the ${SELLER_IMAGES_BUCKET} bucket exists and allows uploads.`);
+      setMessageType('error');
+      setIsSubmitting(false);
+      return;
+    }
+
+    const { data: publicUrlData } = supabase.storage.from(SELLER_IMAGES_BUCKET).getPublicUrl(filePath);
+
+    const { data, error } = await supabase
+      .from(SELLER_ITEMS_TABLE)
+      .insert({
+        seller_email: userEmail,
+        seller_name: userName,
+        title: formData.title,
+        description: formData.description,
+        price: formData.price,
+        market_key: formData.marketKey,
+        image_url: publicUrlData.publicUrl,
+      })
+      .select('*')
+      .single();
+
+    if (error) {
+      setMessage(`Item save failed: ${error.message}. Create the ${SELLER_ITEMS_TABLE} table before using seller uploads.`);
+      setMessageType('error');
+      setIsSubmitting(false);
+      return;
+    }
+
+    onSellerItemCreated(mapSellerItemRecord(data));
+    setMessage(`Item uploaded successfully to ${t(selectedMarket.labelKey)}.`);
+    setMessageType('success');
+    setFormData({ title: '', description: '', price: '', marketKey: sellerMarketOptions[0].key });
+    setImageFile(null);
+    setIsSubmitting(false);
+
+    setTimeout(() => {
+      navigate(selectedMarket.route);
+    }, 700);
+  };
+
+  return (
+    <PageFrame title="List a New Product" subtitle="Fill in the product details below. Once listed, the item will appear in your chosen market and remain stored across sessions.">
+      <div className="mb-5">
+        <Link to="/seller/dashboard" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--svs-primary)] hover:underline">
+          <ChevronLeft className="h-4 w-4" /> Back to My Store
+        </Link>
+      </div>
+      {!isAuthenticated ? (
+        <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 text-sm text-[var(--svs-text)]">
+          <p>Sign in first to list products for sale.</p>
+          <Link to="/signin" className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
+            Sign In
+          </Link>
+        </div>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <form onSubmit={handleSubmit} className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label htmlFor="seller-title" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Item title</label>
+                <input id="seller-title" name="title" value={formData.title} onChange={handleChange} required className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+              <div>
+                <label htmlFor="seller-price" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Price</label>
+                <input id="seller-price" name="price" value={formData.price} onChange={handleChange} required placeholder="129.99" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+              <div>
+                <label htmlFor="seller-market" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Market</label>
+                <select id="seller-market" name="marketKey" value={formData.marketKey} onChange={handleChange} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none">
+                  {sellerMarketOptions.map((option) => (
+                    <option key={option.key} value={option.key}>{t(option.labelKey)}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="seller-description" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Description</label>
+                <textarea id="seller-description" name="description" value={formData.description} onChange={handleChange} rows={4} placeholder="Short details that should appear with the product in its market." className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="seller-image" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Product image</label>
+                <input
+                  id="seller-image"
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => setImageFile(event.target.files?.[0] || null)}
+                  required
+                  className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none"
+                />
+              </div>
+            </div>
+
+            {message ? (
+              <div className={`mt-4 rounded-lg px-4 py-3 text-sm ${messageType === 'error' ? 'border border-rose-200 bg-rose-50 text-rose-700' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+                {message}
+              </div>
+            ) : null}
+
+            <button type="submit" disabled={isSubmitting} className={`${cudyBluePrimaryButtonClassName} mt-5 rounded-lg bg-[var(--svs-primary)] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70`}>
+              {isSubmitting ? 'Publishing listing\u2026' : 'Publish Listing'}
+            </button>
+          </form>
+
+          <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
+            <h2 className="text-xl font-bold text-[var(--svs-text)]">Storage Setup</h2>
+            <div className="mt-4 space-y-3 text-sm text-[var(--svs-muted)]">
+              <p>Use Supabase Postgres for the item details and Supabase Storage for the uploaded image files.</p>
+              <p>The app expects a table named <span className="font-semibold text-[var(--svs-text)]">{SELLER_ITEMS_TABLE}</span> and a public storage bucket named <span className="font-semibold text-[var(--svs-text)]">{SELLER_IMAGES_BUCKET}</span>.</p>
+              <p>Run the SQL in <span className="font-semibold text-[var(--svs-text)]">supabase/seller-marketplace.sql</span> before using this feature in production.</p>
+            </div>
+          </section>
+        </div>
+      )}
+    </PageFrame>
   );
 };
 
@@ -1985,6 +2595,10 @@ const SafetyPage = () => {
 
 const MarketsPage = () => {
   const { t } = useTranslation();
+  const sortedMarketLinks = useMemo(
+    () => [...marketLinks].sort((a, b) => t(a.labelKey).localeCompare(t(b.labelKey))),
+    [t],
+  );
 
   return (
     <section className="bg-[var(--svs-bg)] px-4 py-10">
@@ -2000,7 +2614,7 @@ const MarketsPage = () => {
       </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {marketLinks.map((market, index) => (
+        {sortedMarketLinks.map((market, index) => (
           <Link
             key={`all-${market.href}`}
             to={market.href}
@@ -2102,12 +2716,202 @@ const OffersPage = () => {
   );
 };
 
-const OrdersPage = () => {
+const CheckoutPage = ({ cartItems, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder }) => {
+  const navigate = useNavigate();
+  const [formState, setFormState] = useState({
+    fullName: '',
+    email: typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''),
+    phone: '',
+    address: '',
+    paymentMethod: 'Card',
+    notes: '',
+  });
+  const totals = useMemo(() => getCartTotals(cartItems), [cartItems]);
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+
+    if (!formState.fullName || !formState.email || !formState.phone || !formState.address || !cartItems.length) {
+      return;
+    }
+
+    const order = onPlaceOrder(formState);
+    navigate('/orders', { state: { orderId: order.id } });
+  };
+
+  return (
+    <PageFrame title="Checkout" subtitle="Review your cart, confirm your details, and place your order.">
+      {!cartItems.length ? (
+        <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 text-sm text-[var(--svs-text)]">
+          <p>Your cart is empty. Add products or tickets from any market to continue.</p>
+          <Link to="/markets" className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
+            Browse Markets
+          </Link>
+        </div>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-[1.4fr_0.9fr]">
+          <section className="space-y-4">
+            {cartItems.map((item) => (
+              <article key={item.id} className="flex gap-4 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
+                <img src={item.image} alt={item.title} className="h-24 w-24 rounded-lg object-cover" loading="lazy" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-lg font-bold text-[var(--svs-text)]">{item.title}</h3>
+                      <p className="mt-1 text-sm text-[var(--svs-muted)]">{item.marketName}</p>
+                      {item.details ? <p className="mt-1 text-sm text-[var(--svs-muted)]">{item.details}</p> : null}
+                    </div>
+                    <p className="text-sm font-semibold text-[var(--svs-primary-strong)]">{item.unitPriceLabel}</p>
+                  </div>
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                    <div className="inline-flex items-center overflow-hidden rounded-lg border border-[var(--svs-border)]">
+                      <button type="button" onClick={() => onUpdateCartQuantity(item.id, -1)} className="px-3 py-2 text-sm font-semibold text-[var(--svs-text)]">-</button>
+                      <span className="min-w-10 border-x border-[var(--svs-border)] px-3 py-2 text-center text-sm font-semibold text-[var(--svs-text)]">{item.quantity}</span>
+                      <button type="button" onClick={() => onUpdateCartQuantity(item.id, 1)} className="px-3 py-2 text-sm font-semibold text-[var(--svs-text)]">+</button>
+                    </div>
+                    <button type="button" onClick={() => onRemoveCartItem(item.id)} className="text-sm font-semibold text-rose-600 transition hover:text-rose-500">
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </section>
+
+          <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
+            <h2 className="text-xl font-bold text-[var(--svs-text)]">Order Summary</h2>
+            <div className="mt-4 space-y-2 text-sm text-[var(--svs-muted)]">
+              <div className="flex items-center justify-between"><span>Items</span><span>{getCartCount(cartItems)}</span></div>
+              <div className="flex items-center justify-between"><span>Subtotal</span><span>{formatCheckoutAmount(totals.subtotal)}</span></div>
+              <div className="flex items-center justify-between"><span>Service fee</span><span>{formatCheckoutAmount(totals.serviceFee)}</span></div>
+              <div className="flex items-center justify-between border-t border-[var(--svs-border)] pt-3 text-base font-bold text-[var(--svs-text)]"><span>Total</span><span>{formatCheckoutAmount(totals.total)}</span></div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="mt-5 space-y-3">
+              <input
+                type="text"
+                value={formState.fullName}
+                onChange={(event) => setFormState((current) => ({ ...current, fullName: event.target.value }))}
+                placeholder="Full name"
+                className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
+              />
+              <input
+                type="email"
+                value={formState.email}
+                onChange={(event) => setFormState((current) => ({ ...current, email: event.target.value }))}
+                placeholder="Email address"
+                className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
+              />
+              <input
+                type="tel"
+                value={formState.phone}
+                onChange={(event) => setFormState((current) => ({ ...current, phone: event.target.value }))}
+                placeholder="Phone number"
+                className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
+              />
+              <textarea
+                value={formState.address}
+                onChange={(event) => setFormState((current) => ({ ...current, address: event.target.value }))}
+                placeholder="Delivery address or booking notes"
+                rows={3}
+                className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
+              />
+              <select
+                value={formState.paymentMethod}
+                onChange={(event) => setFormState((current) => ({ ...current, paymentMethod: event.target.value }))}
+                className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
+              >
+                <option>Card</option>
+                <option>Cash on Delivery</option>
+                <option>Bank Transfer</option>
+              </select>
+              <textarea
+                value={formState.notes}
+                onChange={(event) => setFormState((current) => ({ ...current, notes: event.target.value }))}
+                placeholder="Additional notes"
+                rows={2}
+                className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
+              />
+              <button type="submit" className={`${cudyBluePrimaryButtonClassName} w-full rounded-lg bg-[var(--svs-primary)] px-4 py-3 text-sm font-semibold text-white`}>
+                Place Order
+              </button>
+            </form>
+          </section>
+        </div>
+      )}
+    </PageFrame>
+  );
+};
+
+const OrdersPage = ({ orders, cartItems, onAdvanceOrderStatus }) => {
   const { t } = useTranslation();
 
   return (
   <PageFrame title={t('orders.title')} subtitle={t('orders.subtitle')}>
-    <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4 text-sm">{t('orders.empty')}</div>
+    {!orders.length ? (
+      <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4 text-sm text-[var(--svs-text)]">
+        <p>{t('orders.empty')}</p>
+        {cartItems.length ? (
+          <Link to="/checkout" className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
+            Continue to Checkout
+          </Link>
+        ) : null}
+      </div>
+    ) : (
+      <div className="space-y-4">
+        {cartItems.length ? (
+          <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4 text-sm text-[var(--svs-text)]">
+            You still have {getCartCount(cartItems)} item{getCartCount(cartItems) === 1 ? '' : 's'} in your cart.
+            <Link to="/checkout" className="ml-2 font-semibold text-[var(--svs-primary-strong)] underline">Review cart</Link>
+          </div>
+        ) : null}
+        {orders.map((order) => (
+          <article key={order.id} className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="text-xl font-bold text-[var(--svs-text)]">Order {order.reference}</h3>
+                <p className="mt-1 text-sm text-[var(--svs-muted)]">Placed on {formatDate(order.createdAt)}</p>
+                <p className="mt-1 text-sm text-[var(--svs-muted)]">{order.customer.fullName} • {order.customer.email}</p>
+              </div>
+              <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getStatusClasses(order.status)}`}>
+                {order.status}
+              </span>
+            </div>
+            <div className="mt-4 grid gap-4 lg:grid-cols-[1.4fr_0.8fr]">
+              <div className="space-y-3">
+                {order.items.map((item) => (
+                  <div key={`${order.id}-${item.id}`} className="flex items-center justify-between gap-3 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3">
+                    <div>
+                      <p className="font-semibold text-[var(--svs-text)]">{item.title}</p>
+                      <p className="text-sm text-[var(--svs-muted)]">{item.marketName}</p>
+                      {item.details ? <p className="text-sm text-[var(--svs-muted)]">{item.details}</p> : null}
+                    </div>
+                    <div className="text-right text-sm">
+                      <p className="font-semibold text-[var(--svs-text)]">x{item.quantity}</p>
+                      <p className="text-[var(--svs-primary-strong)]">{formatCheckoutAmount(item.unitPrice * item.quantity)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4">
+                <h4 className="text-sm font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Summary</h4>
+                <div className="mt-3 space-y-2 text-sm text-[var(--svs-muted)]">
+                  <div className="flex items-center justify-between"><span>Payment</span><span>{order.paymentMethod}</span></div>
+                  <div className="flex items-center justify-between"><span>Subtotal</span><span>{formatCheckoutAmount(order.subtotal)}</span></div>
+                  <div className="flex items-center justify-between"><span>Service fee</span><span>{formatCheckoutAmount(order.serviceFee)}</span></div>
+                  <div className="flex items-center justify-between border-t border-[var(--svs-border)] pt-3 text-base font-bold text-[var(--svs-text)]"><span>Total</span><span>{formatCheckoutAmount(order.total)}</span></div>
+                </div>
+                {order.status !== ORDER_STATUS_FLOW[ORDER_STATUS_FLOW.length - 1] ? (
+                  <button type="button" onClick={() => onAdvanceOrderStatus(order.id)} className={`${cudyBluePrimaryButtonClassName} mt-4 w-full rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
+                    Advance Status
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    )}
   </PageFrame>
   );
 };
@@ -2130,7 +2934,7 @@ const PageFrame = ({ title, subtitle, children, darkHero = false }) => (
   </section>
 );
 
-const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer }) => {
+const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer, onPrimaryAction }) => {
   const { t } = useTranslation();
 
   return (
@@ -2145,7 +2949,7 @@ const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer }) =>
               <h3 className="text-lg font-bold">{itemTitle}</h3>
               <div className="mt-1">{metaRenderer(item)}</div>
               <div className="mt-3 flex flex-wrap gap-2">
-                <button type="button" className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}>
+                <button type="button" onClick={() => onPrimaryAction?.(item)} className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}>
                   {buttonLabel}
                 </button>
                 <button type="button" className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--svs-text)]">
@@ -2216,7 +3020,7 @@ const SiteFooter = () => {
   );
 };
 
-const AppRoutes = () => {
+const AppRoutes = ({ cartItems, orders, sellerItems, onAddToCart, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder, onAdvanceOrderStatus, onSellerItemCreated, onDeleteSellerItem, onUpdateSellerItem }) => {
   const { t } = useTranslation();
 
   return (
@@ -2224,20 +3028,23 @@ const AppRoutes = () => {
     <Route path="/" element={<HomePage />} />
     <Route path="/markets" element={<MarketsPage />} />
     <Route path="/offers" element={<OffersPage />} />
-    <Route path="/orders" element={<OrdersPage />} />
+    <Route path="/orders" element={<OrdersPage orders={orders} cartItems={cartItems} onAdvanceOrderStatus={onAdvanceOrderStatus} />} />
+    <Route path="/checkout" element={<CheckoutPage cartItems={cartItems} onUpdateCartQuantity={onUpdateCartQuantity} onRemoveCartItem={onRemoveCartItem} onPlaceOrder={onPlaceOrder} />} />
     <Route path="/search" element={<SearchResultsPage />} />
 
-    <Route path="/e-commerce" element={<ECommercePage />} />
-    <Route path="/tickets" element={<TicketsPage />} />
-    <Route path="/bookings-tickets" element={<BookingsTicketsPage />} />
+    <Route path="/e-commerce" element={<ECommercePage onAddToCart={onAddToCart} sellerItems={sellerItems} />} />
+    <Route path="/tickets" element={<TicketsPage onAddToCart={onAddToCart} />} />
+    <Route path="/bookings-tickets" element={<BookingsTicketsPage onAddToCart={onAddToCart} />} />
     <Route path="/voting-clients" element={<VotingClientsPage />} />
     <Route path="/voting-providers" element={<VotingProvidersPage />} />
-    <Route path="/groceries" element={<GroceriesPage />} />
-    <Route path="/fast-food" element={<FastFoodPage />} />
-    <Route path="/beverages-liquors" element={<BeveragesLiquorsPage />} />
-    <Route path="/wellness" element={<WellnessPage />} />
+    <Route path="/groceries" element={<GroceriesPage onAddToCart={onAddToCart} sellerItems={sellerItems} />} />
+    <Route path="/fast-food" element={<FastFoodPage onAddToCart={onAddToCart} sellerItems={sellerItems} />} />
+    <Route path="/beverages-liquors" element={<BeveragesLiquorsPage onAddToCart={onAddToCart} sellerItems={sellerItems} />} />
+    <Route path="/wellness" element={<WellnessPage onAddToCart={onAddToCart} sellerItems={sellerItems} />} />
     <Route path="/home-care" element={<HomeCarePage />} />
-    <Route path="/hardware-software" element={<HardwareSoftwarePage />} />
+    <Route path="/hardware-software" element={<HardwareSoftwarePage onAddToCart={onAddToCart} sellerItems={sellerItems} />} />
+    <Route path="/seller/upload" element={<SellerUploadPage onSellerItemCreated={onSellerItemCreated} />} />
+    <Route path="/seller/dashboard" element={<SellerDashboardPage onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} />} />
     <Route path="/property-hub" element={<PropertyHubPage />} />
     <Route path="/international-lottery-games" element={<InternationalLotteryGamesPage />} />
     <Route path="/livestock-hub" element={<LivestockHubPage />} />
@@ -2262,9 +3069,183 @@ const AppRoutes = () => {
 };
 
 const App = () => {
+  const [cartItems, setCartItems] = useState(getStoredCartItems);
+  const [orders, setOrders] = useState(getStoredOrders);
+  const [sellerItems, setSellerItems] = useState([]);
+
+  useEffect(() => {
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
+  }, [cartItems]);
+
+  useEffect(() => {
+    window.localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
+  }, [orders]);
+
+  const loadSellerItems = useCallback(async () => {
+    if (!hasSupabaseEnv || !supabase) {
+      setSellerItems([]);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from(SELLER_ITEMS_TABLE)
+      .select('id, seller_email, seller_name, title, description, price, market_key, image_url, created_at')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      return;
+    }
+
+    setSellerItems((data || []).map(mapSellerItemRecord));
+  }, []);
+
+  useEffect(() => {
+    loadSellerItems();
+  }, [loadSellerItems]);
+
+  const handleAddToCart = useCallback((cartItem) => {
+    setCartItems((currentItems) => {
+      const existingItem = currentItems.find((item) => item.id === cartItem.id);
+
+      if (existingItem) {
+        return currentItems.map((item) => (
+          item.id === cartItem.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        ));
+      }
+
+      return [...currentItems, cartItem];
+    });
+  }, []);
+
+  const handleUpdateCartQuantity = useCallback((itemId, delta) => {
+    setCartItems((currentItems) => currentItems.reduce((nextItems, item) => {
+      if (item.id !== itemId) {
+        nextItems.push(item);
+        return nextItems;
+      }
+
+      const nextQuantity = item.quantity + delta;
+
+      if (nextQuantity > 0) {
+        nextItems.push({ ...item, quantity: nextQuantity });
+      }
+
+      return nextItems;
+    }, []));
+  }, []);
+
+  const handleRemoveCartItem = useCallback((itemId) => {
+    setCartItems((currentItems) => currentItems.filter((item) => item.id !== itemId));
+  }, []);
+
+  const handlePlaceOrder = useCallback((customer) => {
+    const totals = getCartTotals(cartItems);
+    const order = {
+      id: `order-${Date.now()}`,
+      reference: `SVS-${String(Date.now()).slice(-8)}`,
+      createdAt: new Date().toISOString(),
+      customer,
+      items: cartItems,
+      paymentMethod: customer.paymentMethod,
+      subtotal: totals.subtotal,
+      serviceFee: totals.serviceFee,
+      total: totals.total,
+      status: ORDER_STATUS_FLOW[0],
+    };
+
+    setOrders((currentOrders) => [order, ...currentOrders]);
+    setCartItems([]);
+
+    return order;
+  }, [cartItems]);
+
+  const handleAdvanceOrderStatus = useCallback((orderId) => {
+    setOrders((currentOrders) => currentOrders.map((order) => (
+      order.id === orderId
+        ? { ...order, status: getOrderStatusStep(order.status) }
+        : order
+    )));
+  }, []);
+
+  const handleSellerItemCreated = useCallback((item) => {
+    setSellerItems((currentItems) => [item, ...currentItems]);
+  }, []);
+
+  const handleDeleteSellerItem = useCallback(async (dbId, imageUrl) => {
+    if (!hasSupabaseEnv || !supabase) return;
+
+    const bucketPrefix = `/object/public/${SELLER_IMAGES_BUCKET}/`;
+    const bucketIndex = String(imageUrl || '').indexOf(bucketPrefix);
+
+    if (bucketIndex !== -1) {
+      const storagePath = imageUrl.slice(bucketIndex + bucketPrefix.length);
+      await supabase.storage.from(SELLER_IMAGES_BUCKET).remove([storagePath]);
+    }
+
+    await supabase.from(SELLER_ITEMS_TABLE).delete().eq('id', dbId);
+    setSellerItems((currentItems) => currentItems.filter((item) => item.dbId !== dbId));
+  }, []);
+
+  const handleUpdateSellerItem = useCallback(async (dbId, updates, newImageFile) => {
+    if (!hasSupabaseEnv || !supabase) return { error: 'Supabase is not configured.' };
+
+    let imageUrl = updates.imageUrl;
+
+    if (newImageFile) {
+      const sellerEmail = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || '');
+      const fileExtension = newImageFile.name.split('.').pop() || 'jpg';
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExtension}`;
+      const filePath = `${sanitizeStorageSegment(sellerEmail)}/${updates.marketKey}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(SELLER_IMAGES_BUCKET)
+        .upload(filePath, newImageFile, { cacheControl: '3600', upsert: false });
+
+      if (uploadError) return { error: uploadError.message };
+
+      const { data: publicUrlData } = supabase.storage.from(SELLER_IMAGES_BUCKET).getPublicUrl(filePath);
+      imageUrl = publicUrlData.publicUrl;
+    }
+
+    const { data, error } = await supabase
+      .from(SELLER_ITEMS_TABLE)
+      .update({
+        title: updates.title,
+        description: updates.description,
+        price: updates.price,
+        market_key: updates.marketKey,
+        ...(imageUrl !== undefined ? { image_url: imageUrl } : {}),
+      })
+      .eq('id', dbId)
+      .select('*')
+      .single();
+
+    if (error) return { error: error.message };
+
+    setSellerItems((currentItems) =>
+      currentItems.map((item) => (item.dbId === dbId ? mapSellerItemRecord(data) : item)),
+    );
+
+    return { data };
+  }, []);
+
   return (
-    <Shell>
-      <AppRoutes />
+    <Shell cartItemCount={getCartCount(cartItems)}>
+      <AppRoutes
+        cartItems={cartItems}
+        orders={orders}
+        sellerItems={sellerItems}
+        onAddToCart={handleAddToCart}
+        onUpdateCartQuantity={handleUpdateCartQuantity}
+        onRemoveCartItem={handleRemoveCartItem}
+        onPlaceOrder={handlePlaceOrder}
+        onAdvanceOrderStatus={handleAdvanceOrderStatus}
+        onSellerItemCreated={handleSellerItemCreated}
+        onDeleteSellerItem={handleDeleteSellerItem}
+        onUpdateSellerItem={handleUpdateSellerItem}
+      />
     </Shell>
   );
 };
