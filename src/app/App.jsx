@@ -892,15 +892,53 @@ const toWishlistItemRecord = (userEmail, item) => ({
   unit_price_label: item.unitPriceLabel,
 });
 
-const syncUserCollection = async ({ tableName, userEmail, records }) => {
-  const { error: deleteError } = await supabase.from(tableName).delete().eq('user_email', userEmail);
+const syncUserCollection = async ({ tableName, userEmail, records, removeMissing = true }) => {
+  if (!records.length) {
+    if (!removeMissing) {
+      return null;
+    }
 
-  if (deleteError || !records.length) {
-    return deleteError || null;
+    const { error: clearError } = await supabase.from(tableName).delete().eq('user_email', userEmail);
+    return clearError || null;
   }
 
-  const { error: insertError } = await supabase.from(tableName).insert(records);
-  return insertError || null;
+  const { error: upsertError } = await supabase
+    .from(tableName)
+    .upsert(records, { onConflict: 'user_email,item_key' });
+
+  if (upsertError) {
+    return upsertError;
+  }
+
+  if (!removeMissing) {
+    return null;
+  }
+
+  const { data: existingRows, error: fetchError } = await supabase
+    .from(tableName)
+    .select('item_key')
+    .eq('user_email', userEmail);
+
+  if (fetchError) {
+    return fetchError;
+  }
+
+  const nextItemKeys = new Set(records.map((record) => record.item_key));
+  const keysToDelete = (existingRows || [])
+    .map((row) => row.item_key)
+    .filter((itemKey) => !nextItemKeys.has(itemKey));
+
+  if (!keysToDelete.length) {
+    return null;
+  }
+
+  const { error: deleteError } = await supabase
+    .from(tableName)
+    .delete()
+    .eq('user_email', userEmail)
+    .in('item_key', keysToDelete);
+
+  return deleteError || null;
 };
 
 const getStatusClasses = (status) => {
@@ -1222,16 +1260,6 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0 }) => {
   };
 
   const handleLogout = () => {
-    const userEmail = getCurrentUserEmail();
-
-    window.localStorage.removeItem(getUserScopedStorageKey(CART_STORAGE_KEY, userEmail));
-    window.localStorage.removeItem(getUserScopedStorageKey(WISHLIST_STORAGE_KEY, userEmail));
-    window.localStorage.removeItem(getUserScopedStorageKey(ORDERS_STORAGE_KEY, userEmail));
-    window.localStorage.removeItem(getUserScopedStorageKey(CART_STORAGE_KEY, 'guest'));
-    window.localStorage.removeItem(getUserScopedStorageKey(WISHLIST_STORAGE_KEY, 'guest'));
-    window.localStorage.removeItem(getUserScopedStorageKey(ORDERS_STORAGE_KEY, 'guest'));
-    window.localStorage.removeItem(ORDERS_STORAGE_KEY);
-
     window.localStorage.removeItem('svs-authenticated');
     window.localStorage.removeItem('svs-user-email');
     window.localStorage.removeItem('svs-user-name');
@@ -3315,7 +3343,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
 
 const App = () => {
   const [cartItems, setCartItems] = useState(getStoredCartItems);
-  const [wishlistItems, setWishlistItems] = useState(getStoredWishlistItems);
+  const [wishlistItems, setWishlistItems] = useState(getStoredWishlistItems(getCurrentUserEmail()));
   const [orders, setOrders] = useState(getStoredOrders);
   const [sellerItems, setSellerItems] = useState([]);
   const [activeUserEmail, setActiveUserEmail] = useState(getCurrentUserEmail);
@@ -3356,6 +3384,9 @@ const App = () => {
   }, [activeUserEmail, orders]);
 
   useEffect(() => {
+    // Pause remote sync immediately while switching users to avoid pushing stale empty data.
+    setHasLoadedUserCollections(false);
+
     const localCartItems = getStoredCartItems(activeUserEmail);
     const localWishlistItems = getStoredWishlistItems(activeUserEmail);
     const localOrders = getStoredOrders(activeUserEmail);
@@ -3435,78 +3466,152 @@ const App = () => {
     loadSellerItems();
   }, [loadSellerItems]);
 
-  useEffect(() => {
-    if (!hasLoadedUserCollections || !getAuthState() || !activeUserEmail || !hasSupabaseEnv || !supabase) {
+  // Remove background syncing for cart and wishlist. Sync only on explicit user actions below.
+
+  const removeWishlistItemFromRemote = useCallback(async (itemId) => {
+    if (!getAuthState() || !activeUserEmail || !hasSupabaseEnv || !supabase) {
       return;
     }
 
-    syncUserCollection({
-      tableName: CART_ITEMS_TABLE,
-      userEmail: activeUserEmail,
-      records: cartItems.map((item) => toCartItemRecord(activeUserEmail, item)),
-    });
-  }, [activeUserEmail, cartItems, hasLoadedUserCollections]);
+    await supabase
+      .from(WISHLIST_ITEMS_TABLE)
+      .delete()
+      .eq('user_email', activeUserEmail)
+      .eq('item_key', itemId);
+  }, [activeUserEmail]);
 
-  useEffect(() => {
-    if (!hasLoadedUserCollections || !getAuthState() || !activeUserEmail || !hasSupabaseEnv || !supabase) {
+  const removeCartItemFromRemote = useCallback(async (itemId) => {
+    if (!getAuthState() || !activeUserEmail || !hasSupabaseEnv || !supabase) {
       return;
     }
 
-    syncUserCollection({
-      tableName: WISHLIST_ITEMS_TABLE,
-      userEmail: activeUserEmail,
-      records: wishlistItems.map((item) => toWishlistItemRecord(activeUserEmail, item)),
-    });
-  }, [activeUserEmail, hasLoadedUserCollections, wishlistItems]);
+    await supabase
+      .from(CART_ITEMS_TABLE)
+      .delete()
+      .eq('user_email', activeUserEmail)
+      .eq('item_key', itemId);
+  }, [activeUserEmail]);
+
+  const clearCartFromRemote = useCallback(async () => {
+    if (!getAuthState() || !activeUserEmail || !hasSupabaseEnv || !supabase) {
+      return;
+    }
+
+    await supabase
+      .from(CART_ITEMS_TABLE)
+      .delete()
+      .eq('user_email', activeUserEmail);
+  }, [activeUserEmail]);
 
   const handleAddToCart = useCallback((cartItem) => {
     setCartItems((currentItems) => {
       const existingItem = currentItems.find((item) => item.id === cartItem.id);
-
+      let nextItems;
       if (existingItem) {
-        return currentItems.map((item) => (
+        nextItems = currentItems.map((item) => (
           item.id === cartItem.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         ));
+      } else {
+        nextItems = [...currentItems, cartItem];
       }
-
-      return [...currentItems, cartItem];
+      // Sync to Supabase only if authenticated and valid user
+      if (getAuthState() && activeUserEmail && typeof activeUserEmail === 'string' && activeUserEmail.trim() && hasSupabaseEnv && supabase) {
+        syncUserCollection({
+          tableName: CART_ITEMS_TABLE,
+          userEmail: activeUserEmail,
+          records: nextItems.map((item) => toCartItemRecord(activeUserEmail, item)),
+          removeMissing: false,
+        });
+      }
+      return nextItems;
     });
-  }, []);
+  }, [activeUserEmail]);
 
   const handleUpdateCartQuantity = useCallback((itemId, delta) => {
-    setCartItems((currentItems) => currentItems.reduce((nextItems, item) => {
-      if (item.id !== itemId) {
-        nextItems.push(item);
-        return nextItems;
+    let removedItemId = null;
+    setCartItems((currentItems) => {
+      const nextItems = currentItems.reduce((acc, item) => {
+        if (item.id !== itemId) {
+          acc.push(item);
+          return acc;
+        }
+        const nextQuantity = item.quantity + delta;
+        if (nextQuantity > 0) {
+          acc.push({ ...item, quantity: nextQuantity });
+        } else {
+          removedItemId = item.id;
+        }
+        return acc;
+      }, []);
+      if (getAuthState() && activeUserEmail && typeof activeUserEmail === 'string' && activeUserEmail.trim() && hasSupabaseEnv && supabase) {
+        syncUserCollection({
+          tableName: CART_ITEMS_TABLE,
+          userEmail: activeUserEmail,
+          records: nextItems.map((item) => toCartItemRecord(activeUserEmail, item)),
+          removeMissing: false,
+        });
       }
-
-      const nextQuantity = item.quantity + delta;
-
-      if (nextQuantity > 0) {
-        nextItems.push({ ...item, quantity: nextQuantity });
-      }
-
       return nextItems;
-    }, []));
-  }, []);
+    });
+    if (removedItemId) {
+      removeCartItemFromRemote(removedItemId);
+    }
+  }, [removeCartItemFromRemote, activeUserEmail]);
 
   const handleRemoveCartItem = useCallback((itemId) => {
-    setCartItems((currentItems) => currentItems.filter((item) => item.id !== itemId));
-  }, []);
+    setCartItems((currentItems) => {
+      const nextItems = currentItems.filter((item) => item.id !== itemId);
+      if (getAuthState() && activeUserEmail && typeof activeUserEmail === 'string' && activeUserEmail.trim() && hasSupabaseEnv && supabase) {
+        syncUserCollection({
+          tableName: CART_ITEMS_TABLE,
+          userEmail: activeUserEmail,
+          records: nextItems.map((item) => toCartItemRecord(activeUserEmail, item)),
+          removeMissing: false,
+        });
+      }
+      return nextItems;
+    });
+    removeCartItemFromRemote(itemId);
+  }, [removeCartItemFromRemote, activeUserEmail]);
 
   const handleToggleWishlist = useCallback((wishlistItem) => {
-    setWishlistItems((currentItems) => (
-      currentItems.some((item) => item.id === wishlistItem.id)
+    const alreadyWishlisted = wishlistItems.some((item) => item.id === wishlistItem.id);
+    setWishlistItems((currentItems) => {
+      const nextItems = alreadyWishlisted
         ? currentItems.filter((item) => item.id !== wishlistItem.id)
-        : [wishlistItem, ...currentItems]
-    ));
-  }, []);
+        : [wishlistItem, ...currentItems];
+      if (getAuthState() && activeUserEmail && typeof activeUserEmail === 'string' && activeUserEmail.trim() && hasSupabaseEnv && supabase) {
+        syncUserCollection({
+          tableName: WISHLIST_ITEMS_TABLE,
+          userEmail: activeUserEmail,
+          records: nextItems.map((item) => toWishlistItemRecord(activeUserEmail, item)),
+          removeMissing: false,
+        });
+      }
+      return nextItems;
+    });
+    if (alreadyWishlisted) {
+      removeWishlistItemFromRemote(wishlistItem.id);
+    }
+  }, [removeWishlistItemFromRemote, wishlistItems, activeUserEmail]);
 
   const handleRemoveWishlistItem = useCallback((itemId) => {
-    setWishlistItems((currentItems) => currentItems.filter((item) => item.id !== itemId));
-  }, []);
+    setWishlistItems((currentItems) => {
+      const nextItems = currentItems.filter((item) => item.id !== itemId);
+      if (getAuthState() && activeUserEmail && typeof activeUserEmail === 'string' && activeUserEmail.trim() && hasSupabaseEnv && supabase) {
+        syncUserCollection({
+          tableName: WISHLIST_ITEMS_TABLE,
+          userEmail: activeUserEmail,
+          records: nextItems.map((item) => toWishlistItemRecord(activeUserEmail, item)),
+          removeMissing: false,
+        });
+      }
+      return nextItems;
+    });
+    removeWishlistItemFromRemote(itemId);
+  }, [removeWishlistItemFromRemote, activeUserEmail]);
 
   const handlePlaceOrder = useCallback((customer) => {
     const totals = getCartTotals(cartItems);
@@ -3525,9 +3630,10 @@ const App = () => {
 
     setOrders((currentOrders) => [order, ...currentOrders]);
     setCartItems([]);
+    clearCartFromRemote();
 
     return order;
-  }, [cartItems]);
+  }, [cartItems, clearCartFromRemote]);
 
   const handleAdvanceOrderStatus = useCallback((orderId) => {
     setOrders((currentOrders) => currentOrders.map((order) => (
