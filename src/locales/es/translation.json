@@ -22,7 +22,8 @@
     "add": "Add",
     "uploadPrescription": "Upload Prescription",
     "chatWithProvider": "Chat with Provider",
-    "continue": "Continue"
+    "continue": "Continue",
+    "playNow": "Jugar ahora"
   },
   "search": {
     "placeholder": "Search for Products, Food, Medicines, Tickets...",
@@ -65,7 +66,10 @@
     "hardwareSoftware": "Hardwares & Softwares Hub",
     "bettingHub": "Betting Hub",
     "bettingVoting": "Betting and Voting",
-    "safety": "Safety and Responsibility"
+    "safety": "Safety and Responsibility",
+    "propertyHub": "Centro de propiedades",
+    "internationalLotteryGames": "Centro Internacional de Juegos de Lotería",
+    "livestockHub": "Centro de compra y venta de ganado en línea"
   },
   "footer": {
     "about": "About Us",
@@ -138,7 +142,10 @@
     "hardwareSoftware": "Tech gadgets, software bundles, and secure electronics purchasing.",
     "bettingHub": "Aggregated voting and betting preview with popular matches and hot travel deal highlights.",
     "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
-    "safety": "Compliance standards, age restrictions, and secure transaction guarantees."
+    "safety": "Compliance standards, age restrictions, and secure transaction guarantees.",
+    "propertyHub": "Explore alquileres, casas en venta y espacios comerciales con ricos detalles de ubicación.",
+    "internationalLotteryGames": "Compare los premios acumulados, los días de sorteo y los juegos de lotería internacionales elegibles en un solo lugar.",
+    "livestockHub": "Compre y venda ganado vacuno, ovino y caprino con detalles de listado listos para la granja y ubicaciones de vendedores."
   },
   "searchResults": {
     "title": "Search Results",
@@ -179,5 +186,68 @@
   "site": {
     "tagline": "Shop, Order and Book Service Providers Instantly - Anytime, Anywhere.",
     "address": "Beachy Head Drive, Pietermaritzburg Bay 6600"
+  },
+  "propertyHub": {
+    "intro": "Listados de propiedades verificados para compradores, inquilinos e inversores residenciales y comerciales.",
+    "items": {
+      "pr1": {
+        "title": "Apartamento de lujo en el horizonte",
+        "location": "Paseo marítimo de Ciudad del Cabo",
+        "type": "Apartamento de 2 habitaciones"
+      },
+      "pr2": {
+        "title": "Casa familiar en el cinturón verde",
+        "location": "Colinas de Pietermaritzburg",
+        "type": "Casa de 4 habitaciones"
+      },
+      "pr3": {
+        "title": "Suite de oficina del puerto",
+        "location": "Centro de Durban",
+        "type": "Espacio Comercial"
+      }
+    }
+  },
+  "internationalLotteryHub": {
+    "notice": "La disponibilidad de los juegos, las restricciones de edad y las reglas de pago dependen del país y del proveedor seleccionados.",
+    "regionLabel": "Región",
+    "drawDayLabel": "Día del sorteo",
+    "jackpotLabel": "Bote",
+    "items": {
+      "lg1": {
+        "title": "Sorteo Global Euromillones",
+        "region": "Europa",
+        "drawDay": "Viernes"
+      },
+      "lg2": {
+        "title": "Powerball Internacional",
+        "region": "América del norte",
+        "drawDay": "Miércoles"
+      },
+      "lg3": {
+        "title": "Megamillones panafricanos",
+        "region": "África",
+        "drawDay": "Sábado"
+      }
+    }
+  },
+  "livestockHub": {
+    "intro": "Comercio digital de ganado para granjas verificadas, cooperativas y compradores comerciales.",
+    "items": {
+      "ls1": {
+        "title": "Toro reproductor Brahman",
+        "location": "Estado Libre, Sudáfrica",
+        "summary": "22 meses • Vacunado • Listo para subasta"
+      },
+      "ls2": {
+        "title": "Trío de ovejas Dorper",
+        "location": "Tierras Altas de Lesoto",
+        "summary": "Ovejas sanas • Listas para la temporada de reproducción"
+      },
+      "ls3": {
+        "title": "Rebaño inicial de cabras bóer",
+        "location": "Cinturón agrícola de Limpopo",
+        "summary": "5 cabras • Etiquetadas • Soporte de entrega disponible"
+      }
+    }
   }
 }

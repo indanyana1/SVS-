@@ -47,6 +47,9 @@ const marketLinks = [
   { labelKey: 'markets.bettingHub', href: '/betting-hub' },
   { labelKey: 'markets.bettingVoting', href: '/betting-voting' },
   { labelKey: 'markets.safety', href: '/safety' },
+  { labelKey: 'markets.propertyHub', href: '/property-hub' },
+  { labelKey: 'markets.internationalLotteryGames', href: '/international-lottery-games' },
+  { labelKey: 'markets.livestockHub', href: '/livestock-hub' },
 ];
 
 const productCards = [
@@ -411,6 +414,124 @@ const techItems = [
   },
 ];
 
+const livestockImageFallback = 'https://images.pexels.com/photos/735968/pexels-photo-735968.jpeg?auto=compress&cs=tinysrgb&w=1200';
+
+const propertyListings = [
+  {
+    id: 'pr1',
+    title: 'Skyline Luxury Apartment',
+    titleKey: 'propertyHub.items.pr1.title',
+    location: 'Cape Town Waterfront',
+    locationKey: 'propertyHub.items.pr1.location',
+    type: '2 Bedroom Apartment',
+    typeKey: 'propertyHub.items.pr1.type',
+    price: '24,500 / month',
+    image:
+      'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'pr2',
+    title: 'Greenbelt Family Home',
+    titleKey: 'propertyHub.items.pr2.title',
+    location: 'Pietermaritzburg Hills',
+    locationKey: 'propertyHub.items.pr2.location',
+    type: '4 Bedroom House',
+    typeKey: 'propertyHub.items.pr2.type',
+    price: '3,850,000',
+    image:
+      'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'pr3',
+    title: 'Harbour Office Suite',
+    titleKey: 'propertyHub.items.pr3.title',
+    location: 'Durban Central',
+    locationKey: 'propertyHub.items.pr3.location',
+    type: 'Commercial Space',
+    typeKey: 'propertyHub.items.pr3.type',
+    price: '185 / m2',
+    image:
+      'https://images.pexels.com/photos/37347/office-sitting-room-executive-sitting.jpg?auto=compress&cs=tinysrgb&w=1200',
+  },
+];
+
+const lotteryGames = [
+  {
+    id: 'lg1',
+    title: 'EuroMillions Global Draw',
+    titleKey: 'internationalLotteryHub.items.lg1.title',
+    region: 'Europe',
+    regionKey: 'internationalLotteryHub.items.lg1.region',
+    drawDay: 'Friday',
+    drawDayKey: 'internationalLotteryHub.items.lg1.drawDay',
+    jackpot: '128 Million',
+    image:
+      'https://images.pexels.com/photos/2942085/pexels-photo-2942085.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'lg2',
+    title: 'Powerball International',
+    titleKey: 'internationalLotteryHub.items.lg2.title',
+    region: 'North America',
+    regionKey: 'internationalLotteryHub.items.lg2.region',
+    drawDay: 'Wednesday',
+    drawDayKey: 'internationalLotteryHub.items.lg2.drawDay',
+    jackpot: '214 Million',
+    image:
+      'https://images.pexels.com/photos/7594069/pexels-photo-7594069.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'lg3',
+    title: 'Pan-African Mega Millions',
+    titleKey: 'internationalLotteryHub.items.lg3.title',
+    region: 'Africa',
+    regionKey: 'internationalLotteryHub.items.lg3.region',
+    drawDay: 'Saturday',
+    drawDayKey: 'internationalLotteryHub.items.lg3.drawDay',
+    jackpot: '42 Million',
+    image:
+      'https://images.pexels.com/photos/8112194/pexels-photo-8112194.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+];
+
+const livestockItems = [
+  {
+    id: 'ls1',
+    title: 'Brahman Breeding Bull',
+    titleKey: 'livestockHub.items.ls1.title',
+    location: 'Free State, South Africa',
+    locationKey: 'livestockHub.items.ls1.location',
+    summary: '22 months • Vaccinated • Auction-ready',
+    summaryKey: 'livestockHub.items.ls1.summary',
+    price: '28,000',
+    image: livestockImageFallback,
+  },
+  {
+    id: 'ls2',
+    title: 'Dorper Sheep Trio',
+    titleKey: 'livestockHub.items.ls2.title',
+    location: 'Lesotho Highlands',
+    locationKey: 'livestockHub.items.ls2.location',
+    summary: 'Healthy ewes • Ready for breeding season',
+    summaryKey: 'livestockHub.items.ls2.summary',
+    price: '9,800',
+    image:
+      'https://images.pexels.com/photos/751689/pexels-photo-751689.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ls3',
+    title: 'Boer Goat Starter Herd',
+    titleKey: 'livestockHub.items.ls3.title',
+    location: 'Limpopo Farm Belt',
+    locationKey: 'livestockHub.items.ls3.location',
+    summary: '5 goats • Tagged • Delivery support available',
+    summaryKey: 'livestockHub.items.ls3.summary',
+    price: '14,500',
+    image:
+      'https://images.pexels.com/photos/144240/goat-lamb-little-grass-144240.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+];
+
 const footerLinks = {
   quick: [
     { labelKey: 'footer.about', href: '/about' },
@@ -426,6 +547,8 @@ const footerLinks = {
 };
 
 const buildSearchText = (parts) => parts.filter(Boolean).join(' ').toLowerCase();
+
+const getTranslatedValue = (t, key, defaultValue) => (key ? t(key, { defaultValue }) : defaultValue);
 
 const searchableCatalog = [
   ...productCards.map((item) => ({
@@ -506,6 +629,45 @@ const searchableCatalog = [
       'hardware software laptop keyboard router technology tech gadgets',
     ]),
   })),
+  ...propertyListings.map((item) => ({
+    ...item,
+    section: 'Property Hub',
+    sectionKey: 'markets.propertyHub',
+    route: '/property-hub',
+    searchText: buildSearchText([
+      item.title,
+      item.location,
+      item.type,
+      item.price,
+      'property real estate apartment house office rental sale hub',
+    ]),
+  })),
+  ...lotteryGames.map((item) => ({
+    ...item,
+    section: 'International Lottery Games Hub',
+    sectionKey: 'markets.internationalLotteryGames',
+    route: '/international-lottery-games',
+    searchText: buildSearchText([
+      item.title,
+      item.region,
+      item.drawDay,
+      item.jackpot,
+      'lottery lotto jackpot draw games international millions powerball',
+    ]),
+  })),
+  ...livestockItems.map((item) => ({
+    ...item,
+    section: 'Livestock Online Selling & Buying Hub',
+    sectionKey: 'markets.livestockHub',
+    route: '/livestock-hub',
+    searchText: buildSearchText([
+      item.title,
+      item.location,
+      item.summary,
+      item.price,
+      'livestock cattle goats sheep farm buying selling agriculture hub',
+    ]),
+  })),
 ];
 
 const getCurrentYear = () => new Date().getFullYear();
@@ -531,6 +693,20 @@ const getThemePreference = () => {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 };
 
+const CUDY_BLUE_TEST_STORAGE_KEY = 'svs-test-cudy-blue';
+
+const getCudyBlueTestPreference = () => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  return window.localStorage.getItem(CUDY_BLUE_TEST_STORAGE_KEY) === 'true';
+};
+
+const cudyBluePrimaryButtonClassName = 'svs-test-primary-button';
+const cudyBluePrimaryOutlineClassName = 'svs-test-primary-outline';
+const cudyBluePrimaryIconClassName = 'svs-test-primary-icon';
+
 const formatDate = (value, locale = 'en-US') =>
   new Date(value).toLocaleDateString(locale, {
     year: 'numeric',
@@ -540,27 +716,33 @@ const formatDate = (value, locale = 'en-US') =>
 
 const SALE_DISCOUNT_RATE = 0.2;
 
+const formatSaleAmount = (amount, decimals) => new Intl.NumberFormat('en-US', {
+  minimumFractionDigits: decimals,
+  maximumFractionDigits: decimals,
+}).format(amount);
+
 const getSalePrices = (price, discountRate = SALE_DISCOUNT_RATE) => {
   const text = String(price ?? '').trim();
-  const match = text.match(/^([^\d-]*)(\d+(?:\.\d+)?)(.*)$/);
+  const match = text.match(/^([^\d-]*)(\d[\d,]*(?:\.\d+)?)(.*)$/);
 
   if (!match) {
     return { wasPrice: text, nowPrice: text };
   }
 
   const [, prefix, amountText, suffix] = match;
-  const amount = Number(amountText);
+  const normalizedAmountText = amountText.replace(/,/g, '');
+  const amount = Number(normalizedAmountText);
 
   if (Number.isNaN(amount)) {
     return { wasPrice: text, nowPrice: text };
   }
 
-  const decimals = amountText.includes('.') ? amountText.split('.')[1].length : 0;
+  const decimals = normalizedAmountText.includes('.') ? normalizedAmountText.split('.')[1].length : 0;
   const discountedAmount = Math.max(amount * (1 - discountRate), 0);
 
   return {
-    wasPrice: `${prefix}${amount.toFixed(decimals)}${suffix}`,
-    nowPrice: `${prefix}${discountedAmount.toFixed(decimals)}${suffix}`,
+    wasPrice: `${prefix}${formatSaleAmount(amount, decimals)}${suffix}`,
+    nowPrice: `${prefix}${formatSaleAmount(discountedAmount, decimals)}${suffix}`,
   };
 };
 
@@ -649,6 +831,7 @@ const Shell = ({ children }) => {
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileName, setProfileName] = useState('SVS User');
   const [theme, setTheme] = useState(getThemePreference);
+  const [isCudyBlueTestEnabled, setIsCudyBlueTestEnabled] = useState(getCudyBlueTestPreference);
   const languageCardRefs = useRef([]);
   const desktopLanguageMenuRef = useRef(null);
   const mobileLanguageMenuRef = useRef(null);
@@ -686,6 +869,10 @@ const Shell = ({ children }) => {
   useEffect(() => {
     window.localStorage.setItem('svs-theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    window.localStorage.setItem(CUDY_BLUE_TEST_STORAGE_KEY, String(isCudyBlueTestEnabled));
+  }, [isCudyBlueTestEnabled]);
 
   useEffect(() => {
     const loadProfileName = async () => {
@@ -838,8 +1025,12 @@ const Shell = ({ children }) => {
     setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'));
   };
 
+  const toggleCudyBlueTest = () => {
+    setIsCudyBlueTestEnabled((currentValue) => !currentValue);
+  };
+
   return (
-    <div className={`min-h-screen bg-[var(--svs-bg)] text-[var(--svs-text)] ${isDarkMode ? 'theme-dark' : 'theme-light'}`}>
+    <div className={`min-h-screen bg-[var(--svs-bg)] text-[var(--svs-text)] ${isDarkMode ? 'theme-dark' : 'theme-light'} ${isCudyBlueTestEnabled ? 'test-cudy-blue' : ''}`.trim()}>
       <header className="fixed top-0 z-50 w-full border-b border-[var(--svs-border)] bg-[var(--svs-nav-bg)]/95 text-[var(--svs-nav-text)] backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-3">
           <Link to="/" className="shrink-0">
@@ -868,28 +1059,33 @@ const Shell = ({ children }) => {
               <div className="absolute left-0 right-0 top-[calc(100%+8px)] rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3 shadow-xl">
                 {quickResults.length ? (
                   <ul className="space-y-2 text-sm text-[var(--svs-text)]">
-                    {quickResults.map((item) => (
-                      <li key={item.id}>
-                        <button
-                          type="button"
-                          onClick={() => handleQuickSelect(item.title)}
-                          className="flex w-full items-center gap-3 rounded-md bg-[var(--svs-surface-soft)] px-3 py-2 text-left transition hover:bg-[var(--svs-cyan-surface)]"
-                        >
-                          {item.image ? (
-                            <img
-                              src={item.image}
-                              alt={item.title}
-                              className="h-12 w-12 rounded-md object-cover"
-                              loading="lazy"
-                            />
-                          ) : null}
-                          <span>
-                            <p className="font-semibold">{item.title}</p>
-                            <p className="text-xs text-[var(--svs-muted)]">{item.section}</p>
-                          </span>
-                        </button>
-                      </li>
-                    ))}
+                    {quickResults.map((item) => {
+                      const itemTitle = getTranslatedValue(t, item.titleKey, item.title);
+                      const itemSection = getTranslatedValue(t, item.sectionKey, item.section);
+
+                      return (
+                        <li key={item.id}>
+                          <button
+                            type="button"
+                            onClick={() => handleQuickSelect(itemTitle)}
+                            className="flex w-full items-center gap-3 rounded-md bg-[var(--svs-surface-soft)] px-3 py-2 text-left transition hover:bg-[var(--svs-cyan-surface)]"
+                          >
+                            {item.image ? (
+                              <img
+                                src={item.image}
+                                alt={itemTitle}
+                                className="h-12 w-12 rounded-md object-cover"
+                                loading="lazy"
+                              />
+                            ) : null}
+                            <span>
+                              <p className="font-semibold">{itemTitle}</p>
+                              <p className="text-xs text-[var(--svs-muted)]">{itemSection}</p>
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
                   </ul>
                 ) : (
                   <p className="text-sm text-[var(--svs-muted)]">{t('common.noResults')}</p>
@@ -900,13 +1096,13 @@ const Shell = ({ children }) => {
 
           <div className="ml-auto hidden items-center gap-3 text-[var(--svs-nav-text)] sm:flex">
             <Link to="/orders" aria-label={t('nav.orders')} className="rounded-full p-1.5 transition hover:bg-[var(--svs-cyan-surface)]">
-              <ShoppingCart className="h-5 w-5" />
+              <ShoppingCart className={`h-5 w-5 ${cudyBluePrimaryIconClassName}`} />
             </Link>
             <button type="button" aria-label="Wishlist" className="rounded-full p-1.5 transition hover:bg-[var(--svs-cyan-surface)]">
-              <Heart className="h-5 w-5" />
+              <Heart className={`h-5 w-5 ${cudyBluePrimaryIconClassName}`} />
             </button>
             <button type="button" aria-label="Notifications" className="rounded-full p-1.5 transition hover:bg-[var(--svs-cyan-surface)]">
-              <Bell className="h-5 w-5" />
+              <Bell className={`h-5 w-5 ${cudyBluePrimaryIconClassName}`} />
             </button>
             <div className="relative" ref={desktopLanguageMenuRef}>
               <button
@@ -944,6 +1140,16 @@ const Shell = ({ children }) => {
             >
               {isDarkMode ? <Sun className="h-4 w-4 text-[var(--svs-primary)]" /> : <Moon className="h-4 w-4 text-[var(--svs-primary-strong)]" />}
               <span>{isDarkMode ? t('theme.light') : t('theme.dark')}</span>
+            </button>
+            <button
+              type="button"
+              onClick={toggleCudyBlueTest}
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold transition ${isCudyBlueTestEnabled ? 'border-[var(--svs-primary)] bg-[var(--svs-cyan-surface)] text-[var(--svs-primary-strong)]' : 'border-[var(--svs-border)] bg-[var(--svs-surface)] text-[var(--svs-nav-text)] hover:border-[var(--svs-primary)]'}`}
+              aria-pressed={isCudyBlueTestEnabled}
+              aria-label="Toggle Cudy blue test"
+            >
+              <span className={`h-2.5 w-2.5 rounded-full ${isCudyBlueTestEnabled ? 'bg-[var(--svs-primary)]' : 'bg-[var(--svs-border)]'}`} />
+              <span>Test Blue</span>
             </button>
             <div className="relative">
               <button
@@ -1007,6 +1213,16 @@ const Shell = ({ children }) => {
             >
               {isDarkMode ? <Sun className="h-4 w-4 text-[var(--svs-primary)]" /> : <Moon className="h-4 w-4 text-[var(--svs-primary-strong)]" />}
               {t('theme.switchTo', { mode: isDarkMode ? t('theme.light') : t('theme.dark') })}
+            </button>
+            <button
+              type="button"
+              onClick={toggleCudyBlueTest}
+              className={`mb-3 inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold ${isCudyBlueTestEnabled ? 'border-[var(--svs-primary)] bg-[var(--svs-cyan-surface)] text-[var(--svs-primary-strong)]' : 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)] text-[var(--svs-text)]'}`}
+              aria-pressed={isCudyBlueTestEnabled}
+              aria-label="Toggle Cudy blue test"
+            >
+              <span className={`h-2.5 w-2.5 rounded-full ${isCudyBlueTestEnabled ? 'bg-[var(--svs-primary)]' : 'bg-[var(--svs-border)]'}`} />
+              <span>Test Blue</span>
             </button>
             <div className="relative mb-3" ref={mobileLanguageMenuRef}>
               <button
@@ -1117,7 +1333,7 @@ const HomePage = () => {
               <p className="mt-3 text-lg text-slate-100 sm:text-2xl">{slide.subtitle}</p>
               <button
                 type="button"
-                className="mt-6 rounded-full bg-[var(--svs-primary)] px-8 py-3 text-base font-semibold text-white shadow-lg transition hover:scale-105 hover:bg-[#33b9f2]"
+                className={`${cudyBluePrimaryButtonClassName} mt-6 rounded-full bg-[var(--svs-primary)] px-8 py-3 text-base font-semibold text-white shadow-lg transition hover:scale-105 hover:bg-[#33b9f2]`}
               >
                 {t('common.learnMore')}
               </button>
@@ -1190,14 +1406,14 @@ const HomePage = () => {
             <div className="mt-7 flex flex-wrap gap-3">
               <Link
                 to="/markets"
-                className="rounded-md bg-[var(--svs-primary)] px-6 py-3 text-base font-semibold text-white shadow transition hover:scale-105 hover:bg-[#33b9f2]"
+                className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-6 py-3 text-base font-semibold text-white shadow transition hover:scale-105 hover:bg-[#33b9f2]`}
               >
                 {t('common.exploreNow')}
               </Link>
               {!isAuthenticated ? (
                 <Link
                   to="/signup"
-                  className="rounded-md border border-[var(--svs-primary)] px-6 py-3 text-base font-semibold text-[var(--svs-primary)] transition hover:scale-105 hover:bg-[#e0f7fa]"
+                  className={`${cudyBluePrimaryOutlineClassName} rounded-md border border-[var(--svs-primary)] px-6 py-3 text-base font-semibold text-[var(--svs-primary)] transition hover:scale-105 hover:bg-[#e0f7fa]`}
                 >
                   {t('profile.signUp')}
                 </Link>
@@ -1303,7 +1519,7 @@ const TicketsPage = () => {
               <p className="mt-1 flex items-center gap-1 text-sm text-slate-600"><CalendarDays className="h-4 w-4" /> {formatDate(event.date, currentLocale)}</p>
               <p className="mt-1 flex items-center gap-1 text-sm text-slate-600"><MapPin className="h-4 w-4" /> {t(event.locationKey, { defaultValue: event.location })}</p>
               <p className="mt-2 text-sm text-[var(--svs-primary-strong)]">{t(event.typeKey, { defaultValue: event.type })} • <SalePrice price={event.price} /></p>
-              <button type="button" className="mt-3 rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]">
+              <button type="button" className={`${cudyBluePrimaryButtonClassName} mt-3 rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}>
                 {t('ticketsPage.bookNow')}
               </button>
             </div>
@@ -1341,7 +1557,7 @@ const BookingsTicketsPage = () => {
         <article key={`booking-${event.id}`} className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
           <h3 className="text-lg font-bold">{event.title}</h3>
           <p className="mt-1 text-sm text-slate-600">{formatDate(event.date)} • {event.location}</p>
-          <button type="button" className="mt-3 rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white">{t('common.bookNow')}</button>
+          <button type="button" className={`${cudyBluePrimaryButtonClassName} mt-3 rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white`}>{t('common.bookNow')}</button>
         </article>
       ))}
     </div>
@@ -1426,7 +1642,7 @@ const VoteSuccessModal = ({ vote, onClose }) => {
           <p className="font-bold">10,000+</p>
         </div>
       </div>
-      <button type="button" onClick={onClose} className="mt-4 w-full rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white">
+      <button type="button" onClick={onClose} className={`${cudyBluePrimaryButtonClassName} mt-4 w-full rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white`}>
         {t('common.continue')}
       </button>
     </div>
@@ -1446,7 +1662,7 @@ const VotingProvidersPage = () => {
           <article key={expert.id} className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-lg font-bold">#{expert.rank} {expert.name}</h3>
-              <button type="button" className="rounded-md bg-[var(--svs-primary)] px-3 py-1.5 text-sm font-semibold text-white">
+              <button type="button" className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-1.5 text-sm font-semibold text-white`}>
                 {t('common.voteNow')}
               </button>
             </div>
@@ -1568,7 +1784,7 @@ const HomeCarePage = () => {
           <p className="mt-1 text-sm text-slate-600">{provider.type} • {provider.city}</p>
           <p className="mt-2 flex items-center gap-1 text-sm text-slate-700"><Star className="h-4 w-4 text-amber-500" /> {provider.rating}</p>
           <div className="mt-3 flex gap-2">
-            <button type="button" className="rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white">{t('common.bookNow')}</button>
+            <button type="button" className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white`}>{t('common.bookNow')}</button>
             <button type="button" className="rounded-md border border-[#b2ebf2] px-3 py-2 text-sm font-semibold">{t('common.chatWithProvider')}</button>
           </div>
         </article>
@@ -1589,6 +1805,102 @@ const HardwareSoftwarePage = () => {
       secondaryButtonLabel={t('common.viewMore')}
       metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} /></p>}
     />
+  </PageFrame>
+  );
+};
+
+const PropertyHubPage = () => {
+  const { t } = useTranslation();
+
+  return (
+  <PageFrame title={t('markets.propertyHub')} subtitle={t('pageSubtitles.propertyHub')}>
+    <div className="mb-5 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4 text-sm text-[var(--svs-text)]">
+      {t('propertyHub.intro')}
+    </div>
+    <div className="grid gap-4 md:grid-cols-3">
+      {propertyListings.map((listing) => (
+        <article key={listing.id} className="overflow-hidden rounded-xl border border-[#eeeeee] bg-white shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
+          <img src={listing.image} alt={getTranslatedValue(t, listing.titleKey, listing.title)} className="h-44 w-full object-cover" loading="lazy" />
+          <div className="p-4">
+            <h3 className="text-lg font-bold">{getTranslatedValue(t, listing.titleKey, listing.title)}</h3>
+            <p className="mt-1 text-sm text-slate-600">{getTranslatedValue(t, listing.typeKey, listing.type)}</p>
+            <p className="mt-2 flex items-center gap-2 text-sm text-slate-600"><MapPin className="h-4 w-4" /> {getTranslatedValue(t, listing.locationKey, listing.location)}</p>
+            <p className="mt-3 text-sm text-[var(--svs-primary-strong)]"><SalePrice price={listing.price} /></p>
+            <button type="button" className={`${cudyBluePrimaryButtonClassName} mt-4 rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
+              {t('common.viewDetails')}
+            </button>
+          </div>
+        </article>
+      ))}
+    </div>
+  </PageFrame>
+  );
+};
+
+const InternationalLotteryGamesPage = () => {
+  const { t } = useTranslation();
+
+  return (
+  <PageFrame title={t('markets.internationalLotteryGames')} subtitle={t('pageSubtitles.internationalLotteryGames')}>
+    <div className="mb-5 rounded-xl border border-[#fcd34d] bg-[#fffbeb] p-4 text-sm text-[#92400e]">
+      {t('internationalLotteryHub.notice')}
+    </div>
+    <div className="grid gap-4 md:grid-cols-3">
+      {lotteryGames.map((game) => (
+        <article key={game.id} className="overflow-hidden rounded-xl border border-[#eeeeee] bg-white shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
+          <img src={game.image} alt={getTranslatedValue(t, game.titleKey, game.title)} className="h-44 w-full object-cover" loading="lazy" />
+          <div className="p-4">
+            <h3 className="text-lg font-bold">{getTranslatedValue(t, game.titleKey, game.title)}</h3>
+            <p className="mt-2 text-sm text-slate-600">{t('internationalLotteryHub.regionLabel')}: {getTranslatedValue(t, game.regionKey, game.region)}</p>
+            <p className="mt-1 text-sm text-slate-600">{t('internationalLotteryHub.drawDayLabel')}: {getTranslatedValue(t, game.drawDayKey, game.drawDay)}</p>
+            <div className="mt-3 text-sm text-[var(--svs-primary-strong)]">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('internationalLotteryHub.jackpotLabel')}</p>
+              <SalePrice price={game.jackpot} />
+            </div>
+            <button type="button" className={`${cudyBluePrimaryButtonClassName} mt-4 rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
+              {t('common.playNow')}
+            </button>
+          </div>
+        </article>
+      ))}
+    </div>
+  </PageFrame>
+  );
+};
+
+const LivestockHubPage = () => {
+  const { t } = useTranslation();
+
+  return (
+  <PageFrame title={t('markets.livestockHub')} subtitle={t('pageSubtitles.livestockHub')}>
+    <div className="mb-5 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4 text-sm text-[var(--svs-text)]">
+      {t('livestockHub.intro')}
+    </div>
+    <div className="grid gap-4 md:grid-cols-3">
+      {livestockItems.map((item) => (
+        <article key={item.id} className="overflow-hidden rounded-xl border border-[#eeeeee] bg-white shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
+          <img
+            src={item.image}
+            alt={getTranslatedValue(t, item.titleKey, item.title)}
+            className="h-44 w-full object-cover"
+            loading="lazy"
+            onError={(event) => {
+              event.currentTarget.onerror = null;
+              event.currentTarget.src = livestockImageFallback;
+            }}
+          />
+          <div className="p-4">
+            <h3 className="text-lg font-bold">{getTranslatedValue(t, item.titleKey, item.title)}</h3>
+            <p className="mt-2 flex items-center gap-2 text-sm text-slate-600"><MapPin className="h-4 w-4" /> {getTranslatedValue(t, item.locationKey, item.location)}</p>
+            <p className="mt-2 text-sm text-slate-600">{getTranslatedValue(t, item.summaryKey, item.summary)}</p>
+            <p className="mt-3 text-sm text-[var(--svs-primary-strong)]"><SalePrice price={item.price} /></p>
+            <button type="button" className={`${cudyBluePrimaryButtonClassName} mt-4 rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
+              {t('common.viewDetails')}
+            </button>
+          </div>
+        </article>
+      ))}
+    </div>
   </PageFrame>
   );
 };
@@ -1647,7 +1959,7 @@ const BettingVotingMarketPage = () => {
       <section className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
         <h3 className="text-lg font-bold">Place a Prediction</h3>
         <p className="mt-2 text-sm text-slate-600">Choose a match and submit your prediction in one click.</p>
-        <Link to="/voting-clients" className="mt-4 inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white">
+        <Link to="/voting-clients" className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
           {t('common.voteNow')}
         </Link>
       </section>
@@ -1702,7 +2014,7 @@ const MarketsPage = () => {
               <span className="rounded-full bg-[var(--svs-cyan-surface)] px-2 py-1 text-xs font-bold text-[var(--svs-primary-strong)]">SVS</span>
             </div>
             <p className="mt-3 text-sm text-[var(--svs-muted)]">{t('marketsPage.openMarket')}</p>
-            <div className="mt-4 inline-flex items-center gap-2 rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition group-hover:bg-[#33b9f2]">
+            <div className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex items-center gap-2 rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition group-hover:bg-[#33b9f2]`}>
               {t('marketsPage.enterMarket')} <span aria-hidden="true">-&gt;</span>
             </div>
           </Link>
@@ -1742,24 +2054,29 @@ const SearchResultsPage = () => {
 
       {results.length ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {results.map((item) => (
-            <article key={`search-${item.id}`} className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
-              {item.image ? (
-                <img
-                  src={item.image}
-                  alt={item.title}
-                  className="mb-3 h-40 w-full rounded-lg object-cover"
-                  loading="lazy"
-                />
-              ) : null}
-              <h3 className="text-lg font-bold">{item.title}</h3>
-              <p className="mt-1 text-sm text-slate-600">{item.section}</p>
-              {'price' in item ? <p className="mt-1 text-sm text-[var(--svs-primary-strong)]"><SalePrice price={item.price} /></p> : null}
-              <Link to={item.route} className="mt-3 inline-flex rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white">
-                {t('common.openMarket')}
-              </Link>
-            </article>
-          ))}
+          {results.map((item) => {
+            const itemTitle = getTranslatedValue(t, item.titleKey, item.title);
+            const itemSection = getTranslatedValue(t, item.sectionKey, item.section);
+
+            return (
+              <article key={`search-${item.id}`} className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
+                {item.image ? (
+                  <img
+                    src={item.image}
+                    alt={itemTitle}
+                    className="mb-3 h-40 w-full rounded-lg object-cover"
+                    loading="lazy"
+                  />
+                ) : null}
+                <h3 className="text-lg font-bold">{itemTitle}</h3>
+                <p className="mt-1 text-sm text-slate-600">{itemSection}</p>
+                {'price' in item ? <p className="mt-1 text-sm text-[var(--svs-primary-strong)]"><SalePrice price={item.price} /></p> : null}
+                <Link to={item.route} className={`${cudyBluePrimaryButtonClassName} mt-3 inline-flex rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white`}>
+                  {t('common.openMarket')}
+                </Link>
+              </article>
+            );
+          })}
         </div>
       ) : (
         <div className="rounded-xl border border-[#b2ebf2] bg-[#e0f7fa] p-4 text-sm text-slate-700">{t('searchResults.noResults')}</div>
@@ -1813,27 +2130,35 @@ const PageFrame = ({ title, subtitle, children, darkHero = false }) => (
   </section>
 );
 
-const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer }) => (
-  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-    {items.map((item) => (
-      <article key={item.id} className="overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-card-bg)] shadow-[0_4px_8px_rgba(0,0,0,0.1)] transition hover:scale-[1.03]">
-        <img src={item.image} alt={item.title} className="h-40 w-full object-cover" loading="lazy" />
-        <div className="p-4">
-          <h3 className="text-lg font-bold">{item.title}</h3>
-          <div className="mt-1">{metaRenderer(item)}</div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button type="button" className="rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]">
-              {buttonLabel}
-            </button>
-            <button type="button" className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--svs-text)]">
-              {secondaryButtonLabel}
-            </button>
-          </div>
-        </div>
-      </article>
-    ))}
-  </div>
-);
+const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer }) => {
+  const { t } = useTranslation();
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {items.map((item) => {
+        const itemTitle = getTranslatedValue(t, item.titleKey, item.title);
+
+        return (
+          <article key={item.id} className="overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-card-bg)] shadow-[0_4px_8px_rgba(0,0,0,0.1)] transition hover:scale-[1.03]">
+            <img src={item.image} alt={itemTitle} className="h-40 w-full object-cover" loading="lazy" />
+            <div className="p-4">
+              <h3 className="text-lg font-bold">{itemTitle}</h3>
+              <div className="mt-1">{metaRenderer(item)}</div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button type="button" className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}>
+                  {buttonLabel}
+                </button>
+                <button type="button" className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--svs-text)]">
+                  {secondaryButtonLabel}
+                </button>
+              </div>
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  );
+};
 
 const SiteFooter = () => {
   const { t } = useTranslation();
@@ -1873,7 +2198,7 @@ const SiteFooter = () => {
           <h4 className="text-sm font-semibold uppercase tracking-wide text-cyan-100">{t('footer.subscribe')}</h4>
           <div className="mt-2 space-y-2">
             <input type="text" placeholder={t('footer.subscribePlaceholder')} className="w-full rounded-md border border-cyan-200/40 bg-white/10 px-3 py-2 text-sm text-white placeholder:text-slate-200" aria-label={t('footer.subscribeAria')} />
-            <button type="button" className="rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold">{t('footer.subscribe')}</button>
+            <button type="button" className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold`}>{t('footer.subscribe')}</button>
           </div>
           <div className="mt-3 flex gap-2">
             <span className="rounded-full bg-white/20 px-2 py-1 text-xs">FB</span>
@@ -1913,6 +2238,9 @@ const AppRoutes = () => {
     <Route path="/wellness" element={<WellnessPage />} />
     <Route path="/home-care" element={<HomeCarePage />} />
     <Route path="/hardware-software" element={<HardwareSoftwarePage />} />
+    <Route path="/property-hub" element={<PropertyHubPage />} />
+    <Route path="/international-lottery-games" element={<InternationalLotteryGamesPage />} />
+    <Route path="/livestock-hub" element={<LivestockHubPage />} />
     <Route path="/betting-hub" element={<BettingHubPage />} />
     <Route path="/betting-voting" element={<BettingVotingMarketPage />} />
     <Route path="/safety" element={<SafetyPage />} />

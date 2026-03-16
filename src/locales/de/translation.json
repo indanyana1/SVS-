@@ -22,7 +22,8 @@
     "add": "Hinzufügen",
     "uploadPrescription": "Rezept hochladen",
     "chatWithProvider": "Chatten Sie mit dem Anbieter",
-    "continue": "Weitermachen"
+    "continue": "Weitermachen",
+    "playNow": "jetzt spielen"
   },
   "search": {
     "placeholder": "Suchen Sie nach Produkten, Lebensmitteln, Medikamenten, Tickets ...",
@@ -65,7 +66,10 @@
     "hardwareSoftware": "Hardware- und Software-Hub",
     "bettingHub": "Wett-Hub",
     "bettingVoting": "Wetten und Abstimmen",
-    "safety": "Sicherheit und Verantwortung"
+    "safety": "Sicherheit und Verantwortung",
+    "propertyHub": "Immobilien-Hub",
+    "internationalLotteryGames": "Internationaler Hub für Lotteriespiele",
+    "livestockHub": "Online-Verkaufs- und Verkaufszentrum für Vieh"
   },
   "footer": {
     "about": "Über uns",
@@ -138,7 +142,10 @@
     "hardwareSoftware": "Technische Gadgets, Softwarepakete und sicherer Elektronikeinkauf.",
     "bettingHub": "Aggregierte Abstimmungs- und Wettvorschau mit beliebten Spielen und aktuellen Highlights zu Reiseangeboten.",
     "bettingVoting": "Einheitliche Erfahrung für Vorhersagen, Quoteneinblicke und verifizierte Expertenkanäle.",
-    "safety": "Compliance-Standards, Altersbeschränkungen und sichere Transaktionsgarantien."
+    "safety": "Compliance-Standards, Altersbeschränkungen und sichere Transaktionsgarantien.",
+    "propertyHub": "Durchsuchen Sie Mietobjekte, zum Verkauf stehende Häuser und Gewerbeflächen mit umfangreichen Standortdetails.",
+    "internationalLotteryGames": "Vergleichen Sie Jackpot-Pools, Ziehungstage und berechtigte internationale Lotteriespiele an einem Ort.",
+    "livestockHub": "Kaufen und verkaufen Sie Rinder, Schafe und Ziegen mit betriebsbereiten Auflistungsdetails und Verkäuferstandorten."
   },
   "searchResults": {
     "title": "Suchergebnisse",
@@ -179,5 +186,68 @@
   "site": {
     "tagline": "Kaufen, bestellen und buchen Sie Dienstleister sofort – jederzeit und überall.",
     "address": "Beachy Head Drive, Pietermaritzburg Bay 6600"
+  },
+  "propertyHub": {
+    "intro": "Verifizierte Immobilienangebote für private und gewerbliche Käufer, Mieter und Investoren.",
+    "items": {
+      "pr1": {
+        "title": "Skyline-Luxus-Apartment",
+        "location": "Uferpromenade von Kapstadt",
+        "type": "Apartment mit 2 Schlafzimmern"
+      },
+      "pr2": {
+        "title": "Greenbelt-Familienhaus",
+        "location": "Pietermaritzburg Hills",
+        "type": "Haus mit 4 Schlafzimmern"
+      },
+      "pr3": {
+        "title": "Hafen-Bürosuite",
+        "location": "Durban Central",
+        "type": "Gewerbeflächen"
+      }
+    }
+  },
+  "internationalLotteryHub": {
+    "notice": "Spielverfügbarkeit, Altersbeschränkungen und Auszahlungsregeln hängen vom ausgewählten Land und Anbieter ab.",
+    "regionLabel": "Region",
+    "drawDayLabel": "Tag der Auslosung",
+    "jackpotLabel": "Jackpot",
+    "items": {
+      "lg1": {
+        "title": "Globale EuroMillions-Ziehung",
+        "region": "Europa",
+        "drawDay": "Freitag"
+      },
+      "lg2": {
+        "title": "Powerball International",
+        "region": "Nordamerika",
+        "drawDay": "Mittwoch"
+      },
+      "lg3": {
+        "title": "Panafrikanische Mega Millions",
+        "region": "Afrika",
+        "drawDay": "Samstag"
+      }
+    }
+  },
+  "livestockHub": {
+    "intro": "Digitaler Viehhandel für geprüfte Bauernhöfe, Genossenschaften und gewerbliche Käufer.",
+    "items": {
+      "ls1": {
+        "title": "Brahmanen-Zuchtbulle",
+        "location": "Freistaat, Südafrika",
+        "summary": "22 Monate • Geimpft • Auktionsbereit"
+      },
+      "ls2": {
+        "title": "Dorper Sheep Trio",
+        "location": "Lesotho-Hochland",
+        "summary": "Gesunde Mutterschafe • Bereit für die Brutzeit"
+      },
+      "ls3": {
+        "title": "Burenziegen-Starterherde",
+        "location": "Limpopo-Farmgürtel",
+        "summary": "5 Ziegen • Markiert • Lieferunterstützung verfügbar"
+      }
+    }
   }
 }

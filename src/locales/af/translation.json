@@ -22,7 +22,8 @@
     "add": "Voeg by",
     "uploadPrescription": "Laai voorskrif op",
     "chatWithProvider": "Gesels met verskaffer",
-    "continue": "Gaan voort"
+    "continue": "Gaan voort",
+    "playNow": "Speel Nou"
   },
   "search": {
     "placeholder": "Soek vir Produkte, Kos, Medisyne, Kaartjies...",
@@ -65,7 +66,10 @@
     "hardwareSoftware": "Hardeware- en Sagteware Sentrum",
     "bettingHub": "Weddenskapsentrum",
     "bettingVoting": "Weddenskappe en Stem",
-    "safety": "Veiligheid en Verantwoordelikheid"
+    "safety": "Veiligheid en Verantwoordelikheid",
+    "propertyHub": "Eiendom Hub",
+    "internationalLotteryGames": "Internasionale Lotery Games Hub",
+    "livestockHub": "Vee Aanlyn Verkoop & Koop Hub"
   },
   "footer": {
     "about": "Oor Ons",
@@ -138,7 +142,10 @@
     "hardwareSoftware": "Tegnologie-gadgets, sagtewarebundels en veilige elektroniese aankope.",
     "bettingHub": "Saamgestelde weddery- en stemoorsig met gewilde wedstryde en warm reisaanbiedinge.",
     "bettingVoting": "Verenigde ervaring vir voorspellings, odds-insigte en geverifieerde kundige kanale.",
-    "safety": "Nakomingstandaarde, ouderdomsbeperkings en veilige transaksiewaarborge."
+    "safety": "Nakomingstandaarde, ouderdomsbeperkings en veilige transaksiewaarborge.",
+    "propertyHub": "Blaai deur verhurings, huise te koop en kommersiële ruimtes met ryk liggingbesonderhede.",
+    "internationalLotteryGames": "Vergelyk boerpotpoele, trekkingsdae en kwalifiserende internasionale loteryspeletjies op een plek.",
+    "livestockHub": "Koop en verkoop beeste, skape en bokke met plaasgereed-lysbesonderhede en verkoperliggings."
   },
   "searchResults": {
     "title": "Soekresultate",
@@ -179,5 +186,68 @@
   "site": {
     "tagline": "Koop, bestel en bespreek diensverskaffers onmiddellik - enige tyd, enige plek.",
     "address": "Beachy Head Drive, Pietermaritzburgbaai 6600"
+  },
+  "propertyHub": {
+    "intro": "Geverifieerde eiendomsinskrywings vir residensiële en kommersiële kopers, huurders en beleggers.",
+    "items": {
+      "pr1": {
+        "title": "Skyline Luukse Woonstel",
+        "location": "Kaapstad Waterfront",
+        "type": "2 Slaapkamer woonstel"
+      },
+      "pr2": {
+        "title": "Greenbelt Gesinshuis",
+        "location": "Pietermaritzburg Hills",
+        "type": "4 Slaapkamer Huis"
+      },
+      "pr3": {
+        "title": "Harbour Office Suite",
+        "location": "Durban Sentraal",
+        "type": "Kommersiële Ruimte"
+      }
+    }
+  },
+  "internationalLotteryHub": {
+    "notice": "Speletjiebeskikbaarheid, ouderdomsbeperkings en uitbetalingsreëls hang af van die gekose land en verskaffer.",
+    "regionLabel": "Streek",
+    "drawDayLabel": "Trekkingsdag",
+    "jackpotLabel": "Boerpot",
+    "items": {
+      "lg1": {
+        "title": "EuroMillions Global Draw",
+        "region": "Europa",
+        "drawDay": "Vrydag"
+      },
+      "lg2": {
+        "title": "Powerball Internasionaal",
+        "region": "Noord-Amerika",
+        "drawDay": "Woensdag"
+      },
+      "lg3": {
+        "title": "Pan-Afrikaanse Mega Miljoene",
+        "region": "Afrika",
+        "drawDay": "Saterdag"
+      }
+    }
+  },
+  "livestockHub": {
+    "intro": "Digitale veehandel vir geverifieerde plase, koöperasies en kommersiële kopers.",
+    "items": {
+      "ls1": {
+        "title": "Brahman Teelbul",
+        "location": "Vrystaat, Suid-Afrika",
+        "summary": "22 maande • Ingeënt • Veilingsgereed"
+      },
+      "ls2": {
+        "title": "Dorper Skaap Trio",
+        "location": "Lesotho Hoogland",
+        "summary": "Gesonde ooie • Gereed vir teelseisoen"
+      },
+      "ls3": {
+        "title": "Boerbok Starter Kudde",
+        "location": "Limpopo Plaasgordel",
+        "summary": "5 bokke • Gemerk • Afleweringsondersteuning beskikbaar"
+      }
+    }
   }
 }

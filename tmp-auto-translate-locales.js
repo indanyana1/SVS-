@@ -4,6 +4,10 @@ const path = require('path');
 const root = path.resolve('src/locales');
 const enPath = path.join(root, 'en', 'translation.json');
 const en = JSON.parse(fs.readFileSync(enPath, 'utf8'));
+const onlyPrefixes = String(process.env.ONLY_PREFIXES || '')
+  .split(',')
+  .map((value) => value.trim())
+  .filter(Boolean);
 
 const langMap = {
   af: 'af', ar: 'ar', bn: 'bn', de: 'de', es: 'es', fil: 'tl', fr: 'fr', hi: 'hi',
@@ -88,6 +92,11 @@ async function translateText(input, targetLang) {
 
 (async () => {
   const enFlat = flatten(en);
+  const filteredKeys = Object.keys(enFlat).filter((key) => {
+    if (typeof enFlat[key] !== 'string') return false;
+    if (!onlyPrefixes.length) return true;
+    return onlyPrefixes.some((prefix) => key === prefix || key.startsWith(`${prefix}.`));
+  });
   const localeDirs = fs.readdirSync(root, { withFileTypes: true })
     .filter((d) => d.isDirectory())
     .map((d) => d.name)
@@ -99,10 +108,8 @@ async function translateText(input, targetLang) {
     const locale = JSON.parse(fs.readFileSync(filePath, 'utf8'));
     const localeFlat = flatten(locale);
 
-    const keysToTranslate = Object.keys(enFlat).filter((k) => {
-      if (typeof enFlat[k] !== 'string') return false;
-      if (localeFlat[k] === undefined) return false;
-      return String(localeFlat[k]) === String(enFlat[k]);
+    const keysToTranslate = filteredKeys.filter((k) => {
+      return localeFlat[k] === undefined || String(localeFlat[k]) === String(enFlat[k]);
     });
 
     if (keysToTranslate.length === 0) {
@@ -111,7 +118,11 @@ async function translateText(input, targetLang) {
     }
 
     if (!targetLang) {
-      console.log(`${code}: skipped (${keysToTranslate.length} keys) - no reliable MT language code`);
+      for (const key of keysToTranslate) {
+        setByPath(locale, key, enFlat[key]);
+      }
+      fs.writeFileSync(filePath, JSON.stringify(locale, null, 2) + '\n', 'utf8');
+      console.log(`${code}: filled ${keysToTranslate.length} keys with English fallback - no reliable MT language code`);
       continue;
     }
 
@@ -120,6 +131,7 @@ async function translateText(input, targetLang) {
     let translatedCount = 0;
     for (const key of keysToTranslate) {
       const src = enFlat[key];
+      setByPath(locale, key, src);
       try {
         const out = await translateText(src, targetLang);
         setByPath(locale, key, out);

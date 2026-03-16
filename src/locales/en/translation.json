@@ -12,6 +12,7 @@
     "learnMore": "Learn More",
     "exploreNow": "Explore Now",
     "bookNow": "Book Now",
+    "playNow": "Play Now",
     "voteNow": "Vote Now",
     "openMarket": "Open Market",
     "addToBasket": "Add to Basket",
@@ -104,9 +105,75 @@
     "wellness": "Browse pharmacy and health products, emergency delivery, and prescription-friendly options.",
     "homeCare": "Search providers by location and service type, then book or chat instantly.",
     "hardwareSoftware": "Tech gadgets, software bundles, and secure electronics purchasing.",
+    "propertyHub": "Browse rentals, homes for sale, and commercial spaces with rich location detail.",
+    "internationalLotteryGames": "Compare jackpot pools, draw days, and eligible international lottery games in one place.",
+    "livestockHub": "Buy and sell cattle, sheep, and goats with farm-ready listing details and seller locations.",
     "bettingHub": "Aggregated voting and betting preview with popular matches and hot travel deal highlights.",
     "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
     "safety": "Compliance standards, age restrictions, and secure transaction guarantees."
+  },
+  "propertyHub": {
+    "intro": "Verified property listings for residential and commercial buyers, renters, and investors.",
+    "items": {
+      "pr1": {
+        "title": "Skyline Luxury Apartment",
+        "location": "Cape Town Waterfront",
+        "type": "2 Bedroom Apartment"
+      },
+      "pr2": {
+        "title": "Greenbelt Family Home",
+        "location": "Pietermaritzburg Hills",
+        "type": "4 Bedroom House"
+      },
+      "pr3": {
+        "title": "Harbour Office Suite",
+        "location": "Durban Central",
+        "type": "Commercial Space"
+      }
+    }
+  },
+  "internationalLotteryHub": {
+    "notice": "Game availability, age restrictions, and payout rules depend on the selected country and provider.",
+    "regionLabel": "Region",
+    "drawDayLabel": "Draw Day",
+    "jackpotLabel": "Jackpot",
+    "items": {
+      "lg1": {
+        "title": "EuroMillions Global Draw",
+        "region": "Europe",
+        "drawDay": "Friday"
+      },
+      "lg2": {
+        "title": "Powerball International",
+        "region": "North America",
+        "drawDay": "Wednesday"
+      },
+      "lg3": {
+        "title": "Pan-African Mega Millions",
+        "region": "Africa",
+        "drawDay": "Saturday"
+      }
+    }
+  },
+  "livestockHub": {
+    "intro": "Digital livestock trading for verified farms, co-ops, and commercial buyers.",
+    "items": {
+      "ls1": {
+        "title": "Brahman Breeding Bull",
+        "location": "Free State, South Africa",
+        "summary": "22 months • Vaccinated • Auction-ready"
+      },
+      "ls2": {
+        "title": "Dorper Sheep Trio",
+        "location": "Lesotho Highlands",
+        "summary": "Healthy ewes • Ready for breeding season"
+      },
+      "ls3": {
+        "title": "Boer Goat Starter Herd",
+        "location": "Limpopo Farm Belt",
+        "summary": "5 goats • Tagged • Delivery support available"
+      }
+    }
   },
   "searchResults": {
     "title": "Search Results",
@@ -143,6 +210,9 @@
     "wellness": "Wellness Products Hub",
     "homeCare": "Home Care Hub",
     "hardwareSoftware": "Hardwares & Softwares Hub",
+    "propertyHub": "Property Hub",
+    "internationalLotteryGames": "International Lottery Games Hub",
+    "livestockHub": "Livestock Online Selling & Buying Hub",
     "bettingHub": "Betting Hub",
     "bettingVoting": "Betting and Voting",
     "safety": "Safety and Responsibility"
