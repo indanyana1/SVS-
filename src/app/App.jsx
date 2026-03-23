@@ -824,6 +824,7 @@ const CART_STORAGE_KEY = 'svs-cart-items';
 const WISHLIST_STORAGE_KEY = 'svs-wishlist-items';
 const ORDERS_STORAGE_KEY = 'svs-orders';
 const NOTIFICATIONS_STORAGE_KEY = 'svs-notifications';
+const PRODUCT_REVIEWS_STORAGE_KEY = 'svs-product-reviews';
 const ORDER_STATUS_FLOW = ['Processing', 'Confirmed', 'Preparing for Shipping', 'Shipped', 'Delivered'];
 const REFUND_STATUS_FLOW = ['Cancelled by Buyer', 'Refund Pending', 'Refund Made'];
 const ORDER_AUTO_PROGRESS_MS = {
@@ -836,7 +837,9 @@ const ORDERS_TABLE = 'orders';
 const SELLER_ITEMS_TABLE = 'marketplace_items';
 const CART_ITEMS_TABLE = 'cart_items';
 const WISHLIST_ITEMS_TABLE = 'wishlist_items';
+const PRODUCT_REVIEWS_TABLE = 'product_reviews';
 const SELLER_IMAGES_BUCKET = 'marketplace-items';
+const HARSH_REVIEW_TERMS = ['idiot', 'stupid', 'trash', 'garbage', 'useless', 'scam'];
 
 const getStoredCollection = (storageKey) => {
   if (typeof window === 'undefined') {
@@ -880,6 +883,7 @@ const getStoredOrders = (userEmail = getCurrentUserEmail()) =>
   getStoredCollection(getUserScopedStorageKey(ORDERS_STORAGE_KEY, userEmail));
 const getStoredNotifications = (userEmail = getCurrentUserEmail()) =>
   getStoredCollection(getUserScopedStorageKey(NOTIFICATIONS_STORAGE_KEY, userEmail));
+const getStoredProductReviews = () => getStoredCollection(PRODUCT_REVIEWS_STORAGE_KEY);
 
 const createNotificationRecord = ({ title, message, href, orderId, type = 'info' }) => ({
   id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -931,6 +935,90 @@ const sanitizeStorageSegment = (value) => String(value || 'seller')
   .toLowerCase()
   .replace(/[^a-z0-9]+/g, '-')
   .replace(/^-+|-+$/g, '') || 'seller';
+
+const normalizeReviewComment = (value) => String(value || '')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+const normalizeReviewerName = (value, reviewerEmail = '') => {
+  const trimmedName = String(value || '').trim();
+
+  if (trimmedName) {
+    return trimmedName.slice(0, 50);
+  }
+
+  const normalizedEmail = normalizeEmail(reviewerEmail);
+
+  if (normalizedEmail.includes('@')) {
+    return normalizedEmail.split('@')[0].slice(0, 50);
+  }
+
+  return 'Guest';
+};
+
+const containsHarshReviewContent = (value) => {
+  const normalizedValue = normalizeReviewComment(value).toLowerCase();
+
+  if (!normalizedValue) {
+    return false;
+  }
+
+  return HARSH_REVIEW_TERMS.some((term) => {
+    const expression = new RegExp(`(^|[^a-z])${term}([^a-z]|$)`, 'i');
+    return expression.test(normalizedValue);
+  });
+};
+
+const getProductReviewItemKey = (item) => {
+  if (item?.wishlistItem?.id) {
+    return item.wishlistItem.id;
+  }
+
+  if (item?.cartItem?.id) {
+    return item.cartItem.id;
+  }
+
+  return `${sanitizeStorageSegment(item?.marketName)}:${sanitizeStorageSegment(item?.title)}`;
+};
+
+const createProductReview = ({ itemKey, rating, comment, reviewerName, reviewerEmail = '' }) => ({
+  id: `review-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  itemKey,
+  rating: Math.min(5, Math.max(1, Number(rating) || 5)),
+  comment: normalizeReviewComment(comment),
+  reviewerName: normalizeReviewerName(reviewerName, reviewerEmail),
+  reviewerEmail: normalizeEmail(reviewerEmail),
+  moderationStatus: 'approved',
+  createdAt: new Date().toISOString(),
+});
+
+const sortProductReviews = (reviews) => [...reviews].sort((leftReview, rightReview) => (
+  Date.parse(rightReview.createdAt || '') - Date.parse(leftReview.createdAt || '')
+));
+
+const mapProductReviewRecord = (record) => ({
+  id: record.id,
+  itemKey: record.item_key,
+  rating: Math.min(5, Math.max(1, Number(record.rating) || 5)),
+  comment: normalizeReviewComment(record.comment),
+  reviewerName: normalizeReviewerName(record.reviewer_name, record.reviewer_email),
+  reviewerEmail: normalizeEmail(record.reviewer_email || ''),
+  moderationStatus: String(record.moderation_status || 'approved'),
+  createdAt: record.created_at || new Date().toISOString(),
+});
+
+const toProductReviewRecord = (review) => ({
+  item_key: review.itemKey,
+  rating: review.rating,
+  comment: review.comment,
+  reviewer_name: review.reviewerName,
+  reviewer_email: review.reviewerEmail || null,
+  moderation_status: review.moderationStatus || 'approved',
+});
+
+const getStoredApprovedProductReviews = (itemKey) => sortProductReviews(
+  getStoredProductReviews().filter((review) => review.itemKey === itemKey && review.moderationStatus !== 'rejected'),
+);
 
 const getMarketplaceItemSaveErrorMessage = (errorMessage) => {
   const normalizedMessage = String(errorMessage || '').toLowerCase();
@@ -4385,7 +4473,19 @@ const PageFrame = ({ title, subtitle, children, darkHero = false }) => (
   </section>
 );
 
-const ItemDetailsModal = ({ item, onClose, onAddToCart, onToggleWishlist, isWishlisted = false }) => {
+const ItemDetailsModal = ({
+  item,
+  onClose,
+  onAddToCart,
+  onToggleWishlist,
+  isWishlisted = false,
+  reviews = [],
+  isLoadingReviews = false,
+  onSubmitReview,
+  currentReviewerName = '',
+  currentReviewerEmail = '',
+  reviewNotice = '',
+}) => {
   const itemImages = useMemo(() => {
     const rawImages = Array.isArray(item?.images) ? item.images : [];
     const cleanImages = rawImages.filter((url) => typeof url === 'string' && url.trim());
@@ -4397,11 +4497,27 @@ const ItemDetailsModal = ({ item, onClose, onAddToCart, onToggleWishlist, isWish
     return item?.image ? [item.image] : [];
   }, [item]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isReviewSectionOpen, setIsReviewSectionOpen] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [reviewerName, setReviewerName] = useState(currentReviewerName);
+  const [reviewError, setReviewError] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const touchStartXRef = useRef(null);
+  const itemReviewKey = useMemo(() => getProductReviewItemKey(item), [item]);
+  const isAuthenticatedReviewer = Boolean(normalizeEmail(currentReviewerEmail));
+  const averageRating = reviews.length
+    ? (reviews.reduce((total, review) => total + review.rating, 0) / reviews.length).toFixed(1)
+    : null;
 
   useEffect(() => {
     setCurrentImageIndex(0);
-  }, [item]);
+    setIsReviewSectionOpen(false);
+    setRating(0);
+    setComment('');
+    setReviewError('');
+    setReviewerName(currentReviewerName);
+  }, [item, currentReviewerName]);
 
   if (!item) {
     return null;
@@ -4449,6 +4565,54 @@ const ItemDetailsModal = ({ item, onClose, onAddToCart, onToggleWishlist, isWish
     }
 
     touchStartXRef.current = null;
+  };
+
+  const handleSubmitReview = async (event) => {
+    event.preventDefault();
+
+    const nextReviewerName = isAuthenticatedReviewer ? currentReviewerName : reviewerName;
+    const normalizedComment = normalizeReviewComment(comment);
+
+    if (!isAuthenticatedReviewer && !String(nextReviewerName || '').trim()) {
+      setReviewError('Add your name before posting a review.');
+      return;
+    }
+
+    if (rating === 0) {
+      setReviewError('Tap a star to choose your rating before posting.');
+      return;
+    }
+
+    if (normalizedComment.length < 6) {
+      setReviewError('Write a slightly longer review so other shoppers can use it.');
+      return;
+    }
+
+    if (!itemReviewKey) {
+      setReviewError('This item cannot receive reviews yet.');
+      return;
+    }
+
+    try {
+      setIsSubmittingReview(true);
+      setReviewError('');
+      await onSubmitReview?.({
+        itemKey: itemReviewKey,
+        rating,
+        comment: normalizedComment,
+        reviewerName: nextReviewerName,
+        reviewerEmail: currentReviewerEmail,
+      });
+      setComment('');
+      setRating(0);
+      if (!isAuthenticatedReviewer) {
+        setReviewerName(nextReviewerName);
+      }
+    } catch (error) {
+      setReviewError(error instanceof Error ? error.message : 'Could not publish this review right now.');
+    } finally {
+      setIsSubmittingReview(false);
+    }
   };
 
   return (
@@ -4531,6 +4695,13 @@ const ItemDetailsModal = ({ item, onClose, onAddToCart, onToggleWishlist, isWish
             {item.priceLabel ? (
               <p className="mt-2 text-base font-semibold text-[var(--svs-primary-strong)]">{item.priceLabel}</p>
             ) : null}
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[var(--svs-muted)]">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--svs-surface-soft)] px-3 py-1 font-semibold text-[var(--svs-text)]">
+                <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                {averageRating || 'New'}
+              </span>
+              <span>{reviews.length ? `${reviews.length} public review${reviews.length === 1 ? '' : 's'}` : 'No public reviews yet'}</span>
+            </div>
             {item.details ? (
               <p className="mt-3 text-sm leading-6 text-[var(--svs-muted)]">{item.details}</p>
             ) : (
@@ -4557,6 +4728,120 @@ const ItemDetailsModal = ({ item, onClose, onAddToCart, onToggleWishlist, isWish
                 </button>
               ) : null}
             </div>
+
+            <section className="mt-6 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4">
+              <button
+                type="button"
+                onClick={() => setIsReviewSectionOpen((prev) => !prev)}
+                className="flex w-full items-center justify-between gap-3 text-left"
+                aria-expanded={isReviewSectionOpen}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 text-amber-400">
+                    {[1,2,3,4,5].map((s) => (
+                      <Star key={s} className={`h-4 w-4 ${averageRating && s <= Math.round(Number(averageRating)) ? 'fill-current' : ''}`} />
+                    ))}
+                  </div>
+                  <span className="text-sm font-semibold text-[var(--svs-text)]">
+                    {averageRating ? `${averageRating} · ` : ''}
+                    {reviews.length ? `${reviews.length} review${reviews.length === 1 ? '' : 's'}` : 'No reviews yet'}
+                  </span>
+                </div>
+                <span className="shrink-0 text-xs font-semibold text-[var(--svs-primary)] underline underline-offset-2">
+                  {isReviewSectionOpen ? 'Hide' : 'Write a review'}
+                </span>
+              </button>
+
+              {isReviewSectionOpen ? (
+              <>
+              <form className="mt-4 space-y-3" onSubmit={handleSubmitReview}>
+                {!isAuthenticatedReviewer ? (
+                  <label className="block text-sm font-medium text-[var(--svs-text)]">
+                    Your name
+                    <input
+                      type="text"
+                      value={reviewerName}
+                      onChange={(event) => setReviewerName(event.target.value)}
+                      className="mt-1 w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/40"
+                      maxLength={50}
+                      placeholder="Public display name"
+                    />
+                  </label>
+                ) : (
+                  <p className="text-sm text-[var(--svs-muted)]">Posting as <span className="font-semibold text-[var(--svs-text)]">{normalizeReviewerName(currentReviewerName, currentReviewerEmail)}</span></p>
+                )}
+
+                <div>
+                  <p className="text-sm font-medium text-[var(--svs-text)]">Your rating</p>
+                  <div className="mt-2 flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((starValue) => (
+                      <button
+                        key={starValue}
+                        type="button"
+                        onClick={() => setRating(starValue)}
+                        className="rounded-full p-1 text-amber-400 transition hover:scale-110"
+                        aria-label={`Rate ${starValue} star${starValue === 1 ? '' : 's'}`}
+                      >
+                        <Star className={`h-5 w-5 ${starValue <= rating ? 'fill-current' : ''}`} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <label className="block text-sm font-medium text-[var(--svs-text)]">
+                  Your review
+                  <textarea
+                    value={comment}
+                    onChange={(event) => setComment(event.target.value)}
+                    className="mt-1 min-h-28 w-full rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/40"
+                    maxLength={400}
+                    placeholder="Tell other shoppers what you liked, how it arrived, or how it performs."
+                  />
+                </label>
+
+                {reviewError ? (
+                  <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{reviewError}</p>
+                ) : null}
+                {reviewNotice ? (
+                  <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{reviewNotice}</p>
+                ) : null}
+
+                <button
+                  type="submit"
+                  disabled={isSubmittingReview}
+                  className={`${cudyBluePrimaryButtonClassName} rounded-xl bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60`}
+                >
+                  {isSubmittingReview ? 'Publishing review...' : 'Publish review'}
+                </button>
+              </form>
+
+              <div className="mt-5 space-y-3">
+                {isLoadingReviews ? (
+                  <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-4 text-sm text-[var(--svs-muted)]">Loading reviews...</div>
+                ) : reviews.length ? (
+                  reviews.map((review) => (
+                    <article key={review.id} className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <p className="font-semibold text-[var(--svs-text)]">{review.reviewerName}</p>
+                          <div className="mt-1 flex items-center gap-1 text-amber-400">
+                            {[1, 2, 3, 4, 5].map((starValue) => (
+                              <Star key={starValue} className={`h-4 w-4 ${starValue <= review.rating ? 'fill-current' : ''}`} />
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-xs text-[var(--svs-muted)]">{formatDate(review.createdAt)}</p>
+                      </div>
+                      <p className="mt-3 text-sm leading-6 text-[var(--svs-muted)]">{review.comment}</p>
+                    </article>
+                  ))
+                ) : (
+                  <div className="rounded-xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-4 text-sm text-[var(--svs-muted)]">Be the first to share a review for this product.</div>
+                )}
+              </div>
+              </>
+              ) : null}
+            </section>
           </div>
         </div>
       </div>
@@ -4749,6 +5034,9 @@ const App = () => {
   const [orders, setOrders] = useState(getStoredOrders);
   const [notifications, setNotifications] = useState(getStoredNotifications);
   const [sellerItems, setSellerItems] = useState([]);
+  const [productReviews, setProductReviews] = useState([]);
+  const [isLoadingProductReviews, setIsLoadingProductReviews] = useState(false);
+  const [reviewNotice, setReviewNotice] = useState('');
   const [selectedItemDetails, setSelectedItemDetails] = useState(null);
   const [activeUserEmail, setActiveUserEmail] = useState(getCurrentUserEmail);
   const [hasLoadedUserCollections, setHasLoadedUserCollections] = useState(false);
@@ -4763,6 +5051,10 @@ const App = () => {
     return normalizeEmail(order.ownerEmail || order.customer?.email) === normalizedActiveUserEmail;
   }), [orders, normalizedActiveUserEmail]);
   const wishlistItemIds = useMemo(() => wishlistItems.map((item) => item.id), [wishlistItems]);
+  const selectedItemReviewKey = useMemo(() => getProductReviewItemKey(selectedItemDetails), [selectedItemDetails]);
+  const currentReviewerName = typeof window === 'undefined'
+    ? ''
+    : (window.localStorage.getItem('svs-user-name') || '');
   const isDetailsItemWishlisted = useMemo(() => {
     if (!selectedItemDetails?.wishlistItem?.id) {
       return false;
@@ -4788,6 +5080,18 @@ const App = () => {
   useEffect(() => {
     setNotifications(getStoredNotifications(activeUserEmail));
   }, [activeUserEmail]);
+
+  useEffect(() => {
+    if (!reviewNotice) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      setReviewNotice('');
+    }, 2600);
+
+    return () => window.clearTimeout(timer);
+  }, [reviewNotice]);
 
   useEffect(() => {
     window.localStorage.removeItem(NOTIFICATIONS_STORAGE_KEY);
@@ -5057,6 +5361,67 @@ const App = () => {
   useEffect(() => {
     loadSellerItems();
   }, [loadSellerItems]);
+
+  const loadReviewsForItem = useCallback(async (itemKey) => {
+    if (!itemKey) {
+      setProductReviews([]);
+      return [];
+    }
+
+    if (!hasSupabaseEnv || !supabase) {
+      const localReviews = getStoredApprovedProductReviews(itemKey);
+      setProductReviews(localReviews);
+      return localReviews;
+    }
+
+    setIsLoadingProductReviews(true);
+
+    const { data, error } = await supabase
+      .from(PRODUCT_REVIEWS_TABLE)
+      .select('id, item_key, rating, comment, reviewer_name, reviewer_email, moderation_status, created_at')
+      .eq('item_key', itemKey)
+      .eq('moderation_status', 'approved')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      const localReviews = getStoredApprovedProductReviews(itemKey);
+      setProductReviews(localReviews);
+      setIsLoadingProductReviews(false);
+      return localReviews;
+    }
+
+    const nextReviews = sortProductReviews((data || []).map(mapProductReviewRecord));
+    setProductReviews(nextReviews);
+    setIsLoadingProductReviews(false);
+    return nextReviews;
+  }, []);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const syncReviews = async () => {
+      if (!selectedItemReviewKey) {
+        setProductReviews([]);
+        return;
+      }
+
+      setIsLoadingProductReviews(true);
+      const nextReviews = await loadReviewsForItem(selectedItemReviewKey);
+
+      if (isCancelled) {
+        return;
+      }
+
+      setProductReviews(nextReviews);
+      setIsLoadingProductReviews(false);
+    };
+
+    syncReviews();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [loadReviewsForItem, selectedItemReviewKey]);
 
   // Remove background syncing for cart and wishlist. Sync only on explicit user actions below.
 
@@ -5530,12 +5895,51 @@ const App = () => {
   }, [activeUserEmail, orders, pushNotificationToUser]);
 
   const handleOpenItemDetails = useCallback((itemDetails) => {
+    setReviewNotice('');
     setSelectedItemDetails(itemDetails);
   }, []);
 
   const handleCloseItemDetails = useCallback(() => {
     setSelectedItemDetails(null);
   }, []);
+
+  const handleSubmitProductReview = useCallback(async ({ itemKey, rating, comment, reviewerName, reviewerEmail }) => {
+    const normalizedComment = normalizeReviewComment(comment);
+
+    if (containsHarshReviewContent(normalizedComment)) {
+      throw new Error('Review not published because it contains harsh language.');
+    }
+
+    const nextReview = createProductReview({
+      itemKey,
+      rating,
+      comment: normalizedComment,
+      reviewerName,
+      reviewerEmail,
+    });
+
+    if (hasSupabaseEnv && supabase) {
+      const { error } = await supabase
+        .from(PRODUCT_REVIEWS_TABLE)
+        .insert(toProductReviewRecord(nextReview));
+
+      if (error) {
+        throw new Error(
+          error.message
+            ? `Could not publish this review: ${error.message}`
+            : 'Could not publish this review right now. Run supabase/product-reviews.sql if the table is missing.',
+        );
+      }
+
+      await loadReviewsForItem(itemKey);
+    } else {
+      const nextReviews = [nextReview, ...getStoredProductReviews()];
+      window.localStorage.setItem(PRODUCT_REVIEWS_STORAGE_KEY, JSON.stringify(nextReviews));
+      setProductReviews(getStoredApprovedProductReviews(itemKey));
+    }
+
+    setReviewNotice('Review published. It is now visible to shoppers.');
+  }, [loadReviewsForItem]);
 
   useEffect(() => {
     if (!actionNotice) {
@@ -5615,6 +6019,12 @@ const App = () => {
         onAddToCart={handleAddToCart}
         onToggleWishlist={handleToggleWishlist}
         isWishlisted={isDetailsItemWishlisted}
+        reviews={productReviews}
+        isLoadingReviews={isLoadingProductReviews}
+        onSubmitReview={handleSubmitProductReview}
+        currentReviewerName={currentReviewerName}
+        currentReviewerEmail={activeUserEmail}
+        reviewNotice={reviewNotice}
       />
       {actionNotice ? (
         <div className="pointer-events-none fixed bottom-5 right-5 z-[90] max-w-sm rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 shadow-[0_8px_24px_rgba(16,185,129,0.25)]">

@@ -7,7 +7,7 @@
 	- `REACT_APP_SUPABASE_URL`
 	- `REACT_APP_SUPABASE_ANON_KEY`
 3. Start the app with `npm start`.
-4. To enable persistent seller uploads, user carts, and wishlists, run the SQL in `supabase/seller-marketplace.sql` inside the Supabase SQL editor.
+4. To enable persistent seller uploads, user carts, wishlists, and public product reviews, run the SQL in `supabase/seller-marketplace.sql` and `supabase/product-reviews.sql` inside the Supabase SQL editor.
 
 Do not use your Supabase service role (secret) key in this React app.
 
@@ -22,6 +22,12 @@ Do not use your Supabase service role (secret) key in this React app.
 - Cart items are stored in Supabase Postgres table `cart_items`.
 - Wishlist items are stored in Supabase Postgres table `wishlist_items`.
 - The React app filters both tables by the signed-in user's email so each user sees only their own saved items in the UI.
+
+## Public Product Reviews
+
+- Product reviews are stored in Supabase Postgres table `product_reviews`.
+- Approved reviews are public, so every shopper can see them on the product details modal.
+- The current app blocks harsh comments client-side before publishing. For stronger moderation, move this rule to a trusted server or Supabase Edge Function.
 
 ## Checkout Payments (Card)
 
