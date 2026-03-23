@@ -67,8 +67,10 @@
     "bettingVoting": "क्रीडा अंदाज लीडरबोर्ड",
     "safety": "अनुपालन आणि सुरक्षितता मार्गदर्शक तत्त्वे",
     "propertyHub": "मालमत्ता बाजार",
-    "internationalLotteryGames": "आंतरराष्ट्रीय लॉटरी खेळ",
-    "livestockHub": "पशुधन बाजार"
+    "internationalLotteryGames": "लॉटरी खेळ",
+    "livestockHub": "पशुधन बाजार",
+    "stationery": "स्टेशनरी आणि पुस्तकांचा बाजार",
+    "constructionTools": "इमारत आणि बांधकाम साधने"
   },
   "footer": {
     "about": "About Us",
@@ -141,7 +143,10 @@
     "hardwareSoftware": "Tech gadgets, software bundles, and secure electronics purchasing.",
     "bettingHub": "Aggregated voting and betting preview with popular matches and hot travel deal highlights.",
     "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
-    "safety": "Compliance standards, age restrictions, and secure transaction guarantees."
+    "safety": "Compliance standards, age restrictions, and secure transaction guarantees.",
+    "stationery": "शाळा किंवा व्यवसायासाठी पेन, वह्या, इनव्हॉइस बुक, नोटबुक आणि कार्यालयीन साहित्य खरेदी करा.",
+    "internationalLotteryGames": "जॅकपॉट पूल, ड्रॉ दिवस आणि एकाच ठिकाणी उपलब्ध लॉटरी गेमची तुलना करा.",
+    "constructionTools": "कोणत्याही आकाराच्या प्रकल्पांसाठी बिल्डिंग पुरवठा, हँड टूल्स आणि पॉवर टूल्स ब्राउझ करा."
   },
   "searchResults": {
     "title": "Search Results",

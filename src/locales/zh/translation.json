@@ -67,8 +67,10 @@
     "bettingVoting": "体育预测排行榜",
     "safety": "合规性和安全指南",
     "propertyHub": "房地产市场",
-    "internationalLotteryGames": "国际彩票游戏",
-    "livestockHub": "牲畜市场"
+    "internationalLotteryGames": "彩票游戏",
+    "livestockHub": "牲畜市场",
+    "stationery": "文具及书籍市场",
+    "constructionTools": "建筑和施工工具"
   },
   "footer": {
     "about": "About Us",
@@ -141,7 +143,10 @@
     "hardwareSoftware": "Tech gadgets, software bundles, and secure electronics purchasing.",
     "bettingHub": "Aggregated voting and betting preview with popular matches and hot travel deal highlights.",
     "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
-    "safety": "Compliance standards, age restrictions, and secure transaction guarantees."
+    "safety": "Compliance standards, age restrictions, and secure transaction guarantees.",
+    "stationery": "为学校或企业购买钢笔、书籍、发票簿、笔记本和办公用品。",
+    "internationalLotteryGames": "在一处比较累积奖金池、抽奖日和可用的彩票游戏。",
+    "constructionTools": "浏览适合任何规模项目的建筑用品、手动工具和电动工具。"
   },
   "searchResults": {
     "title": "Search Results",

@@ -67,8 +67,10 @@
     "bettingVoting": "Sportvoorspellingsklassementen",
     "safety": "Nalevings- en veiligheidsrichtlijnen",
     "propertyHub": "Vastgoedmarktplaats",
-    "internationalLotteryGames": "Internationale loterijspelen",
-    "livestockHub": "Veemarktplaats"
+    "internationalLotteryGames": "Loterij spellen",
+    "livestockHub": "Veemarktplaats",
+    "stationery": "Briefpapier- en boekenmarkt",
+    "constructionTools": "Bouw- en constructiehulpmiddelen"
   },
   "footer": {
     "about": "About Us",
@@ -141,7 +143,10 @@
     "hardwareSoftware": "Tech gadgets, software bundles, and secure electronics purchasing.",
     "bettingHub": "Aggregated voting and betting preview with popular matches and hot travel deal highlights.",
     "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
-    "safety": "Compliance standards, age restrictions, and secure transaction guarantees."
+    "safety": "Compliance standards, age restrictions, and secure transaction guarantees.",
+    "stationery": "Koop pennen, boeken, factuurboeken, notitieboekjes en kantoorbenodigdheden voor school of bedrijf.",
+    "internationalLotteryGames": "Vergelijk jackpotpools, trekkingsdagen en beschikbare loterijspellen op één plek.",
+    "constructionTools": "Blader door bouwbenodigdheden, handgereedschap en elektrisch gereedschap voor projecten van elke omvang."
   },
   "searchResults": {
     "title": "Search Results",

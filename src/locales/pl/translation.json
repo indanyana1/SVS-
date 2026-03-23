@@ -67,8 +67,10 @@
     "bettingVoting": "Tabele wyników prognoz sportowych",
     "safety": "Wytyczne dotyczące zgodności i bezpieczeństwa",
     "propertyHub": "Rynek Nieruchomości",
-    "internationalLotteryGames": "Międzynarodowe gry loteryjne",
-    "livestockHub": "Targowisko bydła"
+    "internationalLotteryGames": "Gry loteryjne",
+    "livestockHub": "Targowisko bydła",
+    "stationery": "Rynek Artykułów Papierniczych i Książek",
+    "constructionTools": "Budownictwo i narzędzia budowlane"
   },
   "footer": {
     "about": "About Us",
@@ -141,7 +143,10 @@
     "hardwareSoftware": "Tech gadgets, software bundles, and secure electronics purchasing.",
     "bettingHub": "Aggregated voting and betting preview with popular matches and hot travel deal highlights.",
     "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
-    "safety": "Compliance standards, age restrictions, and secure transaction guarantees."
+    "safety": "Compliance standards, age restrictions, and secure transaction guarantees.",
+    "stationery": "Kupuj długopisy, książki, książeczki do faktur, notesy i artykuły biurowe dla szkoły lub firmy.",
+    "internationalLotteryGames": "Porównaj pule jackpotów, dni losowań i dostępne gry loteryjne w jednym miejscu.",
+    "constructionTools": "Przeglądaj materiały budowlane, narzędzia ręczne i elektronarzędzia do projektów dowolnej wielkości."
   },
   "searchResults": {
     "title": "Search Results",

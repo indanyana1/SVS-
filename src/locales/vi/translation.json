@@ -67,8 +67,10 @@
     "bettingVoting": "Bảng xếp hạng dự đoán thể thao",
     "safety": "Nguyên tắc tuân thủ và an toàn",
     "propertyHub": "Thị trường bất động sản",
-    "internationalLotteryGames": "Trò chơi xổ số quốc tế",
-    "livestockHub": "Chợ chăn nuôi"
+    "internationalLotteryGames": "Trò chơi xổ số",
+    "livestockHub": "Chợ chăn nuôi",
+    "stationery": "Chợ văn phòng phẩm và sách",
+    "constructionTools": "Công cụ xây dựng và xây dựng"
   },
   "footer": {
     "about": "About Us",
@@ -141,7 +143,10 @@
     "hardwareSoftware": "Tech gadgets, software bundles, and secure electronics purchasing.",
     "bettingHub": "Aggregated voting and betting preview with popular matches and hot travel deal highlights.",
     "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
-    "safety": "Compliance standards, age restrictions, and secure transaction guarantees."
+    "safety": "Compliance standards, age restrictions, and secure transaction guarantees.",
+    "stationery": "Mua sắm bút, sách, sổ hóa đơn, sổ ghi chép và đồ dùng văn phòng cho trường học hoặc doanh nghiệp.",
+    "internationalLotteryGames": "So sánh các nhóm giải độc đắc, ngày rút thăm và các trò chơi xổ số có sẵn ở cùng một nơi.",
+    "constructionTools": "Duyệt qua vật tư xây dựng, dụng cụ cầm tay và dụng cụ điện cho các dự án ở mọi quy mô."
   },
   "searchResults": {
     "title": "Search Results",

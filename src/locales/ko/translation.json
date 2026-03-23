@@ -67,8 +67,10 @@
     "bettingVoting": "스포츠 예측 순위표",
     "safety": "규정 준수 및 안전 지침",
     "propertyHub": "부동산 시장",
-    "internationalLotteryGames": "국제 복권 게임",
-    "livestockHub": "가축 시장"
+    "internationalLotteryGames": "복권 게임",
+    "livestockHub": "가축 시장",
+    "stationery": "문구류 및 서적 시장",
+    "constructionTools": "건축 및 건설 도구"
   },
   "footer": {
     "about": "About Us",
@@ -141,7 +143,10 @@
     "hardwareSoftware": "Tech gadgets, software bundles, and secure electronics purchasing.",
     "bettingHub": "Aggregated voting and betting preview with popular matches and hot travel deal highlights.",
     "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
-    "safety": "Compliance standards, age restrictions, and secure transaction guarantees."
+    "safety": "Compliance standards, age restrictions, and secure transaction guarantees.",
+    "stationery": "학교나 기업용 펜, 책, 청구서 책, 노트북, 사무용품을 쇼핑하세요.",
+    "internationalLotteryGames": "잭팟 풀, 추첨일, 이용 가능한 복권 게임을 한 곳에서 비교해 보세요.",
+    "constructionTools": "모든 규모의 프로젝트에 적합한 건축 자재, 수공구 및 전동 공구를 찾아보세요."
   },
   "searchResults": {
     "title": "Search Results",

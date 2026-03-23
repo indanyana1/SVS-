@@ -67,8 +67,10 @@
     "bettingVoting": "Papan Peringkat Prediksi Olahraga",
     "safety": "Pedoman Kepatuhan dan Keselamatan",
     "propertyHub": "Pasar Properti",
-    "internationalLotteryGames": "Permainan Lotere Internasional",
-    "livestockHub": "Pasar Ternak"
+    "internationalLotteryGames": "Permainan Lotere",
+    "livestockHub": "Pasar Ternak",
+    "stationery": "Pasar Alat Tulis dan Buku",
+    "constructionTools": "Alat Bangunan dan Konstruksi"
   },
   "footer": {
     "about": "About Us",
@@ -141,7 +143,10 @@
     "hardwareSoftware": "Tech gadgets, software bundles, and secure electronics purchasing.",
     "bettingHub": "Aggregated voting and betting preview with popular matches and hot travel deal highlights.",
     "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
-    "safety": "Compliance standards, age restrictions, and secure transaction guarantees."
+    "safety": "Compliance standards, age restrictions, and secure transaction guarantees.",
+    "stationery": "Belanja pulpen, buku, buku invoice, buku catatan, dan perlengkapan kantor untuk sekolah atau bisnis.",
+    "internationalLotteryGames": "Bandingkan kumpulan jackpot, hari pengundian, dan permainan lotere yang tersedia di satu tempat.",
+    "constructionTools": "Telusuri perlengkapan bangunan, perkakas tangan, dan perkakas listrik untuk proyek dalam berbagai ukuran."
   },
   "searchResults": {
     "title": "Search Results",

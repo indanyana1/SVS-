@@ -67,8 +67,10 @@
     "bettingVoting": "Liboto tsa Baetapele ba Polelo ea Lipapali",
     "safety": "Litaelo tsa Tumellano le Tšireletseho",
     "propertyHub": "Thepa Marketplace",
-    "internationalLotteryGames": "Lipapali tsa Machaba tsa Lotho",
-    "livestockHub": "Sebaka sa Maraka sa Leruo"
+    "internationalLotteryGames": "Lipapali tsa Lottery",
+    "livestockHub": "Sebaka sa Maraka sa Leruo",
+    "stationery": "'Maraka oa Libuka le Libuka",
+    "constructionTools": "Lisebelisoa tsa Kaho le Kaho"
   },
   "footer": {
     "about": "About Us",
@@ -141,7 +143,10 @@
     "hardwareSoftware": "Tech gadgets, software bundles, and secure electronics purchasing.",
     "bettingHub": "Aggregated voting and betting preview with popular matches and hot travel deal highlights.",
     "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
-    "safety": "Compliance standards, age restrictions, and secure transaction guarantees."
+    "safety": "Compliance standards, age restrictions, and secure transaction guarantees.",
+    "stationery": "Reka lipene, libuka, libuka tsa invoice, libuka tsa ho ngolla, le lisebelisoa tsa ofisi bakeng sa sekolo kapa khoebo.",
+    "internationalLotteryGames": "Bapisa matamo a jackpot, matsatsi a ho rala, le lipapali tsa lotho tse fumanehang sebakeng se le seng.",
+    "constructionTools": "Batla lisebelisoa tsa kaho, lisebelisoa tsa letsoho, le lisebelisoa tsa motlakase bakeng sa merero ea boholo bofe kapa bofe."
   },
   "searchResults": {
     "title": "Search Results",

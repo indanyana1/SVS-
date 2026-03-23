@@ -68,8 +68,10 @@
     "bettingVoting": "Tablas de clasificación de predicción deportiva",
     "safety": "Pautas de cumplimiento y seguridad",
     "propertyHub": "Mercado inmobiliario",
-    "internationalLotteryGames": "Juegos de lotería internacional",
-    "livestockHub": "Mercado de ganado"
+    "internationalLotteryGames": "Juegos de lotería",
+    "livestockHub": "Mercado de ganado",
+    "stationery": "Mercado de Papelería y Libros",
+    "constructionTools": "Herramientas de edificación y construcción"
   },
   "footer": {
     "about": "About Us",
@@ -144,8 +146,10 @@
     "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
     "safety": "Compliance standards, age restrictions, and secure transaction guarantees.",
     "propertyHub": "Explore alquileres, casas en venta y espacios comerciales con ricos detalles de ubicación.",
-    "internationalLotteryGames": "Compare los premios acumulados, los días de sorteo y los juegos de lotería internacionales elegibles en un solo lugar.",
-    "livestockHub": "Compre y venda ganado vacuno, ovino y caprino con detalles de listado listos para la granja y ubicaciones de vendedores."
+    "internationalLotteryGames": "Compare los premios acumulados, los días de sorteo y los juegos de lotería disponibles en un solo lugar.",
+    "livestockHub": "Compre y venda ganado vacuno, ovino y caprino con detalles de listado listos para la granja y ubicaciones de vendedores.",
+    "stationery": "Compre bolígrafos, libros, libretas de facturas, cuadernos y material de oficina para la escuela o la empresa.",
+    "constructionTools": "Busque materiales de construcción, herramientas manuales y eléctricas para proyectos de cualquier tamaño."
   },
   "searchResults": {
     "title": "Search Results",

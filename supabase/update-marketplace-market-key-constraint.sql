@@ -1,0 +1,2 @@
+alter table public.marketplace_items
+drop constraint if exists marketplace_items_market_key_check;

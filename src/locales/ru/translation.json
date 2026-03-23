@@ -67,8 +67,10 @@
     "bettingVoting": "Таблицы лидеров спортивных прогнозов",
     "safety": "Рекомендации по соблюдению требований и безопасности",
     "propertyHub": "Рынок недвижимости",
-    "internationalLotteryGames": "Международные лотереи",
-    "livestockHub": "Животноводческая площадка"
+    "internationalLotteryGames": "Лотерейные игры",
+    "livestockHub": "Животноводческая площадка",
+    "stationery": "Рынок канцелярских товаров и книг",
+    "constructionTools": "Строительные инструменты"
   },
   "footer": {
     "about": "About Us",
@@ -141,7 +143,10 @@
     "hardwareSoftware": "Tech gadgets, software bundles, and secure electronics purchasing.",
     "bettingHub": "Aggregated voting and betting preview with popular matches and hot travel deal highlights.",
     "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
-    "safety": "Compliance standards, age restrictions, and secure transaction guarantees."
+    "safety": "Compliance standards, age restrictions, and secure transaction guarantees.",
+    "stationery": "Покупайте ручки, книги, книги счетов, блокноты и канцелярские товары для школы или бизнеса.",
+    "internationalLotteryGames": "Сравните пулы джекпотов, дни розыгрышей и доступные лотереи в одном месте.",
+    "constructionTools": "Найдите строительные материалы, ручные инструменты и электроинструменты для проектов любого размера."
   },
   "searchResults": {
     "title": "Search Results",

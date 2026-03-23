@@ -67,8 +67,10 @@
     "bettingVoting": "Mga Leaderboard ng Hula sa Sports",
     "safety": "Pagsunod at Mga Alituntunin sa Kaligtasan",
     "propertyHub": "Marketplace ng Ari-arian",
-    "internationalLotteryGames": "Mga International Lottery Games",
-    "livestockHub": "Livestock Marketplace"
+    "internationalLotteryGames": "Mga Larong Lottery",
+    "livestockHub": "Livestock Marketplace",
+    "stationery": "Stationery at Books Market",
+    "constructionTools": "Mga Tool sa Pagbuo at Konstruksyon"
   },
   "footer": {
     "about": "About Us",
@@ -141,7 +143,10 @@
     "hardwareSoftware": "Tech gadgets, software bundles, and secure electronics purchasing.",
     "bettingHub": "Aggregated voting and betting preview with popular matches and hot travel deal highlights.",
     "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
-    "safety": "Compliance standards, age restrictions, and secure transaction guarantees."
+    "safety": "Compliance standards, age restrictions, and secure transaction guarantees.",
+    "stationery": "Mamili ng mga panulat, libro, invoice book, notebook, at mga gamit sa opisina para sa paaralan o negosyo.",
+    "internationalLotteryGames": "Ikumpara ang mga jackpot pool, draw days, at available na mga laro sa lottery sa isang lugar.",
+    "constructionTools": "Mag-browse ng mga kagamitan sa gusali, mga tool sa kamay, at mga tool sa kapangyarihan para sa mga proyekto sa anumang laki."
   },
   "searchResults": {
     "title": "Search Results",

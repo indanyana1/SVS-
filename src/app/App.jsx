@@ -20,11 +20,15 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { Elements, useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
 import logo from '../assets/icons/logo.jpeg';
 import { DEFAULT_LANGUAGE_CODE, getLanguageByCode, isRtlLanguage, SUPPORTED_LANGUAGES } from '../lib/languages';
+import { embeddedCardCheckoutEnabled, stripeCurrency, getStripeInstance } from '../lib/payments';
 import { hasSupabaseEnv, supabase } from '../lib/supabase';
 import SigninPage from '../pages/SigninPage';
 import SignupPage from '../pages/SignupPage';
+
+let stripePromise = null;
 
 const navItems = [
   { labelKey: 'nav.home', href: '/' },
@@ -34,32 +38,36 @@ const navItems = [
 ];
 
 const marketLinks = [
-  { labelKey: 'markets.ecommerce', href: '/e-commerce' },
   { labelKey: 'markets.beverages', href: '/beverages-liquors' },
-  { labelKey: 'markets.bettingHub', href: '/betting-hub' },
-  { labelKey: 'markets.bettingVoting', href: '/betting-voting' },
-  { labelKey: 'markets.bookings', href: '/bookings-tickets' },
+  { labelKey: 'markets.constructionTools', href: '/building-construction-tools' },
+  { labelKey: 'markets.votingClients', href: '/voting-clients' },
+  { labelKey: 'markets.safety', href: '/safety' },
+  { labelKey: 'markets.hardwareSoftware', href: '/hardware-software' },
+  { labelKey: 'markets.tickets', href: '/tickets' },
+  { labelKey: 'markets.votingProviders', href: '/voting-providers' },
   { labelKey: 'markets.fastFood', href: '/fast-food' },
   { labelKey: 'markets.groceries', href: '/groceries' },
-  { labelKey: 'markets.hardwareSoftware', href: '/hardware-software' },
-  { labelKey: 'markets.internationalLotteryGames', href: '/international-lottery-games' },
-  { labelKey: 'markets.livestockHub', href: '/livestock-hub' },
   { labelKey: 'markets.homeCare', href: '/home-care' },
-  { labelKey: 'markets.propertyHub', href: '/property-hub' },
-  { labelKey: 'markets.safety', href: '/safety' },
-  { labelKey: 'markets.tickets', href: '/tickets' },
-  { labelKey: 'markets.votingClients', href: '/voting-clients' },
-  { labelKey: 'markets.votingProviders', href: '/voting-providers' },
+  { labelKey: 'markets.ecommerce', href: '/e-commerce' },
+  { labelKey: 'markets.livestockHub', href: '/livestock-hub' },
+  { labelKey: 'markets.internationalLotteryGames', href: '/international-lottery-games' },
   { labelKey: 'markets.wellness', href: '/wellness' },
+  { labelKey: 'markets.propertyHub', href: '/property-hub' },
+  { labelKey: 'markets.bookings', href: '/bookings-tickets' },
+  { labelKey: 'markets.bettingHub', href: '/betting-hub' },
+  { labelKey: 'markets.bettingVoting', href: '/betting-voting' },
+  { labelKey: 'markets.stationery', href: '/stationery-office' },
 ];
 
 const sellerMarketOptions = [
-  { key: 'ecommerce', labelKey: 'markets.ecommerce', route: '/e-commerce' },
-  { key: 'groceries', labelKey: 'markets.groceries', route: '/groceries' },
-  { key: 'fastFood', labelKey: 'markets.fastFood', route: '/fast-food' },
   { key: 'beverages', labelKey: 'markets.beverages', route: '/beverages-liquors' },
-  { key: 'wellness', labelKey: 'markets.wellness', route: '/wellness' },
+  { key: 'constructionTools', labelKey: 'markets.constructionTools', route: '/building-construction-tools' },
   { key: 'hardwareSoftware', labelKey: 'markets.hardwareSoftware', route: '/hardware-software' },
+  { key: 'fastFood', labelKey: 'markets.fastFood', route: '/fast-food' },
+  { key: 'groceries', labelKey: 'markets.groceries', route: '/groceries' },
+  { key: 'ecommerce', labelKey: 'markets.ecommerce', route: '/e-commerce' },
+  { key: 'wellness', labelKey: 'markets.wellness', route: '/wellness' },
+  { key: 'stationery', labelKey: 'markets.stationery', route: '/stationery-office' },
 ];
 
 const sellerMarketConfig = sellerMarketOptions.reduce((accumulator, option) => {
@@ -222,6 +230,84 @@ const groceries = [
     discount: 'Weekly Deal',
     image:
       'https://images.pexels.com/photos/1132047/pexels-photo-1132047.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+];
+
+const stationeryItems = [
+  {
+    id: 's1',
+    title: 'Executive Ballpoint Pen Set',
+    category: 'Pens',
+    description: 'Smooth-writing pens for school, office, and front-desk use.',
+    price: '6.99',
+    image:
+      'https://images.pexels.com/photos/261763/pexels-photo-261763.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 's2',
+    title: 'A4 Hardcover Exercise Books Pack',
+    category: 'Books',
+    description: 'Durable ruled books for class notes, stock records, and admin work.',
+    price: '9.50',
+    image:
+      'https://images.pexels.com/photos/159711/books-bookstore-book-reading-159711.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 's3',
+    title: 'Duplicate Invoice Book',
+    category: 'Invoice Books',
+    description: 'Carbonless duplicate pages for retail, delivery, and field sales.',
+    price: '4.25',
+    image:
+      'https://images.pexels.com/photos/669365/pexels-photo-669365.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 's4',
+    title: 'Desk Stationery Essentials Bundle',
+    category: 'Office Supplies',
+    description: 'Stapler, sticky notes, paper clips, and markers in one pack.',
+    price: '12.99',
+    image:
+      'https://images.pexels.com/photos/355952/pexels-photo-355952.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+];
+
+const constructionToolsItems = [
+  {
+    id: 'ct1',
+    title: 'Heavy-Duty Claw Hammer',
+    category: 'Hand Tools',
+    description: 'Forged steel hammer for framing, finishing, and general site work.',
+    price: '18.99',
+    image:
+      'https://images.pexels.com/photos/209235/pexels-photo-209235.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ct2',
+    title: 'Cordless Impact Drill Kit',
+    category: 'Power Tools',
+    description: '2-battery drill set for concrete anchors, woodwork, and steel fixtures.',
+    price: '129.00',
+    image:
+      'https://images.pexels.com/photos/162553/drill-machine-tool-construction-162553.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ct3',
+    title: 'Masonry Trowel and Float Set',
+    category: 'Masonry',
+    description: 'Trowel combo for plastering, leveling mortar, and smooth finishing.',
+    price: '24.50',
+    image:
+      'https://images.pexels.com/photos/834892/pexels-photo-834892.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ct4',
+    title: 'Laser Level with Tripod',
+    category: 'Measuring Tools',
+    description: 'Precision leveling for tiles, ceilings, partitions, and layout lines.',
+    price: '67.40',
+    image:
+      'https://images.pexels.com/photos/159358/construction-site-build-construction-work-159358.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
 ];
 
@@ -634,6 +720,32 @@ const searchableCatalog = [
       'wellness health medicine medicines pharmacy tablets first aid',
     ]),
   })),
+  ...stationeryItems.map((item) => ({
+    ...item,
+    section: 'Stationery and Office Supplies Hub',
+    sectionKey: 'markets.stationery',
+    route: '/stationery-office',
+    searchText: buildSearchText([
+      item.title,
+      item.category,
+      item.description,
+      item.price,
+      'stationery stationary pens pen books notebooks invoice books office school supplies',
+    ]),
+  })),
+  ...constructionToolsItems.map((item) => ({
+    ...item,
+    section: 'Building Materials, Construction and Engineering Hub',
+    sectionKey: 'markets.constructionTools',
+    route: '/building-construction-tools',
+    searchText: buildSearchText([
+      item.title,
+      item.category,
+      item.description,
+      item.price,
+      'construction building tools power tools hand tools masonry hardware site equipment',
+    ]),
+  })),
   ...techItems.map((item) => ({
     ...item,
     section: 'Hardwares & Softwares Hub',
@@ -659,7 +771,7 @@ const searchableCatalog = [
   })),
   ...lotteryGames.map((item) => ({
     ...item,
-    section: 'International Lottery Games Hub',
+    section: 'Lottery Games Hub',
     sectionKey: 'markets.internationalLotteryGames',
     route: '/international-lottery-games',
     searchText: buildSearchText([
@@ -711,7 +823,16 @@ const getThemePreference = () => {
 const CART_STORAGE_KEY = 'svs-cart-items';
 const WISHLIST_STORAGE_KEY = 'svs-wishlist-items';
 const ORDERS_STORAGE_KEY = 'svs-orders';
-const ORDER_STATUS_FLOW = ['Confirmed', 'Processing', 'Ready', 'Completed'];
+const NOTIFICATIONS_STORAGE_KEY = 'svs-notifications';
+const ORDER_STATUS_FLOW = ['Processing', 'Confirmed', 'Preparing for Shipping', 'Shipped', 'Delivered'];
+const REFUND_STATUS_FLOW = ['Cancelled by Buyer', 'Refund Pending', 'Refund Made'];
+const ORDER_AUTO_PROGRESS_MS = {
+  confirmed: 45 * 1000,
+  preparingForShipping: 3 * 60 * 1000,
+  shipped: 8 * 60 * 1000,
+  delivered: 15 * 60 * 1000,
+};
+const ORDERS_TABLE = 'orders';
 const SELLER_ITEMS_TABLE = 'marketplace_items';
 const CART_ITEMS_TABLE = 'cart_items';
 const WISHLIST_ITEMS_TABLE = 'wishlist_items';
@@ -744,8 +865,10 @@ const getCurrentUserEmail = () => {
   return window.localStorage.getItem('svs-user-email') || '';
 };
 
+const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
+
 const getUserScopedStorageKey = (storageKey, userEmail = getCurrentUserEmail()) => {
-  const normalizedEmail = String(userEmail || '').trim().toLowerCase();
+  const normalizedEmail = normalizeEmail(userEmail);
   return `${storageKey}:${normalizedEmail || 'guest'}`;
 };
 
@@ -755,15 +878,74 @@ const getStoredWishlistItems = (userEmail = getCurrentUserEmail()) =>
   getStoredCollection(getUserScopedStorageKey(WISHLIST_STORAGE_KEY, userEmail));
 const getStoredOrders = (userEmail = getCurrentUserEmail()) =>
   getStoredCollection(getUserScopedStorageKey(ORDERS_STORAGE_KEY, userEmail));
+const getStoredNotifications = (userEmail = getCurrentUserEmail()) =>
+  getStoredCollection(getUserScopedStorageKey(NOTIFICATIONS_STORAGE_KEY, userEmail));
+
+const createNotificationRecord = ({ title, message, href, orderId, type = 'info' }) => ({
+  id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  type,
+  title: String(title || 'Notification'),
+  message: String(message || ''),
+  href: String(href || '/orders'),
+  orderId: String(orderId || ''),
+  createdAt: new Date().toISOString(),
+  read: false,
+});
+
+const pushNotificationToStorage = (userEmail, notification) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const normalizedEmail = normalizeEmail(userEmail);
+
+  if (!normalizedEmail) {
+    return;
+  }
+
+  const key = getUserScopedStorageKey(NOTIFICATIONS_STORAGE_KEY, normalizedEmail);
+  const current = getStoredCollection(key);
+  window.localStorage.setItem(key, JSON.stringify([notification, ...current].slice(0, 80)));
+};
+
+const getSellerStatusOptions = (currentStatus) => {
+  if (REFUND_STATUS_FLOW.includes(currentStatus)) {
+    const refundIndex = REFUND_STATUS_FLOW.indexOf(currentStatus);
+    return REFUND_STATUS_FLOW.slice(refundIndex);
+  }
+
+  const currentIndex = ORDER_STATUS_FLOW.indexOf(currentStatus);
+
+  if (currentIndex === -1) {
+    return ORDER_STATUS_FLOW;
+  }
+
+  return ORDER_STATUS_FLOW.slice(currentIndex);
+};
+
+const canBuyerCancelOrder = (status) => (
+  status === 'Processing' || status === 'Confirmed' || status === 'Preparing for Shipping'
+);
 
 const sanitizeStorageSegment = (value) => String(value || 'seller')
   .toLowerCase()
   .replace(/[^a-z0-9]+/g, '-')
   .replace(/^-+|-+$/g, '') || 'seller';
 
+const getMarketplaceItemSaveErrorMessage = (errorMessage) => {
+  const normalizedMessage = String(errorMessage || '').toLowerCase();
+
+  if (normalizedMessage.includes('marketplace_items_market_key_check')) {
+    return `Item save failed: ${errorMessage}. Rerun supabase/seller-marketplace.sql so the ${SELLER_ITEMS_TABLE} market_key constraint includes the selected market.`;
+  }
+
+  return `Item save failed: ${errorMessage}. Create or update the ${SELLER_ITEMS_TABLE} table before using seller uploads.`;
+};
+
 const cudyBluePrimaryButtonClassName = 'svs-test-primary-button';
 const cudyBluePrimaryOutlineClassName = 'svs-test-primary-outline';
 const cudyBluePrimaryIconClassName = 'svs-test-primary-icon';
+const languageFeatureSelectClassName = 'w-full appearance-none rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm font-semibold text-[var(--svs-text)] outline-none transition hover:border-[var(--svs-primary)] focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/40';
 
 const formatDate = (value, locale = 'en-US') =>
   new Date(value).toLocaleDateString(locale, {
@@ -813,15 +995,39 @@ const getCartTotals = (cartItems) => {
   };
 };
 
-const getOrderStatusStep = (status) => {
-  const currentIndex = ORDER_STATUS_FLOW.indexOf(status);
-  const nextIndex = Math.min(currentIndex + 1, ORDER_STATUS_FLOW.length - 1);
-  return ORDER_STATUS_FLOW[nextIndex] || ORDER_STATUS_FLOW[0];
+const getAutoOrderStatus = (order, now = Date.now()) => {
+  const createdAtMs = Date.parse(order.createdAt || '');
+
+  if (Number.isNaN(createdAtMs)) {
+    return order.status || ORDER_STATUS_FLOW[0];
+  }
+
+  const elapsed = Math.max(0, now - createdAtMs);
+  let targetStatus = ORDER_STATUS_FLOW[0];
+
+  if (elapsed >= ORDER_AUTO_PROGRESS_MS.delivered) {
+    targetStatus = 'Delivered';
+  } else if (elapsed >= ORDER_AUTO_PROGRESS_MS.shipped) {
+    targetStatus = 'Shipped';
+  } else if (elapsed >= ORDER_AUTO_PROGRESS_MS.preparingForShipping) {
+    targetStatus = 'Preparing for Shipping';
+  } else if (elapsed >= ORDER_AUTO_PROGRESS_MS.confirmed) {
+    targetStatus = 'Confirmed';
+  }
+
+  const currentIndex = ORDER_STATUS_FLOW.indexOf(order.status);
+  const targetIndex = ORDER_STATUS_FLOW.indexOf(targetStatus);
+
+  if (currentIndex === -1) {
+    return targetStatus;
+  }
+
+  return ORDER_STATUS_FLOW[Math.max(currentIndex, targetIndex)] || targetStatus;
 };
 
 const getCollectionItemId = (route, id) => `${route}:${id}`;
 
-const createSavedItem = ({ id, title, image, price, route, marketName, details = '' }) => ({
+const createSavedItem = ({ id, title, image, price, route, marketName, details = '', sellerName = '', sellerEmail = '' }) => ({
   id: getCollectionItemId(route, id),
   sku: id,
   title,
@@ -829,6 +1035,8 @@ const createSavedItem = ({ id, title, image, price, route, marketName, details =
   route,
   marketName,
   details,
+  sellerName,
+  sellerEmail: normalizeEmail(sellerEmail),
   unitPrice: getNumericPriceValue(price),
   unitPriceLabel: getSalePrices(price).nowPrice,
 });
@@ -848,6 +1056,8 @@ const mapCartItemRecord = (record) => ({
   route: record.route,
   marketName: record.market_name,
   details: record.details || '',
+  sellerName: record.seller_name || '',
+  sellerEmail: normalizeEmail(record.seller_email || ''),
   quantity: Math.max(Number(record.quantity) || 1, 1),
   unitPrice: Number(record.unit_price) || 0,
   unitPriceLabel: record.unit_price_label,
@@ -861,6 +1071,8 @@ const mapWishlistItemRecord = (record) => ({
   route: record.route,
   marketName: record.market_name,
   details: record.details || '',
+  sellerName: record.seller_name || '',
+  sellerEmail: normalizeEmail(record.seller_email || ''),
   unitPrice: Number(record.unit_price) || 0,
   unitPriceLabel: record.unit_price_label,
 });
@@ -874,6 +1086,8 @@ const toCartItemRecord = (userEmail, item) => ({
   route: item.route,
   market_name: item.marketName,
   details: item.details,
+  seller_name: item.sellerName || null,
+  seller_email: normalizeEmail(item.sellerEmail || ''),
   quantity: item.quantity,
   unit_price: item.unitPrice,
   unit_price_label: item.unitPriceLabel,
@@ -888,8 +1102,46 @@ const toWishlistItemRecord = (userEmail, item) => ({
   route: item.route,
   market_name: item.marketName,
   details: item.details,
+  seller_name: item.sellerName || null,
+  seller_email: normalizeEmail(item.sellerEmail || ''),
   unit_price: item.unitPrice,
   unit_price_label: item.unitPriceLabel,
+});
+
+const mapOrderRecord = (record) => ({
+  id: record.order_key,
+  reference: record.reference,
+  createdAt: record.order_created_at,
+  ownerEmail: normalizeEmail(record.user_email),
+  customer: typeof record.customer === 'object' && record.customer ? record.customer : {},
+  items: Array.isArray(record.items) ? record.items : [],
+  paymentMethod: record.payment_method,
+  paymentProvider: record.payment_provider,
+  paymentStatus: record.payment_status,
+  paymentReference: record.payment_reference,
+  currency: record.currency,
+  subtotal: Number(record.subtotal) || 0,
+  serviceFee: Number(record.service_fee) || 0,
+  total: Number(record.total) || 0,
+  status: record.status || ORDER_STATUS_FLOW[0],
+});
+
+const toOrderRecord = (userEmail, order) => ({
+  user_email: normalizeEmail(order.ownerEmail || userEmail),
+  order_key: order.id,
+  reference: order.reference,
+  order_created_at: order.createdAt,
+  customer: order.customer,
+  items: order.items,
+  payment_method: order.paymentMethod,
+  payment_provider: order.paymentProvider,
+  payment_status: order.paymentStatus,
+  payment_reference: order.paymentReference,
+  currency: order.currency,
+  subtotal: order.subtotal,
+  service_fee: order.serviceFee,
+  total: order.total,
+  status: order.status,
 });
 
 const syncUserCollection = async ({ tableName, userEmail, records, removeMissing = true }) => {
@@ -943,12 +1195,22 @@ const syncUserCollection = async ({ tableName, userEmail, records, removeMissing
 
 const getStatusClasses = (status) => {
   switch (status) {
-    case 'Completed':
+    case 'Delivered':
       return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-    case 'Ready':
+    case 'Shipped':
       return 'border-cyan-200 bg-cyan-50 text-cyan-700';
+    case 'Preparing for Shipping':
+      return 'border-blue-200 bg-blue-50 text-blue-700';
+    case 'Confirmed':
+      return 'border-violet-200 bg-violet-50 text-violet-700';
     case 'Processing':
       return 'border-amber-200 bg-amber-50 text-amber-700';
+    case 'Cancelled by Buyer':
+      return 'border-rose-200 bg-rose-50 text-rose-700';
+    case 'Refund Pending':
+      return 'border-orange-200 bg-orange-50 text-orange-700';
+    case 'Refund Made':
+      return 'border-emerald-200 bg-emerald-50 text-emerald-700';
     default:
       return 'border-slate-200 bg-slate-100 text-slate-700';
   }
@@ -956,6 +1218,10 @@ const getStatusClasses = (status) => {
 
 const mapSellerItemRecord = (record) => {
   const marketConfig = sellerMarketConfig[record.market_key] || sellerMarketOptions[0];
+  const imageList = Array.isArray(record.image_urls)
+    ? record.image_urls.filter((url) => typeof url === 'string' && url.trim())
+    : [];
+  const primaryImage = record.image_url || imageList[0] || '';
 
   return {
     id: `seller-${record.id}`,
@@ -963,13 +1229,33 @@ const mapSellerItemRecord = (record) => {
     title: record.title,
     description: record.description || '',
     price: record.price,
-    image: record.image_url,
+    image: primaryImage,
+    images: imageList.length ? imageList : (primaryImage ? [primaryImage] : []),
     marketKey: record.market_key,
     route: marketConfig.route,
     sellerName: record.seller_name || record.seller_email || 'Seller',
     sellerEmail: record.seller_email || '',
     createdAt: record.created_at,
   };
+};
+
+const doesLineItemBelongToSeller = (lineItem, sellerEmail, ownedListingIds) => {
+  const normalizedSellerEmail = normalizeEmail(sellerEmail);
+  const lineSellerEmail = normalizeEmail(lineItem?.sellerEmail || '');
+
+  if (normalizedSellerEmail && lineSellerEmail === normalizedSellerEmail) {
+    return true;
+  }
+
+  const sku = String(lineItem?.sku || '');
+  if (ownedListingIds.has(sku)) {
+    return true;
+  }
+
+  const lineId = String(lineItem?.id || '');
+  const rawId = lineId.includes(':') ? lineId.split(':').pop() : lineId;
+
+  return ownedListingIds.has(rawId) || ownedListingIds.has(`seller-${rawId}`);
 };
 
 const getSellerItemsForMarket = (items, marketKey) => items.filter((item) => item.marketKey === marketKey);
@@ -1071,7 +1357,95 @@ const LanguageSelectorPopover = ({
   );
 };
 
-const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0 }) => {
+const MarketSelectorField = ({
+  id,
+  value,
+  onChange,
+  placeholder = 'Select Market',
+  ariaLabel = 'Market selector',
+}) => {
+  const { t } = useTranslation();
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+  const selectedOption = sellerMarketOptions.find((option) => option.key === value);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return undefined;
+    }
+
+    const handlePointerDown = (event) => {
+      if (!containerRef.current?.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+    };
+  }, [isOpen]);
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        id={id}
+        type="button"
+        onClick={() => setIsOpen((previous) => !previous)}
+        className="inline-flex w-full items-center justify-between rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] focus:border-[var(--svs-primary)] focus:outline-none focus:ring-2 focus:ring-[#33b9f2]/40"
+        aria-label={ariaLabel}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+      >
+        <span>{selectedOption ? t(selectedOption.labelKey) : placeholder}</span>
+        <ChevronDown className={`h-4 w-4 transition ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen ? (
+        <div
+          className="absolute left-0 top-[calc(100%+8px)] z-[70] w-full overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-2xl"
+          role="menu"
+          aria-label={ariaLabel}
+        >
+          <div className="max-h-72 overflow-y-auto p-2">
+            {sellerMarketOptions.map((option) => {
+              const isSelected = option.key === value;
+
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  onClick={() => {
+                    onChange(option.key);
+                    setIsOpen(false);
+                  }}
+                  className={`mb-1 flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition last:mb-0 ${
+                    isSelected
+                      ? 'bg-[var(--svs-cyan-surface)] text-[var(--svs-primary-strong)]'
+                      : 'text-[var(--svs-text)] hover:bg-[var(--svs-surface-soft)]'
+                  }`}
+                  aria-checked={isSelected}
+                  role="menuitemradio"
+                >
+                  <span className="font-medium">{t(option.labelKey)}</span>
+                  <span
+                    className={`h-4 w-4 rounded-full border-2 ${
+                      isSelected ? 'border-[var(--svs-primary)] bg-[var(--svs-primary)]' : 'border-[var(--svs-border)] bg-transparent'
+                    }`}
+                    aria-hidden="true"
+                  />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notifications = [], onMarkNotificationsRead }) => {
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -1082,13 +1456,19 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0 }) => {
   const [query, setQuery] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(getAuthState);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [profileName, setProfileName] = useState('SVS User');
   const [theme, setTheme] = useState(getThemePreference);
   const languageCardRefs = useRef([]);
   const desktopLanguageMenuRef = useRef(null);
   const mobileLanguageMenuRef = useRef(null);
+  const notificationsMenuRef = useRef(null);
   const isDarkMode = theme === 'dark';
   const activeLanguage = getLanguageByCode(i18n.resolvedLanguage || i18n.language);
+  const unreadNotificationsCount = useMemo(
+    () => notifications.reduce((count, notification) => (notification.read ? count : count + 1), 0),
+    [notifications],
+  );
 
   const closeLanguageModal = () => {
     setIsLanguageModalOpen(false);
@@ -1116,7 +1496,28 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0 }) => {
     setIsAuthenticated(getAuthState());
     setProfileOpen(false);
     setIsLanguageModalOpen(false);
+    setIsNotificationsOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!isNotificationsOpen) {
+      return undefined;
+    }
+
+    const handlePointerDown = (event) => {
+      if (!notificationsMenuRef.current?.contains(event.target)) {
+        setIsNotificationsOpen(false);
+      }
+    };
+
+    window.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('touchstart', handlePointerDown);
+
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('touchstart', handlePointerDown);
+    };
+  }, [isNotificationsOpen]);
 
   useEffect(() => {
     window.localStorage.setItem('svs-theme', theme);
@@ -1356,9 +1757,53 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0 }) => {
                 </span>
               ) : null}
             </Link>
-            <button type="button" aria-label="Notifications" className="rounded-full p-1.5 transition hover:bg-[var(--svs-cyan-surface)]">
-              <Bell className={`h-5 w-5 ${cudyBluePrimaryIconClassName}`} />
-            </button>
+            <div className="relative" ref={notificationsMenuRef}>
+              <button
+                type="button"
+                aria-label="Notifications"
+                onClick={() => {
+                  const willOpen = !isNotificationsOpen;
+                  setIsNotificationsOpen(willOpen);
+
+                  if (willOpen && unreadNotificationsCount > 0) {
+                    onMarkNotificationsRead?.();
+                  }
+                }}
+                className="relative rounded-full p-1.5 transition hover:bg-[var(--svs-cyan-surface)]"
+              >
+                <Bell className={`h-5 w-5 ${cudyBluePrimaryIconClassName}`} />
+                {unreadNotificationsCount > 0 ? (
+                  <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
+                    {unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount}
+                  </span>
+                ) : null}
+              </button>
+
+              {isNotificationsOpen ? (
+                <div className="absolute right-0 top-[calc(100%+8px)] z-[70] w-[min(92vw,380px)] overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-2xl">
+                  <div className="flex items-center justify-between border-b border-[var(--svs-border)] px-4 py-3">
+                    <p className="text-sm font-bold text-[var(--svs-text)]">Notifications</p>
+                    <p className="text-xs text-[var(--svs-muted)]">{notifications.length} total</p>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto p-2">
+                    {notifications.length ? notifications.map((notification) => (
+                      <Link
+                        key={notification.id}
+                        to={notification.href || '/orders'}
+                        onClick={() => setIsNotificationsOpen(false)}
+                        className="mb-1 block rounded-xl border border-transparent bg-[var(--svs-surface-soft)] px-3 py-2.5 text-left transition last:mb-0 hover:border-[var(--svs-primary)]"
+                      >
+                        <p className="text-sm font-semibold text-[var(--svs-text)]">{notification.title}</p>
+                        {notification.message ? <p className="mt-0.5 text-xs text-[var(--svs-muted)]">{notification.message}</p> : null}
+                        <p className="mt-1 text-[11px] text-[var(--svs-muted)]">{formatDate(notification.createdAt)}</p>
+                      </Link>
+                    )) : (
+                      <p className="px-2 py-3 text-sm text-[var(--svs-muted)]">No notifications yet.</p>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+            </div>
             <div className="relative" ref={desktopLanguageMenuRef}>
               <button
                 type="button"
@@ -1679,9 +2124,21 @@ const KpiCard = ({ label, value }) => (
   </div>
 );
 
-const ECommercePage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [] }) => {
+const ECommercePage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'ecommerce'), ...productCards], [sellerItems]);
+  const buildCartItem = (item) => createCartItem({
+    ...item,
+    route: '/e-commerce',
+    marketName: t('markets.ecommerce'),
+    details: item.subtitle || item.description || item.sellerName,
+  });
+  const buildWishlistItem = (item) => createWishlistItem({
+    ...item,
+    route: '/e-commerce',
+    marketName: t('markets.ecommerce'),
+    details: item.subtitle || item.description || item.sellerName,
+  });
 
   return (
     <PageFrame
@@ -1693,26 +2150,29 @@ const ECommercePage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], se
         items={marketItems}
         buttonLabel={t('common.addToCart')}
         secondaryButtonLabel={t('common.viewMore')}
-        onPrimaryAction={(item) => onAddToCart(createCartItem({
-          ...item,
-          route: '/e-commerce',
-          marketName: t('markets.ecommerce'),
-          details: item.subtitle || item.description || item.sellerName,
-        }))}
-        onToggleWishlist={(item) => onToggleWishlist(createWishlistItem({
-          ...item,
-          route: '/e-commerce',
-          marketName: t('markets.ecommerce'),
-          details: item.subtitle || item.description || item.sellerName,
-        }))}
+        onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+        onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+        onOpenItemDetails={(item) => {
+          const wishlistItem = buildWishlistItem(item);
+          onOpenItemDetails?.({
+            title: getTranslatedValue(t, item.titleKey, item.title),
+            image: item.image,
+            images: item.images || (item.image ? [item.image] : []),
+            marketName: t('markets.ecommerce'),
+            details: item.subtitle || item.description || item.sellerName,
+            priceLabel: getSalePrices(item.price).nowPrice,
+            cartItem: buildCartItem(item),
+            wishlistItem,
+          });
+        }}
         isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/e-commerce', item.id))}
-        metaRenderer={(item) => <p className="text-sm text-slate-500">{item.subtitle || item.description || item.sellerName || 'Seller item'} • <SalePrice price={item.price} /></p>}
+        metaRenderer={(item) => <p className="text-sm text-slate-500">{item.subtitle || item.sellerName || 'Seller item'} • <SalePrice price={item.price} /></p>}
       />
     </PageFrame>
   );
 };
 
-const TicketsPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [] }) => {
+const TicketsPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], onOpenItemDetails }) => {
   const { t, i18n } = useTranslation();
   const [typeFilter, setTypeFilter] = useState('All');
   const [locationFilter, setLocationFilter] = useState('All');
@@ -1732,30 +2192,36 @@ const TicketsPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [] }) =>
       subtitle={t('ticketsPage.subtitle')}
     >
       <div className="mb-5 flex flex-wrap gap-2">
-        <select
-          value={typeFilter}
-          onChange={(event) => setTypeFilter(event.target.value)}
-          className="rounded-md border border-[#b2ebf2] bg-white px-3 py-2 text-sm"
-          aria-label={t('ticketsPage.filters.typeAria')}
-        >
-          <option value="All">{t('ticketsPage.filters.all')}</option>
-          <option value="Concert">{t('ticketsPage.types.concert')}</option>
-          <option value="Movie">{t('ticketsPage.types.movie')}</option>
-          <option value="Sports">{t('ticketsPage.types.sports')}</option>
-          <option value="Travel">{t('ticketsPage.types.travel')}</option>
-        </select>
-        <select
-          value={locationFilter}
-          onChange={(event) => setLocationFilter(event.target.value)}
-          className="rounded-md border border-[#b2ebf2] bg-white px-3 py-2 text-sm"
-          aria-label={t('ticketsPage.filters.locationAria')}
-        >
-          <option value="All">{t('ticketsPage.filters.all')}</option>
-          <option value="Cape Town">{t('ticketsPage.locations.capeTown')}</option>
-          <option value="Nu Metro">{t('ticketsPage.locations.nuMetro')}</option>
-          <option value="Kings">{t('ticketsPage.locations.kings')}</option>
-          <option value="Durban">{t('ticketsPage.locations.durban')}</option>
-        </select>
+        <div className="relative min-w-[190px]">
+          <select
+            value={typeFilter}
+            onChange={(event) => setTypeFilter(event.target.value)}
+            className={`${languageFeatureSelectClassName} pr-10`}
+            aria-label={t('ticketsPage.filters.typeAria')}
+          >
+            <option value="All">{t('ticketsPage.filters.all')}</option>
+            <option value="Concert">{t('ticketsPage.types.concert')}</option>
+            <option value="Movie">{t('ticketsPage.types.movie')}</option>
+            <option value="Sports">{t('ticketsPage.types.sports')}</option>
+            <option value="Travel">{t('ticketsPage.types.travel')}</option>
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
+        </div>
+        <div className="relative min-w-[190px]">
+          <select
+            value={locationFilter}
+            onChange={(event) => setLocationFilter(event.target.value)}
+            className={`${languageFeatureSelectClassName} pr-10`}
+            aria-label={t('ticketsPage.filters.locationAria')}
+          >
+            <option value="All">{t('ticketsPage.filters.all')}</option>
+            <option value="Cape Town">{t('ticketsPage.locations.capeTown')}</option>
+            <option value="Nu Metro">{t('ticketsPage.locations.nuMetro')}</option>
+            <option value="Kings">{t('ticketsPage.locations.kings')}</option>
+            <option value="Durban">{t('ticketsPage.locations.durban')}</option>
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -1763,6 +2229,29 @@ const TicketsPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [] }) =>
           <article
             key={event.id}
             className="rounded-xl border border-[#eeeeee] bg-white shadow-[0_4px_8px_rgba(0,0,0,0.1)] transition hover:scale-[1.03]"
+            role="button"
+            tabIndex={0}
+            onClick={() => {
+              const details = `${formatDate(event.date, currentLocale)} • ${t(event.locationKey, { defaultValue: event.location })}`;
+              const cartItem = createCartItem({ ...event, route: '/tickets', marketName: t('markets.tickets'), details });
+              const wishlistItem = createWishlistItem({ ...event, route: '/tickets', marketName: t('markets.tickets'), details });
+              onOpenItemDetails?.({
+                title: t(event.titleKey, { defaultValue: event.title }),
+                image: event.image,
+                images: event.images || (event.image ? [event.image] : []),
+                marketName: t('markets.tickets'),
+                details,
+                priceLabel: getSalePrices(event.price).nowPrice,
+                cartItem,
+                wishlistItem,
+              });
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                e.currentTarget.click();
+              }
+            }}
           >
             <img
               src={event.image}
@@ -1782,24 +2271,30 @@ const TicketsPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [] }) =>
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => onAddToCart(createCartItem({
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddToCart(createCartItem({
                     ...event,
                     route: '/tickets',
                     marketName: t('markets.tickets'),
                     details: `${formatDate(event.date, currentLocale)} • ${t(event.locationKey, { defaultValue: event.location })}`,
-                  }))}
+                    }));
+                  }}
                   className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}
                 >
                   {t('ticketsPage.bookNow')}
                 </button>
                 <button
                   type="button"
-                  onClick={() => onToggleWishlist(createWishlistItem({
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleWishlist(createWishlistItem({
                     ...event,
                     route: '/tickets',
                     marketName: t('markets.tickets'),
                     details: `${formatDate(event.date, currentLocale)} • ${t(event.locationKey, { defaultValue: event.location })}`,
-                  }))}
+                    }));
+                  }}
                   aria-pressed={wishlistItemIds.includes(getCollectionItemId('/tickets', event.id))}
                   className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition ${wishlistItemIds.includes(getCollectionItemId('/tickets', event.id)) ? 'border-rose-200 bg-rose-50 text-rose-600' : 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)] text-[var(--svs-text)]'}`}
                 >
@@ -1826,7 +2321,7 @@ const TicketsPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [] }) =>
   );
 };
 
-const BookingsTicketsPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [] }) => {
+const BookingsTicketsPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], onOpenItemDetails }) => {
   const { t } = useTranslation();
 
   return (
@@ -1839,30 +2334,62 @@ const BookingsTicketsPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = 
     </p>
     <div className="mt-4 grid gap-4 md:grid-cols-2">
       {ticketEvents.slice(0, 2).map((event) => (
-        <article key={`booking-${event.id}`} className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
+        <article
+          key={`booking-${event.id}`}
+          className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]"
+          role="button"
+          tabIndex={0}
+          onClick={() => {
+            const details = `${formatDate(event.date)} • ${event.location}`;
+            const cartItem = createCartItem({ ...event, route: '/bookings-tickets', marketName: t('markets.bookings'), details });
+            const wishlistItem = createWishlistItem({ ...event, route: '/bookings-tickets', marketName: t('markets.bookings'), details });
+            onOpenItemDetails?.({
+              title: event.title,
+              image: event.image,
+              images: event.images || (event.image ? [event.image] : []),
+              marketName: t('markets.bookings'),
+              details,
+              priceLabel: getSalePrices(event.price).nowPrice,
+              cartItem,
+              wishlistItem,
+            });
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.currentTarget.click();
+            }
+          }}
+        >
           <h3 className="text-lg font-bold">{event.title}</h3>
           <p className="mt-1 text-sm text-slate-600">{formatDate(event.date)} • {event.location}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => onAddToCart(createCartItem({
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddToCart(createCartItem({
                 ...event,
                 route: '/bookings-tickets',
                 marketName: t('markets.bookings'),
                 details: `${formatDate(event.date)} • ${event.location}`,
-              }))}
+                }));
+              }}
               className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white`}
             >
               {t('common.bookNow')}
             </button>
             <button
               type="button"
-              onClick={() => onToggleWishlist(createWishlistItem({
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleWishlist(createWishlistItem({
                 ...event,
                 route: '/bookings-tickets',
                 marketName: t('markets.bookings'),
                 details: `${formatDate(event.date)} • ${event.location}`,
-              }))}
+                }));
+              }}
               aria-pressed={wishlistItemIds.includes(getCollectionItemId('/bookings-tickets', event.id))}
               className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition ${wishlistItemIds.includes(getCollectionItemId('/bookings-tickets', event.id)) ? 'border-rose-200 bg-rose-50 text-rose-600' : 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)] text-[var(--svs-text)]'}`}
             >
@@ -1990,10 +2517,22 @@ const VotingProvidersPage = () => {
   );
 };
 
-const GroceriesPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [] }) => {
+const GroceriesPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
   const { t } = useTranslation();
   const [tab, setTab] = useState('Fruits');
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'groceries'), ...groceries], [sellerItems]);
+  const buildCartItem = (item) => createCartItem({
+    ...item,
+    route: '/groceries',
+    marketName: t('markets.groceries'),
+    details: item.discount || item.description || item.sellerName,
+  });
+  const buildWishlistItem = (item) => createWishlistItem({
+    ...item,
+    route: '/groceries',
+    marketName: t('markets.groceries'),
+    details: item.discount || item.description || item.sellerName,
+  });
 
   return (
     <PageFrame title={t('markets.groceries')} subtitle={t('pageSubtitles.groceries')}>
@@ -2013,28 +2552,43 @@ const GroceriesPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], se
         items={marketItems}
         buttonLabel={t('common.addToBasket')}
         secondaryButtonLabel={t('common.deliveryOptions')}
-        onPrimaryAction={(item) => onAddToCart(createCartItem({
-          ...item,
-          route: '/groceries',
-          marketName: t('markets.groceries'),
-          details: item.discount || item.description || item.sellerName,
-        }))}
-        onToggleWishlist={(item) => onToggleWishlist(createWishlistItem({
-          ...item,
-          route: '/groceries',
-          marketName: t('markets.groceries'),
-          details: item.discount || item.description || item.sellerName,
-        }))}
+        onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+        onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+        onOpenItemDetails={(item) => {
+          const wishlistItem = buildWishlistItem(item);
+          onOpenItemDetails?.({
+            title: getTranslatedValue(t, item.titleKey, item.title),
+            image: item.image,
+            images: item.images || (item.image ? [item.image] : []),
+            marketName: t('markets.groceries'),
+            details: item.discount || item.description || item.sellerName,
+            priceLabel: getSalePrices(item.price).nowPrice,
+            cartItem: buildCartItem(item),
+            wishlistItem,
+          });
+        }}
         isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/groceries', item.id))}
-        metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} /> • {item.discount || item.description || item.sellerName || 'Seller item'}</p>}
+        metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} /> • {item.discount || item.sellerName || 'Seller item'}</p>}
       />
     </PageFrame>
   );
 };
 
-const FastFoodPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [] }) => {
+const FastFoodPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'fastFood'), ...fastFoodItems], [sellerItems]);
+  const buildCartItem = (item) => createCartItem({
+    ...item,
+    route: '/fast-food',
+    marketName: t('markets.fastFood'),
+    details: `${item.category || 'Seller item'} • ${item.prepTime || item.description || 'Ready to order'}`,
+  });
+  const buildWishlistItem = (item) => createWishlistItem({
+    ...item,
+    route: '/fast-food',
+    marketName: t('markets.fastFood'),
+    details: `${item.category || 'Seller item'} • ${item.prepTime || item.description || 'Ready to order'}`,
+  });
 
   return (
   <PageFrame
@@ -2045,28 +2599,43 @@ const FastFoodPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sel
       items={marketItems}
       buttonLabel={t('common.orderNow')}
       secondaryButtonLabel={t('common.viewMeal')}
-      onPrimaryAction={(item) => onAddToCart(createCartItem({
-        ...item,
-        route: '/fast-food',
-        marketName: t('markets.fastFood'),
-        details: `${item.category || 'Seller item'} • ${item.prepTime || item.description || 'Ready to order'}`,
-      }))}
-      onToggleWishlist={(item) => onToggleWishlist(createWishlistItem({
-        ...item,
-        route: '/fast-food',
-        marketName: t('markets.fastFood'),
-        details: `${item.category || 'Seller item'} • ${item.prepTime || item.description || 'Ready to order'}`,
-      }))}
+      onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+      onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+      onOpenItemDetails={(item) => {
+        const wishlistItem = buildWishlistItem(item);
+        onOpenItemDetails?.({
+          title: getTranslatedValue(t, item.titleKey, item.title),
+          image: item.image,
+          images: item.images || (item.image ? [item.image] : []),
+          marketName: t('markets.fastFood'),
+          details: `${item.category || 'Seller item'} • ${item.prepTime || item.description || 'Ready to order'}`,
+          priceLabel: getSalePrices(item.price).nowPrice,
+          cartItem: buildCartItem(item),
+          wishlistItem,
+        });
+      }}
       isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/fast-food', item.id))}
-      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.prepTime || item.description || 'Ready to order'} • <SalePrice price={item.price} /></p>}
+      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.prepTime || 'Ready to order'} • <SalePrice price={item.price} /></p>}
     />
   </PageFrame>
   );
 };
 
-const BeveragesLiquorsPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [] }) => {
+const BeveragesLiquorsPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'beverages'), ...beveragesLiquorItems], [sellerItems]);
+  const buildCartItem = (item) => createCartItem({
+    ...item,
+    route: '/beverages-liquors',
+    marketName: t('markets.beverages'),
+    details: `${item.category || 'Seller item'} • ${item.volume || item.description || item.sellerName || 'Marketplace listing'}`,
+  });
+  const buildWishlistItem = (item) => createWishlistItem({
+    ...item,
+    route: '/beverages-liquors',
+    marketName: t('markets.beverages'),
+    details: `${item.category || 'Seller item'} • ${item.volume || item.description || item.sellerName || 'Marketplace listing'}`,
+  });
 
   return (
   <PageFrame
@@ -2081,28 +2650,43 @@ const BeveragesLiquorsPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds =
       items={marketItems}
       buttonLabel={t('common.addToCart')}
       secondaryButtonLabel={t('common.viewDetails')}
-      onPrimaryAction={(item) => onAddToCart(createCartItem({
-        ...item,
-        route: '/beverages-liquors',
-        marketName: t('markets.beverages'),
-        details: `${item.category || 'Seller item'} • ${item.volume || item.description || item.sellerName || 'Marketplace listing'}`,
-      }))}
-      onToggleWishlist={(item) => onToggleWishlist(createWishlistItem({
-        ...item,
-        route: '/beverages-liquors',
-        marketName: t('markets.beverages'),
-        details: `${item.category || 'Seller item'} • ${item.volume || item.description || item.sellerName || 'Marketplace listing'}`,
-      }))}
+      onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+      onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+      onOpenItemDetails={(item) => {
+        const wishlistItem = buildWishlistItem(item);
+        onOpenItemDetails?.({
+          title: getTranslatedValue(t, item.titleKey, item.title),
+          image: item.image,
+          images: item.images || (item.image ? [item.image] : []),
+          marketName: t('markets.beverages'),
+          details: `${item.category || 'Seller item'} • ${item.volume || item.description || item.sellerName || 'Marketplace listing'}`,
+          priceLabel: getSalePrices(item.price).nowPrice,
+          cartItem: buildCartItem(item),
+          wishlistItem,
+        });
+      }}
       isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/beverages-liquors', item.id))}
-      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.volume || item.description || item.sellerName || 'Marketplace listing'} • <SalePrice price={item.price} /></p>}
+      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.volume || item.sellerName || 'Marketplace listing'} • <SalePrice price={item.price} /></p>}
     />
   </PageFrame>
   );
 };
 
-const WellnessPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [] }) => {
+const WellnessPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'wellness'), ...wellnessItems], [sellerItems]);
+  const buildCartItem = (item) => createCartItem({
+    ...item,
+    route: '/wellness',
+    marketName: t('markets.wellness'),
+    details: item.description || item.sellerName,
+  });
+  const buildWishlistItem = (item) => createWishlistItem({
+    ...item,
+    route: '/wellness',
+    marketName: t('markets.wellness'),
+    details: item.description || item.sellerName,
+  });
 
   return (
   <PageFrame title={t('markets.wellness')} subtitle={t('pageSubtitles.wellness')}>
@@ -2110,20 +2694,111 @@ const WellnessPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sel
       items={marketItems}
       buttonLabel={t('common.add')}
       secondaryButtonLabel={t('common.uploadPrescription')}
-      onPrimaryAction={(item) => onAddToCart(createCartItem({
-        ...item,
-        route: '/wellness',
-        marketName: t('markets.wellness'),
-        details: item.description || item.sellerName,
-      }))}
-      onToggleWishlist={(item) => onToggleWishlist(createWishlistItem({
-        ...item,
-        route: '/wellness',
-        marketName: t('markets.wellness'),
-        details: item.description || item.sellerName,
-      }))}
+      onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+      onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+      onOpenItemDetails={(item) => {
+        const wishlistItem = buildWishlistItem(item);
+        onOpenItemDetails?.({
+          title: getTranslatedValue(t, item.titleKey, item.title),
+          image: item.image,
+          images: item.images || (item.image ? [item.image] : []),
+          marketName: t('markets.wellness'),
+          details: item.description || item.sellerName,
+          priceLabel: getSalePrices(item.price).nowPrice,
+          cartItem: buildCartItem(item),
+          wishlistItem,
+        });
+      }}
       isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/wellness', item.id))}
-      metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} />{item.description ? ` • ${item.description}` : ''}</p>}
+      metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} />{item.sellerName ? ` • ${item.sellerName}` : ''}</p>}
+    />
+  </PageFrame>
+  );
+};
+
+const StationeryPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
+  const { t } = useTranslation();
+  const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'stationery'), ...stationeryItems], [sellerItems]);
+  const buildCartItem = (item) => createCartItem({
+    ...item,
+    route: '/stationery-office',
+    marketName: t('markets.stationery'),
+    details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Ready for school and office use'}`,
+  });
+  const buildWishlistItem = (item) => createWishlistItem({
+    ...item,
+    route: '/stationery-office',
+    marketName: t('markets.stationery'),
+    details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Ready for school and office use'}`,
+  });
+
+  return (
+  <PageFrame title={t('markets.stationery')} subtitle={t('pageSubtitles.stationery')}>
+    <CardGrid
+      items={marketItems}
+      buttonLabel={t('common.addToCart')}
+      secondaryButtonLabel={t('common.viewDetails')}
+      onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+      onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+      onOpenItemDetails={(item) => {
+        const wishlistItem = buildWishlistItem(item);
+        onOpenItemDetails?.({
+          title: getTranslatedValue(t, item.titleKey, item.title),
+          image: item.image,
+          images: item.images || (item.image ? [item.image] : []),
+          marketName: t('markets.stationery'),
+          details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Ready for school and office use'}`,
+          priceLabel: getSalePrices(item.price).nowPrice,
+          cartItem: buildCartItem(item),
+          wishlistItem,
+        });
+      }}
+      isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/stationery-office', item.id))}
+      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • <SalePrice price={item.price} /></p>}
+    />
+  </PageFrame>
+  );
+};
+
+const ConstructionToolsPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
+  const { t } = useTranslation();
+  const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'constructionTools'), ...constructionToolsItems], [sellerItems]);
+  const buildCartItem = (item) => createCartItem({
+    ...item,
+    route: '/building-construction-tools',
+    marketName: t('markets.constructionTools'),
+    details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Construction-ready listing'}`,
+  });
+  const buildWishlistItem = (item) => createWishlistItem({
+    ...item,
+    route: '/building-construction-tools',
+    marketName: t('markets.constructionTools'),
+    details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Construction-ready listing'}`,
+  });
+
+  return (
+  <PageFrame title={t('markets.constructionTools')} subtitle={t('pageSubtitles.constructionTools')}>
+    <CardGrid
+      items={marketItems}
+      buttonLabel={t('common.addToCart')}
+      secondaryButtonLabel={t('common.viewDetails')}
+      onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+      onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+      onOpenItemDetails={(item) => {
+        const wishlistItem = buildWishlistItem(item);
+        onOpenItemDetails?.({
+          title: getTranslatedValue(t, item.titleKey, item.title),
+          image: item.image,
+          images: item.images || (item.image ? [item.image] : []),
+          marketName: t('markets.constructionTools'),
+          details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Construction-ready listing'}`,
+          priceLabel: getSalePrices(item.price).nowPrice,
+          cartItem: buildCartItem(item),
+          wishlistItem,
+        });
+      }}
+      isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/building-construction-tools', item.id))}
+      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • <SalePrice price={item.price} /></p>}
     />
   </PageFrame>
   );
@@ -2137,12 +2812,15 @@ const HomeCarePage = () => {
     <div className="mb-5 grid gap-2 sm:grid-cols-3">
       <input type="search" placeholder="Search providers" className="rounded-md border border-[#b2ebf2] bg-white px-3 py-2 text-sm" aria-label="Search providers" />
       <input type="search" placeholder="Location" className="rounded-md border border-[#b2ebf2] bg-white px-3 py-2 text-sm" aria-label="Filter location" />
-      <select className="rounded-md border border-[#b2ebf2] bg-white px-3 py-2 text-sm" aria-label="Filter service type">
-        <option>All Types</option>
-        <option>Plumbing</option>
-        <option>Electrical</option>
-        <option>Cleaning</option>
-      </select>
+      <div className="relative">
+        <select className={`${languageFeatureSelectClassName} pr-10`} aria-label="Filter service type">
+          <option>All Types</option>
+          <option>Plumbing</option>
+          <option>Electrical</option>
+          <option>Cleaning</option>
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
+      </div>
     </div>
 
     <div className="grid gap-4 md:grid-cols-3">
@@ -2162,9 +2840,21 @@ const HomeCarePage = () => {
   );
 };
 
-const HardwareSoftwarePage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [] }) => {
+const HardwareSoftwarePage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'hardwareSoftware'), ...techItems], [sellerItems]);
+  const buildCartItem = (item) => createCartItem({
+    ...item,
+    route: '/hardware-software',
+    marketName: t('markets.hardwareSoftware'),
+    details: item.description || item.subtitle || item.sellerName,
+  });
+  const buildWishlistItem = (item) => createWishlistItem({
+    ...item,
+    route: '/hardware-software',
+    marketName: t('markets.hardwareSoftware'),
+    details: item.description || item.subtitle || item.sellerName,
+  });
 
   return (
   <PageFrame title={t('markets.hardwareSoftware')} subtitle={t('pageSubtitles.hardwareSoftware')}>
@@ -2172,20 +2862,23 @@ const HardwareSoftwarePage = ({ onAddToCart, onToggleWishlist, wishlistItemIds =
       items={marketItems}
       buttonLabel={t('common.addToCart')}
       secondaryButtonLabel={t('common.viewMore')}
-      onPrimaryAction={(item) => onAddToCart(createCartItem({
-        ...item,
-        route: '/hardware-software',
-        marketName: t('markets.hardwareSoftware'),
-        details: item.description || item.subtitle || item.sellerName,
-      }))}
-      onToggleWishlist={(item) => onToggleWishlist(createWishlistItem({
-        ...item,
-        route: '/hardware-software',
-        marketName: t('markets.hardwareSoftware'),
-        details: item.description || item.subtitle || item.sellerName,
-      }))}
+      onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+      onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+      onOpenItemDetails={(item) => {
+        const wishlistItem = buildWishlistItem(item);
+        onOpenItemDetails?.({
+          title: getTranslatedValue(t, item.titleKey, item.title),
+          image: item.image,
+          images: item.images || (item.image ? [item.image] : []),
+          marketName: t('markets.hardwareSoftware'),
+          details: item.description || item.subtitle || item.sellerName,
+          priceLabel: getSalePrices(item.price).nowPrice,
+          cartItem: buildCartItem(item),
+          wishlistItem,
+        });
+      }}
       isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/hardware-software', item.id))}
-      metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} />{item.description ? ` • ${item.description}` : ''}</p>}
+      metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} />{item.sellerName ? ` • ${item.sellerName}` : ''}</p>}
     />
   </PageFrame>
   );
@@ -2196,14 +2889,16 @@ const MARKET_BADGE_COLORS = {
   groceries: 'bg-green-100 text-green-700',
   fastFood: 'bg-orange-100 text-orange-700',
   beverages: 'bg-purple-100 text-purple-700',
+  constructionTools: 'bg-yellow-100 text-yellow-800',
   wellness: 'bg-teal-100 text-teal-700',
+  stationery: 'bg-amber-100 text-amber-700',
   hardwareSoftware: 'bg-slate-100 text-slate-700',
 };
 
-const SellerDashboardPage = ({ onDeleteSellerItem, onUpdateSellerItem }) => {
+const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerItem, onUpdateOrderStatus }) => {
   const { t } = useTranslation();
   const isAuthenticated = getAuthState();
-  const userEmail = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || '');
+  const userEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
 
   const [myListings, setMyListings] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -2215,6 +2910,12 @@ const SellerDashboardPage = ({ onDeleteSellerItem, onUpdateSellerItem }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [sellerOrders, setSellerOrders] = useState([]);
+  const [hasLoadedSellerOrders, setHasLoadedSellerOrders] = useState(false);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+  const [orderLoadError, setOrderLoadError] = useState('');
+  const [updatingOrderId, setUpdatingOrderId] = useState('');
+  const [orderUpdateError, setOrderUpdateError] = useState('');
 
   useEffect(() => {
     if (!isAuthenticated || !hasSupabaseEnv || !supabase) return;
@@ -2241,6 +2942,47 @@ const SellerDashboardPage = ({ onDeleteSellerItem, onUpdateSellerItem }) => {
     fetchMyListings();
   }, [isAuthenticated, userEmail]);
 
+  useEffect(() => {
+    if (!isAuthenticated || !hasSupabaseEnv || !supabase || myListings.length === 0) {
+      setSellerOrders(orders || []);
+      setHasLoadedSellerOrders(true);
+      setIsLoadingOrders(false);
+      return;
+    }
+
+    let isCancelled = false;
+
+    const fetchSellerOrders = async () => {
+      setIsLoadingOrders(true);
+      setOrderLoadError('');
+
+      const { data, error } = await supabase
+        .from(ORDERS_TABLE)
+        .select('user_email, order_key, reference, order_created_at, customer, items, payment_method, payment_provider, payment_status, payment_reference, currency, subtotal, service_fee, total, status')
+        .order('order_created_at', { ascending: false });
+
+      if (isCancelled) {
+        return;
+      }
+
+      if (error) {
+        setOrderLoadError('');
+        setSellerOrders([]);
+      } else {
+        setSellerOrders((data || []).map(mapOrderRecord));
+      }
+
+      setHasLoadedSellerOrders(true);
+      setIsLoadingOrders(false);
+    };
+
+    fetchSellerOrders();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isAuthenticated, myListings.length, orders, userEmail]);
+
   const openEdit = (item) => {
     setEditingId(item.dbId);
     setEditForm({ title: item.title, description: item.description, price: item.price, marketKey: item.marketKey, imageFile: null });
@@ -2266,7 +3008,7 @@ const SellerDashboardPage = ({ onDeleteSellerItem, onUpdateSellerItem }) => {
 
     const result = await onUpdateSellerItem(
       item.dbId,
-      { title: editForm.title, description: editForm.description, price: editForm.price, marketKey: editForm.marketKey, imageUrl: item.image },
+      { title: editForm.title, description: editForm.description, price: editForm.price, marketKey: editForm.marketKey, imageUrl: item.image, imageUrls: item.images || [] },
       editForm.imageFile || null,
     );
 
@@ -2286,10 +3028,63 @@ const SellerDashboardPage = ({ onDeleteSellerItem, onUpdateSellerItem }) => {
 
   const handleDelete = async (item) => {
     setDeletingId(item.dbId);
-    await onDeleteSellerItem(item.dbId, item.image);
+    await onDeleteSellerItem(item.dbId, item.images || [], item.image);
     setMyListings((current) => current.filter((listing) => listing.dbId !== item.dbId));
     setConfirmDeleteId(null);
     setDeletingId(null);
+  };
+
+  const myListingIds = useMemo(() => new Set(myListings.map((listing) => listing.id)), [myListings]);
+
+  const visibleOrders = useMemo(() => {
+    const sourceOrders = hasLoadedSellerOrders ? sellerOrders : orders;
+
+    return sourceOrders.reduce((accumulator, order) => {
+      const sellerLineItems = (order.items || []).filter((lineItem) => doesLineItemBelongToSeller(lineItem, userEmail, myListingIds));
+
+      if (!sellerLineItems.length) {
+        return accumulator;
+      }
+
+      const sellerSubtotal = sellerLineItems.reduce((total, lineItem) => {
+        const price = Number(lineItem.unitPrice) || 0;
+        const quantity = Math.max(Number(lineItem.quantity) || 1, 1);
+        return total + (price * quantity);
+      }, 0);
+
+      accumulator.push({
+        ...order,
+        sellerLineItems,
+        sellerSubtotal,
+      });
+
+      return accumulator;
+    }, []);
+  }, [hasLoadedSellerOrders, myListingIds, orders, sellerOrders, userEmail]);
+
+  const handleOrderStatusUpdate = async (orderId, nextStatus) => {
+    if (!onUpdateOrderStatus) {
+      return;
+    }
+
+    setOrderUpdateError('');
+    setUpdatingOrderId(orderId);
+
+    const result = await onUpdateOrderStatus(orderId, nextStatus);
+
+    if (result?.error) {
+      setOrderUpdateError(result.error);
+      setUpdatingOrderId('');
+      return;
+    }
+
+    setSellerOrders((currentOrders) => currentOrders.map((order) => (
+      order.id === orderId
+        ? { ...order, status: nextStatus }
+        : order
+    )));
+
+    setUpdatingOrderId('');
   };
 
   if (!isAuthenticated) {
@@ -2375,11 +3170,12 @@ const SellerDashboardPage = ({ onDeleteSellerItem, onUpdateSellerItem }) => {
                       </div>
                       <div>
                         <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Market</label>
-                        <select name="marketKey" value={editForm.marketKey} onChange={handleEditChange} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none">
-                          {sellerMarketOptions.map((option) => (
-                            <option key={option.key} value={option.key}>{t(option.labelKey)}</option>
-                          ))}
-                        </select>
+                        <MarketSelectorField
+                          id={`edit-market-${item.dbId}`}
+                          value={editForm.marketKey}
+                          onChange={(marketKey) => setEditForm((current) => ({ ...current, marketKey }))}
+                          ariaLabel="Edit listing market"
+                        />
                       </div>
                     </div>
                     <div>
@@ -2451,6 +3247,99 @@ const SellerDashboardPage = ({ onDeleteSellerItem, onUpdateSellerItem }) => {
           ))}
         </div>
       )}
+
+      <section className="mt-10 space-y-4 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-[var(--svs-text)]">Order Management</h2>
+            <p className="text-sm text-[var(--svs-muted)]">Track orders containing your listings and update fulfillment, shipping, and refund status.</p>
+          </div>
+          <span className="rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-1 text-xs font-semibold text-[var(--svs-text)]">
+            {visibleOrders.length} order{visibleOrders.length === 1 ? '' : 's'}
+          </span>
+        </div>
+
+        {orderUpdateError ? (
+          <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{orderUpdateError}</div>
+        ) : null}
+
+        {orderLoadError ? (
+          <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{orderLoadError}</div>
+        ) : isLoadingOrders ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[1, 2].map((placeholder) => (
+              <div key={placeholder} className="h-36 animate-pulse rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)]" />
+            ))}
+          </div>
+        ) : visibleOrders.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-8 text-center text-sm text-[var(--svs-muted)]">
+            Orders with your listings will show here.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {visibleOrders.map((order) => (
+              <article key={order.id} className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Order</p>
+                    <p className="text-sm font-bold text-[var(--svs-text)]">{order.reference || order.id}</p>
+                    <p className="text-xs text-[var(--svs-muted)]">{new Date(order.createdAt).toLocaleString()}</p>
+                  </div>
+                  <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getStatusClasses(order.status)}`}>
+                    {order.status}
+                  </span>
+                </div>
+
+                <div className="mt-3 space-y-1 text-xs text-[var(--svs-muted)]">
+                  <p>Customer: {order.customer?.fullName || order.customer?.email || 'Guest customer'}</p>
+                  {order.customer?.email ? <p>Email: {order.customer.email}</p> : null}
+                  {order.customer?.phone ? <p>Phone: {order.customer.phone}</p> : null}
+                  <p>Items from your store: {order.sellerLineItems.reduce((count, lineItem) => count + (Number(lineItem.quantity) || 1), 0)}</p>
+                  <p>Your subtotal: {formatCheckoutAmount(order.sellerSubtotal)}</p>
+                </div>
+
+                <div className="mt-3 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Your items in this order</p>
+                  <div className="mt-2 space-y-2">
+                    {order.sellerLineItems.map((lineItem, index) => {
+                      const quantity = Math.max(Number(lineItem.quantity) || 1, 1);
+                      const linePrice = (Number(lineItem.unitPrice) || 0) * quantity;
+
+                      return (
+                        <div key={`${order.id}-${lineItem.id || lineItem.sku || index}`} className="flex items-start justify-between gap-3 text-xs text-[var(--svs-text)]">
+                          <div>
+                            <p className="font-semibold text-[var(--svs-text)]">{lineItem.title || 'Untitled item'}</p>
+                            <p className="text-[var(--svs-muted)]">Qty: {quantity}</p>
+                          </div>
+                          <p className="font-semibold text-[var(--svs-primary-strong)]">{formatCheckoutAmount(linePrice)}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <label htmlFor={`order-status-${order.id}`} className="text-xs font-semibold text-[var(--svs-text)]">Status</label>
+                  <select
+                    id={`order-status-${order.id}`}
+                    value={order.status || ORDER_STATUS_FLOW[0]}
+                    onChange={(event) => handleOrderStatusUpdate(order.id, event.target.value)}
+                    disabled={updatingOrderId === order.id}
+                    className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--svs-text)]"
+                  >
+                    {getSellerStatusOptions(order.status).map((status) => (
+                      <option key={`${order.id}-${status}`} value={status}>{status}</option>
+                    ))}
+                  </select>
+                  {updatingOrderId === order.id ? (
+                    <span className="text-xs text-[var(--svs-muted)]">Updating...</span>
+                  ) : null}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
     </PageFrame>
   );
 };
@@ -2462,26 +3351,66 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
     title: '',
     description: '',
     price: '',
-    marketKey: sellerMarketOptions[0].key,
+    marketKey: '',
   });
-  const [imageFile, setImageFile] = useState(null);
+  const [imageFiles, setImageFiles] = useState([]);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('idle');
   const isAuthenticated = getAuthState();
-  const userEmail = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || '');
+  const userEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
   const userName = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-name') || 'SVS Seller');
+
+  useEffect(() => {
+    if (!imageFiles.length) {
+      setImagePreviewUrls([]);
+      return;
+    }
+
+    const nextUrls = imageFiles.map((file) => URL.createObjectURL(file));
+    setImagePreviewUrls(nextUrls);
+
+    return () => {
+      nextUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [imageFiles]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
     setFormData((current) => ({ ...current, [name]: value }));
   };
 
+  const handleImagePick = (event) => {
+    const pickedFiles = Array.from(event.target.files || []);
+
+    if (!pickedFiles.length) {
+      return;
+    }
+
+    setImageFiles((current) => [...current, ...pickedFiles]);
+    event.target.value = '';
+  };
+
+  const handleRemoveSelectedImage = (indexToRemove) => {
+    setImageFiles((current) => current.filter((_, index) => index !== indexToRemove));
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
 
+    const trimmedTitle = formData.title.trim();
+    const trimmedDescription = formData.description.trim();
+    const trimmedPrice = formData.price.trim();
+
     if (!isAuthenticated) {
       navigate('/signin');
+      return;
+    }
+
+    if (!trimmedTitle || !trimmedDescription || !trimmedPrice || !formData.marketKey) {
+      setMessage('Fill in all required fields and select a market before publishing your listing.');
+      setMessageType('error');
       return;
     }
 
@@ -2491,8 +3420,8 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
       return;
     }
 
-    if (!imageFile) {
-      setMessage('Select an image before uploading your item.');
+    if (!imageFiles.length) {
+      setMessage('Select at least one image before uploading your item.');
       setMessageType('error');
       return;
     }
@@ -2502,39 +3431,52 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
     setMessageType('idle');
 
     const selectedMarket = sellerMarketConfig[formData.marketKey];
-    const fileExtension = imageFile.name.split('.').pop() || 'jpg';
-    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExtension}`;
-    const filePath = `${sanitizeStorageSegment(userEmail)}/${formData.marketKey}/${fileName}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from(SELLER_IMAGES_BUCKET)
-      .upload(filePath, imageFile, { cacheControl: '3600', upsert: false });
-
-    if (uploadError) {
-      setMessage(`Image upload failed: ${uploadError.message}. Make sure the ${SELLER_IMAGES_BUCKET} bucket exists and allows uploads.`);
+    if (!selectedMarket) {
+      setMessage('Select a valid market before publishing your listing.');
       setMessageType('error');
-      setIsSubmitting(false);
       return;
     }
 
-    const { data: publicUrlData } = supabase.storage.from(SELLER_IMAGES_BUCKET).getPublicUrl(filePath);
+    const uploadedImageUrls = [];
+
+    for (const imageFile of imageFiles) {
+      const fileExtension = imageFile.name.split('.').pop() || 'jpg';
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExtension}`;
+      const filePath = `${sanitizeStorageSegment(userEmail)}/${formData.marketKey}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(SELLER_IMAGES_BUCKET)
+        .upload(filePath, imageFile, { cacheControl: '3600', upsert: false });
+
+      if (uploadError) {
+        setMessage(`Image upload failed: ${uploadError.message}. Make sure the ${SELLER_IMAGES_BUCKET} bucket exists and allows uploads.`);
+        setMessageType('error');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const { data: publicUrlData } = supabase.storage.from(SELLER_IMAGES_BUCKET).getPublicUrl(filePath);
+      uploadedImageUrls.push(publicUrlData.publicUrl);
+    }
 
     const { data, error } = await supabase
       .from(SELLER_ITEMS_TABLE)
       .insert({
         seller_email: userEmail,
         seller_name: userName,
-        title: formData.title,
-        description: formData.description,
-        price: formData.price,
+        title: trimmedTitle,
+        description: trimmedDescription,
+        price: trimmedPrice,
         market_key: formData.marketKey,
-        image_url: publicUrlData.publicUrl,
+        image_url: uploadedImageUrls[0],
+        image_urls: uploadedImageUrls,
       })
       .select('*')
       .single();
 
     if (error) {
-      setMessage(`Item save failed: ${error.message}. Create the ${SELLER_ITEMS_TABLE} table before using seller uploads.`);
+      setMessage(getMarketplaceItemSaveErrorMessage(error.message));
       setMessageType('error');
       setIsSubmitting(false);
       return;
@@ -2543,8 +3485,8 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
     onSellerItemCreated(mapSellerItemRecord(data));
     setMessage(`Item uploaded successfully to ${t(selectedMarket.labelKey)}.`);
     setMessageType('success');
-    setFormData({ title: '', description: '', price: '', marketKey: sellerMarketOptions[0].key });
-    setImageFile(null);
+    setFormData({ title: '', description: '', price: '', marketKey: '' });
+    setImageFiles([]);
     setIsSubmitting(false);
 
     setTimeout(() => {
@@ -2580,26 +3522,69 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
               </div>
               <div>
                 <label htmlFor="seller-market" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Market</label>
-                <select id="seller-market" name="marketKey" value={formData.marketKey} onChange={handleChange} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none">
-                  {sellerMarketOptions.map((option) => (
-                    <option key={option.key} value={option.key}>{t(option.labelKey)}</option>
-                  ))}
-                </select>
+                <MarketSelectorField
+                  id="seller-market"
+                  value={formData.marketKey}
+                  onChange={(marketKey) => setFormData((current) => ({ ...current, marketKey }))}
+                  placeholder="Select Market"
+                  ariaLabel="Select listing market"
+                />
               </div>
               <div className="sm:col-span-2">
                 <label htmlFor="seller-description" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Description</label>
-                <textarea id="seller-description" name="description" value={formData.description} onChange={handleChange} rows={4} placeholder="Short details that should appear with the product in its market." className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+                <textarea id="seller-description" name="description" value={formData.description} onChange={handleChange} rows={4} required placeholder="Short details that should appear with the product in its market." className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
               </div>
               <div className="sm:col-span-2">
-                <label htmlFor="seller-image" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Product image</label>
+                <label htmlFor="seller-image" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Product images</label>
                 <input
                   id="seller-image"
                   type="file"
                   accept="image/*"
-                  onChange={(event) => setImageFile(event.target.files?.[0] || null)}
-                  required
+                  multiple
+                  onChange={handleImagePick}
                   className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none"
                 />
+                <p className="mt-1 text-xs text-[var(--svs-muted)]">Tap to add an image. On mobile, add images one by one. On desktop, you can also pick multiple at once.</p>
+                {imageFiles.length ? (
+                  <div className="mt-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-2 text-xs text-[var(--svs-muted)]">
+                    <p className="font-semibold text-[var(--svs-text)]">{imageFiles.length} image{imageFiles.length === 1 ? '' : 's'} selected</p>
+                    <ul className="mt-1 max-h-20 space-y-0.5 overflow-y-auto pr-1">
+                      {imageFiles.map((file, index) => (
+                        <li key={`${file.name}-${file.size}-${index}`} className="flex items-center justify-between gap-2">
+                          <span className="truncate">{file.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSelectedImage(index)}
+                            className="rounded border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700"
+                          >
+                            Remove
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                    {imagePreviewUrls.length ? (
+                      <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                        {imagePreviewUrls.map((previewUrl, index) => (
+                          <div key={`${previewUrl}-${index}`} className="relative overflow-hidden rounded-md border border-[var(--svs-border)] bg-white">
+                            <img
+                              src={previewUrl}
+                              alt={`Selected preview ${index + 1}`}
+                              className="h-24 w-full object-cover"
+                              loading="lazy"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveSelectedImage(index)}
+                              className="absolute right-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700"
+                            >
+                              x
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -2927,7 +3912,7 @@ const OffersPage = () => {
   );
 };
 
-const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem }) => (
+const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onOpenItemDetails }) => (
   <PageFrame title="Wishlist" subtitle="Save items you want to come back to later.">
     {!wishlistItems.length ? (
       <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 text-sm text-[var(--svs-text)]">
@@ -2939,7 +3924,28 @@ const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem }) => (
     ) : (
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {wishlistItems.map((item) => (
-          <article key={item.id} className="overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
+          <article
+            key={item.id}
+            className="overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-[0_4px_8px_rgba(0,0,0,0.08)]"
+            role="button"
+            tabIndex={0}
+            onClick={() => onOpenItemDetails?.({
+              title: item.title,
+              image: item.image,
+              images: item.images || (item.image ? [item.image] : []),
+              marketName: item.marketName,
+              details: item.details,
+              priceLabel: item.unitPriceLabel,
+              cartItem: { ...item, quantity: 1 },
+              wishlistItem: item,
+            })}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                event.currentTarget.click();
+              }
+            }}
+          >
             {item.image ? <img src={item.image} alt={item.title} className="h-44 w-full object-cover" loading="lazy" /> : null}
             <div className="p-4">
               <div className="flex items-start justify-between gap-3">
@@ -2949,19 +3955,24 @@ const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem }) => (
                 </div>
                 <Heart className="h-5 w-5 fill-current text-rose-500" />
               </div>
-              {item.details ? <p className="mt-2 text-sm text-[var(--svs-muted)]">{item.details}</p> : null}
               <p className="mt-3 text-sm font-semibold text-[var(--svs-primary-strong)]">{item.unitPriceLabel}</p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => onAddToCart({ ...item, quantity: 1 })}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onAddToCart({ ...item, quantity: 1 });
+                  }}
                   className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white`}
                 >
                   Add to cart
                 </button>
                 <button
                   type="button"
-                  onClick={() => onRemoveWishlistItem(item.id)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onRemoveWishlistItem(item.id);
+                  }}
                   className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
                 >
                   Remove
@@ -2975,26 +3986,146 @@ const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem }) => (
   </PageFrame>
 );
 
+const StripePaymentForm = ({ onStripeContextChange }) => {
+  const stripe = useStripe();
+  const elements = useElements();
+
+  useEffect(() => {
+    onStripeContextChange({ stripe, elements });
+  }, [stripe, elements, onStripeContextChange]);
+
+  return (
+    <div>
+      <PaymentElement />
+    </div>
+  );
+};
+
 const CheckoutPage = ({ cartItems, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder }) => {
   const navigate = useNavigate();
+  const cardPaymentsEnabled = embeddedCardCheckoutEnabled;
+  const stripeInstance = useMemo(() => {
+    if (!cardPaymentsEnabled) {
+      return null;
+    }
+
+    if (!stripePromise) {
+      stripePromise = getStripeInstance();
+    }
+
+    return stripePromise;
+  }, [cardPaymentsEnabled]);
   const [formState, setFormState] = useState({
     fullName: '',
     email: typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''),
     phone: '',
     address: '',
-    paymentMethod: 'Card',
+    paymentMethod: cardPaymentsEnabled ? 'Card' : 'Cash on Delivery',
     notes: '',
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [clientSecret, setClientSecret] = useState('');
+  const [stripeContext, setStripeContext] = useState({ stripe: null, elements: null });
+  const stripeElementsOptions = useMemo(() => ({ clientSecret }), [clientSecret]);
   const totals = useMemo(() => getCartTotals(cartItems), [cartItems]);
+  const handleStripeContextChange = useCallback((nextContext) => {
+    setStripeContext(nextContext);
+  }, []);
 
-  const handleSubmit = (event) => {
+  useEffect(() => {
+    if (formState.paymentMethod === 'Card' && cardPaymentsEnabled && !clientSecret) {
+      const initializePayment = async () => {
+        try {
+          const response = await fetch('/api/payment-intent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              amount: Math.round(totals.total * 100),
+              currency: stripeCurrency,
+              email: formState.email,
+              fullName: formState.fullName,
+            }),
+          });
+          
+          if (!response.ok) {
+            throw new Error('Failed to initialize payment. Payment API may be unavailable.');
+          }
+
+          const { clientSecret: secret } = await response.json();
+          setClientSecret(secret || '');
+        } catch (error) {
+          setSubmitError(error instanceof Error ? error.message : 'Payment initialization failed.');
+        }
+      };
+
+      initializePayment();
+    }
+  }, [formState.paymentMethod, cardPaymentsEnabled, formState.email, formState.fullName, totals.total, clientSecret]);
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
+    setSubmitError('');
 
     if (!formState.fullName || !formState.email || !formState.phone || !formState.address || !cartItems.length) {
+      setSubmitError('Please complete your customer details before placing the order.');
       return;
     }
 
-    const order = onPlaceOrder(formState);
+    setIsSubmitting(true);
+
+    let paymentDetails = {
+      provider: formState.paymentMethod,
+      status: formState.paymentMethod === 'Card' ? 'pending' : 'pending-offline',
+      reference: '',
+      currency: stripeCurrency,
+    };
+
+    if (formState.paymentMethod === 'Card') {
+      if (!clientSecret) {
+        setIsSubmitting(false);
+        setSubmitError('Payment form is still loading. Please wait a moment and try again.');
+        return;
+      }
+
+      if (!stripeContext.stripe || !stripeContext.elements) {
+        setIsSubmitting(false);
+        setSubmitError('Secure card form is not ready yet. Please wait a moment and try again.');
+        return;
+      }
+
+      const { error, paymentIntent } = await stripeContext.stripe.confirmPayment({
+        elements: stripeContext.elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/orders`,
+        },
+        redirect: 'if_required',
+      });
+
+      if (error) {
+        setIsSubmitting(false);
+        setSubmitError(error.message || 'Card payment failed. Please check your details and try again.');
+        return;
+      }
+
+      if (!paymentIntent || (paymentIntent.status !== 'succeeded' && paymentIntent.status !== 'processing')) {
+        setIsSubmitting(false);
+        setSubmitError('Payment was not completed. Please try again.');
+        return;
+      }
+
+      paymentDetails = {
+        provider: 'Stripe',
+        status: paymentIntent.status === 'succeeded' ? 'paid' : 'processing',
+        reference: paymentIntent.id,
+        currency: stripeCurrency,
+      };
+
+      setSubmitError('');
+    }
+
+    const order = await onPlaceOrder(formState, paymentDetails);
+    setIsSubmitting(false);
     navigate('/orders', { state: { orderId: order.id } });
   };
 
@@ -3075,15 +4206,26 @@ const CheckoutPage = ({ cartItems, onUpdateCartQuantity, onRemoveCartItem, onPla
                 rows={3}
                 className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
               />
-              <select
-                value={formState.paymentMethod}
-                onChange={(event) => setFormState((current) => ({ ...current, paymentMethod: event.target.value }))}
-                className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
-              >
-                <option>Card</option>
-                <option>Cash on Delivery</option>
-                <option>Bank Transfer</option>
-              </select>
+              <div className="relative">
+                <select
+                  value={formState.paymentMethod}
+                  onChange={(event) => setFormState((current) => ({ ...current, paymentMethod: event.target.value }))}
+                  className={`${languageFeatureSelectClassName} pr-10`}
+                >
+                  <option value="Card" disabled={!cardPaymentsEnabled}>Card {cardPaymentsEnabled ? '' : '(Unavailable)'}</option>
+                  <option>Cash on Delivery</option>
+                  <option>Bank Transfer</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
+              </div>
+
+              {formState.paymentMethod === 'Card' && clientSecret && (
+                <div className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4">
+                  <Elements stripe={stripeInstance} options={stripeElementsOptions}>
+                    <StripePaymentForm onStripeContextChange={handleStripeContextChange} />
+                  </Elements>
+                </div>
+              )}
               <textarea
                 value={formState.notes}
                 onChange={(event) => setFormState((current) => ({ ...current, notes: event.target.value }))}
@@ -3091,8 +4233,13 @@ const CheckoutPage = ({ cartItems, onUpdateCartQuantity, onRemoveCartItem, onPla
                 rows={2}
                 className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
               />
-              <button type="submit" className={`${cudyBluePrimaryButtonClassName} w-full rounded-lg bg-[var(--svs-primary)] px-4 py-3 text-sm font-semibold text-white`}>
-                Place Order
+              {submitError ? (
+                <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                  {submitError}
+                </div>
+              ) : null}
+              <button type="submit" disabled={isSubmitting || (formState.paymentMethod === 'Card' && !clientSecret)} className={`${cudyBluePrimaryButtonClassName} w-full rounded-lg bg-[var(--svs-primary)] px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70`}>
+                {isSubmitting ? 'Processing...' : (formState.paymentMethod === 'Card' ? 'Pay Now' : 'Place Order')}
               </button>
             </form>
           </section>
@@ -3102,8 +4249,26 @@ const CheckoutPage = ({ cartItems, onUpdateCartQuantity, onRemoveCartItem, onPla
   );
 };
 
-const OrdersPage = ({ orders, cartItems, onAdvanceOrderStatus }) => {
+const OrdersPage = ({ orders, cartItems, onCancelOrder }) => {
   const { t } = useTranslation();
+  const [cancellingOrderId, setCancellingOrderId] = useState('');
+  const [cancelError, setCancelError] = useState('');
+
+  const handleCancelOrder = async (orderId) => {
+    if (!onCancelOrder) {
+      return;
+    }
+
+    setCancelError('');
+    setCancellingOrderId(orderId);
+    const result = await onCancelOrder(orderId);
+
+    if (result?.error) {
+      setCancelError(result.error);
+    }
+
+    setCancellingOrderId('');
+  };
 
   return (
   <PageFrame title={t('orders.title')} subtitle={t('orders.subtitle')}>
@@ -3118,6 +4283,9 @@ const OrdersPage = ({ orders, cartItems, onAdvanceOrderStatus }) => {
       </div>
     ) : (
       <div className="space-y-4">
+        {cancelError ? (
+          <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{cancelError}</div>
+        ) : null}
         {cartItems.length ? (
           <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4 text-sm text-[var(--svs-text)]">
             You still have {getCartCount(cartItems)} item{getCartCount(cartItems) === 1 ? '' : 's'} in your cart.
@@ -3136,6 +4304,17 @@ const OrdersPage = ({ orders, cartItems, onAdvanceOrderStatus }) => {
                 {order.status}
               </span>
             </div>
+
+            {order.status === 'Refund Pending' ? (
+              <div className="mt-3 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-700">
+                Refund has been initiated. If funds have not reflected yet, please allow 3-7 business days for your bank to post the reversal.
+              </div>
+            ) : null}
+            {order.status === 'Refund Made' ? (
+              <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+                Refund has been made by the seller. Bank reflection can still take 3-7 business days.
+              </div>
+            ) : null}
             <div className="mt-4 grid gap-4 lg:grid-cols-[1.4fr_0.8fr]">
               <div className="space-y-3">
                 {order.items.map((item) => (
@@ -3156,15 +4335,28 @@ const OrdersPage = ({ orders, cartItems, onAdvanceOrderStatus }) => {
                 <h4 className="text-sm font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Summary</h4>
                 <div className="mt-3 space-y-2 text-sm text-[var(--svs-muted)]">
                   <div className="flex items-center justify-between"><span>Payment</span><span>{order.paymentMethod}</span></div>
+                  <div className="flex items-center justify-between"><span>Payment status</span><span className="capitalize">{order.paymentStatus || 'pending'}</span></div>
+                  {order.paymentReference ? <div className="flex items-center justify-between"><span>Reference</span><span>{order.paymentReference}</span></div> : null}
                   <div className="flex items-center justify-between"><span>Subtotal</span><span>{formatCheckoutAmount(order.subtotal)}</span></div>
                   <div className="flex items-center justify-between"><span>Service fee</span><span>{formatCheckoutAmount(order.serviceFee)}</span></div>
                   <div className="flex items-center justify-between border-t border-[var(--svs-border)] pt-3 text-base font-bold text-[var(--svs-text)]"><span>Total</span><span>{formatCheckoutAmount(order.total)}</span></div>
                 </div>
-                {order.status !== ORDER_STATUS_FLOW[ORDER_STATUS_FLOW.length - 1] ? (
-                  <button type="button" onClick={() => onAdvanceOrderStatus(order.id)} className={`${cudyBluePrimaryButtonClassName} mt-4 w-full rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
-                    Advance Status
-                  </button>
-                ) : null}
+                <div className="mt-4 border-t border-[var(--svs-border)] pt-3">
+                  {canBuyerCancelOrder(order.status) ? (
+                    <button
+                      type="button"
+                      onClick={() => handleCancelOrder(order.id)}
+                      disabled={cancellingOrderId === order.id}
+                      className="w-full rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-60"
+                    >
+                      {cancellingOrderId === order.id ? 'Cancelling...' : 'Cancel Order'}
+                    </button>
+                  ) : (
+                    <p className="text-xs text-[var(--svs-muted)]">
+                      Cancellation is only available before the order is shipped.
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </article>
@@ -3193,7 +4385,186 @@ const PageFrame = ({ title, subtitle, children, darkHero = false }) => (
   </section>
 );
 
-const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer, onPrimaryAction, onToggleWishlist, isItemWishlisted }) => {
+const ItemDetailsModal = ({ item, onClose, onAddToCart, onToggleWishlist, isWishlisted = false }) => {
+  const itemImages = useMemo(() => {
+    const rawImages = Array.isArray(item?.images) ? item.images : [];
+    const cleanImages = rawImages.filter((url) => typeof url === 'string' && url.trim());
+
+    if (cleanImages.length) {
+      return cleanImages;
+    }
+
+    return item?.image ? [item.image] : [];
+  }, [item]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const touchStartXRef = useRef(null);
+
+  useEffect(() => {
+    setCurrentImageIndex(0);
+  }, [item]);
+
+  if (!item) {
+    return null;
+  }
+
+  const currentImage = itemImages[currentImageIndex] || '';
+  const hasMultipleImages = itemImages.length > 1;
+
+  const showPreviousImage = () => {
+    if (!itemImages.length) {
+      return;
+    }
+
+    setCurrentImageIndex((currentIndex) => ((currentIndex - 1 + itemImages.length) % itemImages.length));
+  };
+
+  const showNextImage = () => {
+    if (!itemImages.length) {
+      return;
+    }
+
+    setCurrentImageIndex((currentIndex) => ((currentIndex + 1) % itemImages.length));
+  };
+
+  const handleTouchStart = (event) => {
+    touchStartXRef.current = event.touches?.[0]?.clientX ?? null;
+  };
+
+  const handleTouchEnd = (event) => {
+    const touchEndX = event.changedTouches?.[0]?.clientX ?? null;
+    const touchStartX = touchStartXRef.current;
+
+    if (touchStartX === null || touchEndX === null || !hasMultipleImages) {
+      touchStartXRef.current = null;
+      return;
+    }
+
+    const deltaX = touchEndX - touchStartX;
+    const swipeThreshold = 35;
+
+    if (deltaX > swipeThreshold) {
+      showPreviousImage();
+    } else if (deltaX < -swipeThreshold) {
+      showNextImage();
+    }
+
+    touchStartXRef.current = null;
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/70 p-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Item details"
+    >
+      <div
+        className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-[var(--svs-border)] px-5 py-4">
+          <h2 className="text-xl font-bold text-[var(--svs-text)]">{item.title}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-2 text-[var(--svs-text)]"
+            aria-label="Close item details"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="grid gap-5 p-5 md:grid-cols-[1.15fr_0.85fr]">
+          <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-2">
+            <div className="relative" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+              {currentImage ? (
+                <img
+                  src={currentImage}
+                  alt={`${item.title} ${currentImageIndex + 1}`}
+                  className="h-auto max-h-[70vh] w-full rounded-lg object-contain"
+                  loading="eager"
+                />
+              ) : (
+                <div className="flex h-56 items-center justify-center rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] text-sm text-[var(--svs-muted)]">
+                  No image available
+                </div>
+              )}
+
+              {hasMultipleImages ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={showPreviousImage}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full border border-[var(--svs-border)] bg-white/90 p-1.5 text-[var(--svs-text)]"
+                    aria-label="Previous image"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={showNextImage}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full border border-[var(--svs-border)] bg-white/90 p-1.5 text-[var(--svs-text)]"
+                    aria-label="Next image"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </>
+              ) : null}
+            </div>
+
+            {hasMultipleImages ? (
+              <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
+                {itemImages.map((imageUrl, index) => (
+                  <button
+                    key={`${imageUrl}-${index}`}
+                    type="button"
+                    onClick={() => setCurrentImageIndex(index)}
+                    className={`h-2.5 w-2.5 rounded-full ${index === currentImageIndex ? 'bg-[var(--svs-primary)]' : 'bg-slate-300'}`}
+                    aria-label={`View image ${index + 1}`}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-[var(--svs-primary-strong)]">{item.marketName}</p>
+            {item.priceLabel ? (
+              <p className="mt-2 text-base font-semibold text-[var(--svs-primary-strong)]">{item.priceLabel}</p>
+            ) : null}
+            {item.details ? (
+              <p className="mt-3 text-sm leading-6 text-[var(--svs-muted)]">{item.details}</p>
+            ) : (
+              <p className="mt-3 text-sm leading-6 text-[var(--svs-muted)]">No additional details available for this item yet.</p>
+            )}
+            <div className="mt-5 flex flex-wrap gap-2">
+              {item.cartItem ? (
+                <button
+                  type="button"
+                  onClick={() => onAddToCart(item.cartItem)}
+                  className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}
+                >
+                  Add to cart
+                </button>
+              ) : null}
+              {item.wishlistItem ? (
+                <button
+                  type="button"
+                  onClick={() => onToggleWishlist(item.wishlistItem)}
+                  className={`inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-semibold ${isWishlisted ? 'border-rose-200 bg-rose-50 text-rose-600' : 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)] text-[var(--svs-text)]'}`}
+                >
+                  <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-current' : ''}`} />
+                  {isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+                </button>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer, onPrimaryAction, onToggleWishlist, isItemWishlisted, onOpenItemDetails }) => {
   const { t } = useTranslation();
 
   return (
@@ -3202,13 +4573,28 @@ const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer, onPr
         const itemTitle = getTranslatedValue(t, item.titleKey, item.title);
 
         return (
-          <article key={item.id} className="overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-card-bg)] shadow-[0_4px_8px_rgba(0,0,0,0.1)] transition hover:scale-[1.03]">
+          <article
+            key={item.id}
+            className="overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-card-bg)] shadow-[0_4px_8px_rgba(0,0,0,0.1)] transition hover:scale-[1.03]"
+            role="button"
+            tabIndex={0}
+            onClick={() => onOpenItemDetails?.(item)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onOpenItemDetails?.(item);
+              }
+            }}
+          >
             <div className="relative">
               <img src={item.image} alt={itemTitle} className="h-40 w-full object-cover" loading="lazy" />
               {onToggleWishlist ? (
                 <button
                   type="button"
-                  onClick={() => onToggleWishlist(item)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onToggleWishlist(item);
+                  }}
                   aria-pressed={isItemWishlisted?.(item) || false}
                   aria-label={isItemWishlisted?.(item) ? 'Remove from wishlist' : 'Add to wishlist'}
                   className={`absolute right-3 top-3 rounded-full border p-2 transition ${isItemWishlisted?.(item) ? 'border-rose-200 bg-rose-50 text-rose-600' : 'border-white/70 bg-white/90 text-slate-700 hover:bg-white'}`}
@@ -3221,10 +4607,24 @@ const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer, onPr
               <h3 className="text-lg font-bold">{itemTitle}</h3>
               <div className="mt-1">{metaRenderer(item)}</div>
               <div className="mt-3 flex flex-wrap gap-2">
-                <button type="button" onClick={() => onPrimaryAction?.(item)} className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onPrimaryAction?.(item);
+                  }}
+                  className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}
+                >
                   {buttonLabel}
                 </button>
-                <button type="button" className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--svs-text)]">
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onOpenItemDetails?.(item);
+                  }}
+                  className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--svs-text)]"
+                >
                   {secondaryButtonLabel}
                 </button>
               </div>
@@ -3292,7 +4692,7 @@ const SiteFooter = () => {
   );
 };
 
-const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerItems, onAddToCart, onToggleWishlist, onRemoveWishlistItem, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder, onAdvanceOrderStatus, onSellerItemCreated, onDeleteSellerItem, onUpdateSellerItem }) => {
+const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerItems, onAddToCart, onToggleWishlist, onRemoveWishlistItem, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder, onCancelOrder, onSellerItemCreated, onDeleteSellerItem, onUpdateSellerItem, onUpdateOrderStatus, onOpenItemDetails }) => {
   const { t } = useTranslation();
 
   return (
@@ -3300,24 +4700,26 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/" element={<HomePage />} />
     <Route path="/markets" element={<MarketsPage />} />
     <Route path="/offers" element={<OffersPage />} />
-    <Route path="/orders" element={<OrdersPage orders={orders} cartItems={cartItems} onAdvanceOrderStatus={onAdvanceOrderStatus} />} />
-    <Route path="/wishlist" element={<WishlistPage wishlistItems={wishlistItems} onAddToCart={onAddToCart} onRemoveWishlistItem={onRemoveWishlistItem} />} />
+    <Route path="/orders" element={<OrdersPage orders={orders} cartItems={cartItems} onCancelOrder={onCancelOrder} />} />
+    <Route path="/wishlist" element={<WishlistPage wishlistItems={wishlistItems} onAddToCart={onAddToCart} onRemoveWishlistItem={onRemoveWishlistItem} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/checkout" element={<CheckoutPage cartItems={cartItems} onUpdateCartQuantity={onUpdateCartQuantity} onRemoveCartItem={onRemoveCartItem} onPlaceOrder={onPlaceOrder} />} />
     <Route path="/search" element={<SearchResultsPage />} />
 
-    <Route path="/e-commerce" element={<ECommercePage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} />} />
-    <Route path="/tickets" element={<TicketsPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} />} />
-    <Route path="/bookings-tickets" element={<BookingsTicketsPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} />} />
+    <Route path="/e-commerce" element={<ECommercePage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/tickets" element={<TicketsPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/bookings-tickets" element={<BookingsTicketsPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/voting-clients" element={<VotingClientsPage />} />
     <Route path="/voting-providers" element={<VotingProvidersPage />} />
-    <Route path="/groceries" element={<GroceriesPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} />} />
-    <Route path="/fast-food" element={<FastFoodPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} />} />
-    <Route path="/beverages-liquors" element={<BeveragesLiquorsPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} />} />
-    <Route path="/wellness" element={<WellnessPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} />} />
+    <Route path="/groceries" element={<GroceriesPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/fast-food" element={<FastFoodPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/beverages-liquors" element={<BeveragesLiquorsPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/building-construction-tools" element={<ConstructionToolsPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/wellness" element={<WellnessPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/stationery-office" element={<StationeryPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/home-care" element={<HomeCarePage />} />
-    <Route path="/hardware-software" element={<HardwareSoftwarePage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} />} />
+    <Route path="/hardware-software" element={<HardwareSoftwarePage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/seller/upload" element={<SellerUploadPage onSellerItemCreated={onSellerItemCreated} />} />
-    <Route path="/seller/dashboard" element={<SellerDashboardPage onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} />} />
+    <Route path="/seller/dashboard" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onUpdateOrderStatus={onUpdateOrderStatus} />} />
     <Route path="/property-hub" element={<PropertyHubPage />} />
     <Route path="/international-lottery-games" element={<InternationalLotteryGamesPage />} />
     <Route path="/livestock-hub" element={<LivestockHubPage />} />
@@ -3345,10 +4747,29 @@ const App = () => {
   const [cartItems, setCartItems] = useState(getStoredCartItems);
   const [wishlistItems, setWishlistItems] = useState(getStoredWishlistItems(getCurrentUserEmail()));
   const [orders, setOrders] = useState(getStoredOrders);
+  const [notifications, setNotifications] = useState(getStoredNotifications);
   const [sellerItems, setSellerItems] = useState([]);
+  const [selectedItemDetails, setSelectedItemDetails] = useState(null);
   const [activeUserEmail, setActiveUserEmail] = useState(getCurrentUserEmail);
   const [hasLoadedUserCollections, setHasLoadedUserCollections] = useState(false);
+  const [actionNotice, setActionNotice] = useState('');
+  const skipNextOrderSyncRef = useRef(false);
+  const normalizedActiveUserEmail = useMemo(() => normalizeEmail(activeUserEmail), [activeUserEmail]);
+  const scopedOrders = useMemo(() => orders.filter((order) => {
+    if (!normalizedActiveUserEmail) {
+      return true;
+    }
+
+    return normalizeEmail(order.ownerEmail || order.customer?.email) === normalizedActiveUserEmail;
+  }), [orders, normalizedActiveUserEmail]);
   const wishlistItemIds = useMemo(() => wishlistItems.map((item) => item.id), [wishlistItems]);
+  const isDetailsItemWishlisted = useMemo(() => {
+    if (!selectedItemDetails?.wishlistItem?.id) {
+      return false;
+    }
+
+    return wishlistItemIds.includes(selectedItemDetails.wishlistItem.id);
+  }, [selectedItemDetails, wishlistItemIds]);
 
   useEffect(() => {
     const handleAuthChange = () => {
@@ -3362,6 +4783,37 @@ const App = () => {
       window.removeEventListener('svs-auth-changed', handleAuthChange);
       window.removeEventListener('storage', handleAuthChange);
     };
+  }, []);
+
+  useEffect(() => {
+    setNotifications(getStoredNotifications(activeUserEmail));
+  }, [activeUserEmail]);
+
+  useEffect(() => {
+    window.localStorage.removeItem(NOTIFICATIONS_STORAGE_KEY);
+    window.localStorage.setItem(getUserScopedStorageKey(NOTIFICATIONS_STORAGE_KEY, activeUserEmail), JSON.stringify(notifications));
+  }, [activeUserEmail, notifications]);
+
+  const pushNotificationToUser = useCallback((userEmail, notificationPayload) => {
+    const notification = createNotificationRecord(notificationPayload);
+    const normalizedTargetEmail = normalizeEmail(userEmail);
+
+    if (!normalizedTargetEmail) {
+      return;
+    }
+
+    if (normalizedTargetEmail === normalizeEmail(activeUserEmail)) {
+      setNotifications((currentNotifications) => [notification, ...currentNotifications].slice(0, 80));
+      return;
+    }
+
+    pushNotificationToStorage(normalizedTargetEmail, notification);
+  }, [activeUserEmail]);
+
+  const markNotificationsAsRead = useCallback(() => {
+    setNotifications((currentNotifications) => currentNotifications.map((notification) => (
+      notification.read ? notification : { ...notification, read: true }
+    )));
   }, []);
 
   useEffect(() => {
@@ -3380,12 +4832,109 @@ const App = () => {
     // Remove old shared key so orders no longer leak between users.
     window.localStorage.removeItem(ORDERS_STORAGE_KEY);
 
-    window.localStorage.setItem(getUserScopedStorageKey(ORDERS_STORAGE_KEY, activeUserEmail), JSON.stringify(orders));
+    // Only save orders if they belong to the current user (safety check for account switches)
+    const normalizedEmail = normalizeEmail(activeUserEmail);
+    const allOrdersBelongToUser = orders.length === 0 || orders.every(order => normalizeEmail(order.ownerEmail || '') === normalizedEmail);
+    
+    if (allOrdersBelongToUser) {
+      window.localStorage.setItem(getUserScopedStorageKey(ORDERS_STORAGE_KEY, activeUserEmail), JSON.stringify(orders));
+    }
   }, [activeUserEmail, orders]);
+
+  const replaceOrdersFromRemote = useCallback((nextOrders) => {
+    skipNextOrderSyncRef.current = true;
+    setOrders(nextOrders);
+  }, []);
+
+  const refreshOrdersFromRemote = useCallback(async (userEmail = activeUserEmail) => {
+    if (!getAuthState() || !userEmail || !hasSupabaseEnv || !supabase) {
+      return false;
+    }
+
+    const normalizedUserEmail = normalizeEmail(userEmail);
+
+    if (!normalizedUserEmail) {
+      return false;
+    }
+
+    const { data, error } = await supabase
+      .from(ORDERS_TABLE)
+      .select('user_email, order_key, reference, order_created_at, customer, items, payment_method, payment_provider, payment_status, payment_reference, currency, subtotal, service_fee, total, status')
+      .eq('user_email', normalizedUserEmail)
+      .order('order_created_at', { ascending: false });
+
+    if (error) {
+      return false;
+    }
+
+    replaceOrdersFromRemote((data || []).map(mapOrderRecord));
+    return true;
+  }, [activeUserEmail, replaceOrdersFromRemote]);
+
+  useEffect(() => {
+    if (!hasLoadedUserCollections || !getAuthState() || !activeUserEmail || !hasSupabaseEnv || !supabase) {
+      return;
+    }
+
+    if (skipNextOrderSyncRef.current) {
+      skipNextOrderSyncRef.current = false;
+      return;
+    }
+
+    const userEmail = normalizeEmail(activeUserEmail);
+
+    if (!userEmail) {
+      return;
+    }
+
+    const syncOrdersToRemote = async () => {
+      const records = orders.map((order) => toOrderRecord(userEmail, order));
+
+      if (!records.length) {
+        await supabase.from(ORDERS_TABLE).delete().eq('user_email', userEmail);
+        return;
+      }
+
+      const { error: upsertError } = await supabase
+        .from(ORDERS_TABLE)
+        .upsert(records, { onConflict: 'user_email,order_key' });
+
+      if (upsertError) {
+        return;
+      }
+
+      const { data: existingRows, error: fetchError } = await supabase
+        .from(ORDERS_TABLE)
+        .select('order_key')
+        .eq('user_email', userEmail);
+
+      if (fetchError) {
+        return;
+      }
+
+      const nextOrderKeys = new Set(records.map((record) => record.order_key));
+      const keysToDelete = (existingRows || [])
+        .map((row) => row.order_key)
+        .filter((orderKey) => !nextOrderKeys.has(orderKey));
+
+      if (!keysToDelete.length) {
+        return;
+      }
+
+      await supabase
+        .from(ORDERS_TABLE)
+        .delete()
+        .eq('user_email', userEmail)
+        .in('order_key', keysToDelete);
+    };
+
+    syncOrdersToRemote();
+  }, [activeUserEmail, hasLoadedUserCollections, orders]);
 
   useEffect(() => {
     // Pause remote sync immediately while switching users to avoid pushing stale empty data.
     setHasLoadedUserCollections(false);
+    skipNextOrderSyncRef.current = true; // Prevent sync from overwriting just-cleared data
 
     const localCartItems = getStoredCartItems(activeUserEmail);
     const localWishlistItems = getStoredWishlistItems(activeUserEmail);
@@ -3409,17 +4958,22 @@ const App = () => {
     const loadUserCollections = async () => {
       setHasLoadedUserCollections(false);
 
-      const [cartResponse, wishlistResponse] = await Promise.all([
+      const [cartResponse, wishlistResponse, ordersResponse] = await Promise.all([
         supabase
           .from(CART_ITEMS_TABLE)
-          .select('item_key, sku, title, image_url, route, market_name, details, quantity, unit_price, unit_price_label')
+          .select('item_key, sku, title, image_url, route, market_name, details, seller_name, seller_email, quantity, unit_price, unit_price_label')
           .eq('user_email', activeUserEmail)
           .order('created_at', { ascending: false }),
         supabase
           .from(WISHLIST_ITEMS_TABLE)
-          .select('item_key, sku, title, image_url, route, market_name, details, unit_price, unit_price_label')
+          .select('item_key, sku, title, image_url, route, market_name, details, seller_name, seller_email, unit_price, unit_price_label')
           .eq('user_email', activeUserEmail)
           .order('created_at', { ascending: false }),
+        supabase
+          .from(ORDERS_TABLE)
+          .select('user_email, order_key, reference, order_created_at, customer, items, payment_method, payment_provider, payment_status, payment_reference, currency, subtotal, service_fee, total, status')
+          .eq('user_email', normalizeEmail(activeUserEmail))
+          .order('order_created_at', { ascending: false }),
       ]);
 
       if (isCancelled) {
@@ -3434,6 +4988,10 @@ const App = () => {
         setWishlistItems((wishlistResponse.data || []).map(mapWishlistItemRecord));
       }
 
+      if (!ordersResponse.error) {
+        replaceOrdersFromRemote((ordersResponse.data || []).map(mapOrderRecord));
+      }
+
       setHasLoadedUserCollections(true);
     };
 
@@ -3442,7 +5000,41 @@ const App = () => {
     return () => {
       isCancelled = true;
     };
-  }, [activeUserEmail]);
+  }, [activeUserEmail, replaceOrdersFromRemote]);
+
+  useEffect(() => {
+    if (!hasLoadedUserCollections || !getAuthState() || !activeUserEmail || !hasSupabaseEnv || !supabase) {
+      return undefined;
+    }
+
+    let isCancelled = false;
+
+    const refreshBuyerOrders = async () => {
+      const refreshed = await refreshOrdersFromRemote(activeUserEmail);
+
+      if (isCancelled || !refreshed) {
+        return;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshBuyerOrders();
+      }
+    };
+
+    const intervalId = window.setInterval(refreshBuyerOrders, 15000);
+
+    window.addEventListener('focus', refreshBuyerOrders);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      isCancelled = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', refreshBuyerOrders);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [activeUserEmail, hasLoadedUserCollections, refreshOrdersFromRemote]);
 
   const loadSellerItems = useCallback(async () => {
     if (!hasSupabaseEnv || !supabase) {
@@ -3452,7 +5044,7 @@ const App = () => {
 
     const { data, error } = await supabase
       .from(SELLER_ITEMS_TABLE)
-      .select('id, seller_email, seller_name, title, description, price, market_key, image_url, created_at')
+      .select('id, seller_email, seller_name, title, description, price, market_key, image_url, image_urls, created_at')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -3527,6 +5119,7 @@ const App = () => {
       }
       return nextItems;
     });
+    setActionNotice(`Added to cart: ${cartItem.title}`);
   }, [activeUserEmail]);
 
   const handleUpdateCartQuantity = useCallback((itemId, delta) => {
@@ -3594,6 +5187,8 @@ const App = () => {
     });
     if (alreadyWishlisted) {
       removeWishlistItemFromRemote(wishlistItem.id);
+    } else {
+      setActionNotice(`Added to wishlist: ${wishlistItem.title}`);
     }
   }, [removeWishlistItemFromRemote, wishlistItems, activeUserEmail]);
 
@@ -3613,62 +5208,145 @@ const App = () => {
     removeWishlistItemFromRemote(itemId);
   }, [removeWishlistItemFromRemote, activeUserEmail]);
 
-  const handlePlaceOrder = useCallback((customer) => {
+  const handlePlaceOrder = useCallback(async (customer, paymentDetails = null) => {
     const totals = getCartTotals(cartItems);
+    const sellerLookup = sellerItems.reduce((lookup, item) => {
+      lookup.set(String(item.id || ''), {
+        sellerEmail: normalizeEmail(item.sellerEmail || ''),
+        sellerName: item.sellerName || '',
+      });
+      return lookup;
+    }, new Map());
+
+    const orderItems = cartItems.map((item) => {
+      const existingSellerEmail = normalizeEmail(item.sellerEmail || '');
+      const existingSellerName = item.sellerName || '';
+
+      if (existingSellerEmail) {
+        return {
+          ...item,
+          sellerEmail: existingSellerEmail,
+          sellerName: existingSellerName,
+        };
+      }
+
+      const itemIdKey = String(item.id || '').includes(':')
+        ? String(item.id || '').split(':').pop()
+        : String(item.id || '');
+      const sellerFromLookup = sellerLookup.get(String(item.sku || '')) || sellerLookup.get(itemIdKey) || null;
+
+      return {
+        ...item,
+        sellerEmail: normalizeEmail(sellerFromLookup?.sellerEmail || ''),
+        sellerName: sellerFromLookup?.sellerName || existingSellerName,
+      };
+    });
+
+    const resolvedPayment = paymentDetails || {
+      provider: customer.paymentMethod,
+      status: customer.paymentMethod === 'Card' ? 'pending' : 'pending-offline',
+      reference: '',
+      currency: stripeCurrency,
+    };
     const order = {
       id: `order-${Date.now()}`,
       reference: `SVS-${String(Date.now()).slice(-8)}`,
       createdAt: new Date().toISOString(),
+      ownerEmail: normalizeEmail(activeUserEmail),
       customer,
-      items: cartItems,
+      items: orderItems,
       paymentMethod: customer.paymentMethod,
+      paymentProvider: resolvedPayment.provider,
+      paymentStatus: resolvedPayment.status,
+      paymentReference: resolvedPayment.reference,
+      currency: resolvedPayment.currency,
       subtotal: totals.subtotal,
       serviceFee: totals.serviceFee,
       total: totals.total,
-      status: ORDER_STATUS_FLOW[0],
+      status: 'Processing',
     };
 
     setOrders((currentOrders) => [order, ...currentOrders]);
+
+    const sellerEmails = Array.from(new Set(
+      orderItems
+        .map((item) => normalizeEmail(item.sellerEmail || ''))
+        .filter(Boolean),
+    ));
+
+    sellerEmails.forEach((sellerEmail) => {
+      pushNotificationToUser(sellerEmail, {
+        type: 'order',
+        title: 'New order received',
+        message: `${order.reference} was placed and is ready for confirmation.`,
+        href: '/seller/dashboard',
+        orderId: order.id,
+      });
+    });
+
+    pushNotificationToUser(order.ownerEmail, {
+      type: 'order',
+      title: 'Order placed',
+      message: `${order.reference} is now Processing.`,
+      href: '/orders',
+      orderId: order.id,
+    });
+
     setCartItems([]);
     clearCartFromRemote();
 
     return order;
-  }, [cartItems, clearCartFromRemote]);
-
-  const handleAdvanceOrderStatus = useCallback((orderId) => {
-    setOrders((currentOrders) => currentOrders.map((order) => (
-      order.id === orderId
-        ? { ...order, status: getOrderStatusStep(order.status) }
-        : order
-    )));
-  }, []);
+  }, [activeUserEmail, cartItems, clearCartFromRemote, pushNotificationToUser, sellerItems]);
 
   const handleSellerItemCreated = useCallback((item) => {
     setSellerItems((currentItems) => [item, ...currentItems]);
   }, []);
 
-  const handleDeleteSellerItem = useCallback(async (dbId, imageUrl) => {
+  const handleDeleteSellerItem = useCallback(async (dbId, imageUrls = [], imageUrl = '') => {
     if (!hasSupabaseEnv || !supabase) return;
+    const sellerEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
 
-    const bucketPrefix = `/object/public/${SELLER_IMAGES_BUCKET}/`;
-    const bucketIndex = String(imageUrl || '').indexOf(bucketPrefix);
-
-    if (bucketIndex !== -1) {
-      const storagePath = imageUrl.slice(bucketIndex + bucketPrefix.length);
-      await supabase.storage.from(SELLER_IMAGES_BUCKET).remove([storagePath]);
+    if (!sellerEmail) {
+      return;
     }
 
-    await supabase.from(SELLER_ITEMS_TABLE).delete().eq('id', dbId);
+    const bucketPrefix = `/object/public/${SELLER_IMAGES_BUCKET}/`;
+    const sourceUrls = Array.isArray(imageUrls) && imageUrls.length ? imageUrls : (imageUrl ? [imageUrl] : []);
+    const storagePaths = sourceUrls
+      .map((url) => {
+        const bucketIndex = String(url || '').indexOf(bucketPrefix);
+        if (bucketIndex === -1) {
+          return '';
+        }
+
+        return url.slice(bucketIndex + bucketPrefix.length);
+      })
+      .filter(Boolean);
+
+    if (storagePaths.length) {
+      await supabase.storage.from(SELLER_IMAGES_BUCKET).remove(storagePaths);
+    }
+
+    await supabase
+      .from(SELLER_ITEMS_TABLE)
+      .delete()
+      .eq('id', dbId)
+      .eq('seller_email', sellerEmail);
     setSellerItems((currentItems) => currentItems.filter((item) => item.dbId !== dbId));
   }, []);
 
   const handleUpdateSellerItem = useCallback(async (dbId, updates, newImageFile) => {
     if (!hasSupabaseEnv || !supabase) return { error: 'Supabase is not configured.' };
+    const sellerEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
+
+    if (!sellerEmail) {
+      return { error: 'You must be signed in to update this listing.' };
+    }
 
     let imageUrl = updates.imageUrl;
+    let imageUrls = Array.isArray(updates.imageUrls) ? updates.imageUrls : (updates.imageUrl ? [updates.imageUrl] : []);
 
     if (newImageFile) {
-      const sellerEmail = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || '');
       const fileExtension = newImageFile.name.split('.').pop() || 'jpg';
       const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExtension}`;
       const filePath = `${sanitizeStorageSegment(sellerEmail)}/${updates.marketKey}/${fileName}`;
@@ -3681,6 +5359,7 @@ const App = () => {
 
       const { data: publicUrlData } = supabase.storage.from(SELLER_IMAGES_BUCKET).getPublicUrl(filePath);
       imageUrl = publicUrlData.publicUrl;
+      imageUrls = [imageUrl];
     }
 
     const { data, error } = await supabase
@@ -3690,13 +5369,20 @@ const App = () => {
         description: updates.description,
         price: updates.price,
         market_key: updates.marketKey,
-        ...(imageUrl !== undefined ? { image_url: imageUrl } : {}),
+        ...(imageUrl !== undefined ? { image_url: imageUrl, image_urls: imageUrls } : {}),
       })
       .eq('id', dbId)
+      .eq('seller_email', sellerEmail)
       .select('*')
       .single();
 
-    if (error) return { error: error.message };
+    if (error) {
+      return {
+        error: String(error.message || '').toLowerCase().includes('marketplace_items_market_key_check')
+          ? `Rerun supabase/seller-marketplace.sql so the ${SELLER_ITEMS_TABLE} market_key constraint includes the selected market.`
+          : error.message,
+      };
+    }
 
     setSellerItems((currentItems) =>
       currentItems.map((item) => (item.dbId === dbId ? mapSellerItemRecord(data) : item)),
@@ -3705,13 +5391,210 @@ const App = () => {
     return { data };
   }, []);
 
+  const handleUpdateOrderStatus = useCallback(async (orderId, nextStatus) => {
+    if (!orderId || ![...ORDER_STATUS_FLOW, ...REFUND_STATUS_FLOW].includes(nextStatus)) {
+      return { error: 'Invalid order update.' };
+    }
+
+    const activeSellerEmail = normalizeEmail(activeUserEmail);
+    const ownedSellerItemIds = new Set(
+      sellerItems
+        .filter((item) => normalizeEmail(item.sellerEmail || '') === activeSellerEmail)
+        .map((item) => String(item.id || '')),
+    );
+    
+    // Try to find order in local state first (buyer's personal orders)
+    let targetOrder = orders.find((order) => order.id === orderId);
+
+    // If not found locally, fetch from Supabase (seller may be managing a customer's order)
+    if (!targetOrder && hasSupabaseEnv && supabase) {
+      const { data, error: fetchError } = await supabase
+        .from(ORDERS_TABLE)
+        .select('user_email, order_key, reference, order_created_at, customer, items, payment_method, payment_provider, payment_status, payment_reference, currency, subtotal, service_fee, total, status')
+        .eq('order_key', orderId)
+        .single();
+
+      if (fetchError || !data) {
+        return { error: 'Order not found.' };
+      }
+
+      targetOrder = mapOrderRecord(data);
+    }
+
+    if (!targetOrder) {
+      return { error: 'Order not found.' };
+    }
+
+    const allowedStatuses = getSellerStatusOptions(targetOrder.status);
+    if (!allowedStatuses.includes(nextStatus)) {
+      return { error: 'Invalid status transition for this order.' };
+    }
+
+    const sellerCanManageOrder = (targetOrder.items || []).some((lineItem) => (
+      doesLineItemBelongToSeller(lineItem, activeSellerEmail, ownedSellerItemIds)
+    ));
+
+    if (!sellerCanManageOrder) {
+      return { error: 'You can only update orders that include your listings.' };
+    }
+
+    if (hasSupabaseEnv && supabase) {
+      const { error } = await supabase
+        .from(ORDERS_TABLE)
+        .update({ status: nextStatus })
+        .eq('order_key', orderId);
+
+      if (error) {
+        return { error: error.message || 'Could not update order status.' };
+      }
+    }
+
+    setOrders((currentOrders) => currentOrders.map((order) => (
+      order.id === orderId
+        ? { ...order, status: nextStatus }
+        : order
+    )));
+
+    if (targetOrder.ownerEmail) {
+      const refundNote = nextStatus === 'Refund Made'
+        ? 'Refund has been made. Bank reflection can take 3-7 business days.'
+        : `${targetOrder.reference || orderId} is now ${nextStatus}.`;
+
+      pushNotificationToUser(targetOrder.ownerEmail, {
+        type: 'status',
+        title: 'Order status updated',
+        message: refundNote,
+        href: '/orders',
+        orderId,
+      });
+    }
+
+    return { data: true };
+  }, [activeUserEmail, orders, pushNotificationToUser, sellerItems]);
+
+  const handleCancelOrder = useCallback(async (orderId) => {
+    const normalizedBuyerEmail = normalizeEmail(activeUserEmail);
+    const targetOrder = orders.find((order) => order.id === orderId);
+
+    if (!targetOrder) {
+      return { error: 'Order not found.' };
+    }
+
+    if (!canBuyerCancelOrder(targetOrder.status)) {
+      return { error: 'Order can only be cancelled before it is shipped.' };
+    }
+
+    if (hasSupabaseEnv && supabase) {
+      const { error } = await supabase
+        .from(ORDERS_TABLE)
+        .update({ status: 'Cancelled by Buyer' })
+        .eq('order_key', orderId)
+        .eq('user_email', normalizedBuyerEmail);
+
+      if (error) {
+        return { error: error.message || 'Could not cancel order.' };
+      }
+    }
+
+    setOrders((currentOrders) => currentOrders.map((order) => (
+      order.id === orderId
+        ? { ...order, status: 'Cancelled by Buyer' }
+        : order
+    )));
+
+    const sellerEmails = Array.from(new Set(
+      (targetOrder.items || [])
+        .map((lineItem) => normalizeEmail(lineItem?.sellerEmail || ''))
+        .filter(Boolean),
+    ));
+
+    sellerEmails.forEach((sellerEmail) => {
+      pushNotificationToUser(sellerEmail, {
+        type: 'refund',
+        title: 'Order cancelled by buyer',
+        message: `${targetOrder.reference || targetOrder.id} was cancelled. Process refund once funds settle.`,
+        href: '/seller/dashboard',
+        orderId,
+      });
+    });
+
+    pushNotificationToUser(targetOrder.ownerEmail || normalizedBuyerEmail, {
+      type: 'refund',
+      title: 'Order cancelled',
+      message: 'Cancellation received. After seller processes the refund, bank reflection may take 3-7 business days.',
+      href: '/orders',
+      orderId,
+    });
+
+    return { data: true };
+  }, [activeUserEmail, orders, pushNotificationToUser]);
+
+  const handleOpenItemDetails = useCallback((itemDetails) => {
+    setSelectedItemDetails(itemDetails);
+  }, []);
+
+  const handleCloseItemDetails = useCallback(() => {
+    setSelectedItemDetails(null);
+  }, []);
+
+  useEffect(() => {
+    if (!actionNotice) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setActionNotice('');
+    }, 2200);
+
+    return () => window.clearTimeout(timer);
+  }, [actionNotice]);
+
+  useEffect(() => {
+    // With Supabase enabled, order status is managed by persisted updates (buyer/seller flow).
+    // Skip local auto-progression to avoid overwriting seller-selected statuses.
+    if (hasSupabaseEnv && supabase) {
+      return undefined;
+    }
+
+    const updateOrderStatuses = () => {
+      const now = Date.now();
+
+      setOrders((currentOrders) => {
+        let hasChanges = false;
+
+        const nextOrders = currentOrders.map((order) => {
+          const nextStatus = getAutoOrderStatus(order, now);
+
+          if (nextStatus !== order.status) {
+            hasChanges = true;
+            return { ...order, status: nextStatus };
+          }
+
+          return order;
+        });
+
+        return hasChanges ? nextOrders : currentOrders;
+      });
+    };
+
+    updateOrderStatuses();
+    const intervalId = window.setInterval(updateOrderStatuses, 30 * 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
   return (
-    <Shell cartItemCount={getCartCount(cartItems)} wishlistItemCount={wishlistItems.length}>
+    <Shell
+      cartItemCount={getCartCount(cartItems)}
+      wishlistItemCount={wishlistItems.length}
+      notifications={notifications}
+      onMarkNotificationsRead={markNotificationsAsRead}
+    >
       <AppRoutes
         cartItems={cartItems}
         wishlistItems={wishlistItems}
         wishlistItemIds={wishlistItemIds}
-        orders={orders}
+        orders={scopedOrders}
         sellerItems={sellerItems}
         onAddToCart={handleAddToCart}
         onToggleWishlist={handleToggleWishlist}
@@ -3719,14 +5602,30 @@ const App = () => {
         onUpdateCartQuantity={handleUpdateCartQuantity}
         onRemoveCartItem={handleRemoveCartItem}
         onPlaceOrder={handlePlaceOrder}
-        onAdvanceOrderStatus={handleAdvanceOrderStatus}
+        onCancelOrder={handleCancelOrder}
         onSellerItemCreated={handleSellerItemCreated}
         onDeleteSellerItem={handleDeleteSellerItem}
         onUpdateSellerItem={handleUpdateSellerItem}
+        onUpdateOrderStatus={handleUpdateOrderStatus}
+        onOpenItemDetails={handleOpenItemDetails}
       />
+      <ItemDetailsModal
+        item={selectedItemDetails}
+        onClose={handleCloseItemDetails}
+        onAddToCart={handleAddToCart}
+        onToggleWishlist={handleToggleWishlist}
+        isWishlisted={isDetailsItemWishlisted}
+      />
+      {actionNotice ? (
+        <div className="pointer-events-none fixed bottom-5 right-5 z-[90] max-w-sm rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 shadow-[0_8px_24px_rgba(16,185,129,0.25)]">
+          {actionNotice}
+        </div>
+      ) : null}
     </Shell>
   );
 };
 
 export default App;
+
+
 

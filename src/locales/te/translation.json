@@ -67,8 +67,10 @@
     "bettingVoting": "స్పోర్ట్స్ ప్రిడిక్షన్ లీడర్‌బోర్డ్‌లు",
     "safety": "వర్తింపు మరియు భద్రతా మార్గదర్శకాలు",
     "propertyHub": "ఆస్తి మార్కెట్ ప్లేస్",
-    "internationalLotteryGames": "అంతర్జాతీయ లాటరీ గేమ్స్",
-    "livestockHub": "పశువుల మార్కెట్"
+    "internationalLotteryGames": "లాటరీ ఆటలు",
+    "livestockHub": "పశువుల మార్కెట్",
+    "stationery": "స్టేషనరీ మరియు బుక్స్ మార్కెట్",
+    "constructionTools": "బిల్డింగ్ మరియు కన్స్ట్రక్షన్ టూల్స్"
   },
   "footer": {
     "about": "About Us",
@@ -141,7 +143,10 @@
     "hardwareSoftware": "Tech gadgets, software bundles, and secure electronics purchasing.",
     "bettingHub": "Aggregated voting and betting preview with popular matches and hot travel deal highlights.",
     "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
-    "safety": "Compliance standards, age restrictions, and secure transaction guarantees."
+    "safety": "Compliance standards, age restrictions, and secure transaction guarantees.",
+    "stationery": "పాఠశాల లేదా వ్యాపారం కోసం పెన్నులు, పుస్తకాలు, ఇన్‌వాయిస్ పుస్తకాలు, నోట్‌బుక్‌లు మరియు కార్యాలయ సామాగ్రిని షాపింగ్ చేయండి.",
+    "internationalLotteryGames": "జాక్‌పాట్ పూల్స్, డ్రా డేస్ మరియు అందుబాటులో ఉన్న లాటరీ గేమ్‌లను ఒకే చోట సరిపోల్చండి.",
+    "constructionTools": "ఏదైనా పరిమాణంలో ప్రాజెక్ట్‌ల కోసం నిర్మాణ సామాగ్రి, హ్యాండ్ టూల్స్ మరియు పవర్ టూల్స్ బ్రౌజ్ చేయండి."
   },
   "searchResults": {
     "title": "Search Results",

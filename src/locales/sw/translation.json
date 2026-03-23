@@ -106,7 +106,10 @@
     "hardwareSoftware": "Vifaa vya teknolojia, vifurushi vya programu, na ununuzi salama wa vifaa vya kielektroniki.",
     "bettingHub": "Muhtasari wa kura na ubashiri wenye mechi maarufu na vivutio vya ofa za safari.",
     "bettingVoting": "Uzoefu wa pamoja wa utabiri, maarifa ya odds, na njia za wataalam waliothibitishwa.",
-    "safety": "Viwango vya utii, vizuizi vya umri, na dhamana za miamala salama."
+    "safety": "Viwango vya utii, vizuizi vya umri, na dhamana za miamala salama.",
+    "stationery": "Nunua kalamu, vitabu, vitabu vya ankara, daftari na vifaa vya ofisi kwa shule au biashara.",
+    "internationalLotteryGames": "Linganisha bwawa la jackpot, siku za kuchora, na michezo ya bahati nasibu inayopatikana katika sehemu moja.",
+    "constructionTools": "Vinjari vifaa vya ujenzi, zana za mikono, na zana za nguvu za miradi ya ukubwa wowote."
   },
   "searchResults": {
     "title": "Matokeo ya Utafutaji",
@@ -147,8 +150,10 @@
     "bettingVoting": "Vibao vya Utabiri vya Michezo",
     "safety": "Miongozo ya Uzingatiaji na Usalama",
     "propertyHub": "Soko la Mali",
-    "internationalLotteryGames": "Michezo ya Kimataifa ya Bahati Nasibu",
-    "livestockHub": "Soko la Mifugo"
+    "internationalLotteryGames": "Michezo ya Bahati Nasibu",
+    "livestockHub": "Soko la Mifugo",
+    "stationery": "Soko la Vifaa na Vitabu",
+    "constructionTools": "Zana za Ujenzi na Ujenzi"
   },
   "marketsPage": {
     "title": "Masoko Yote",

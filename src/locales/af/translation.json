@@ -68,8 +68,10 @@
     "bettingVoting": "Sportvoorspelling ranglyste",
     "safety": "Voldoening en Veiligheidsriglyne",
     "propertyHub": "Eiendomsmark",
-    "internationalLotteryGames": "Internasionale Lotery Spele",
-    "livestockHub": "Veemark"
+    "internationalLotteryGames": "Lotery Speletjies",
+    "livestockHub": "Veemark",
+    "stationery": "Skryfbehoeftes en Boeke Mark",
+    "constructionTools": "Bou- en konstruksiegereedskap"
   },
   "footer": {
     "about": "Oor Ons",
@@ -144,8 +146,10 @@
     "bettingVoting": "Verenigde ervaring vir voorspellings, odds-insigte en geverifieerde kundige kanale.",
     "safety": "Nakomingstandaarde, ouderdomsbeperkings en veilige transaksiewaarborge.",
     "propertyHub": "Blaai deur verhurings, huise te koop en kommersiële ruimtes met ryk liggingbesonderhede.",
-    "internationalLotteryGames": "Vergelyk boerpotpoele, trekkingsdae en kwalifiserende internasionale loteryspeletjies op een plek.",
-    "livestockHub": "Koop en verkoop beeste, skape en bokke met plaasgereed-lysbesonderhede en verkoperliggings."
+    "internationalLotteryGames": "Vergelyk boerpotpoele, trekkingsdae en beskikbare loteryspeletjies op een plek.",
+    "livestockHub": "Koop en verkoop beeste, skape en bokke met plaasgereed-lysbesonderhede en verkoperliggings.",
+    "stationery": "Winkelpenne, boeke, faktuurboeke, notaboeke en kantoorbenodigdhede vir skool of besigheid.",
+    "constructionTools": "Blaai deur boubenodigdhede, handgereedskap en elektriese gereedskap vir projekte van enige grootte."
   },
   "searchResults": {
     "title": "Soekresultate",

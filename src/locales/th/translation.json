@@ -67,8 +67,10 @@
     "bettingVoting": "ลีดเดอร์บอร์ดทำนายผลกีฬา",
     "safety": "แนวทางการปฏิบัติตามกฎระเบียบและความปลอดภัย",
     "propertyHub": "ตลาดอสังหาริมทรัพย์",
-    "internationalLotteryGames": "เกมลอตเตอรี่นานาชาติ",
-    "livestockHub": "ตลาดปศุสัตว์"
+    "internationalLotteryGames": "เกมส์ลอตเตอรี่",
+    "livestockHub": "ตลาดปศุสัตว์",
+    "stationery": "ตลาดเครื่องเขียนและหนังสือ",
+    "constructionTools": "เครื่องมือก่อสร้างและอาคาร"
   },
   "footer": {
     "about": "About Us",
@@ -141,7 +143,10 @@
     "hardwareSoftware": "Tech gadgets, software bundles, and secure electronics purchasing.",
     "bettingHub": "Aggregated voting and betting preview with popular matches and hot travel deal highlights.",
     "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
-    "safety": "Compliance standards, age restrictions, and secure transaction guarantees."
+    "safety": "Compliance standards, age restrictions, and secure transaction guarantees.",
+    "stationery": "เลือกซื้อปากกา หนังสือ สมุดใบแจ้งหนี้ สมุดบันทึก และอุปกรณ์สำนักงานสำหรับโรงเรียนหรือธุรกิจ",
+    "internationalLotteryGames": "เปรียบเทียบแจ็กพอตพูล วันออกรางวัล และเกมลอตเตอรี่ที่มีในที่เดียว",
+    "constructionTools": "เลือกดูวัสดุก่อสร้าง เครื่องมือช่าง และเครื่องมือไฟฟ้าสำหรับโครงการทุกขนาด"
   },
   "searchResults": {
     "title": "Search Results",

@@ -67,8 +67,10 @@
     "bettingVoting": "Clasamente de predicții sportive",
     "safety": "Ghid de conformitate și siguranță",
     "propertyHub": "Piața imobiliară",
-    "internationalLotteryGames": "Jocuri internaționale de loterie",
-    "livestockHub": "Piața de animale"
+    "internationalLotteryGames": "Jocuri de loterie",
+    "livestockHub": "Piața de animale",
+    "stationery": "Piata de Papetarie si Carti",
+    "constructionTools": "Instrumente de constructii si constructii"
   },
   "footer": {
     "about": "About Us",
@@ -141,7 +143,10 @@
     "hardwareSoftware": "Tech gadgets, software bundles, and secure electronics purchasing.",
     "bettingHub": "Aggregated voting and betting preview with popular matches and hot travel deal highlights.",
     "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
-    "safety": "Compliance standards, age restrictions, and secure transaction guarantees."
+    "safety": "Compliance standards, age restrictions, and secure transaction guarantees.",
+    "stationery": "Cumpărați pixuri, cărți, cărți de facturi, caiete și rechizite de birou pentru școală sau afaceri.",
+    "internationalLotteryGames": "Comparați grupurile de jackpot, zilele de extragere și jocurile de loterie disponibile într-un singur loc.",
+    "constructionTools": "Răsfoiți materiale de construcție, unelte de mână și scule electrice pentru proiecte de orice dimensiune."
   },
   "searchResults": {
     "title": "Search Results",

@@ -23,6 +23,24 @@ Do not use your Supabase service role (secret) key in this React app.
 - Wishlist items are stored in Supabase Postgres table `wishlist_items`.
 - The React app filters both tables by the signed-in user's email so each user sees only their own saved items in the UI.
 
+## Checkout Payments (Card)
+
+Card checkout now uses Stripe for secure payment processing.
+
+1. Get your test keys from https://dashboard.stripe.com/test/apikeys
+2. Add these variables to `.env`:
+	- `REACT_APP_STRIPE_PUBLIC_KEY` (starts with `pk_test_` or `pk_live_`)
+	- `REACT_APP_STRIPE_CURRENCY` (optional, defaults to `usd` e.g. `usd`, `gbp`, `eur`, `zar`)
+3. Restart the dev server after updating `.env`.
+4. Open the checkout page, select `Card (Stripe)`, fill in the form, and complete the payment.
+
+Notes:
+
+- This frontend uses the Stripe public key only and does NOT directly charge cards.
+- Payment intents are created server-side via a `/api/payment-intent` endpoint (you must implement this).
+- For production: set up your backend to securely create payment intents and handle webhook confirmations.
+- Test card: 4242 4242 4242 4242 with any future date and CVC.
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts

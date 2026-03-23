@@ -7,17 +7,23 @@ create table if not exists public.marketplace_items (
   title text not null,
   description text,
   price text not null,
-  market_key text not null check (market_key in (
-    'ecommerce',
-    'groceries',
-    'fastFood',
-    'beverages',
-    'wellness',
-    'hardwareSoftware'
-  )),
+  market_key text not null,
   image_url text not null,
+  image_urls jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now()
 );
+
+alter table public.marketplace_items
+add column if not exists image_urls jsonb not null default '[]'::jsonb;
+
+update public.marketplace_items
+set image_urls = jsonb_build_array(image_url)
+where coalesce(jsonb_array_length(image_urls), 0) = 0
+  and image_url is not null
+  and image_url <> '';
+
+alter table public.marketplace_items
+drop constraint if exists marketplace_items_market_key_check;
 
 alter table public.marketplace_items enable row level security;
 
@@ -78,6 +84,8 @@ create table if not exists public.cart_items (
   route text not null,
   market_name text not null,
   details text,
+  seller_name text,
+  seller_email text,
   quantity integer not null default 1 check (quantity > 0),
   unit_price numeric(12, 2) not null default 0,
   unit_price_label text not null,
@@ -125,6 +133,8 @@ create table if not exists public.wishlist_items (
   route text not null,
   market_name text not null,
   details text,
+  seller_name text,
+  seller_email text,
   unit_price numeric(12, 2) not null default 0,
   unit_price_label text not null,
   created_at timestamptz not null default now(),

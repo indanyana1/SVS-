@@ -68,8 +68,10 @@
     "bettingVoting": "Bestenlisten für Sportvorhersagen",
     "safety": "Compliance- und Sicherheitsrichtlinien",
     "propertyHub": "Immobilienmarktplatz",
-    "internationalLotteryGames": "Internationale Lotteriespiele",
-    "livestockHub": "Viehmarkt"
+    "internationalLotteryGames": "Lotteriespiele",
+    "livestockHub": "Viehmarkt",
+    "stationery": "Schreibwaren- und Büchermarkt",
+    "constructionTools": "Bau- und Konstruktionswerkzeuge"
   },
   "footer": {
     "about": "Über uns",
@@ -144,8 +146,10 @@
     "bettingVoting": "Einheitliche Erfahrung für Vorhersagen, Quoteneinblicke und verifizierte Expertenkanäle.",
     "safety": "Compliance-Standards, Altersbeschränkungen und sichere Transaktionsgarantien.",
     "propertyHub": "Durchsuchen Sie Mietobjekte, zum Verkauf stehende Häuser und Gewerbeflächen mit umfangreichen Standortdetails.",
-    "internationalLotteryGames": "Vergleichen Sie Jackpot-Pools, Ziehungstage und berechtigte internationale Lotteriespiele an einem Ort.",
-    "livestockHub": "Kaufen und verkaufen Sie Rinder, Schafe und Ziegen mit betriebsbereiten Auflistungsdetails und Verkäuferstandorten."
+    "internationalLotteryGames": "Vergleichen Sie Jackpot-Pools, Ziehungstage und verfügbare Lotteriespiele an einem Ort.",
+    "livestockHub": "Kaufen und verkaufen Sie Rinder, Schafe und Ziegen mit betriebsbereiten Auflistungsdetails und Verkäuferstandorten.",
+    "stationery": "Kaufen Sie Stifte, Bücher, Rechnungsbücher, Notizbücher und Bürobedarf für Schule oder Unternehmen.",
+    "constructionTools": "Durchsuchen Sie Baumaterialien, Handwerkzeuge und Elektrowerkzeuge für Projekte jeder Größe."
   },
   "searchResults": {
     "title": "Suchergebnisse",
