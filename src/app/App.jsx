@@ -838,6 +838,7 @@ const SELLER_ITEMS_TABLE = 'marketplace_items';
 const CART_ITEMS_TABLE = 'cart_items';
 const WISHLIST_ITEMS_TABLE = 'wishlist_items';
 const PRODUCT_REVIEWS_TABLE = 'product_reviews';
+const NOTIFICATIONS_TABLE = 'notifications';
 const SELLER_IMAGES_BUCKET = 'marketplace-items';
 const HARSH_REVIEW_TERMS = ['idiot', 'stupid', 'trash', 'garbage', 'useless', 'scam'];
 
@@ -894,6 +895,29 @@ const createNotificationRecord = ({ title, message, href, orderId, type = 'info'
   orderId: String(orderId || ''),
   createdAt: new Date().toISOString(),
   read: false,
+});
+
+const mapNotificationRecord = (record) => ({
+  id: String(record.notification_key || record.id || `notif-${Date.now()}`),
+  type: String(record.type || 'info'),
+  title: String(record.title || 'Notification'),
+  message: String(record.message || ''),
+  href: String(record.href || '/orders'),
+  orderId: String(record.order_id || ''),
+  createdAt: record.created_at || new Date().toISOString(),
+  read: Boolean(record.is_read),
+});
+
+const toNotificationRecord = (userEmail, notification) => ({
+  user_email: normalizeEmail(userEmail),
+  notification_key: notification.id,
+  type: notification.type,
+  title: notification.title,
+  message: notification.message,
+  href: notification.href,
+  order_id: notification.orderId || null,
+  is_read: Boolean(notification.read),
+  created_at: notification.createdAt,
 });
 
 const pushNotificationToStorage = (userEmail, notification) => {
@@ -1581,7 +1605,7 @@ const MarketSelectorField = ({
   );
 };
 
-const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notifications = [], onMarkNotificationsRead }) => {
+const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notifications = [], onMarkNotificationsRead, onClearNotifications }) => {
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -1919,7 +1943,18 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                 <div className="absolute right-0 top-[calc(100%+8px)] z-[70] w-[min(92vw,380px)] overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-2xl">
                   <div className="flex items-center justify-between border-b border-[var(--svs-border)] px-4 py-3">
                     <p className="text-sm font-bold text-[var(--svs-text)]">Notifications</p>
-                    <p className="text-xs text-[var(--svs-muted)]">{notifications.length} total</p>
+                    <div className="flex items-center gap-3">
+                      <p className="text-xs text-[var(--svs-muted)]">{notifications.length} total</p>
+                      {notifications.length > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => { onClearNotifications?.(); setIsNotificationsOpen(false); }}
+                          className="text-xs font-semibold text-rose-500 transition hover:text-rose-700"
+                        >
+                          Clear all
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                   <div className="max-h-80 overflow-y-auto p-2">
                     {notifications.length ? notifications.map((notification) => (
@@ -5290,7 +5325,88 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    setNotifications(getStoredNotifications(activeUserEmail));
+    if (!getAuthState() || !activeUserEmail || !hasSupabaseEnv || !supabase) {
+      setNotifications(getStoredNotifications(activeUserEmail));
+      return;
+    }
+
+    let isCancelled = false;
+
+    const loadRemoteNotifications = async () => {
+      const normalizedUserEmail = normalizeEmail(activeUserEmail);
+
+      if (!normalizedUserEmail) {
+        setNotifications([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from(NOTIFICATIONS_TABLE)
+        .select('id, user_email, notification_key, type, title, message, href, order_id, is_read, created_at')
+        .eq('user_email', normalizedUserEmail)
+        .order('created_at', { ascending: false })
+        .limit(80);
+
+      if (isCancelled) {
+        return;
+      }
+
+      if (error) {
+        // Keep notifications working even if the remote table/policies are unavailable.
+        setNotifications(getStoredNotifications(normalizedUserEmail));
+        return;
+      }
+
+      setNotifications((data || []).map(mapNotificationRecord));
+    };
+
+    loadRemoteNotifications();
+
+    const normalizedUserEmail = normalizeEmail(activeUserEmail);
+    const channel = supabase
+      .channel(`svs-notifications-${normalizedUserEmail}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: NOTIFICATIONS_TABLE,
+          filter: `user_email=eq.${normalizedUserEmail}`,
+        },
+        (payload) => {
+          if (isCancelled) {
+            return;
+          }
+
+          if (payload.eventType === 'DELETE') {
+            const deletedRecord = payload.old || {};
+            const deletedKey = String(deletedRecord.notification_key || deletedRecord.id || '');
+
+            setNotifications((current) => current.filter((notification) => notification.id !== deletedKey));
+            return;
+          }
+
+          const mapped = mapNotificationRecord(payload.new || {});
+
+          setNotifications((current) => {
+            const existingIndex = current.findIndex((notification) => notification.id === mapped.id);
+
+            if (existingIndex === -1) {
+              return [mapped, ...current].slice(0, 80);
+            }
+
+            const next = [...current];
+            next[existingIndex] = { ...next[existingIndex], ...mapped };
+            return next;
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      isCancelled = true;
+      supabase.removeChannel(channel);
+    };
   }, [activeUserEmail]);
 
   useEffect(() => {
@@ -5320,17 +5436,57 @@ const App = () => {
 
     if (normalizedTargetEmail === normalizeEmail(activeUserEmail)) {
       setNotifications((currentNotifications) => [notification, ...currentNotifications].slice(0, 80));
+    }
+
+    if (hasSupabaseEnv && supabase) {
+      supabase
+        .from(NOTIFICATIONS_TABLE)
+        .upsert([toNotificationRecord(normalizedTargetEmail, notification)], { onConflict: 'user_email,notification_key' })
+        .then(({ error }) => {
+          if (!error) {
+            return;
+          }
+
+          // Fallback path when remote write fails.
+          if (normalizedTargetEmail !== normalizeEmail(activeUserEmail)) {
+            pushNotificationToStorage(normalizedTargetEmail, notification);
+          }
+        });
+
       return;
     }
 
-    pushNotificationToStorage(normalizedTargetEmail, notification);
+    if (normalizedTargetEmail !== normalizeEmail(activeUserEmail)) {
+      pushNotificationToStorage(normalizedTargetEmail, notification);
+    }
+  }, [activeUserEmail]);
+
+  const handleClearNotifications = useCallback(async () => {
+    setNotifications([]);
+
+    if (getAuthState() && activeUserEmail && hasSupabaseEnv && supabase) {
+      await supabase
+        .from(NOTIFICATIONS_TABLE)
+        .delete()
+        .eq('user_email', normalizeEmail(activeUserEmail));
+    }
   }, [activeUserEmail]);
 
   const markNotificationsAsRead = useCallback(() => {
+    const unreadIds = notifications.filter((notification) => !notification.read).map((notification) => notification.id);
+
     setNotifications((currentNotifications) => currentNotifications.map((notification) => (
       notification.read ? notification : { ...notification, read: true }
     )));
-  }, []);
+
+    if (unreadIds.length && getAuthState() && activeUserEmail && hasSupabaseEnv && supabase) {
+      supabase
+        .from(NOTIFICATIONS_TABLE)
+        .update({ is_read: true })
+        .eq('user_email', normalizeEmail(activeUserEmail))
+        .in('notification_key', unreadIds);
+    }
+  }, [activeUserEmail, notifications]);
 
   useEffect(() => {
     // Remove old shared keys so cart/wishlist no longer leak between users.
@@ -5906,6 +6062,82 @@ const App = () => {
       status: 'Processing',
     };
 
+    const inventoryRequest = Array.from(orderItems.reduce((accumulator, item) => {
+      const listingDbId = getSellerListingIdFromItemKey(item.sku || item.id);
+
+      if (!listingDbId) {
+        return accumulator;
+      }
+
+      const purchasedQuantity = Math.max(Number(item.quantity) || 1, 1);
+      accumulator.set(listingDbId, (accumulator.get(listingDbId) || 0) + purchasedQuantity);
+      return accumulator;
+    }, new Map()).entries()).map(([listingId, quantity]) => ({
+      listing_id: listingId,
+      quantity,
+    }));
+
+    if (inventoryRequest.length) {
+      if (hasSupabaseEnv && supabase) {
+        const { data: inventoryResult, error: inventoryError } = await supabase.rpc('apply_inventory_deduction', {
+          p_order_key: order.id,
+          p_user_email: normalizeEmail(activeUserEmail),
+          p_items: inventoryRequest,
+        });
+
+        if (inventoryError) {
+          setActionNotice(`Could not reserve inventory: ${inventoryError.message || 'please try again.'}`);
+          return null;
+        }
+
+        if (!inventoryResult || !['applied', 'already_applied'].includes(inventoryResult.status)) {
+          const failureReason = String(inventoryResult?.failure_reason || 'One or more items are no longer in stock.');
+          setActionNotice(failureReason);
+          return null;
+        }
+
+        const appliedItems = Array.isArray(inventoryResult.applied_items) ? inventoryResult.applied_items : [];
+
+        if (appliedItems.length) {
+          const stockByListingId = new Map(
+            appliedItems.map((entry) => [
+              String(entry.listing_id || ''),
+              Math.max(Number(entry.new_quantity) || 0, 0),
+            ]),
+          );
+
+          setSellerItems((currentItems) => currentItems.map((sellerItem) => {
+            const nextQuantity = stockByListingId.get(String(sellerItem.dbId || ''));
+
+            if (nextQuantity === undefined) {
+              return sellerItem;
+            }
+
+            return {
+              ...sellerItem,
+              availableQuantity: nextQuantity,
+            };
+          }));
+        }
+      } else {
+        // Local-only fallback without Supabase persistence.
+        const purchasedByListingId = new Map(inventoryRequest.map((entry) => [String(entry.listing_id || ''), Number(entry.quantity) || 0]));
+
+        setSellerItems((currentItems) => currentItems.map((sellerItem) => {
+          const purchasedQuantity = purchasedByListingId.get(String(sellerItem.dbId || ''));
+
+          if (!purchasedQuantity) {
+            return sellerItem;
+          }
+
+          return {
+            ...sellerItem,
+            availableQuantity: Math.max(normalizeListingQuantity(sellerItem.availableQuantity, 0) - purchasedQuantity, 0),
+          };
+        }));
+      }
+    }
+
     setOrders((currentOrders) => [order, ...currentOrders]);
 
     const sellerEmails = Array.from(new Set(
@@ -5934,52 +6166,6 @@ const App = () => {
 
     setCartItems([]);
     clearCartFromRemote();
-
-    const purchasedByListingId = orderItems.reduce((accumulator, item) => {
-      const listingDbId = getSellerListingIdFromItemKey(item.sku || item.id);
-
-      if (!listingDbId) {
-        return accumulator;
-      }
-
-      const purchasedQuantity = Math.max(Number(item.quantity) || 1, 1);
-      accumulator.set(listingDbId, (accumulator.get(listingDbId) || 0) + purchasedQuantity);
-      return accumulator;
-    }, new Map());
-
-    if (purchasedByListingId.size > 0) {
-      setSellerItems((currentItems) => currentItems.map((sellerItem) => {
-        const purchasedQuantity = purchasedByListingId.get(String(sellerItem.dbId || ''));
-
-        if (!purchasedQuantity) {
-          return sellerItem;
-        }
-
-        return {
-          ...sellerItem,
-          availableQuantity: Math.max(normalizeListingQuantity(sellerItem.availableQuantity, 0) - purchasedQuantity, 0),
-        };
-      }));
-
-      if (hasSupabaseEnv && supabase) {
-        await Promise.all(
-          Array.from(purchasedByListingId.entries()).map(async ([listingDbId, purchasedQuantity]) => {
-            const currentStock = sellerStockLookup.get(String(listingDbId));
-
-            if (currentStock === undefined) {
-              return;
-            }
-
-            const nextStock = Math.max(currentStock - purchasedQuantity, 0);
-
-            await supabase
-              .from(SELLER_ITEMS_TABLE)
-              .update({ quantity: nextStock })
-              .eq('id', listingDbId);
-          }),
-        );
-      }
-    }
 
     return order;
   }, [activeUserEmail, cartItems, clearCartFromRemote, pushNotificationToUser, sellerItems]);
@@ -6200,7 +6386,7 @@ const App = () => {
     const sellerEmails = Array.from(new Set(
       (targetOrder.items || [])
         .map((lineItem) => normalizeEmail(lineItem?.sellerEmail || ''))
-        .filter(Boolean),
+        .filter((email) => Boolean(email) && email !== normalizedBuyerEmail),
     ));
 
     sellerEmails.forEach((sellerEmail) => {
@@ -6213,10 +6399,13 @@ const App = () => {
       });
     });
 
+    const wasCardPayment = targetOrder.paymentMethod === 'Card';
     pushNotificationToUser(targetOrder.ownerEmail || normalizedBuyerEmail, {
       type: 'refund',
       title: 'Order cancelled',
-      message: 'Cancellation received. After seller processes the refund, bank reflection may take 3-7 business days.',
+      message: wasCardPayment
+        ? 'Cancellation received. After the seller processes the refund, bank reflection can take 3-7 business days.'
+        : 'Your order has been successfully cancelled.',
       href: '/orders',
       orderId,
     });
@@ -6323,6 +6512,7 @@ const App = () => {
       wishlistItemCount={wishlistItems.length}
       notifications={notifications}
       onMarkNotificationsRead={markNotificationsAsRead}
+      onClearNotifications={handleClearNotifications}
     >
       <AppRoutes
         cartItems={cartItems}
