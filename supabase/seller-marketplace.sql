@@ -6,6 +6,7 @@ create table if not exists public.marketplace_items (
   seller_name text,
   title text not null,
   description text,
+  quantity integer not null default 0 check (quantity >= 0),
   price text not null,
   market_key text not null,
   image_url text not null,
@@ -15,6 +16,15 @@ create table if not exists public.marketplace_items (
 
 alter table public.marketplace_items
 add column if not exists image_urls jsonb not null default '[]'::jsonb;
+
+alter table public.marketplace_items
+add column if not exists quantity integer not null default 0;
+
+alter table public.marketplace_items
+drop constraint if exists marketplace_items_quantity_check;
+
+alter table public.marketplace_items
+add constraint marketplace_items_quantity_check check (quantity >= 0);
 
 update public.marketplace_items
 set image_urls = jsonb_build_array(image_url)

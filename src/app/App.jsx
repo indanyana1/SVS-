@@ -1027,6 +1027,10 @@ const getMarketplaceItemSaveErrorMessage = (errorMessage) => {
     return `Item save failed: ${errorMessage}. Rerun supabase/seller-marketplace.sql so the ${SELLER_ITEMS_TABLE} market_key constraint includes the selected market.`;
   }
 
+  if (normalizedMessage.includes('quantity')) {
+    return `Item save failed: ${errorMessage}. Run supabase/add-marketplace-item-quantity.sql, then try again.`;
+  }
+
   return `Item save failed: ${errorMessage}. Create or update the ${SELLER_ITEMS_TABLE} table before using seller uploads.`;
 };
 
@@ -1115,7 +1119,49 @@ const getAutoOrderStatus = (order, now = Date.now()) => {
 
 const getCollectionItemId = (route, id) => `${route}:${id}`;
 
-const createSavedItem = ({ id, title, image, price, route, marketName, details = '', sellerName = '', sellerEmail = '' }) => ({
+const normalizeListingQuantity = (value, fallback = 0) => {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+
+  return Math.max(Math.floor(parsed), 0);
+};
+
+const getSellerListingIdFromItemKey = (value) => {
+  const rawValue = String(value || '');
+
+  if (!rawValue) {
+    return '';
+  }
+
+  const normalizedValue = rawValue.includes(':') ? rawValue.split(':').pop() : rawValue;
+
+  if (normalizedValue.startsWith('seller-')) {
+    return normalizedValue.slice('seller-'.length);
+  }
+
+  return '';
+};
+
+const getSellerListingStock = (sellerItems, candidateItem) => {
+  const listingDbId = getSellerListingIdFromItemKey(candidateItem?.sku || candidateItem?.id);
+
+  if (!listingDbId) {
+    return null;
+  }
+
+  const listing = sellerItems.find((item) => item.dbId === listingDbId || item.id === `seller-${listingDbId}`);
+
+  if (!listing) {
+    return null;
+  }
+
+  return normalizeListingQuantity(listing.availableQuantity, 0);
+};
+
+const createSavedItem = ({ id, title, image, price, route, marketName, details = '', sellerName = '', sellerEmail = '', availableQuantity = null }) => ({
   id: getCollectionItemId(route, id),
   sku: id,
   title,
@@ -1125,6 +1171,7 @@ const createSavedItem = ({ id, title, image, price, route, marketName, details =
   details,
   sellerName,
   sellerEmail: normalizeEmail(sellerEmail),
+  availableQuantity: String(id || '').startsWith('seller-') ? normalizeListingQuantity(availableQuantity, 0) : null,
   unitPrice: getNumericPriceValue(price),
   unitPriceLabel: getSalePrices(price).nowPrice,
 });
@@ -1316,6 +1363,7 @@ const mapSellerItemRecord = (record) => {
     dbId: record.id,
     title: record.title,
     description: record.description || '',
+    availableQuantity: normalizeListingQuantity(record.quantity, 0),
     price: record.price,
     image: primaryImage,
     images: imageList.length ? imageList : (primaryImage ? [primaryImage] : []),
@@ -2992,7 +3040,9 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [editingId, setEditingId] = useState(null);
-  const [editForm, setEditForm] = useState({ title: '', description: '', price: '', marketKey: '', imageFile: null });
+  const [editForm, setEditForm] = useState({ title: '', description: '', price: '', quantity: '', marketKey: '' });
+  const [editImageFiles, setEditImageFiles] = useState([]);
+  const [editImagePreviewUrls, setEditImagePreviewUrls] = useState([]);
   const [editMessage, setEditMessage] = useState('');
   const [editMessageType, setEditMessageType] = useState('idle');
   const [isSaving, setIsSaving] = useState(false);
@@ -3071,16 +3121,47 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
     };
   }, [isAuthenticated, myListings.length, orders, userEmail]);
 
+  useEffect(() => {
+    if (!editImageFiles.length) {
+      setEditImagePreviewUrls([]);
+      return;
+    }
+    const nextUrls = editImageFiles.map((file) => URL.createObjectURL(file));
+    setEditImagePreviewUrls(nextUrls);
+    return () => {
+      nextUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [editImageFiles]);
+
+  const handleEditImagePick = (event) => {
+    const pickedFiles = Array.from(event.target.files || []);
+    if (!pickedFiles.length) return;
+    setEditImageFiles((current) => [...current, ...pickedFiles]);
+    event.target.value = '';
+  };
+
+  const handleRemoveEditImage = (indexToRemove) => {
+    setEditImageFiles((current) => current.filter((_, index) => index !== indexToRemove));
+  };
+
   const openEdit = (item) => {
     setEditingId(item.dbId);
-    setEditForm({ title: item.title, description: item.description, price: item.price, marketKey: item.marketKey, imageFile: null });
+    setEditForm({
+      title: item.title,
+      description: item.description,
+      price: item.price,
+      quantity: String(normalizeListingQuantity(item.availableQuantity, 0)),
+      marketKey: item.marketKey,
+    });
+    setEditImageFiles([]);
     setEditMessage('');
     setEditMessageType('idle');
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setEditForm({ title: '', description: '', price: '', marketKey: '', imageFile: null });
+    setEditForm({ title: '', description: '', price: '', quantity: '', marketKey: '' });
+    setEditImageFiles([]);
     setEditMessage('');
   };
 
@@ -3094,10 +3175,27 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
     setEditMessage('');
     setEditMessageType('idle');
 
+    const normalizedQuantity = normalizeListingQuantity(editForm.quantity, NaN);
+
+    if (!Number.isFinite(normalizedQuantity)) {
+      setEditMessage('Enter a valid stock quantity using whole numbers (0 or more).');
+      setEditMessageType('error');
+      setIsSaving(false);
+      return;
+    }
+
     const result = await onUpdateSellerItem(
       item.dbId,
-      { title: editForm.title, description: editForm.description, price: editForm.price, marketKey: editForm.marketKey, imageUrl: item.image, imageUrls: item.images || [] },
-      editForm.imageFile || null,
+      {
+        title: editForm.title,
+        description: editForm.description,
+        price: editForm.price,
+        quantity: normalizedQuantity,
+        marketKey: editForm.marketKey,
+        imageUrl: item.image,
+        imageUrls: item.images || [],
+      },
+      editImageFiles,
     );
 
     if (result.error) {
@@ -3241,6 +3339,10 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
               <div className="p-4">
                 <h3 className="text-base font-bold leading-tight text-[var(--svs-text)]">{item.title}</h3>
                 <p className="mt-0.5 text-sm font-semibold text-[var(--svs-primary-strong)]"><SalePrice price={item.price} /></p>
+                <p className="mt-1 text-xs text-[var(--svs-muted)]">
+                  Quantity in stock: {normalizeListingQuantity(item.availableQuantity, 0)}
+                  {normalizeListingQuantity(item.availableQuantity, 0) === 0 ? ' (Out of stock - buyers can only wishlist this item).' : ''}
+                </p>
                 {item.description ? (
                   <p className="mt-1.5 line-clamp-2 text-xs text-[var(--svs-muted)]">{item.description}</p>
                 ) : null}
@@ -3257,6 +3359,20 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                         <input name="price" value={editForm.price} onChange={handleEditChange} placeholder="e.g. 29.99" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
                       </div>
                       <div>
+                        <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Quantity</label>
+                        <input
+                          name="quantity"
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={editForm.quantity}
+                          onChange={handleEditChange}
+                          placeholder="e.g. 25"
+                          className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
+                        />
+                        <p className="mt-1 text-[10px] text-[var(--svs-muted)]">This is how many units are available for checkout.</p>
+                      </div>
+                      <div className="col-span-2">
                         <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Market</label>
                         <MarketSelectorField
                           id={`edit-market-${item.dbId}`}
@@ -3271,13 +3387,55 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                       <textarea name="description" value={editForm.description} onChange={handleEditChange} rows={3} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Replace Image <span className="font-normal text-[var(--svs-muted)]">(optional)</span></label>
+                      <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Replace Images <span className="font-normal text-[var(--svs-muted)]">(optional)</span></label>
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={(event) => setEditForm((current) => ({ ...current, imageFile: event.target.files?.[0] || null }))}
+                        multiple
+                        onChange={handleEditImagePick}
                         className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-xs text-[var(--svs-text)] outline-none"
                       />
+                      <p className="mt-1 text-xs text-[var(--svs-muted)]">Pick new images to replace the current ones. Leave empty to keep existing images.</p>
+                      {editImageFiles.length ? (
+                        <div className="mt-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-2 text-xs text-[var(--svs-muted)]">
+                          <p className="font-semibold text-[var(--svs-text)]">{editImageFiles.length} image{editImageFiles.length === 1 ? '' : 's'} selected</p>
+                          <ul className="mt-1 max-h-20 space-y-0.5 overflow-y-auto pr-1">
+                            {editImageFiles.map((file, index) => (
+                              <li key={`${file.name}-${file.size}-${index}`} className="flex items-center justify-between gap-2">
+                                <span className="truncate">{file.name}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveEditImage(index)}
+                                  className="rounded border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700"
+                                >
+                                  Remove
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                          {editImagePreviewUrls.length ? (
+                            <div className="mt-2 grid grid-cols-2 gap-2">
+                              {editImagePreviewUrls.map((previewUrl, index) => (
+                                <div key={`${previewUrl}-${index}`} className="relative overflow-hidden rounded-md border border-[var(--svs-border)] bg-white">
+                                  <img
+                                    src={previewUrl}
+                                    alt={`Selected preview ${index + 1}`}
+                                    className="h-24 w-full object-cover"
+                                    loading="lazy"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveEditImage(index)}
+                                    className="absolute right-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700"
+                                  >
+                                    x
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </div>
                     {editMessage ? (
                       <div className={`rounded-lg px-3 py-2 text-xs ${editMessageType === 'error' ? 'border border-rose-200 bg-rose-50 text-rose-700' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
@@ -3439,6 +3597,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
     title: '',
     description: '',
     price: '',
+    quantity: '',
     marketKey: '',
   });
   const [imageFiles, setImageFiles] = useState([]);
@@ -3490,14 +3649,21 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
     const trimmedTitle = formData.title.trim();
     const trimmedDescription = formData.description.trim();
     const trimmedPrice = formData.price.trim();
+    const normalizedQuantity = normalizeListingQuantity(formData.quantity, NaN);
 
     if (!isAuthenticated) {
       navigate('/signin');
       return;
     }
 
-    if (!trimmedTitle || !trimmedDescription || !trimmedPrice || !formData.marketKey) {
+    if (!trimmedTitle || !trimmedDescription || !trimmedPrice || !formData.marketKey || !formData.quantity) {
       setMessage('Fill in all required fields and select a market before publishing your listing.');
+      setMessageType('error');
+      return;
+    }
+
+    if (!Number.isFinite(normalizedQuantity)) {
+      setMessage('Enter a valid quantity in whole numbers (0 or more).');
       setMessageType('error');
       return;
     }
@@ -3555,6 +3721,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
         seller_name: userName,
         title: trimmedTitle,
         description: trimmedDescription,
+        quantity: normalizedQuantity,
         price: trimmedPrice,
         market_key: formData.marketKey,
         image_url: uploadedImageUrls[0],
@@ -3573,7 +3740,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
     onSellerItemCreated(mapSellerItemRecord(data));
     setMessage(`Item uploaded successfully to ${t(selectedMarket.labelKey)}.`);
     setMessageType('success');
-    setFormData({ title: '', description: '', price: '', marketKey: '' });
+    setFormData({ title: '', description: '', price: '', quantity: '', marketKey: '' });
     setImageFiles([]);
     setIsSubmitting(false);
 
@@ -3609,6 +3776,22 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                 <input id="seller-price" name="price" value={formData.price} onChange={handleChange} required placeholder="129.99" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
               </div>
               <div>
+                <label htmlFor="seller-quantity" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Quantity</label>
+                <input
+                  id="seller-quantity"
+                  name="quantity"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={formData.quantity}
+                  onChange={handleChange}
+                  required
+                  placeholder="20"
+                  className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none"
+                />
+                <p className="mt-1 text-xs text-[var(--svs-muted)]">Quantity means how many units buyers can still checkout. When it reaches 0, Add to Cart is disabled and buyers can wishlist only.</p>
+              </div>
+              <div className="sm:col-span-2">
                 <label htmlFor="seller-market" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Market</label>
                 <MarketSelectorField
                   id="seller-market"
@@ -3692,6 +3875,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
             <div className="mt-4 space-y-3 text-sm text-[var(--svs-muted)]">
               <p>Use a clear product title and include important details buyers search for.</p>
               <p>Add a short description with size, condition, and key features to reduce buyer questions.</p>
+              <p>Set an accurate quantity so shoppers know stock availability before checkout.</p>
               <p>Use a clean, bright image where the product fills most of the frame.</p>
               <p>Set a realistic price so your listing performs better in market results.</p>
               <p>After publishing, you can edit or remove the item anytime from My Store.</p>
@@ -4213,6 +4397,13 @@ const CheckoutPage = ({ cartItems, onUpdateCartQuantity, onRemoveCartItem, onPla
     }
 
     const order = await onPlaceOrder(formState, paymentDetails);
+
+    if (!order) {
+      setIsSubmitting(false);
+      setSubmitError('One or more items are no longer available in the requested quantity. Update your cart and try again.');
+      return;
+    }
+
     setIsSubmitting(false);
     navigate('/orders', { state: { orderId: order.id } });
   };
@@ -4509,6 +4700,10 @@ const ItemDetailsModal = ({
   const averageRating = reviews.length
     ? (reviews.reduce((total, review) => total + review.rating, 0) / reviews.length).toFixed(1)
     : null;
+  const stockSource = item?.availableQuantity ?? item?.cartItem?.availableQuantity;
+  const hasStockValue = stockSource !== null && stockSource !== undefined;
+  const availableQuantity = hasStockValue ? normalizeListingQuantity(stockSource, 0) : null;
+  const isOutOfStock = availableQuantity !== null && availableQuantity <= 0;
 
   useEffect(() => {
     setCurrentImageIndex(0);
@@ -4707,14 +4902,21 @@ const ItemDetailsModal = ({
             ) : (
               <p className="mt-3 text-sm leading-6 text-[var(--svs-muted)]">No additional details available for this item yet.</p>
             )}
+            {availableQuantity !== null ? (
+              <p className="mt-2 text-sm text-[var(--svs-muted)]">
+                Quantity available: <span className="font-semibold text-[var(--svs-text)]">{availableQuantity}</span>
+                {isOutOfStock ? ' (Out of stock - wishlist only)' : ''}
+              </p>
+            ) : null}
             <div className="mt-5 flex flex-wrap gap-2">
               {item.cartItem ? (
                 <button
                   type="button"
+                  disabled={isOutOfStock}
                   onClick={() => onAddToCart(item.cartItem)}
-                  className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}
+                  className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-400`}
                 >
-                  Add to cart
+                  {isOutOfStock ? 'Out of stock' : 'Add to cart'}
                 </button>
               ) : null}
               {item.wishlistItem ? (
@@ -4856,6 +5058,9 @@ const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer, onPr
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {items.map((item) => {
         const itemTitle = getTranslatedValue(t, item.titleKey, item.title);
+        const hasStockValue = item.availableQuantity !== null && item.availableQuantity !== undefined;
+        const availableQuantity = hasStockValue ? normalizeListingQuantity(item.availableQuantity, 0) : null;
+        const isOutOfStock = availableQuantity !== null && availableQuantity <= 0;
 
         return (
           <article
@@ -4891,16 +5096,23 @@ const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer, onPr
             <div className="p-4">
               <h3 className="text-lg font-bold">{itemTitle}</h3>
               <div className="mt-1">{metaRenderer(item)}</div>
+              {availableQuantity !== null ? (
+                <p className="mt-1 text-xs text-[var(--svs-muted)]">
+                  Quantity: {availableQuantity}
+                  {isOutOfStock ? ' (Out of stock - wishlist only)' : ' available for checkout'}
+                </p>
+              ) : null}
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   type="button"
+                  disabled={isOutOfStock}
                   onClick={(event) => {
                     event.stopPropagation();
                     onPrimaryAction?.(item);
                   }}
-                  className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}
+                  className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)] disabled:cursor-not-allowed disabled:bg-slate-400 disabled:hover:bg-slate-400`}
                 >
-                  {buttonLabel}
+                  {isOutOfStock ? 'Out of stock' : buttonLabel}
                 </button>
                 <button
                   type="button"
@@ -5348,7 +5560,7 @@ const App = () => {
 
     const { data, error } = await supabase
       .from(SELLER_ITEMS_TABLE)
-      .select('id, seller_email, seller_name, title, description, price, market_key, image_url, image_urls, created_at')
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -5463,6 +5675,21 @@ const App = () => {
   const handleAddToCart = useCallback((cartItem) => {
     setCartItems((currentItems) => {
       const existingItem = currentItems.find((item) => item.id === cartItem.id);
+      const availableStock = getSellerListingStock(sellerItems, cartItem);
+
+      if (availableStock !== null) {
+        const currentQuantity = existingItem ? existingItem.quantity : 0;
+
+        if (currentQuantity >= availableStock) {
+          setActionNotice(
+            availableStock === 0
+              ? `${cartItem.title} is out of stock. You can add it to wishlist only.`
+              : `Only ${availableStock} in stock for ${cartItem.title}.`,
+          );
+          return currentItems;
+        }
+      }
+
       let nextItems;
       if (existingItem) {
         nextItems = currentItems.map((item) => (
@@ -5484,12 +5711,34 @@ const App = () => {
       }
       return nextItems;
     });
-    setActionNotice(`Added to cart: ${cartItem.title}`);
-  }, [activeUserEmail]);
+    const availableStock = getSellerListingStock(sellerItems, cartItem);
+    if (availableStock === null || availableStock > 0) {
+      setActionNotice(`Added to cart: ${cartItem.title}`);
+    }
+  }, [activeUserEmail, sellerItems]);
 
   const handleUpdateCartQuantity = useCallback((itemId, delta) => {
     let removedItemId = null;
     setCartItems((currentItems) => {
+      const currentItem = currentItems.find((item) => item.id === itemId);
+
+      if (!currentItem) {
+        return currentItems;
+      }
+
+      if (delta > 0) {
+        const availableStock = getSellerListingStock(sellerItems, currentItem);
+
+        if (availableStock !== null && currentItem.quantity >= availableStock) {
+          setActionNotice(
+            availableStock === 0
+              ? `${currentItem.title} is out of stock. You can add it to wishlist only.`
+              : `Only ${availableStock} in stock for ${currentItem.title}.`,
+          );
+          return currentItems;
+        }
+      }
+
       const nextItems = currentItems.reduce((acc, item) => {
         if (item.id !== itemId) {
           acc.push(item);
@@ -5516,7 +5765,7 @@ const App = () => {
     if (removedItemId) {
       removeCartItemFromRemote(removedItemId);
     }
-  }, [removeCartItemFromRemote, activeUserEmail]);
+  }, [removeCartItemFromRemote, activeUserEmail, sellerItems]);
 
   const handleRemoveCartItem = useCallback((itemId) => {
     setCartItems((currentItems) => {
@@ -5574,6 +5823,32 @@ const App = () => {
   }, [removeWishlistItemFromRemote, activeUserEmail]);
 
   const handlePlaceOrder = useCallback(async (customer, paymentDetails = null) => {
+    const sellerStockLookup = sellerItems.reduce((lookup, sellerItem) => {
+      lookup.set(String(sellerItem.dbId || ''), normalizeListingQuantity(sellerItem.availableQuantity, 0));
+      return lookup;
+    }, new Map());
+
+    const outOfStockItem = cartItems.find((item) => {
+      const listingDbId = getSellerListingIdFromItemKey(item.sku || item.id);
+
+      if (!listingDbId) {
+        return false;
+      }
+
+      const inStock = sellerStockLookup.get(listingDbId);
+
+      if (inStock === undefined) {
+        return false;
+      }
+
+      return Math.max(Number(item.quantity) || 1, 1) > inStock;
+    });
+
+    if (outOfStockItem) {
+      setActionNotice(`${outOfStockItem.title} no longer has enough stock for that cart quantity. Adjust your cart and try again.`);
+      return null;
+    }
+
     const totals = getCartTotals(cartItems);
     const sellerLookup = sellerItems.reduce((lookup, item) => {
       lookup.set(String(item.id || ''), {
@@ -5660,6 +5935,52 @@ const App = () => {
     setCartItems([]);
     clearCartFromRemote();
 
+    const purchasedByListingId = orderItems.reduce((accumulator, item) => {
+      const listingDbId = getSellerListingIdFromItemKey(item.sku || item.id);
+
+      if (!listingDbId) {
+        return accumulator;
+      }
+
+      const purchasedQuantity = Math.max(Number(item.quantity) || 1, 1);
+      accumulator.set(listingDbId, (accumulator.get(listingDbId) || 0) + purchasedQuantity);
+      return accumulator;
+    }, new Map());
+
+    if (purchasedByListingId.size > 0) {
+      setSellerItems((currentItems) => currentItems.map((sellerItem) => {
+        const purchasedQuantity = purchasedByListingId.get(String(sellerItem.dbId || ''));
+
+        if (!purchasedQuantity) {
+          return sellerItem;
+        }
+
+        return {
+          ...sellerItem,
+          availableQuantity: Math.max(normalizeListingQuantity(sellerItem.availableQuantity, 0) - purchasedQuantity, 0),
+        };
+      }));
+
+      if (hasSupabaseEnv && supabase) {
+        await Promise.all(
+          Array.from(purchasedByListingId.entries()).map(async ([listingDbId, purchasedQuantity]) => {
+            const currentStock = sellerStockLookup.get(String(listingDbId));
+
+            if (currentStock === undefined) {
+              return;
+            }
+
+            const nextStock = Math.max(currentStock - purchasedQuantity, 0);
+
+            await supabase
+              .from(SELLER_ITEMS_TABLE)
+              .update({ quantity: nextStock })
+              .eq('id', listingDbId);
+          }),
+        );
+      }
+    }
+
     return order;
   }, [activeUserEmail, cartItems, clearCartFromRemote, pushNotificationToUser, sellerItems]);
 
@@ -5700,7 +6021,7 @@ const App = () => {
     setSellerItems((currentItems) => currentItems.filter((item) => item.dbId !== dbId));
   }, []);
 
-  const handleUpdateSellerItem = useCallback(async (dbId, updates, newImageFile) => {
+  const handleUpdateSellerItem = useCallback(async (dbId, updates, newImageFiles) => {
     if (!hasSupabaseEnv || !supabase) return { error: 'Supabase is not configured.' };
     const sellerEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
 
@@ -5711,20 +6032,26 @@ const App = () => {
     let imageUrl = updates.imageUrl;
     let imageUrls = Array.isArray(updates.imageUrls) ? updates.imageUrls : (updates.imageUrl ? [updates.imageUrl] : []);
 
-    if (newImageFile) {
-      const fileExtension = newImageFile.name.split('.').pop() || 'jpg';
-      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExtension}`;
-      const filePath = `${sanitizeStorageSegment(sellerEmail)}/${updates.marketKey}/${fileName}`;
+    if (newImageFiles && newImageFiles.length) {
+      const uploadedImageUrls = [];
 
-      const { error: uploadError } = await supabase.storage
-        .from(SELLER_IMAGES_BUCKET)
-        .upload(filePath, newImageFile, { cacheControl: '3600', upsert: false });
+      for (const imageFile of newImageFiles) {
+        const fileExtension = imageFile.name.split('.').pop() || 'jpg';
+        const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExtension}`;
+        const filePath = `${sanitizeStorageSegment(sellerEmail)}/${updates.marketKey}/${fileName}`;
 
-      if (uploadError) return { error: uploadError.message };
+        const { error: uploadError } = await supabase.storage
+          .from(SELLER_IMAGES_BUCKET)
+          .upload(filePath, imageFile, { cacheControl: '3600', upsert: false });
 
-      const { data: publicUrlData } = supabase.storage.from(SELLER_IMAGES_BUCKET).getPublicUrl(filePath);
-      imageUrl = publicUrlData.publicUrl;
-      imageUrls = [imageUrl];
+        if (uploadError) return { error: uploadError.message };
+
+        const { data: publicUrlData } = supabase.storage.from(SELLER_IMAGES_BUCKET).getPublicUrl(filePath);
+        uploadedImageUrls.push(publicUrlData.publicUrl);
+      }
+
+      imageUrl = uploadedImageUrls[0];
+      imageUrls = uploadedImageUrls;
     }
 
     const { data, error } = await supabase
@@ -5733,6 +6060,7 @@ const App = () => {
         title: updates.title,
         description: updates.description,
         price: updates.price,
+        quantity: normalizeListingQuantity(updates.quantity, 0),
         market_key: updates.marketKey,
         ...(imageUrl !== undefined ? { image_url: imageUrl, image_urls: imageUrls } : {}),
       })
@@ -5745,7 +6073,9 @@ const App = () => {
       return {
         error: String(error.message || '').toLowerCase().includes('marketplace_items_market_key_check')
           ? `Rerun supabase/seller-marketplace.sql so the ${SELLER_ITEMS_TABLE} market_key constraint includes the selected market.`
-          : error.message,
+          : String(error.message || '').toLowerCase().includes('quantity')
+            ? 'Run supabase/add-marketplace-item-quantity.sql to add listing quantity support, then try again.'
+            : error.message,
       };
     }
 
