@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import StandalonePageShell from '../components/layout/StandalonePageShell';
 import { hasSupabaseEnv, supabase } from '../lib/supabase';
+import { hasCompleteSellerProfile } from './SellerOnboardingPage';
 
 const verifyPasswordHash = async (password, storedHash) => {
 	if (!storedHash || !storedHash.includes(':')) {
@@ -87,11 +89,33 @@ const SigninPage = () => {
 			return;
 		}
 
+		const { data: sellerProfile, error: sellerProfileError } = await supabase
+			.from('seller_profiles')
+			.select('*')
+			.eq('user_email', data.email_address)
+			.maybeSingle();
+
+		if (sellerProfileError) {
+			setMessage(sellerProfileError.message);
+			setMessageType('error');
+			setIsSubmitting(false);
+			return;
+		}
+
+		const sellerProfileIsComplete = hasCompleteSellerProfile(sellerProfile);
+
 		setMessage(`Welcome back, ${data.full_name}. Sign in successful.`);
 		setMessageType('success');
 		window.localStorage.setItem('svs-authenticated', 'true');
 		window.localStorage.setItem('svs-user-email', data.email_address);
 		window.localStorage.setItem('svs-user-name', data.full_name);
+		if (sellerProfile && sellerProfileIsComplete) {
+			window.localStorage.setItem('svs-has-seller-access', 'true');
+			window.localStorage.setItem('svs-seller-home-path', '/seller/dashboard');
+		} else {
+			window.localStorage.removeItem('svs-has-seller-access');
+			window.localStorage.removeItem('svs-seller-home-path');
+		}
 		window.dispatchEvent(new Event('svs-auth-changed'));
 		setFormData({ email: '', password: '' });
 		setIsSubmitting(false);
@@ -102,8 +126,9 @@ const SigninPage = () => {
 	};
 
 	return (
-		<section className="min-h-screen bg-[#0b1220] px-4 pt-28 pb-12 text-slate-100">
-			<div className="mx-auto w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900/80 p-6 shadow-2xl shadow-black/30 md:p-8">
+		<StandalonePageShell title="Sign In" mainClassName="px-4 py-8 sm:px-6 sm:py-10">
+			<section className="px-0 text-slate-100">
+				<div className="mx-auto w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900/80 p-6 shadow-2xl shadow-black/30 md:p-8">
 				<h1 className="text-2xl font-bold text-white">Sign In</h1>
 				<p className="mt-2 text-sm text-slate-300">Enter your account details to continue.</p>
 
@@ -167,8 +192,9 @@ const SigninPage = () => {
 						Create one
 					</Link>
 				</p>
-			</div>
-		</section>
+				</div>
+			</section>
+		</StandalonePageShell>
 	);
 };
 

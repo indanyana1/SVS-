@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import StandalonePageShell from '../components/layout/StandalonePageShell';
 import { hasSupabaseEnv, supabase } from '../lib/supabase';
 
 const generatePasswordHash = async (password) => {
@@ -82,8 +83,9 @@ const SignupPage = () => {
 	};
 
 	return (
-		<section className="min-h-screen bg-[#0b1220] px-4 pt-28 pb-12 text-slate-100">
-			<div className="mx-auto w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900/80 p-6 shadow-2xl shadow-black/30 md:p-8">
+		<StandalonePageShell title="Create Your Account" mainClassName="px-4 py-8 sm:px-6 sm:py-10">
+			<section className="px-0 text-slate-100">
+				<div className="mx-auto w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900/80 p-6 shadow-2xl shadow-black/30 md:p-8">
 				<h1 className="text-2xl font-bold text-white">Create Your Account</h1>
 				<p className="mt-2 text-sm text-slate-300">
 					Enter your details to sign up on SVS E-COMMERCE.
@@ -175,8 +177,9 @@ const SignupPage = () => {
 						{isSubmitting ? 'Creating Account...' : 'Create Account'}
 					</button>
 				</form>
-			</div>
-		</section>
+				</div>
+			</section>
+		</StandalonePageShell>
 	);
 };
 

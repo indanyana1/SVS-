@@ -1,4 +1,3 @@
-import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import {
   Bell,
   CalendarDays,
@@ -21,28 +20,21 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { Elements, useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
 import logo from '../assets/icons/logo.jpeg';
 import { DEFAULT_LANGUAGE_CODE, getLanguageByCode, isRtlLanguage, SUPPORTED_LANGUAGES } from '../lib/languages';
-import { embeddedCardCheckoutEnabled, getStripeInstance, startCardPayment, stripeCurrency } from '../lib/payments';
+import { embeddedCardCheckoutEnabled, stripeCurrency, getStripeInstance } from '../lib/payments';
 import { hasSupabaseEnv, supabase } from '../lib/supabase';
 import SigninPage from '../pages/SigninPage';
 import SignupPage from '../pages/SignupPage';
-import SellerLandingPage from '../pages/SellerLandingPage';
-import SellerOnboardingPage from '../pages/SellerOnboardingPage';
-import SellerSigninPage from '../pages/SellerSigninPage';
-import SellerSignupPage from '../pages/SellerSignupPage';
+
+let stripePromise = null;
 
 const navItems = [
   { labelKey: 'nav.home', href: '/' },
   { labelKey: 'nav.markets', href: '/markets' },
   { labelKey: 'nav.offers', href: '/offers' },
   { labelKey: 'nav.orders', href: '/orders' },
-];
-
-const sellerConsoleNavItems = [
-  { label: 'Dashboard', href: '/seller/dashboard' },
-  { label: 'Orders', href: '/seller/orders' },
-  { label: 'Upload Products', href: '/seller/upload' },
 ];
 
 const marketLinks = [
@@ -610,7 +602,7 @@ const livestockItems = [
     titleKey: 'livestockHub.items.ls1.title',
     location: 'Free State, South Africa',
     locationKey: 'livestockHub.items.ls1.location',
-    summary: '22 months â€¢ Vaccinated â€¢ Auction-ready',
+    summary: '22 months GÇó Vaccinated GÇó Auction-ready',
     summaryKey: 'livestockHub.items.ls1.summary',
     price: '28,000',
     image: livestockImageFallback,
@@ -621,7 +613,7 @@ const livestockItems = [
     titleKey: 'livestockHub.items.ls2.title',
     location: 'Lesotho Highlands',
     locationKey: 'livestockHub.items.ls2.location',
-    summary: 'Healthy ewes â€¢ Ready for breeding season',
+    summary: 'Healthy ewes GÇó Ready for breeding season',
     summaryKey: 'livestockHub.items.ls2.summary',
     price: '9,800',
     image:
@@ -633,7 +625,7 @@ const livestockItems = [
     titleKey: 'livestockHub.items.ls3.title',
     location: 'Limpopo Farm Belt',
     locationKey: 'livestockHub.items.ls3.location',
-    summary: '5 goats â€¢ Tagged â€¢ Delivery support available',
+    summary: '5 goats GÇó Tagged GÇó Delivery support available',
     summaryKey: 'livestockHub.items.ls3.summary',
     price: '14,500',
     image:
@@ -833,8 +825,6 @@ const WISHLIST_STORAGE_KEY = 'svs-wishlist-items';
 const ORDERS_STORAGE_KEY = 'svs-orders';
 const NOTIFICATIONS_STORAGE_KEY = 'svs-notifications';
 const PRODUCT_REVIEWS_STORAGE_KEY = 'svs-product-reviews';
-const SELLER_ACCESS_STORAGE_KEY = 'svs-has-seller-access';
-const SELLER_HOME_PATH_STORAGE_KEY = 'svs-seller-home-path';
 const ORDER_STATUS_FLOW = ['Processing', 'Confirmed', 'Preparing for Shipping', 'Shipped', 'Delivered'];
 const REFUND_STATUS_FLOW = ['Cancelled by Buyer', 'Refund Pending', 'Refund Made'];
 const ORDER_AUTO_PROGRESS_MS = {
@@ -869,23 +859,6 @@ const getStoredCollection = (storageKey) => {
   } catch {
     return [];
   }
-};
-
-const getSellerAccessState = () => {
-  if (typeof window === 'undefined') {
-    return false;
-  }
-
-  return window.localStorage.getItem(SELLER_ACCESS_STORAGE_KEY) === 'true';
-};
-
-const getSellerHomePath = () => {
-  if (typeof window === 'undefined') {
-    return '/seller/dashboard';
-  }
-
-  const storedPath = window.localStorage.getItem(SELLER_HOME_PATH_STORAGE_KEY);
-  return storedPath === '/sell/onboarding' ? storedPath : '/seller/dashboard';
 };
 
 const getCurrentUserEmail = () => {
@@ -1104,7 +1077,7 @@ const formatSaleAmount = (amount, decimals) => new Intl.NumberFormat('en-US', {
   maximumFractionDigits: decimals,
 }).format(amount);
 
-const formatCheckoutAmount = (amount) => `R ${formatSaleAmount(amount, 2)}`;
+const formatCheckoutAmount = (amount) => formatSaleAmount(amount, 2);
 
 const getNumericPriceValue = (price, discountRate = SALE_DISCOUNT_RATE) => {
   const text = String(price ?? '').trim();
@@ -1126,92 +1099,6 @@ const getNumericPriceValue = (price, discountRate = SALE_DISCOUNT_RATE) => {
 const getCartCount = (cartItems) => cartItems.reduce((total, item) => total + item.quantity, 0);
 const getCartSubtotal = (cartItems) => cartItems.reduce((total, item) => total + (item.unitPrice * item.quantity), 0);
 const getServiceFee = (subtotal) => subtotal * 0.03;
-const GUEST_ORDER_EMAIL = 'guest@svs.app';
-const STANDARD_SHIPPING_FEE = 150;
-const SOUTH_AFRICA_PROVINCES = [
-  'Eastern Cape',
-  'Free State',
-  'Gauteng',
-  'KwaZulu-Natal',
-  'Limpopo',
-  'Mpumalanga',
-  'North West',
-  'Northern Cape',
-  'Western Cape',
-];
-const PAYFAST_METHOD_OPTIONS = [
-  { value: 'credit_cheque_card', label: 'Credit & Cheque card' },
-  { value: 'instant_eft', label: 'Instant EFT' },
-  { value: 'capitec_pay', label: 'Capitec Pay' },
-  { value: 'snapscan', label: 'SnapScan' },
-  { value: 'zapper', label: 'Zapper' },
-  { value: 'bank_qr_code', label: 'Bank QR Code Apps' },
-  { value: 'scan_to_pay', label: 'Scan to Pay' },
-];
-const CARD_PAYMENT_METHOD_VALUE = 'credit_cheque_card';
-const PAYFAST_PENDING_PAYMENT_STORAGE_KEY = 'svs-payfast-pending-payment';
-
-const readPendingPayfastSession = () => {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
-  try {
-    const raw = window.sessionStorage.getItem(PAYFAST_PENDING_PAYMENT_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch (_error) {
-    return null;
-  }
-};
-
-const writePendingPayfastSession = (session) => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  try {
-    if (session) {
-      window.sessionStorage.setItem(PAYFAST_PENDING_PAYMENT_STORAGE_KEY, JSON.stringify(session));
-    } else {
-      window.sessionStorage.removeItem(PAYFAST_PENDING_PAYMENT_STORAGE_KEY);
-    }
-  } catch (_error) {
-    // Ignore storage access failures and fall back to in-memory route state.
-  }
-};
-
-const clearPendingPayfastSession = () => {
-  writePendingPayfastSession(null);
-};
-
-const toStripeMinorUnitAmount = (amount) => Math.max(Math.round((Number(amount) || 0) * 100), 0);
-
-const requestStripeClientSecret = async ({ amount, currency, email, fullName }) => {
-  const response = await fetch('/api/payment-intent', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      amount: toStripeMinorUnitAmount(amount),
-      currency: String(currency || stripeCurrency || 'usd').toLowerCase(),
-      email,
-      fullName,
-    }),
-  });
-
-  const result = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    throw new Error(result.error || 'Could not initialize secure card payment.');
-  }
-
-  if (!result.clientSecret) {
-    throw new Error('Stripe client secret was not returned by the payment server.');
-  }
-
-  return result.clientSecret;
-};
 
 const getCartTotals = (cartItems) => {
   const subtotal = getCartSubtotal(cartItems);
@@ -1222,128 +1109,6 @@ const getCartTotals = (cartItems) => {
     serviceFee,
     total: subtotal + serviceFee,
   };
-};
-
-const getCheckoutTotals = (cartItems, shippingFee = 0) => {
-  const subtotal = getCartSubtotal(cartItems);
-  const serviceFee = getServiceFee(subtotal);
-  const normalizedShippingFee = Math.max(Number(shippingFee) || 0, 0);
-  const feeTotal = serviceFee + normalizedShippingFee;
-
-  return {
-    subtotal,
-    serviceFee,
-    shippingFee: normalizedShippingFee,
-    feeTotal,
-    total: subtotal + feeTotal,
-  };
-};
-
-const MinimalCheckoutShell = ({ title, badge = null, children }) => {
-  const { t, i18n } = useTranslation();
-  const [theme, setTheme] = useState(getThemePreference);
-  const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
-  const [pendingLanguageCode, setPendingLanguageCode] = useState(DEFAULT_LANGUAGE_CODE);
-  const [focusedLanguageIndex, setFocusedLanguageIndex] = useState(0);
-  const languageCardRefs = useRef([]);
-  const languageMenuRef = useRef(null);
-  const isDarkMode = theme === 'dark';
-  const activeLanguage = getLanguageByCode(i18n.resolvedLanguage || i18n.language);
-
-  const applyLanguageCode = useCallback(async (languageCode) => {
-    const nextLanguage = getLanguageByCode(languageCode);
-    await i18n.changeLanguage(nextLanguage.code);
-    window.localStorage.setItem('svs-language', nextLanguage.code);
-    document.documentElement.setAttribute('lang', nextLanguage.code);
-    document.documentElement.setAttribute('dir', isRtlLanguage(nextLanguage.code) ? 'rtl' : 'ltr');
-    setIsLanguageModalOpen(false);
-  }, [i18n]);
-
-  useEffect(() => {
-    window.localStorage.setItem('svs-theme', theme);
-    document.body.classList.toggle('theme-dark', isDarkMode);
-    document.body.classList.toggle('theme-light', !isDarkMode);
-  }, [isDarkMode, theme]);
-
-  useEffect(() => {
-    const currentLanguage = getLanguageByCode(i18n.resolvedLanguage || i18n.language);
-    setPendingLanguageCode(currentLanguage.code);
-    setFocusedLanguageIndex(SUPPORTED_LANGUAGES.findIndex((language) => language.code === currentLanguage.code));
-  }, [i18n.language, i18n.resolvedLanguage]);
-
-  useEffect(() => {
-    if (!isLanguageModalOpen) {
-      return undefined;
-    }
-
-    const handlePointerDown = (event) => {
-      if (!languageMenuRef.current?.contains(event.target)) {
-        setIsLanguageModalOpen(false);
-      }
-    };
-
-    window.addEventListener('mousedown', handlePointerDown);
-    window.addEventListener('touchstart', handlePointerDown);
-
-    return () => {
-      window.removeEventListener('mousedown', handlePointerDown);
-      window.removeEventListener('touchstart', handlePointerDown);
-    };
-  }, [isLanguageModalOpen]);
-
-  return (
-    <div className={`min-h-screen bg-[var(--svs-bg)] text-[var(--svs-text)] ${isDarkMode ? 'theme-dark' : 'theme-light'}`.trim()}>
-      <header className="border-b border-[var(--svs-border)] bg-[var(--svs-surface)]/95 backdrop-blur-sm">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <div className="flex min-w-0 items-center gap-3">
-            <Link to="/" aria-label="Back to SVS E-Commerce" className="shrink-0">
-              <img src={logo} alt="SVS E-Commerce" className="h-10 w-auto rounded-lg" />
-            </Link>
-            <h1 className="truncate text-2xl font-black text-[var(--svs-text)]">{title}</h1>
-          </div>
-
-          <div className="flex items-center gap-2" ref={languageMenuRef}>
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => {
-                  setFocusedLanguageIndex(SUPPORTED_LANGUAGES.findIndex((language) => language.code === activeLanguage.code));
-                  setIsLanguageModalOpen((prev) => !prev);
-                }}
-                className="inline-flex items-center gap-2 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)]"
-              >
-                <span>{activeLanguage.flag ? `${activeLanguage.flag} ` : ''}{activeLanguage.englishName}</span>
-                <ChevronDown className={`h-4 w-4 transition ${isLanguageModalOpen ? 'rotate-180' : ''}`} />
-              </button>
-              <LanguageSelectorPopover
-                isOpen={isLanguageModalOpen}
-                pendingLanguageCode={pendingLanguageCode}
-                focusedIndex={focusedLanguageIndex}
-                onSelect={async (code) => {
-                  setPendingLanguageCode(code);
-                  setFocusedLanguageIndex(SUPPORTED_LANGUAGES.findIndex((language) => language.code === code));
-                  await applyLanguageCode(code);
-                }}
-                onFocusIndex={setFocusedLanguageIndex}
-                cardRefs={languageCardRefs}
-              />
-            </div>
-            <button
-              type="button"
-              onClick={() => setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'))}
-              className="inline-flex items-center gap-2 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)]"
-              aria-label={t('theme.toggleAria')}
-            >
-              {isDarkMode ? <Sun className="h-4 w-4 text-[var(--svs-primary)]" /> : <Moon className="h-4 w-4 text-[var(--svs-primary-strong)]" />}
-              <span>{isDarkMode ? t('theme.light') : t('theme.dark')}</span>
-            </button>
-          </div>
-          {badge}
-        </div>
-      </header>
-      <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">{children}</main>
-    </div>
-  );
 };
 
 const getAutoOrderStatus = (order, now = Date.now()) => {
@@ -1850,8 +1615,6 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
   const [focusedLanguageIndex, setFocusedLanguageIndex] = useState(0);
   const [query, setQuery] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(getAuthState);
-  const [hasSellerAccess, setHasSellerAccess] = useState(getSellerAccessState);
-  const [sellerHomePath, setSellerHomePath] = useState(getSellerHomePath);
   const [profileOpen, setProfileOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [profileName, setProfileName] = useState('SVS User');
@@ -1861,7 +1624,6 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
   const mobileLanguageMenuRef = useRef(null);
   const notificationsMenuRef = useRef(null);
   const isDarkMode = theme === 'dark';
-  const isSellerConsoleRoute = location.pathname.startsWith('/seller/') || location.pathname === '/sell/onboarding';
   const activeLanguage = getLanguageByCode(i18n.resolvedLanguage || i18n.language);
   const unreadNotificationsCount = useMemo(
     () => notifications.reduce((count, notification) => (notification.read ? count : count + 1), 0),
@@ -1892,26 +1654,10 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
 
   useEffect(() => {
     setIsAuthenticated(getAuthState());
-    setHasSellerAccess(getSellerAccessState());
-    setSellerHomePath(getSellerHomePath());
     setProfileOpen(false);
     setIsLanguageModalOpen(false);
     setIsNotificationsOpen(false);
   }, [location.pathname]);
-
-  useEffect(() => {
-    const handleAuthChange = () => {
-      setIsAuthenticated(getAuthState());
-      setHasSellerAccess(getSellerAccessState());
-      setSellerHomePath(getSellerHomePath());
-    };
-
-    window.addEventListener('svs-auth-changed', handleAuthChange);
-
-    return () => {
-      window.removeEventListener('svs-auth-changed', handleAuthChange);
-    };
-  }, []);
 
   useEffect(() => {
     if (!isNotificationsOpen) {
@@ -2078,12 +1824,8 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
     window.localStorage.removeItem('svs-authenticated');
     window.localStorage.removeItem('svs-user-email');
     window.localStorage.removeItem('svs-user-name');
-    window.localStorage.removeItem(SELLER_ACCESS_STORAGE_KEY);
-    window.localStorage.removeItem(SELLER_HOME_PATH_STORAGE_KEY);
     window.dispatchEvent(new Event('svs-auth-changed'));
     setIsAuthenticated(false);
-    setHasSellerAccess(false);
-    setSellerHomePath('/seller/dashboard');
     setProfileName(t('profile.defaultName'));
     setProfileOpen(false);
     navigate('/');
@@ -2102,40 +1844,14 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
           </Link>
 
           <nav className="hidden items-center gap-6 text-sm font-semibold text-[var(--svs-nav-text)] lg:flex">
-            {isSellerConsoleRoute ? sellerConsoleNavItems.map((item) => (
-              <Link key={item.href} to={item.href} className="transition hover:text-[var(--svs-primary)]">
-                {item.label}
-              </Link>
-            )) : navItems.map((item) => (
+            {navItems.map((item) => (
               <Link key={item.labelKey} to={item.href} className="transition hover:text-[var(--svs-primary)]">
                 {t(item.labelKey)}
               </Link>
             ))}
-            {isSellerConsoleRoute ? (
-              <Link
-                to="/markets"
-                className="ml-1 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-1.5 text-xs font-bold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
-              >
-                Switch to Buyer View
-              </Link>
-            ) : hasSellerAccess ? (
-              <Link
-                to={sellerHomePath}
-                className="ml-1 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-1.5 text-xs font-bold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
-              >
-                Switch to Seller View
-              </Link>
-            ) : (
-              <Link
-                to="/sell"
-                className="ml-1 rounded-full bg-orange-500 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-orange-600"
-              >
-                Sell on SVS
-              </Link>
-            )}
           </nav>
 
-          <form className={`relative max-w-xl flex-1 ${isSellerConsoleRoute ? 'hidden' : 'hidden lg:block'}`} onSubmit={handleSearchSubmit}>
+          <form className="relative hidden max-w-xl flex-1 lg:block" onSubmit={handleSearchSubmit}>
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               type="search"
@@ -2185,65 +1901,22 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
           </form>
 
           <div className="ml-auto hidden items-center gap-3 text-[var(--svs-nav-text)] sm:flex">
-            <div className="hidden items-center gap-3 lg:flex">
-              <div className="relative" ref={desktopLanguageMenuRef}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFocusedLanguageIndex(SUPPORTED_LANGUAGES.findIndex((language) => language.code === activeLanguage.code));
-                    setIsLanguageModalOpen((prev) => !prev);
-                  }}
-                  className="inline-flex items-center gap-2 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-1.5 text-sm font-semibold transition hover:border-[var(--svs-primary)]"
-                  aria-label={t('languageModal.title')}
-                  aria-haspopup="menu"
-                  aria-expanded={isLanguageModalOpen}
-                >
-                  <span>{activeLanguage.flag ? `${activeLanguage.flag} ` : ''}{activeLanguage.englishName}</span>
-                  <ChevronDown className={`h-4 w-4 transition ${isLanguageModalOpen ? 'rotate-180' : ''}`} />
-                </button>
-                <LanguageSelectorPopover
-                  isOpen={isLanguageModalOpen}
-                  pendingLanguageCode={pendingLanguageCode}
-                  focusedIndex={focusedLanguageIndex}
-                  onSelect={async (code) => {
-                    setPendingLanguageCode(code);
-                    setFocusedLanguageIndex(SUPPORTED_LANGUAGES.findIndex((language) => language.code === code));
-                    await applyLanguageCode(code);
-                  }}
-                  onFocusIndex={setFocusedLanguageIndex}
-                  cardRefs={languageCardRefs}
-                />
-              </div>
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className="inline-flex items-center gap-2 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-1.5 text-sm font-semibold transition hover:border-[var(--svs-primary)]"
-                aria-label={t('theme.toggleAria')}
-              >
-                {isDarkMode ? <Sun className="h-4 w-4 text-[var(--svs-primary)]" /> : <Moon className="h-4 w-4 text-[var(--svs-primary-strong)]" />}
-                <span>{isDarkMode ? t('theme.light') : t('theme.dark')}</span>
-              </button>
-            </div>
-            {!isSellerConsoleRoute ? (
-              <>
-                <Link to="/checkout" aria-label="Open cart and checkout" className="relative rounded-full p-1.5 transition hover:bg-[var(--svs-cyan-surface)]">
-                  <ShoppingCart className={`h-5 w-5 ${cudyBluePrimaryIconClassName}`} />
-                  {cartItemCount > 0 ? (
-                    <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[var(--svs-primary)] px-1 text-[10px] font-bold text-white">
-                      {cartItemCount}
-                    </span>
-                  ) : null}
-                </Link>
-                <Link to="/wishlist" aria-label="Open wishlist" className="relative rounded-full p-1.5 transition hover:bg-[var(--svs-cyan-surface)]">
-                  <Heart className={`h-5 w-5 ${cudyBluePrimaryIconClassName}`} />
-                  {wishlistItemCount > 0 ? (
-                    <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[var(--svs-primary)] px-1 text-[10px] font-bold text-white">
-                      {wishlistItemCount}
-                    </span>
-                  ) : null}
-                </Link>
-              </>
-            ) : null}
+            <Link to="/checkout" aria-label="Open cart and checkout" className="relative rounded-full p-1.5 transition hover:bg-[var(--svs-cyan-surface)]">
+              <ShoppingCart className={`h-5 w-5 ${cudyBluePrimaryIconClassName}`} />
+              {cartItemCount > 0 ? (
+                <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[var(--svs-primary)] px-1 text-[10px] font-bold text-white">
+                  {cartItemCount}
+                </span>
+              ) : null}
+            </Link>
+            <Link to="/wishlist" aria-label="Open wishlist" className="relative rounded-full p-1.5 transition hover:bg-[var(--svs-cyan-surface)]">
+              <Heart className={`h-5 w-5 ${cudyBluePrimaryIconClassName}`} />
+              {wishlistItemCount > 0 ? (
+                <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[var(--svs-primary)] px-1 text-[10px] font-bold text-white">
+                  {wishlistItemCount}
+                </span>
+              ) : null}
+            </Link>
             <div className="relative" ref={notificationsMenuRef}>
               <button
                 type="button"
@@ -2302,6 +1975,43 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                 </div>
               ) : null}
             </div>
+            <div className="relative" ref={desktopLanguageMenuRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setFocusedLanguageIndex(SUPPORTED_LANGUAGES.findIndex((language) => language.code === activeLanguage.code));
+                  setIsLanguageModalOpen((prev) => !prev);
+                }}
+                className="inline-flex items-center gap-2 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-1.5 text-sm font-semibold transition hover:border-[var(--svs-primary)]"
+                aria-label={t('languageModal.title')}
+                aria-haspopup="menu"
+                aria-expanded={isLanguageModalOpen}
+              >
+                <span>{activeLanguage.flag ? `${activeLanguage.flag} ` : ''}{activeLanguage.englishName}</span>
+                <ChevronDown className={`h-4 w-4 transition ${isLanguageModalOpen ? 'rotate-180' : ''}`} />
+              </button>
+              <LanguageSelectorPopover
+                isOpen={isLanguageModalOpen}
+                pendingLanguageCode={pendingLanguageCode}
+                focusedIndex={focusedLanguageIndex}
+                onSelect={async (code) => {
+                  setPendingLanguageCode(code);
+                  setFocusedLanguageIndex(SUPPORTED_LANGUAGES.findIndex((language) => language.code === code));
+                  await applyLanguageCode(code);
+                }}
+                onFocusIndex={setFocusedLanguageIndex}
+                cardRefs={languageCardRefs}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="inline-flex items-center gap-2 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-1.5 text-sm font-semibold transition hover:border-[var(--svs-primary)]"
+              aria-label={t('theme.toggleAria')}
+            >
+              {isDarkMode ? <Sun className="h-4 w-4 text-[var(--svs-primary)]" /> : <Moon className="h-4 w-4 text-[var(--svs-primary-strong)]" />}
+              <span>{isDarkMode ? t('theme.light') : t('theme.dark')}</span>
+            </button>
             <div className="relative">
               <button
                 type="button"
@@ -2323,6 +2033,13 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                 <div className="absolute right-0 top-[calc(100%+8px)] w-56 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3 shadow-xl">
                   <p className="text-xs uppercase tracking-wide text-[var(--svs-muted)]">{t('profile.signedInAs')}</p>
                   <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{profileName}</p>
+                  <Link
+                    to="/seller/dashboard"
+                    onClick={() => setProfileOpen(false)}
+                    className="mt-3 block w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-center text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)]"
+                  >
+                    My Store
+                  </Link>
                   <button
                     type="button"
                     onClick={handleLogout}
@@ -2347,18 +2064,16 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
 
         {mobileOpen ? (
           <div className="border-t border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-3 lg:hidden">
-            {!isSellerConsoleRoute ? (
-              <form onSubmit={handleSearchSubmit}>
-                <input
-                  type="search"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder={t('search.placeholder')}
-                  className="mb-3 w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
-                  aria-label={t('search.mobileAria')}
-                />
-              </form>
-            ) : null}
+            <form onSubmit={handleSearchSubmit}>
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={t('search.placeholder')}
+                className="mb-3 w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
+                aria-label={t('search.mobileAria')}
+              />
+            </form>
             <button
               type="button"
               onClick={toggleTheme}
@@ -2396,16 +2111,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
               />
             </div>
             <div className="space-y-2 text-sm font-semibold">
-              {isSellerConsoleRoute ? sellerConsoleNavItems.map((item) => (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  onClick={() => setMobileOpen(false)}
-                  className="block rounded-md bg-[var(--svs-surface-soft)] px-3 py-2"
-                >
-                  {item.label}
-                </Link>
-              )) : navItems.map((item) => (
+              {navItems.map((item) => (
                 <Link
                   key={item.labelKey}
                   to={item.href}
@@ -2415,31 +2121,6 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                   {t(item.labelKey)}
                 </Link>
               ))}
-              {isSellerConsoleRoute ? (
-                <Link
-                  to="/markets"
-                  onClick={() => setMobileOpen(false)}
-                  className="block rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 font-bold text-[var(--svs-text)]"
-                >
-                  Switch to Buyer View
-                </Link>
-              ) : hasSellerAccess ? (
-                <Link
-                  to={sellerHomePath}
-                  onClick={() => setMobileOpen(false)}
-                  className="block rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 font-bold text-[var(--svs-text)]"
-                >
-                  Switch to Seller View
-                </Link>
-              ) : (
-                <Link
-                  to="/sell"
-                  onClick={() => setMobileOpen(false)}
-                  className="block rounded-md bg-orange-500 px-3 py-2 font-bold text-white"
-                >
-                  Sell on SVS
-                </Link>
-              )}
               {!isAuthenticated ? (
                 <>
                   <Link to="/signin" className="block rounded-md bg-[var(--svs-surface-soft)] px-3 py-2">
@@ -2449,7 +2130,11 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                     {t('profile.signUp')}
                   </Link>
                 </>
-              ) : null}
+              ) : (
+                <Link to="/seller/dashboard" onClick={() => setMobileOpen(false)} className="block rounded-md bg-[var(--svs-surface-soft)] px-3 py-2">
+                  My Store
+                </Link>
+              )}
             </div>
           </div>
         ) : null}
@@ -2610,7 +2295,7 @@ const KpiCard = ({ label, value }) => (
   </div>
 );
 
-const ECommercePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
+const ECommercePage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'ecommerce'), ...productCards], [sellerItems]);
   const buildCartItem = (item) => createCartItem({
@@ -2637,7 +2322,6 @@ const ECommercePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
         buttonLabel={t('common.addToCart')}
         secondaryButtonLabel={t('common.viewMore')}
         onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-        onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
         onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
         onOpenItemDetails={(item) => {
           const wishlistItem = buildWishlistItem(item);
@@ -2653,13 +2337,13 @@ const ECommercePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
           });
         }}
         isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/e-commerce', item.id))}
-        metaRenderer={(item) => <p className="text-sm text-slate-500">{item.subtitle || item.sellerName || 'Seller item'} â€¢ <SalePrice price={item.price} /></p>}
+        metaRenderer={(item) => <p className="text-sm text-slate-500">{item.subtitle || item.sellerName || 'Seller item'} GÇó <SalePrice price={item.price} /></p>}
       />
     </PageFrame>
   );
 };
 
-const TicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], onOpenItemDetails }) => {
+const TicketsPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], onOpenItemDetails }) => {
   const { t, i18n } = useTranslation();
   const [typeFilter, setTypeFilter] = useState('All');
   const [locationFilter, setLocationFilter] = useState('All');
@@ -2719,7 +2403,7 @@ const TicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds 
             role="button"
             tabIndex={0}
             onClick={() => {
-              const details = `${formatDate(event.date, currentLocale)} â€¢ ${t(event.locationKey, { defaultValue: event.location })}`;
+              const details = `${formatDate(event.date, currentLocale)} GÇó ${t(event.locationKey, { defaultValue: event.location })}`;
               const cartItem = createCartItem({ ...event, route: '/tickets', marketName: t('markets.tickets'), details });
               const wishlistItem = createWishlistItem({ ...event, route: '/tickets', marketName: t('markets.tickets'), details });
               onOpenItemDetails?.({
@@ -2754,7 +2438,7 @@ const TicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds 
               <h3 className="text-base font-bold">{t(event.titleKey, { defaultValue: event.title })}</h3>
               <p className="mt-1 flex items-center gap-1 text-sm text-slate-600"><CalendarDays className="h-4 w-4" /> {formatDate(event.date, currentLocale)}</p>
               <p className="mt-1 flex items-center gap-1 text-sm text-slate-600"><MapPin className="h-4 w-4" /> {t(event.locationKey, { defaultValue: event.location })}</p>
-              <p className="mt-2 text-sm text-[var(--svs-primary-strong)]">{t(event.typeKey, { defaultValue: event.type })} â€¢ <SalePrice price={event.price} /></p>
+              <p className="mt-2 text-sm text-[var(--svs-primary-strong)]">{t(event.typeKey, { defaultValue: event.type })} GÇó <SalePrice price={event.price} /></p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -2764,7 +2448,7 @@ const TicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds 
                     ...event,
                     route: '/tickets',
                     marketName: t('markets.tickets'),
-                    details: `${formatDate(event.date, currentLocale)} â€¢ ${t(event.locationKey, { defaultValue: event.location })}`,
+                    details: `${formatDate(event.date, currentLocale)} GÇó ${t(event.locationKey, { defaultValue: event.location })}`,
                     }));
                   }}
                   className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}
@@ -2775,26 +2459,11 @@ const TicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds 
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onBuyNow?.(createCartItem({
-                    ...event,
-                    route: '/tickets',
-                    marketName: t('markets.tickets'),
-                    details: `${formatDate(event.date, currentLocale)} â€¢ ${t(event.locationKey, { defaultValue: event.location })}`,
-                    }));
-                  }}
-                  className="rounded-md bg-[#111111] px-3 py-2 text-sm font-semibold text-white transition hover:bg-black"
-                >
-                  Buy it now
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
                     onToggleWishlist(createWishlistItem({
                     ...event,
                     route: '/tickets',
                     marketName: t('markets.tickets'),
-                    details: `${formatDate(event.date, currentLocale)} â€¢ ${t(event.locationKey, { defaultValue: event.location })}`,
+                    details: `${formatDate(event.date, currentLocale)} GÇó ${t(event.locationKey, { defaultValue: event.location })}`,
                     }));
                   }}
                   aria-pressed={wishlistItemIds.includes(getCollectionItemId('/tickets', event.id))}
@@ -2823,7 +2492,7 @@ const TicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds 
   );
 };
 
-const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], onOpenItemDetails }) => {
+const BookingsTicketsPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], onOpenItemDetails }) => {
   const { t } = useTranslation();
 
   return (
@@ -2842,7 +2511,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
           role="button"
           tabIndex={0}
           onClick={() => {
-            const details = `${formatDate(event.date)} â€¢ ${event.location}`;
+            const details = `${formatDate(event.date)} GÇó ${event.location}`;
             const cartItem = createCartItem({ ...event, route: '/bookings-tickets', marketName: t('markets.bookings'), details });
             const wishlistItem = createWishlistItem({ ...event, route: '/bookings-tickets', marketName: t('markets.bookings'), details });
             onOpenItemDetails?.({
@@ -2864,7 +2533,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
           }}
         >
           <h3 className="text-lg font-bold">{event.title}</h3>
-          <p className="mt-1 text-sm text-slate-600">{formatDate(event.date)} â€¢ {event.location}</p>
+          <p className="mt-1 text-sm text-slate-600">{formatDate(event.date)} GÇó {event.location}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
@@ -2874,7 +2543,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
                 ...event,
                 route: '/bookings-tickets',
                 marketName: t('markets.bookings'),
-                details: `${formatDate(event.date)} â€¢ ${event.location}`,
+                details: `${formatDate(event.date)} GÇó ${event.location}`,
                 }));
               }}
               className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white`}
@@ -2885,26 +2554,11 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                onBuyNow?.(createCartItem({
-                ...event,
-                route: '/bookings-tickets',
-                marketName: t('markets.bookings'),
-                details: `${formatDate(event.date)} â€¢ ${event.location}`,
-                }));
-              }}
-              className="rounded-md bg-[#111111] px-3 py-2 text-sm font-semibold text-white transition hover:bg-black"
-            >
-              Buy it now
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
                 onToggleWishlist(createWishlistItem({
                 ...event,
                 route: '/bookings-tickets',
                 marketName: t('markets.bookings'),
-                details: `${formatDate(event.date)} â€¢ ${event.location}`,
+                details: `${formatDate(event.date)} GÇó ${event.location}`,
                 }));
               }}
               aria-pressed={wishlistItemIds.includes(getCollectionItemId('/bookings-tickets', event.id))}
@@ -3034,7 +2688,7 @@ const VotingProvidersPage = () => {
   );
 };
 
-const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
+const GroceriesPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
   const { t } = useTranslation();
   const [tab, setTab] = useState('Fruits');
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'groceries'), ...groceries], [sellerItems]);
@@ -3070,7 +2724,6 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
         buttonLabel={t('common.addToBasket')}
         secondaryButtonLabel={t('common.deliveryOptions')}
         onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-        onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
         onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
         onOpenItemDetails={(item) => {
           const wishlistItem = buildWishlistItem(item);
@@ -3086,26 +2739,26 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
           });
         }}
         isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/groceries', item.id))}
-        metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} /> â€¢ {item.discount || item.sellerName || 'Seller item'}</p>}
+        metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} /> GÇó {item.discount || item.sellerName || 'Seller item'}</p>}
       />
     </PageFrame>
   );
 };
 
-const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
+const FastFoodPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'fastFood'), ...fastFoodItems], [sellerItems]);
   const buildCartItem = (item) => createCartItem({
     ...item,
     route: '/fast-food',
     marketName: t('markets.fastFood'),
-    details: `${item.category || 'Seller item'} â€¢ ${item.prepTime || item.description || 'Ready to order'}`,
+    details: `${item.category || 'Seller item'} GÇó ${item.prepTime || item.description || 'Ready to order'}`,
   });
   const buildWishlistItem = (item) => createWishlistItem({
     ...item,
     route: '/fast-food',
     marketName: t('markets.fastFood'),
-    details: `${item.category || 'Seller item'} â€¢ ${item.prepTime || item.description || 'Ready to order'}`,
+    details: `${item.category || 'Seller item'} GÇó ${item.prepTime || item.description || 'Ready to order'}`,
   });
 
   return (
@@ -3118,7 +2771,6 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
       buttonLabel={t('common.orderNow')}
       secondaryButtonLabel={t('common.viewMeal')}
       onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-      onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
       onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
       onOpenItemDetails={(item) => {
         const wishlistItem = buildWishlistItem(item);
@@ -3127,33 +2779,33 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
           image: item.image,
           images: item.images || (item.image ? [item.image] : []),
           marketName: t('markets.fastFood'),
-          details: `${item.category || 'Seller item'} â€¢ ${item.prepTime || item.description || 'Ready to order'}`,
+          details: `${item.category || 'Seller item'} GÇó ${item.prepTime || item.description || 'Ready to order'}`,
           priceLabel: getSalePrices(item.price).nowPrice,
           cartItem: buildCartItem(item),
           wishlistItem,
         });
       }}
       isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/fast-food', item.id))}
-      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} â€¢ {item.prepTime || 'Ready to order'} â€¢ <SalePrice price={item.price} /></p>}
+      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} GÇó {item.prepTime || 'Ready to order'} GÇó <SalePrice price={item.price} /></p>}
     />
   </PageFrame>
   );
 };
 
-const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
+const BeveragesLiquorsPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'beverages'), ...beveragesLiquorItems], [sellerItems]);
   const buildCartItem = (item) => createCartItem({
     ...item,
     route: '/beverages-liquors',
     marketName: t('markets.beverages'),
-    details: `${item.category || 'Seller item'} â€¢ ${item.volume || item.description || item.sellerName || 'Marketplace listing'}`,
+    details: `${item.category || 'Seller item'} GÇó ${item.volume || item.description || item.sellerName || 'Marketplace listing'}`,
   });
   const buildWishlistItem = (item) => createWishlistItem({
     ...item,
     route: '/beverages-liquors',
     marketName: t('markets.beverages'),
-    details: `${item.category || 'Seller item'} â€¢ ${item.volume || item.description || item.sellerName || 'Marketplace listing'}`,
+    details: `${item.category || 'Seller item'} GÇó ${item.volume || item.description || item.sellerName || 'Marketplace listing'}`,
   });
 
   return (
@@ -3170,7 +2822,6 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       buttonLabel={t('common.addToCart')}
       secondaryButtonLabel={t('common.viewDetails')}
       onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-      onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
       onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
       onOpenItemDetails={(item) => {
         const wishlistItem = buildWishlistItem(item);
@@ -3179,20 +2830,20 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
           image: item.image,
           images: item.images || (item.image ? [item.image] : []),
           marketName: t('markets.beverages'),
-          details: `${item.category || 'Seller item'} â€¢ ${item.volume || item.description || item.sellerName || 'Marketplace listing'}`,
+          details: `${item.category || 'Seller item'} GÇó ${item.volume || item.description || item.sellerName || 'Marketplace listing'}`,
           priceLabel: getSalePrices(item.price).nowPrice,
           cartItem: buildCartItem(item),
           wishlistItem,
         });
       }}
       isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/beverages-liquors', item.id))}
-      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} â€¢ {item.volume || item.sellerName || 'Marketplace listing'} â€¢ <SalePrice price={item.price} /></p>}
+      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} GÇó {item.volume || item.sellerName || 'Marketplace listing'} GÇó <SalePrice price={item.price} /></p>}
     />
   </PageFrame>
   );
 };
 
-const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
+const WellnessPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'wellness'), ...wellnessItems], [sellerItems]);
   const buildCartItem = (item) => createCartItem({
@@ -3215,7 +2866,6 @@ const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
       buttonLabel={t('common.add')}
       secondaryButtonLabel={t('common.uploadPrescription')}
       onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-      onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
       onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
       onOpenItemDetails={(item) => {
         const wishlistItem = buildWishlistItem(item);
@@ -3231,26 +2881,26 @@ const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
         });
       }}
       isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/wellness', item.id))}
-      metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} />{item.sellerName ? ` â€¢ ${item.sellerName}` : ''}</p>}
+      metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} />{item.sellerName ? ` GÇó ${item.sellerName}` : ''}</p>}
     />
   </PageFrame>
   );
 };
 
-const StationeryPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
+const StationeryPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'stationery'), ...stationeryItems], [sellerItems]);
   const buildCartItem = (item) => createCartItem({
     ...item,
     route: '/stationery-office',
     marketName: t('markets.stationery'),
-    details: `${item.category || 'Seller item'} â€¢ ${item.description || item.sellerName || 'Ready for school and office use'}`,
+    details: `${item.category || 'Seller item'} GÇó ${item.description || item.sellerName || 'Ready for school and office use'}`,
   });
   const buildWishlistItem = (item) => createWishlistItem({
     ...item,
     route: '/stationery-office',
     marketName: t('markets.stationery'),
-    details: `${item.category || 'Seller item'} â€¢ ${item.description || item.sellerName || 'Ready for school and office use'}`,
+    details: `${item.category || 'Seller item'} GÇó ${item.description || item.sellerName || 'Ready for school and office use'}`,
   });
 
   return (
@@ -3260,7 +2910,6 @@ const StationeryPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
       buttonLabel={t('common.addToCart')}
       secondaryButtonLabel={t('common.viewDetails')}
       onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-      onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
       onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
       onOpenItemDetails={(item) => {
         const wishlistItem = buildWishlistItem(item);
@@ -3269,33 +2918,33 @@ const StationeryPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
           image: item.image,
           images: item.images || (item.image ? [item.image] : []),
           marketName: t('markets.stationery'),
-          details: `${item.category || 'Seller item'} â€¢ ${item.description || item.sellerName || 'Ready for school and office use'}`,
+          details: `${item.category || 'Seller item'} GÇó ${item.description || item.sellerName || 'Ready for school and office use'}`,
           priceLabel: getSalePrices(item.price).nowPrice,
           cartItem: buildCartItem(item),
           wishlistItem,
         });
       }}
       isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/stationery-office', item.id))}
-      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} â€¢ <SalePrice price={item.price} /></p>}
+      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} GÇó <SalePrice price={item.price} /></p>}
     />
   </PageFrame>
   );
 };
 
-const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
+const ConstructionToolsPage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'constructionTools'), ...constructionToolsItems], [sellerItems]);
   const buildCartItem = (item) => createCartItem({
     ...item,
     route: '/building-construction-tools',
     marketName: t('markets.constructionTools'),
-    details: `${item.category || 'Seller item'} â€¢ ${item.description || item.sellerName || 'Construction-ready listing'}`,
+    details: `${item.category || 'Seller item'} GÇó ${item.description || item.sellerName || 'Construction-ready listing'}`,
   });
   const buildWishlistItem = (item) => createWishlistItem({
     ...item,
     route: '/building-construction-tools',
     marketName: t('markets.constructionTools'),
-    details: `${item.category || 'Seller item'} â€¢ ${item.description || item.sellerName || 'Construction-ready listing'}`,
+    details: `${item.category || 'Seller item'} GÇó ${item.description || item.sellerName || 'Construction-ready listing'}`,
   });
 
   return (
@@ -3305,7 +2954,6 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
       buttonLabel={t('common.addToCart')}
       secondaryButtonLabel={t('common.viewDetails')}
       onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-      onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
       onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
       onOpenItemDetails={(item) => {
         const wishlistItem = buildWishlistItem(item);
@@ -3314,14 +2962,14 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
           image: item.image,
           images: item.images || (item.image ? [item.image] : []),
           marketName: t('markets.constructionTools'),
-          details: `${item.category || 'Seller item'} â€¢ ${item.description || item.sellerName || 'Construction-ready listing'}`,
+          details: `${item.category || 'Seller item'} GÇó ${item.description || item.sellerName || 'Construction-ready listing'}`,
           priceLabel: getSalePrices(item.price).nowPrice,
           cartItem: buildCartItem(item),
           wishlistItem,
         });
       }}
       isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/building-construction-tools', item.id))}
-      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} â€¢ <SalePrice price={item.price} /></p>}
+      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} GÇó <SalePrice price={item.price} /></p>}
     />
   </PageFrame>
   );
@@ -3350,7 +2998,7 @@ const HomeCarePage = () => {
       {homeCareProviders.map((provider) => (
         <article key={provider.id} className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
           <h3 className="text-lg font-bold">{provider.name}</h3>
-          <p className="mt-1 text-sm text-slate-600">{provider.type} â€¢ {provider.city}</p>
+          <p className="mt-1 text-sm text-slate-600">{provider.type} GÇó {provider.city}</p>
           <p className="mt-2 flex items-center gap-1 text-sm text-slate-700"><Star className="h-4 w-4 text-amber-500" /> {provider.rating}</p>
           <div className="mt-3 flex gap-2">
             <button type="button" className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white`}>{t('common.bookNow')}</button>
@@ -3363,7 +3011,7 @@ const HomeCarePage = () => {
   );
 };
 
-const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
+const HardwareSoftwarePage = ({ onAddToCart, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'hardwareSoftware'), ...techItems], [sellerItems]);
   const buildCartItem = (item) => createCartItem({
@@ -3386,7 +3034,6 @@ const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       buttonLabel={t('common.addToCart')}
       secondaryButtonLabel={t('common.viewMore')}
       onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-      onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
       onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
       onOpenItemDetails={(item) => {
         const wishlistItem = buildWishlistItem(item);
@@ -3402,7 +3049,7 @@ const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
         });
       }}
       isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/hardware-software', item.id))}
-      metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} />{item.sellerName ? ` â€¢ ${item.sellerName}` : ''}</p>}
+      metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} />{item.sellerName ? ` GÇó ${item.sellerName}` : ''}</p>}
     />
   </PageFrame>
   );
@@ -3419,11 +3066,10 @@ const MARKET_BADGE_COLORS = {
   hardwareSoftware: 'bg-slate-100 text-slate-700',
 };
 
-const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerItem, onUpdateOrderStatus, initialView = 'listings' }) => {
+const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerItem, onUpdateOrderStatus }) => {
   const { t } = useTranslation();
   const isAuthenticated = getAuthState();
   const userEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
-  const isOrdersView = initialView === 'orders';
 
   const [myListings, setMyListings] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -3637,26 +3283,6 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
     }, []);
   }, [hasLoadedSellerOrders, myListingIds, orders, sellerOrders, userEmail]);
 
-  const totalStockUnits = useMemo(
-    () => myListings.reduce((total, listing) => total + normalizeListingQuantity(listing.availableQuantity, 0), 0),
-    [myListings],
-  );
-
-  const lowStockListingsCount = useMemo(
-    () => myListings.filter((listing) => normalizeListingQuantity(listing.availableQuantity, 0) > 0 && normalizeListingQuantity(listing.availableQuantity, 0) <= 3).length,
-    [myListings],
-  );
-
-  const activeOrdersCount = useMemo(
-    () => visibleOrders.filter((order) => !['Delivered', 'Cancelled by Buyer', 'Refund Made'].includes(order.status)).length,
-    [visibleOrders],
-  );
-
-  const deliveredOrdersCount = useMemo(
-    () => visibleOrders.filter((order) => order.status === 'Delivered').length,
-    [visibleOrders],
-  );
-
   const handleOrderStatusUpdate = async (orderId, nextStatus) => {
     if (!onUpdateOrderStatus) {
       return;
@@ -3684,9 +3310,9 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
 
   if (!isAuthenticated) {
     return (
-      <PageFrame title={isOrdersView ? 'Seller Orders' : 'My Store'} subtitle={isOrdersView ? 'Sign in to manage orders containing your listings.' : 'Sign in to manage your product listings.'}>
+      <PageFrame title="My Store" subtitle="Sign in to manage your product listings.">
         <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-6 text-sm text-[var(--svs-text)]">
-          <p className="mb-4">You need to be signed in to view and manage your seller account.</p>
+          <p className="mb-4">You need to be signed in to view and manage your listings.</p>
           <Link to="/signin" className={`${cudyBluePrimaryButtonClassName} inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
             Sign In
           </Link>
@@ -3696,166 +3322,48 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
   }
 
   const uniqueMarketCount = new Set(myListings.map((item) => item.marketKey)).size;
-  const listingsSummary = isLoading
-    ? 'Loading your listingsâ€¦'
-    : myListings.length === 0
-      ? 'No listings yet. Add your first product to get started.'
-      : `${myListings.length} listing${myListings.length !== 1 ? 's' : ''} across ${uniqueMarketCount} market${uniqueMarketCount !== 1 ? 's' : ''}`;
-  const inventorySummary = myListings.length === 0
-    ? 'Your inventory summary will appear here after your first upload.'
-    : lowStockListingsCount > 0
-      ? `${lowStockListingsCount} listing${lowStockListingsCount !== 1 ? 's are' : ' is'} running low on stock.`
-      : 'All current listings have healthy stock levels.';
 
   return (
-    <PageFrame
-      title={isOrdersView ? 'Seller Orders' : 'My Store'}
-      subtitle={isOrdersView ? 'Track orders containing your listings and update fulfillment status.' : 'View, edit, and remove your product listings across all markets.'}
-    >
-      <section className="mb-6 grid gap-4 xl:grid-cols-[minmax(0,1.8fr)_320px]">
-        <div className="rounded-3xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] md:p-6">
-          <span className="inline-flex rounded-full bg-[var(--svs-cyan-surface)] px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-[var(--svs-primary-strong)]">
-            {isOrdersView ? 'Seller Orders' : 'Store Dashboard'}
-          </span>
-          <h2 className="mt-3 text-2xl font-bold text-[var(--svs-text)]">
-            {isOrdersView ? 'Keep fulfillment moving.' : 'Everything in your store, in one place.'}
-          </h2>
-          <p className="mt-2 max-w-3xl text-sm text-[var(--svs-muted)] sm:text-base">
-            {isOrdersView
-              ? 'Review order volume, update statuses, and monitor buyer activity without digging through listing cards.'
-              : 'Track inventory, update product details, and jump into order activity through clearly separated sections.'}
-          </p>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <KpiCard label="Listings" value={String(myListings.length)} />
-            <KpiCard label="Markets" value={String(uniqueMarketCount)} />
-            <KpiCard label={isOrdersView ? 'Active Orders' : 'Units in Stock'} value={String(isOrdersView ? activeOrdersCount : totalStockUnits)} />
-            <KpiCard label={isOrdersView ? 'Delivered' : 'Low Stock'} value={String(isOrdersView ? deliveredOrdersCount : lowStockListingsCount)} />
-          </div>
-        </div>
-
-        <aside className="rounded-3xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-          <h3 className="text-base font-bold text-[var(--svs-text)]">Quick Actions</h3>
-          <p className="mt-1 text-sm text-[var(--svs-muted)]">
-            {isOrdersView ? 'Move between order operations and store maintenance.' : 'Open the next task without scrolling through the page.'}
-          </p>
-          <div className="mt-4 space-y-2.5">
-            {!isOrdersView ? (
-              <Link
-                to="/seller/upload"
-                className={`${cudyBluePrimaryButtonClassName} inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--svs-primary)] px-4 py-3 text-sm font-semibold text-white`}
-              >
-                <Plus className="h-4 w-4" /> Add New Listing
-              </Link>
-            ) : null}
-            <Link
-              to={isOrdersView ? '/seller/dashboard' : '/seller/orders'}
-              className="inline-flex w-full items-center justify-center rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
-            >
-              {isOrdersView ? 'Back to Listings' : 'Open Orders View'}
-            </Link>
-            <Link
-              to="/markets"
-              className="inline-flex w-full items-center justify-center rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
-            >
-              Switch to Buyer View
-            </Link>
-          </div>
-        </aside>
-      </section>
-
+    <PageFrame title="My Store" subtitle="View, edit, and remove your product listings across all markets.">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-1 text-sm font-semibold">
-          <Link
-            to="/seller/dashboard"
-            className={`rounded-lg px-4 py-2 transition ${!isOrdersView ? 'bg-[var(--svs-primary)] text-white' : 'text-[var(--svs-text)] hover:text-[var(--svs-primary)]'}`}
-          >
-            Listings
-          </Link>
-          <Link
-            to="/seller/orders"
-            className={`rounded-lg px-4 py-2 transition ${isOrdersView ? 'bg-[var(--svs-primary)] text-white' : 'text-[var(--svs-text)] hover:text-[var(--svs-primary)]'}`}
-          >
-            Orders
-          </Link>
-        </div>
         <p className="text-sm text-[var(--svs-muted)]">
-          {isOrdersView
-            ? `${visibleOrders.length} order${visibleOrders.length !== 1 ? 's' : ''} containing your listings`
-            : listingsSummary}
+          {isLoading
+            ? 'Loading your listings\u2026'
+            : myListings.length === 0
+              ? 'No listings yet. Add your first product to get started.'
+              : `${myListings.length} listing${myListings.length !== 1 ? 's' : ''} across ${uniqueMarketCount} market${uniqueMarketCount !== 1 ? 's' : ''}`}
         </p>
+        <Link
+          to="/seller/upload"
+          className={`${cudyBluePrimaryButtonClassName} inline-flex items-center gap-2 rounded-lg bg-[var(--svs-primary)] px-4 py-2.5 text-sm font-semibold text-white`}
+        >
+          <Plus className="h-4 w-4" /> Add New Listing
+        </Link>
       </div>
 
-      {!isOrdersView ? (
-        <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
-          <aside className="space-y-4">
-            <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-              <h2 className="text-lg font-bold text-[var(--svs-text)]">Store Snapshot</h2>
-              <p className="mt-1 text-sm text-[var(--svs-muted)]">A quick inventory check before you edit listings.</p>
-              <div className="mt-4 space-y-3 text-sm text-[var(--svs-text)]">
-                <div className="rounded-xl bg-[var(--svs-surface-soft)] px-4 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Inventory Health</p>
-                  <p className="mt-1 font-semibold text-[var(--svs-text)]">{inventorySummary}</p>
-                </div>
-                <div className="rounded-xl bg-[var(--svs-surface-soft)] px-4 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Orders Waiting</p>
-                  <p className="mt-1 font-semibold text-[var(--svs-text)]">
-                    {activeOrdersCount > 0
-                      ? `${activeOrdersCount} active order${activeOrdersCount !== 1 ? 's' : ''} need attention.`
-                      : 'No active seller orders right now.'}
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-              <h2 className="text-lg font-bold text-[var(--svs-text)]">Next Best Step</h2>
-              <p className="mt-1 text-sm text-[var(--svs-muted)]">
-                {myListings.length === 0
-                  ? 'Publish your first listing so it can appear in the marketplace.'
-                  : lowStockListingsCount > 0
-                    ? 'Restock low inventory items or adjust quantities before they run out.'
-                    : 'Review product details and pricing to keep your store current.'}
-              </p>
-            </section>
-          </aside>
-
-          <section className="rounded-3xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-bold text-[var(--svs-text)]">Listings</h2>
-                <p className="text-sm text-[var(--svs-muted)]">Manage every published item from one ordered workspace.</p>
-              </div>
-              <Link
-                to="/seller/upload"
-                className={`${cudyBluePrimaryButtonClassName} inline-flex items-center gap-2 rounded-lg bg-[var(--svs-primary)] px-4 py-2.5 text-sm font-semibold text-white`}
-              >
-                <Plus className="h-4 w-4" /> Add New Listing
-              </Link>
-            </div>
-
-            {loadError ? (
-              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{loadError}</div>
-            ) : isLoading ? (
-              <div className="grid gap-5 sm:grid-cols-2 2xl:grid-cols-3">
-                {[1, 2, 3].map((n) => (
-                  <div key={n} className="h-72 animate-pulse rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)]" />
-                ))}
-              </div>
-            ) : myListings.length === 0 ? (
-              <div className="rounded-2xl border-2 border-dashed border-[var(--svs-border)] bg-[var(--svs-surface-soft)] py-16 text-center">
-                <p className="text-base font-semibold text-[var(--svs-text)]">Your store is empty</p>
-                <p className="mt-1 text-sm text-[var(--svs-muted)]">Start by adding your first product listing.</p>
-                <Link
-                  to="/seller/upload"
-                  className={`${cudyBluePrimaryButtonClassName} mt-5 inline-flex items-center gap-2 rounded-lg bg-[var(--svs-primary)] px-5 py-3 text-sm font-semibold text-white`}
-                >
-                  <Plus className="h-4 w-4" /> Add New Listing
-                </Link>
-              </div>
-            ) : (
-              <div className="grid gap-5 sm:grid-cols-2 2xl:grid-cols-3">
-                {myListings.map((item) => (
-                  <article key={item.dbId} className="overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+      {loadError ? (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{loadError}</div>
+      ) : isLoading ? (
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="h-72 animate-pulse rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)]" />
+          ))}
+        </div>
+      ) : myListings.length === 0 ? (
+        <div className="rounded-2xl border-2 border-dashed border-[var(--svs-border)] bg-[var(--svs-surface-soft)] py-16 text-center">
+          <p className="text-base font-semibold text-[var(--svs-text)]">Your store is empty</p>
+          <p className="mt-1 text-sm text-[var(--svs-muted)]">Start by adding your first product listing.</p>
+          <Link
+            to="/seller/upload"
+            className={`${cudyBluePrimaryButtonClassName} mt-5 inline-flex items-center gap-2 rounded-lg bg-[var(--svs-primary)] px-5 py-3 text-sm font-semibold text-white`}
+          >
+            <Plus className="h-4 w-4" /> Add New Listing
+          </Link>
+        </div>
+      ) : (
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {myListings.map((item) => (
+            <article key={item.dbId} className="overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
               <div className="relative h-48 overflow-hidden bg-[var(--svs-surface-soft)]">
                 <img src={item.image} alt={item.title} className="h-full w-full object-cover" loading="lazy" />
                 <span className={`absolute left-3 top-3 rounded-full px-2.5 py-0.5 text-xs font-semibold ${MARKET_BADGE_COLORS[item.marketKey] || 'bg-slate-100 text-slate-700'}`}>
@@ -3863,7 +3371,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                 </span>
               </div>
 
-              <div className="flex h-full flex-col p-4">
+              <div className="p-4">
                 <h3 className="text-base font-bold leading-tight text-[var(--svs-text)]">{item.title}</h3>
                 <p className="mt-0.5 text-sm font-semibold text-[var(--svs-primary-strong)]"><SalePrice price={item.price} /></p>
                 <p className="mt-1 text-xs text-[var(--svs-muted)]">
@@ -3979,7 +3487,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                     </div>
                   </div>
                 ) : (
-                  <div className="mt-auto flex gap-2 pt-4">
+                  <div className="mt-4 flex gap-2">
                     {confirmDeleteId === item.dbId ? (
                       <>
                         <span className="flex-1 self-center text-xs text-[var(--svs-muted)]">Remove this listing?</span>
@@ -4016,37 +3524,20 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                   </div>
                 )}
               </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
+            </article>
+          ))}
         </div>
-      ) : null}
+      )}
 
-      <section className={`${isOrdersView ? 'mt-0' : 'mt-6'} space-y-4 rounded-3xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]`}>
+      <section className="mt-10 space-y-4 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-bold text-[var(--svs-text)]">Order Management</h2>
-            <p className="text-sm text-[var(--svs-muted)]">
-              {isOrdersView
-                ? 'Review every order containing your products and keep fulfillment statuses current.'
-                : 'Track orders containing your listings and update fulfillment, shipping, and refund status.'}
-            </p>
+            <p className="text-sm text-[var(--svs-muted)]">Track orders containing your listings and update fulfillment, shipping, and refund status.</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-1 text-xs font-semibold text-[var(--svs-text)]">
-              {visibleOrders.length} order{visibleOrders.length === 1 ? '' : 's'}
-            </span>
-            {!isOrdersView ? (
-              <Link
-                to="/seller/orders"
-                className="rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-1 text-xs font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
-              >
-                View Full Orders Page
-              </Link>
-            ) : null}
-          </div>
+          <span className="rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-1 text-xs font-semibold text-[var(--svs-text)]">
+            {visibleOrders.length} order{visibleOrders.length === 1 ? '' : 's'}
+          </span>
         </div>
 
         {orderUpdateError ? (
@@ -4541,7 +4032,7 @@ const BettingHubPage = () => {
         <ul className="mt-3 space-y-2 text-sm">
           {matchSeed.map((match) => (
             <li key={`hub-${match.id}`} className="rounded-md bg-[#f8fdff] px-3 py-2">
-              {match.match} â€¢ Split: {match.split}
+              {match.match} GÇó Split: {match.split}
             </li>
           ))}
         </ul>
@@ -4551,7 +4042,7 @@ const BettingHubPage = () => {
         <ul className="mt-3 space-y-2 text-sm">
           {ticketEvents.filter((event) => event.type === 'Travel').map((event) => (
             <li key={`travel-${event.id}`} className="rounded-md bg-[#f8fdff] px-3 py-2">
-              {event.title} â€¢ <SalePrice price={event.price} />
+              {event.title} GÇó <SalePrice price={event.price} />
             </li>
           ))}
         </ul>
@@ -4802,916 +4293,278 @@ const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onOpen
   </PageFrame>
 );
 
-const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemoveCartItem, onClearBuyNowCheckout }) => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const isBuyNowMode = Boolean(location.state?.checkoutMode === 'buy-now' && buyNowCheckout?.items?.length);
-  const checkoutItems = useMemo(() => (
-    isBuyNowMode ? (buyNowCheckout?.items || []) : cartItems
-  ), [buyNowCheckout, cartItems, isBuyNowMode]);
-  const shippingFee = checkoutItems.length ? STANDARD_SHIPPING_FEE : 0;
-  const totals = useMemo(() => getCheckoutTotals(checkoutItems, shippingFee), [checkoutItems, shippingFee]);
-  const [formState, setFormState] = useState({
-    contact: typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''),
-    saveInformation: false,
-    marketingOptIn: false,
-    country: 'South Africa',
-    firstName: '',
-    lastName: '',
-    company: '',
-    address1: '',
-    address2: '',
-    city: '',
-    province: 'KwaZulu-Natal',
-    postalCode: '',
-    phoneCountryCode: '+27',
-    phone: '',
-    paymentMethod: PAYFAST_METHOD_OPTIONS[0].value,
-    billingAddressMode: 'same',
-    billingFirstName: '',
-    billingLastName: '',
-    billingCompany: '',
-    billingAddress1: '',
-    billingAddress2: '',
-    billingCity: '',
-    billingProvince: 'KwaZulu-Natal',
-    billingPostalCode: '',
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [, setSubmitError] = useState('');
-  const [currentStep, setCurrentStep] = useState(1);
-  const isPhoneMissing = !formState.phone.trim();
-  const contactEmail = String(formState.contact || '').trim();
-  const hasInvalidContactEmail = Boolean(contactEmail) && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail);
-  const shippingMethodLabel = `Standard â€“ ${formatCheckoutAmount(shippingFee)}`;
-  const sectionClassName = 'rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 shadow-sm md:p-8';
-  const fieldLabelClassName = 'mb-2 block text-sm font-medium text-[var(--svs-text)]';
-  const inputClassName = 'w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/20';
-  const mutedTextClassName = 'text-sm text-[var(--svs-muted)]';
-  const checkoutSteps = [
-    { id: 1, label: 'Items' },
-    { id: 2, label: 'Delivery' },
-    { id: 3, label: 'Payment' },
-  ];
-
-  useEffect(() => {
-    if (!location.state?.prefillCheckout) {
-      return;
-    }
-
-    setFormState((current) => ({ ...current, ...location.state.prefillCheckout }));
-  }, [location.state]);
-
-  useEffect(() => {
-    if (!isBuyNowMode && buyNowCheckout?.items?.length) {
-      onClearBuyNowCheckout?.();
-    }
-  }, [buyNowCheckout, isBuyNowMode, onClearBuyNowCheckout]);
-
-  const updateField = (field, value) => {
-    setFormState((current) => ({ ...current, [field]: value }));
-  };
-
-  const validateDeliveryStep = () => {
-    const requiredFields = [
-      formState.contact,
-      formState.firstName,
-      formState.lastName,
-      formState.address1,
-      formState.city,
-      formState.province,
-      formState.postalCode,
-      formState.phone,
-    ];
-
-    if (!checkoutItems.length) {
-      return 'Your checkout is empty. Choose an item before continuing.';
-    }
-
-    if (requiredFields.some((value) => !String(value || '').trim())) {
-      return 'Please complete your contact, delivery, and phone details before paying.';
-    }
-
-    if (hasInvalidContactEmail) {
-      return 'Enter a valid email address before paying.';
-    }
-
-    return '';
-  };
-
-  const validatePaymentStep = () => {
-    const deliveryError = validateDeliveryStep();
-
-    if (deliveryError) {
-      return deliveryError;
-    }
-
-    if (formState.billingAddressMode === 'different') {
-      const billingFields = [
-        formState.billingFirstName,
-        formState.billingLastName,
-        formState.billingAddress1,
-        formState.billingCity,
-        formState.billingProvince,
-        formState.billingPostalCode,
-      ];
-
-      if (billingFields.some((value) => !String(value || '').trim())) {
-        return 'Complete the billing address details or choose same as shipping address.';
-      }
-    }
-
-    return '';
-  };
-
-  const handleContinueFromItems = () => {
-    if (!checkoutItems.length) {
-      setSubmitError('Your checkout is empty. Choose an item before continuing.');
-      return;
-    }
-
-    setSubmitError('');
-    setCurrentStep(2);
-  };
-
-  const handleContinueToPayment = () => {
-    const validationError = validateDeliveryStep();
-
-    if (validationError) {
-      setSubmitError(validationError);
-      return;
-    }
-
-    setSubmitError('');
-    setCurrentStep(3);
-  };
-
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    setSubmitError('');
-
-    const validationError = validatePaymentStep();
-
-    if (validationError) {
-      setSubmitError(validationError);
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    const fullName = `${formState.firstName} ${formState.lastName}`.trim();
-    const normalizedContactEmail = normalizeEmail(String(formState.contact || '').trim());
-    const shippingAddress = {
-      country: formState.country,
-      firstName: formState.firstName.trim(),
-      lastName: formState.lastName.trim(),
-      company: formState.company.trim(),
-      address1: formState.address1.trim(),
-      address2: formState.address2.trim(),
-      city: formState.city.trim(),
-      province: formState.province,
-      postalCode: formState.postalCode.trim(),
-      phone: `${formState.phoneCountryCode} ${formState.phone.trim()}`.trim(),
-    };
-    const billingAddress = formState.billingAddressMode === 'different'
-      ? {
-        firstName: formState.billingFirstName.trim(),
-        lastName: formState.billingLastName.trim(),
-        company: formState.billingCompany.trim(),
-        address1: formState.billingAddress1.trim(),
-        address2: formState.billingAddress2.trim(),
-        city: formState.billingCity.trim(),
-        province: formState.billingProvince,
-        postalCode: formState.billingPostalCode.trim(),
-        country: formState.country,
-      }
-      : shippingAddress;
-
-    const payfastSession = {
-      id: `payfast-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      mode: isBuyNowMode ? 'buy-now' : 'cart',
-      checkoutMode: isBuyNowMode ? 'buy-now' : 'cart',
-      customer: {
-        fullName,
-        firstName: formState.firstName.trim(),
-        lastName: formState.lastName.trim(),
-        email: normalizedContactEmail || null,
-        contact: normalizedContactEmail,
-        phone: shippingAddress.phone,
-        company: formState.company.trim(),
-        address: [
-          shippingAddress.address1,
-          shippingAddress.address2,
-          shippingAddress.city,
-          shippingAddress.province,
-          shippingAddress.postalCode,
-          shippingAddress.country,
-        ].filter(Boolean).join(', '),
-        country: formState.country,
-        province: formState.province,
-        postalCode: formState.postalCode.trim(),
-        shippingAddress,
-        billingAddress,
-        billingAddressMode: formState.billingAddressMode,
-        shippingMethod: shippingMethodLabel,
-        shippingFee,
-        saveInformation: formState.saveInformation,
-        marketingOptIn: formState.marketingOptIn,
-        paymentMethod: PAYFAST_METHOD_OPTIONS.find((option) => option.value === formState.paymentMethod)?.label || PAYFAST_METHOD_OPTIONS[0].label,
-      },
-      checkoutOptions: {
-        items: checkoutItems,
-        mode: isBuyNowMode ? 'buy-now' : 'cart',
-        feeTotal: totals.feeTotal,
-        total: totals.total,
-      },
-      prefillCheckout: formState,
-      totals,
-      contactEmail: normalizedContactEmail || 'guest@svs.app',
-    };
-    writePendingPayfastSession(payfastSession);
-    setIsSubmitting(false);
-    navigate('/checkout/payfast', {
-      state: {
-        payfastSession,
-        checkoutMode: isBuyNowMode ? 'buy-now' : 'cart',
-      },
-    });
-  };
-
-  let activeStepContent = null;
-
-  if (currentStep === 1) {
-    activeStepContent = (
-      <section className={sectionClassName}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-xl font-black text-[var(--svs-text)]">Items</h2>
-            <p className={`${mutedTextClassName} mt-1`}>{isBuyNowMode ? 'This order contains a single item.' : 'Adjust quantities here before paying.'}</p>
-          </div>
-          {isBuyNowMode ? <span className="rounded-full bg-[#111111] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-white">Single item</span> : null}
-        </div>
-
-        <div className="mt-5 space-y-3">
-          {checkoutItems.map((item) => (
-            <article key={item.id} className="flex gap-4 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4">
-              <img src={item.image} alt={item.title} className="h-24 w-24 rounded-2xl object-cover" loading="lazy" />
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-lg font-bold text-[var(--svs-text)]">{item.title}</h3>
-                    <p className="mt-1 text-sm text-[var(--svs-muted)]">{item.marketName}</p>
-                    {item.details ? <p className="mt-1 text-sm text-[var(--svs-muted)]">{item.details}</p> : null}
-                  </div>
-                  <p className="text-sm font-semibold text-[var(--svs-text)]">{item.unitPriceLabel}</p>
-                </div>
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                  {isBuyNowMode ? (
-                    <div className="inline-flex items-center rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-2 text-sm font-semibold text-[var(--svs-text)]">
-                      1 item
-                    </div>
-                  ) : (
-                    <>
-                      <div className="inline-flex items-center overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)]">
-                        <button type="button" onClick={() => onUpdateCartQuantity(item.id, -1)} className="px-3 py-2 text-sm font-semibold text-[var(--svs-text)]">-</button>
-                        <span className="min-w-10 border-x border-[var(--svs-border)] px-3 py-2 text-center text-sm font-semibold text-[var(--svs-text)]">{item.quantity}</span>
-                        <button type="button" onClick={() => onUpdateCartQuantity(item.id, 1)} className="px-3 py-2 text-sm font-semibold text-[var(--svs-text)]">+</button>
-                      </div>
-                      <button type="button" onClick={() => onRemoveCartItem(item.id)} className="text-sm font-semibold text-rose-600 transition hover:text-rose-500">
-                        Remove
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-
-        <div className="mt-6 flex justify-end">
-          <button type="button" onClick={handleContinueFromItems} className={`${cudyBluePrimaryButtonClassName} rounded-xl bg-[var(--svs-primary)] px-5 py-3 text-sm font-bold text-white`}>
-            Continue to Delivery
-          </button>
-        </div>
-      </section>
-    );
-  } else if (currentStep === 2) {
-    activeStepContent = (
-      <>
-        <section className={sectionClassName}>
-          <h2 className="text-xl font-black text-[var(--svs-text)]">Contact</h2>
-          <p className={`${mutedTextClassName} mt-1`}>Email address</p>
-          <div className="mt-4">
-            <input
-              type="email"
-              value={formState.contact}
-              onChange={(event) => updateField('contact', event.target.value)}
-              placeholder="Email address"
-              className={inputClassName}
-            />
-          </div>
-          {hasInvalidContactEmail ? (
-            <p className="mt-2 text-xs font-medium text-[#d94d4d]">Enter a valid email address to continue</p>
-          ) : null}
-          <label className="mt-4 flex items-start gap-3 text-sm text-[var(--svs-text)]">
-            <input
-              type="checkbox"
-              checked={formState.saveInformation}
-              onChange={(event) => updateField('saveInformation', event.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-[#d9d1c6]"
-            />
-            <span>Save this information for next time</span>
-          </label>
-          <label className="mt-3 flex items-start gap-3 text-sm text-[var(--svs-text)]">
-            <input
-              type="checkbox"
-              checked={formState.marketingOptIn}
-              onChange={(event) => updateField('marketingOptIn', event.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-[#d9d1c6]"
-            />
-            <span>Text me with news and offers</span>
-          </label>
-        </section>
-
-        <section className={sectionClassName}>
-          <h2 className="text-xl font-black text-[var(--svs-text)]">Delivery</h2>
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
-            <label className="md:col-span-2">
-              <span className={fieldLabelClassName}>Country/Region</span>
-              <select value={formState.country} onChange={(event) => updateField('country', event.target.value)} className={inputClassName}>
-                <option>South Africa</option>
-              </select>
-            </label>
-            <label>
-              <span className={fieldLabelClassName}>First name</span>
-              <input type="text" value={formState.firstName} onChange={(event) => updateField('firstName', event.target.value)} className={inputClassName} />
-            </label>
-            <label>
-              <span className={fieldLabelClassName}>Last name</span>
-              <input type="text" value={formState.lastName} onChange={(event) => updateField('lastName', event.target.value)} className={inputClassName} />
-            </label>
-            <label className="md:col-span-2">
-              <span className={fieldLabelClassName}>Company (optional)</span>
-              <input type="text" value={formState.company} onChange={(event) => updateField('company', event.target.value)} className={inputClassName} />
-            </label>
-            <label className="md:col-span-2">
-              <span className={fieldLabelClassName}>Address</span>
-              <input type="text" value={formState.address1} onChange={(event) => updateField('address1', event.target.value)} className={inputClassName} />
-            </label>
-            <label className="md:col-span-2">
-              <span className={fieldLabelClassName}>Apartment, suite, etc. (optional)</span>
-              <input type="text" value={formState.address2} onChange={(event) => updateField('address2', event.target.value)} className={inputClassName} />
-            </label>
-            <label>
-              <span className={fieldLabelClassName}>City</span>
-              <input type="text" value={formState.city} onChange={(event) => updateField('city', event.target.value)} className={inputClassName} />
-            </label>
-            <label>
-              <span className={fieldLabelClassName}>Province</span>
-              <select value={formState.province} onChange={(event) => updateField('province', event.target.value)} className={inputClassName}>
-                {SOUTH_AFRICA_PROVINCES.map((province) => <option key={province}>{province}</option>)}
-              </select>
-            </label>
-            <label>
-              <span className={fieldLabelClassName}>Postal code</span>
-              <input type="text" value={formState.postalCode} onChange={(event) => updateField('postalCode', event.target.value)} className={inputClassName} />
-            </label>
-            <label>
-              <span className={fieldLabelClassName}>Phone</span>
-              <div className="grid grid-cols-[108px_minmax(0,1fr)] gap-2">
-                <select value={formState.phoneCountryCode} onChange={(event) => updateField('phoneCountryCode', event.target.value)} className={inputClassName}>
-                  <option value="+27">ðŸ‡¿ðŸ‡¦ +27</option>
-                </select>
-                <input
-                  type="tel"
-                  value={formState.phone}
-                  onChange={(event) => updateField('phone', event.target.value)}
-                  className={`w-full rounded-xl px-4 py-3 text-sm text-[var(--svs-text)] outline-none transition focus:ring-2 ${isPhoneMissing ? 'border border-[#e46b6b] bg-[#fff6f6] focus:border-[#d94d4d] focus:ring-[#ffd9d9]' : 'border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] focus:border-[var(--svs-primary)] focus:ring-[#33b9f2]/20'}`}
-                />
-              </div>
-              {isPhoneMissing ? (
-                <p className="mt-2 text-xs font-medium text-[#d94d4d]">Enter a phone number to use this delivery method</p>
-              ) : null}
-            </label>
-          </div>
-        </section>
-
-        <section className={sectionClassName}>
-          <h2 className="text-xl font-black text-[var(--svs-text)]">Shipping Method</h2>
-          <div className="mt-5 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-4">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-semibold text-[var(--svs-text)]">{shippingMethodLabel}</p>
-                <p className="mt-1 text-xs text-[var(--svs-muted)]">South Africa delivery</p>
-              </div>
-              <p className="text-sm font-semibold text-[var(--svs-text)]">{formatCheckoutAmount(shippingFee)}</p>
-            </div>
-          </div>
-        </section>
-
-        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-          <button type="button" onClick={() => setCurrentStep(1)} className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 py-3 text-sm font-bold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]">
-            Back to Items
-          </button>
-          <button type="button" onClick={handleContinueToPayment} className={`${cudyBluePrimaryButtonClassName} rounded-xl bg-[var(--svs-primary)] px-5 py-3 text-sm font-bold text-white`}>
-            Continue to Payment
-          </button>
-        </div>
-      </>
-    );
-  } else {
-    activeStepContent = (
-      <>
-        <section className={sectionClassName}>
-          <h2 className="text-xl font-black text-[var(--svs-text)]">Payment</h2>
-          <div className="mt-5 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-[var(--svs-text)]">Payfast</p>
-                <p className="mt-1 text-xs text-[var(--svs-muted)]">You'll be redirected to Payfast to complete your purchase.</p>
-              </div>
-              <div className="flex flex-wrap gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--svs-muted)]">
-                <span className="rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2.5 py-1">Visa</span>
-                <span className="rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2.5 py-1">Mastercard</span>
-                <span className="rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2.5 py-1">EFT</span>
-              </div>
-            </div>
-            <div className="mt-4 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-4 text-sm text-[var(--svs-text)]">
-              <p className="font-semibold text-[var(--svs-text)]">Payment method</p>
-              <div className="mt-3 space-y-2">
-                {PAYFAST_METHOD_OPTIONS.map((option) => {
-                  const isSelected = formState.paymentMethod === option.value;
-
-                  return (
-                    <label key={option.value} className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm transition ${isSelected ? 'border-[var(--svs-primary)] bg-[var(--svs-cyan-surface)] text-[var(--svs-text)]' : 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)] text-[var(--svs-text)]'}`}>
-                      <span className="flex items-center gap-3">
-                        <input type="radio" name="payment-method" checked={isSelected} onChange={() => updateField('paymentMethod', option.value)} />
-                        <span className="font-medium">{option.label}</span>
-                      </span>
-                      {isSelected ? <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#1a73e8]">Default</span> : null}
-                    </label>
-                  );
-                })}
-              </div>
-              <p className="mt-4 text-sm text-[#4d463d]">Additional payment methods may be available on Payfast.</p>
-            </div>
-          </div>
-        </section>
-
-        <section className={sectionClassName}>
-          <h2 className="text-xl font-black text-[var(--svs-text)]">Billing Address</h2>
-          <div className="mt-5 space-y-3">
-            <label className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium ${formState.billingAddressMode === 'same' ? 'border-[var(--svs-primary)] bg-[var(--svs-cyan-surface)] text-[var(--svs-text)]' : 'border-[var(--svs-border)] bg-[var(--svs-surface)] text-[var(--svs-text)]'}`}>
-              <input type="radio" name="billing-address-mode" checked={formState.billingAddressMode === 'same'} onChange={() => updateField('billingAddressMode', 'same')} />
-              <span>Same as shipping address</span>
-            </label>
-            <label className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium ${formState.billingAddressMode === 'different' ? 'border-[var(--svs-primary)] bg-[var(--svs-cyan-surface)] text-[var(--svs-text)]' : 'border-[var(--svs-border)] bg-[var(--svs-surface)] text-[var(--svs-text)]'}`}>
-              <input type="radio" name="billing-address-mode" checked={formState.billingAddressMode === 'different'} onChange={() => updateField('billingAddressMode', 'different')} />
-              <span>Use a different billing address</span>
-            </label>
-          </div>
-
-          {formState.billingAddressMode === 'different' ? (
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <input type="text" value={formState.billingFirstName} onChange={(event) => updateField('billingFirstName', event.target.value)} placeholder="Billing first name" className={inputClassName} />
-              <input type="text" value={formState.billingLastName} onChange={(event) => updateField('billingLastName', event.target.value)} placeholder="Billing last name" className={inputClassName} />
-              <input type="text" value={formState.billingCompany} onChange={(event) => updateField('billingCompany', event.target.value)} placeholder="Billing company (optional)" className={`md:col-span-2 ${inputClassName}`} />
-              <input type="text" value={formState.billingAddress1} onChange={(event) => updateField('billingAddress1', event.target.value)} placeholder="Billing address" className={`md:col-span-2 ${inputClassName}`} />
-              <input type="text" value={formState.billingAddress2} onChange={(event) => updateField('billingAddress2', event.target.value)} placeholder="Apartment, suite, etc. (optional)" className={`md:col-span-2 ${inputClassName}`} />
-              <input type="text" value={formState.billingCity} onChange={(event) => updateField('billingCity', event.target.value)} placeholder="Billing city" className={inputClassName} />
-              <select value={formState.billingProvince} onChange={(event) => updateField('billingProvince', event.target.value)} className={inputClassName}>
-                {SOUTH_AFRICA_PROVINCES.map((province) => <option key={province}>{province}</option>)}
-              </select>
-              <input type="text" value={formState.billingPostalCode} onChange={(event) => updateField('billingPostalCode', event.target.value)} placeholder="Billing postal code" className={inputClassName} />
-            </div>
-          ) : null}
-        </section>
-
-        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-          <button type="button" onClick={() => setCurrentStep(2)} className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 py-3 text-sm font-bold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]">
-            Back to Delivery
-          </button>
-          <button type="submit" disabled={isSubmitting} className={`${cudyBluePrimaryButtonClassName} rounded-xl bg-[var(--svs-primary)] px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-70`}>
-            {isSubmitting ? 'Processing...' : 'Pay now'}
-          </button>
-        </div>
-      </>
-    );
-  }
-
-  return (
-    <MinimalCheckoutShell
-      title="Checkout"
-      badge={isBuyNowMode ? <div className="rounded-full bg-[#111111] px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-white">Buy it now</div> : null}
-    >
-        {!checkoutItems.length ? (
-          <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 text-sm text-[var(--svs-text)] shadow-sm md:p-8">
-            <p>Your checkout is empty. Add products or tickets from any market to continue.</p>
-            <Link to="/markets" className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex rounded-xl bg-[var(--svs-primary)] px-4 py-3 text-sm font-bold text-white`}>
-              Browse Markets
-            </Link>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_390px]">
-            <section className="mx-auto w-full max-w-3xl space-y-5 xl:mx-0 xl:max-w-none">
-              <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 shadow-sm md:p-8">
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div>
-                    <h2 className="text-2xl font-black text-[var(--svs-text)]">Checkout</h2>
-                    <p className="mt-2 text-sm text-[var(--svs-muted)]">Review your items, delivery details, and payment method.</p>
-                  </div>
-                  <div className="inline-flex flex-wrap rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-1 text-sm font-semibold">
-                    {checkoutSteps.map((step) => {
-                      const isActive = currentStep === step.id;
-                      const isComplete = currentStep > step.id;
-
-                      return (
-                        <button
-                          key={step.id}
-                          type="button"
-                          onClick={() => {
-                            if (step.id <= currentStep) {
-                              setSubmitError('');
-                              setCurrentStep(step.id);
-                            }
-                          }}
-                          className={`rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] transition ${isActive ? 'bg-[var(--svs-primary)] text-white' : isComplete ? 'text-[var(--svs-primary)]' : 'text-[var(--svs-muted)]'}`}
-                        >
-                          {step.id}. {step.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </section>
-              {activeStepContent}
-            </section>
-
-            <aside className="hidden self-start rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 shadow-sm md:p-8 lg:sticky lg:top-24 xl:block">
-              {isBuyNowMode ? (
-                <div className="mb-5 rounded-[24px] bg-[#111111] px-4 py-4 text-white">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">Buy it now</p>
-                  <p className="mt-2 text-sm text-slate-200">Express guest checkout for this single item.</p>
-                </div>
-              ) : null}
-
-              <h2 className="text-xl font-black text-[var(--svs-text)]">Order Summary</h2>
-              <div className="mt-5 space-y-4">
-                {checkoutItems.map((item) => (
-                  <div key={`summary-${item.id}`} className="flex items-center gap-3 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3">
-                    <img src={item.image} alt={item.title} className="h-16 w-16 rounded-2xl object-cover" loading="lazy" />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold text-[var(--svs-text)]">{item.title}</p>
-                      <p className="mt-1 text-xs text-[var(--svs-muted)]">{item.quantity} item{item.quantity === 1 ? '' : 's'}</p>
-                    </div>
-                    <p className="text-sm font-semibold text-[var(--svs-text)]">{formatCheckoutAmount(item.unitPrice * item.quantity)}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-6 space-y-3 text-sm text-[var(--svs-muted)]">
-                <div className="flex items-center justify-between"><span>Subtotal</span><span>{formatCheckoutAmount(totals.subtotal)}</span></div>
-                <div className="flex items-center justify-between"><span>Shipping</span><span>{formatCheckoutAmount(totals.shippingFee)}</span></div>
-                <div className="flex items-center justify-between"><span>Platform fee</span><span>{formatCheckoutAmount(totals.serviceFee)}</span></div>
-                <div className="flex items-center justify-between border-t border-[var(--svs-border)] pt-4 text-base font-bold text-[var(--svs-text)]"><span>Total</span><span>{formatCheckoutAmount(totals.total)}</span></div>
-              </div>
-
-            </aside>
-          </form>
-        )}
-    </MinimalCheckoutShell>
-  );
-};
-
-const StripeCardPaymentPanel = ({
-  payfastSession,
-  paymentMethodLabel,
-  onReturnToCheckout,
-  onFinalizeOrder,
-}) => {
+const StripePaymentForm = ({ onStripeContextChange }) => {
   const stripe = useStripe();
   const elements = useElements();
-  const [submitError, setSubmitError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleStripeSubmit = async () => {
-    setSubmitError('');
-    setIsSubmitting(true);
-
-    try {
-      const paymentDetails = await startCardPayment({
-        amount: payfastSession.totals.total,
-        email: payfastSession.contactEmail,
-        fullName: payfastSession.customer.fullName,
-        phone: payfastSession.customer.phone,
-        itemCount: payfastSession.checkoutOptions?.items?.length || 0,
-        stripe,
-        confirmPayment: {
-          elements,
-          confirmPayment: stripe?.confirmPayment.bind(stripe),
-        },
-        returnUrl: `${typeof window !== 'undefined' ? window.location.origin : ''}/orders`,
-        redirect: 'if_required',
-      });
-
-      const completed = await onFinalizeOrder(paymentDetails, paymentMethodLabel);
-
-      if (!completed) {
-        setSubmitError('One or more items are no longer available in the requested quantity. Return to checkout and review your order.');
-      }
-    } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Card payment failed. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  useEffect(() => {
+    onStripeContextChange({ stripe, elements });
+  }, [stripe, elements, onStripeContextChange]);
 
   return (
-    <>
-      <div className="rounded-[24px] border border-[#e2dbd0] bg-[#fbfaf7] p-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8a7967]">Card payment</p>
-        <p className="mt-2 text-sm text-[#4d463d]">Your card payment is processed securely with Stripe using the existing payment integration.</p>
-        <div className="mt-4 rounded-[20px] border border-[#e2dbd0] bg-white p-4">
-          <PaymentElement options={{ layout: 'tabs' }} />
-        </div>
-      </div>
-
-      {submitError ? (
-        <div className="rounded-2xl border border-[#f1b8b8] bg-[#fff4f4] px-4 py-3 text-sm text-[#c74d4d]">
-          {submitError}
-        </div>
-      ) : null}
-
-      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <button type="button" onClick={onReturnToCheckout} className="rounded-2xl border border-[#d9d1c6] bg-white px-5 py-3 text-sm font-semibold text-[#4d463d] transition hover:border-[#1f1f1f] hover:text-[#1f1f1f]">
-          Cancel Payment
-        </button>
-        <button type="button" disabled={isSubmitting || !stripe || !elements} onClick={handleStripeSubmit} className={`${cudyBluePrimaryButtonClassName} rounded-2xl bg-[#1a73e8] px-6 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70`}>
-          {isSubmitting ? 'Processing payment...' : `Pay ${formatCheckoutAmount(payfastSession.totals.total)}`}
-        </button>
-      </div>
-    </>
+    <div>
+      <PaymentElement />
+    </div>
   );
 };
 
-const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowCheckout }) => {
-  const location = useLocation();
+const CheckoutPage = ({ cartItems, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder }) => {
   const navigate = useNavigate();
-  const routeSession = location.state?.payfastSession || null;
-  const [payfastSession, setPayfastSession] = useState(() => routeSession || readPendingPayfastSession());
-  const [selectedMethod, setSelectedMethod] = useState(() => {
-    const storedLabel = (routeSession || readPendingPayfastSession())?.customer?.paymentMethod || PAYFAST_METHOD_OPTIONS[0].label;
-    return PAYFAST_METHOD_OPTIONS.find((option) => option.label === storedLabel)?.value || PAYFAST_METHOD_OPTIONS[0].value;
-  });
-  const [submitError, setSubmitError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [stripeClientSecret, setStripeClientSecret] = useState('');
-  const [isPreparingStripe, setIsPreparingStripe] = useState(false);
-  const [stripeSetupError, setStripeSetupError] = useState('');
-  const stripePromise = useMemo(() => getStripeInstance(), []);
-  const isBuyNowMode = payfastSession?.mode === 'buy-now' && buyNowCheckout?.items?.length;
-  const selectedMethodLabel = PAYFAST_METHOD_OPTIONS.find((option) => option.value === selectedMethod)?.label || PAYFAST_METHOD_OPTIONS[0].label;
-  const isCardPaymentMethod = selectedMethod === CARD_PAYMENT_METHOD_VALUE;
-
-  useEffect(() => {
-    if (routeSession) {
-      setPayfastSession(routeSession);
-      setSelectedMethod(PAYFAST_METHOD_OPTIONS.find((option) => option.label === routeSession.customer?.paymentMethod)?.value || PAYFAST_METHOD_OPTIONS[0].value);
-      writePendingPayfastSession(routeSession);
-    }
-  }, [routeSession]);
-
-  useEffect(() => {
-    if (!payfastSession || !isCardPaymentMethod) {
-      setStripeClientSecret('');
-      setStripeSetupError('');
-      setIsPreparingStripe(false);
-      return;
-    }
-
-    if (!embeddedCardCheckoutEnabled) {
-      setStripeClientSecret('');
-      setStripeSetupError('Stripe card payments are unavailable. Add REACT_APP_STRIPE_PUBLIC_KEY and STRIPE_SECRET_KEY to continue.');
-      setIsPreparingStripe(false);
-      return;
-    }
-
-    let cancelled = false;
-    setIsPreparingStripe(true);
-    setStripeSetupError('');
-    setStripeClientSecret('');
-
-    requestStripeClientSecret({
-      amount: payfastSession.totals.total,
-      currency: stripeCurrency,
-      email: payfastSession.contactEmail,
-      fullName: payfastSession.customer.fullName,
-    }).then((clientSecret) => {
-      if (!cancelled) {
-        setStripeClientSecret(clientSecret);
-      }
-    }).catch((error) => {
-      if (!cancelled) {
-        setStripeSetupError(error instanceof Error ? error.message : 'Could not initialize Stripe card payment.');
-      }
-    }).finally(() => {
-      if (!cancelled) {
-        setIsPreparingStripe(false);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isCardPaymentMethod, payfastSession]);
-
-  if (!payfastSession) {
-    return (
-      <MinimalCheckoutShell title="Payfast">
-        <div className="rounded-[28px] border border-[#ddd5c8] bg-white p-6 shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
-          <p className="text-sm text-[#4d463d]">Your payment session expired. Return to checkout and start again.</p>
-          <button type="button" onClick={() => navigate('/checkout')} className={`${cudyBluePrimaryButtonClassName} mt-4 rounded-2xl bg-[#1a73e8] px-4 py-2.5 text-sm font-semibold text-white`}>
-            Return to checkout
-          </button>
-        </div>
-      </MinimalCheckoutShell>
-    );
-  }
-
-  const handleReturnToCheckout = () => {
-    navigate('/checkout', {
-      state: {
-        checkoutMode: payfastSession.checkoutMode === 'buy-now' ? 'buy-now' : undefined,
-        prefillCheckout: payfastSession.prefillCheckout,
-      },
-    });
-  };
-
-  const handleCompletePayment = async () => {
-    setIsSubmitting(true);
-    setSubmitError('');
-
-    const order = await onPlaceOrder(
-      {
-        ...payfastSession.customer,
-        paymentMethod: selectedMethodLabel,
-      },
-      {
-        provider: 'Payfast',
-        status: 'paid',
-        reference: `PF-${Date.now()}`,
-        currency: 'ZAR',
-      },
-      payfastSession.checkoutOptions,
-    );
-
-    if (!order) {
-      setIsSubmitting(false);
-      setSubmitError('One or more items are no longer available in the requested quantity. Return to checkout and review your order.');
-      return;
-    }
-
-    clearPendingPayfastSession();
-
-    if (isBuyNowMode) {
-      onClearBuyNowCheckout?.();
-    }
-
-    setIsSubmitting(false);
-    navigate('/orders', {
-      state: {
-        orderId: order.id,
-        reference: order.reference,
-        guestCheckout: !getAuthState(),
-      },
-    });
-  };
-
-  const handleFinalizeStripeOrder = async (paymentDetails, paymentMethodLabel) => {
-    const order = await onPlaceOrder(
-      {
-        ...payfastSession.customer,
-        paymentMethod: paymentMethodLabel,
-      },
-      paymentDetails,
-      payfastSession.checkoutOptions,
-    );
-
-    if (!order) {
+  const cardPaymentsEnabled = embeddedCardCheckoutEnabled;
+  const stripeInstance = useMemo(() => {
+    if (!cardPaymentsEnabled) {
       return null;
     }
 
-    clearPendingPayfastSession();
-
-    if (isBuyNowMode) {
-      onClearBuyNowCheckout?.();
+    if (!stripePromise) {
+      stripePromise = getStripeInstance();
     }
 
-    navigate('/orders', {
-      state: {
-        orderId: order.id,
-        reference: order.reference,
-        guestCheckout: !getAuthState(),
-      },
-    });
+    return stripePromise;
+  }, [cardPaymentsEnabled]);
+  const [formState, setFormState] = useState({
+    fullName: '',
+    email: typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''),
+    phone: '',
+    address: '',
+    paymentMethod: cardPaymentsEnabled ? 'Card' : 'Cash on Delivery',
+    notes: '',
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [clientSecret, setClientSecret] = useState('');
+  const [stripeContext, setStripeContext] = useState({ stripe: null, elements: null });
+  const stripeElementsOptions = useMemo(() => ({ clientSecret }), [clientSecret]);
+  const totals = useMemo(() => getCartTotals(cartItems), [cartItems]);
+  const handleStripeContextChange = useCallback((nextContext) => {
+    setStripeContext(nextContext);
+  }, []);
 
-    return order;
+  useEffect(() => {
+    if (formState.paymentMethod === 'Card' && cardPaymentsEnabled && !clientSecret) {
+      const initializePayment = async () => {
+        try {
+          const response = await fetch('/api/payment-intent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              amount: Math.round(totals.total * 100),
+              currency: stripeCurrency,
+              email: formState.email,
+              fullName: formState.fullName,
+            }),
+          });
+          
+          if (!response.ok) {
+            throw new Error('Failed to initialize payment. Payment API may be unavailable.');
+          }
+
+          const { clientSecret: secret } = await response.json();
+          setClientSecret(secret || '');
+        } catch (error) {
+          setSubmitError(error instanceof Error ? error.message : 'Payment initialization failed.');
+        }
+      };
+
+      initializePayment();
+    }
+  }, [formState.paymentMethod, cardPaymentsEnabled, formState.email, formState.fullName, totals.total, clientSecret]);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setSubmitError('');
+
+    if (!formState.fullName || !formState.email || !formState.phone || !formState.address || !cartItems.length) {
+      setSubmitError('Please complete your customer details before placing the order.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    let paymentDetails = {
+      provider: formState.paymentMethod,
+      status: formState.paymentMethod === 'Card' ? 'pending' : 'pending-offline',
+      reference: '',
+      currency: stripeCurrency,
+    };
+
+    if (formState.paymentMethod === 'Card') {
+      if (!clientSecret) {
+        setIsSubmitting(false);
+        setSubmitError('Payment form is still loading. Please wait a moment and try again.');
+        return;
+      }
+
+      if (!stripeContext.stripe || !stripeContext.elements) {
+        setIsSubmitting(false);
+        setSubmitError('Secure card form is not ready yet. Please wait a moment and try again.');
+        return;
+      }
+
+      const { error, paymentIntent } = await stripeContext.stripe.confirmPayment({
+        elements: stripeContext.elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/orders`,
+        },
+        redirect: 'if_required',
+      });
+
+      if (error) {
+        setIsSubmitting(false);
+        setSubmitError(error.message || 'Card payment failed. Please check your details and try again.');
+        return;
+      }
+
+      if (!paymentIntent || (paymentIntent.status !== 'succeeded' && paymentIntent.status !== 'processing')) {
+        setIsSubmitting(false);
+        setSubmitError('Payment was not completed. Please try again.');
+        return;
+      }
+
+      paymentDetails = {
+        provider: 'Stripe',
+        status: paymentIntent.status === 'succeeded' ? 'paid' : 'processing',
+        reference: paymentIntent.id,
+        currency: stripeCurrency,
+      };
+
+      setSubmitError('');
+    }
+
+    const order = await onPlaceOrder(formState, paymentDetails);
+
+    if (!order) {
+      setIsSubmitting(false);
+      setSubmitError('One or more items are no longer available in the requested quantity. Update your cart and try again.');
+      return;
+    }
+
+    setIsSubmitting(false);
+    navigate('/orders', { state: { orderId: order.id } });
   };
 
   return (
-    <MinimalCheckoutShell
-      title="Payment"
-      badge={<div className="rounded-full border border-[#d9d1c6] bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#6b6258]">Secure checkout</div>}
-    >
-      <div className="mx-auto max-w-3xl rounded-[32px] border border-[#ddd5c8] bg-white p-6 shadow-[0_22px_50px_rgba(15,23,42,0.08)] sm:p-8">
-        <div className="space-y-6">
-          <div className="rounded-[24px] bg-[#f7f3ec] p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8a7967]">Order from:</p>
-            <p className="mt-2 text-2xl font-bold text-[#1f1f1f]">SVS E-Commerce</p>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-[24px] border border-[#e2dbd0] bg-[#fbfaf7] p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8a7967]">Payment total:</p>
-              <p className="mt-2 text-2xl font-bold text-[#1f1f1f]">ZAR {formatCheckoutAmount(payfastSession.totals.total)}</p>
-            </div>
-            <div className="rounded-[24px] border border-[#e2dbd0] bg-[#fbfaf7] p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8a7967]">Transacting as:</p>
-              <div className="mt-2 flex items-center gap-2 text-sm text-[#1f1f1f]">
-                <span className="font-semibold">{payfastSession.contactEmail}</span>
-                <button type="button" onClick={handleReturnToCheckout} className="font-semibold text-[#1a73e8] underline">
-                  Change
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <h2 className="text-2xl font-bold text-[#1f1f1f]">How will you be paying today?</h2>
-            <div className="mt-5 space-y-3">
-              {PAYFAST_METHOD_OPTIONS.map((option) => {
-                const isSelected = selectedMethod === option.value;
-
-                return (
-                  <label key={option.value} className={`flex cursor-pointer items-center justify-between gap-4 rounded-[22px] border px-5 py-4 text-sm transition ${isSelected ? 'border-[#1f1f1f] bg-[#fffdfa]' : 'border-[#e2dbd0] bg-[#fbfaf7]'}`}>
-                    <span className="flex items-center gap-3">
-                      <input type="radio" name="payfast-method" checked={isSelected} onChange={() => setSelectedMethod(option.value)} />
-                      <span className="font-semibold text-[#1f1f1f]">{option.label}</span>
-                    </span>
-                    {isSelected ? <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#1a73e8]">{option.value === CARD_PAYMENT_METHOD_VALUE ? 'Default' : 'Selected'}</span> : null}
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-
-          {stripeSetupError ? (
-            <div className="rounded-2xl border border-[#f1b8b8] bg-[#fff4f4] px-4 py-3 text-sm text-[#c74d4d]">
-              {stripeSetupError}
-            </div>
-          ) : null}
-
-          {!isCardPaymentMethod && submitError ? (
-            <div className="rounded-2xl border border-[#f1b8b8] bg-[#fff4f4] px-4 py-3 text-sm text-[#c74d4d]">
-              {submitError}
-            </div>
-          ) : null}
-
-          {isCardPaymentMethod ? (
-            isPreparingStripe ? (
-              <div className="rounded-2xl border border-[#e2dbd0] bg-[#fbfaf7] px-5 py-4 text-sm text-[#4d463d]">
-                Preparing secure Stripe card payment...
-              </div>
-            ) : stripeClientSecret ? (
-              <Elements stripe={stripePromise} options={{ clientSecret: stripeClientSecret }}>
-                <StripeCardPaymentPanel
-                  payfastSession={payfastSession}
-                  paymentMethodLabel={selectedMethodLabel}
-                  onReturnToCheckout={handleReturnToCheckout}
-                  onFinalizeOrder={handleFinalizeStripeOrder}
-                />
-              </Elements>
-            ) : null
-          ) : (
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <button type="button" onClick={handleReturnToCheckout} className="rounded-2xl border border-[#d9d1c6] bg-white px-5 py-3 text-sm font-semibold text-[#4d463d] transition hover:border-[#1f1f1f] hover:text-[#1f1f1f]">
-                Cancel Payment
-              </button>
-              <button type="button" disabled={isSubmitting} onClick={handleCompletePayment} className={`${cudyBluePrimaryButtonClassName} rounded-2xl bg-[#1a73e8] px-6 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70`}>
-                {isSubmitting ? 'Processing payment...' : `Pay ${formatCheckoutAmount(payfastSession.totals.total)}`}
-              </button>
-            </div>
-          )}
+    <PageFrame title="Checkout" subtitle="Review your cart, confirm your details, and place your order.">
+      {!cartItems.length ? (
+        <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 text-sm text-[var(--svs-text)]">
+          <p>Your cart is empty. Add products or tickets from any market to continue.</p>
+          <Link to="/markets" className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
+            Browse Markets
+          </Link>
         </div>
-      </div>
-    </MinimalCheckoutShell>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-[1.4fr_0.9fr]">
+          <section className="space-y-4">
+            {cartItems.map((item) => (
+              <article key={item.id} className="flex gap-4 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
+                <img src={item.image} alt={item.title} className="h-24 w-24 rounded-lg object-cover" loading="lazy" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-lg font-bold text-[var(--svs-text)]">{item.title}</h3>
+                      <p className="mt-1 text-sm text-[var(--svs-muted)]">{item.marketName}</p>
+                      {item.details ? <p className="mt-1 text-sm text-[var(--svs-muted)]">{item.details}</p> : null}
+                    </div>
+                    <p className="text-sm font-semibold text-[var(--svs-primary-strong)]">{item.unitPriceLabel}</p>
+                  </div>
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                    <div className="inline-flex items-center overflow-hidden rounded-lg border border-[var(--svs-border)]">
+                      <button type="button" onClick={() => onUpdateCartQuantity(item.id, -1)} className="px-3 py-2 text-sm font-semibold text-[var(--svs-text)]">-</button>
+                      <span className="min-w-10 border-x border-[var(--svs-border)] px-3 py-2 text-center text-sm font-semibold text-[var(--svs-text)]">{item.quantity}</span>
+                      <button type="button" onClick={() => onUpdateCartQuantity(item.id, 1)} className="px-3 py-2 text-sm font-semibold text-[var(--svs-text)]">+</button>
+                    </div>
+                    <button type="button" onClick={() => onRemoveCartItem(item.id)} className="text-sm font-semibold text-rose-600 transition hover:text-rose-500">
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </section>
+
+          <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
+            <h2 className="text-xl font-bold text-[var(--svs-text)]">Order Summary</h2>
+            <div className="mt-4 space-y-2 text-sm text-[var(--svs-muted)]">
+              <div className="flex items-center justify-between"><span>Items</span><span>{getCartCount(cartItems)}</span></div>
+              <div className="flex items-center justify-between"><span>Subtotal</span><span>{formatCheckoutAmount(totals.subtotal)}</span></div>
+              <div className="flex items-center justify-between"><span>Service fee</span><span>{formatCheckoutAmount(totals.serviceFee)}</span></div>
+              <div className="flex items-center justify-between border-t border-[var(--svs-border)] pt-3 text-base font-bold text-[var(--svs-text)]"><span>Total</span><span>{formatCheckoutAmount(totals.total)}</span></div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="mt-5 space-y-3">
+              <input
+                type="text"
+                value={formState.fullName}
+                onChange={(event) => setFormState((current) => ({ ...current, fullName: event.target.value }))}
+                placeholder="Full name"
+                className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
+              />
+              <input
+                type="email"
+                value={formState.email}
+                onChange={(event) => setFormState((current) => ({ ...current, email: event.target.value }))}
+                placeholder="Email address"
+                className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
+              />
+              <input
+                type="tel"
+                value={formState.phone}
+                onChange={(event) => setFormState((current) => ({ ...current, phone: event.target.value }))}
+                placeholder="Phone number"
+                className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
+              />
+              <textarea
+                value={formState.address}
+                onChange={(event) => setFormState((current) => ({ ...current, address: event.target.value }))}
+                placeholder="Delivery address or booking notes"
+                rows={3}
+                className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
+              />
+              <div className="relative">
+                <select
+                  value={formState.paymentMethod}
+                  onChange={(event) => setFormState((current) => ({ ...current, paymentMethod: event.target.value }))}
+                  className={`${languageFeatureSelectClassName} pr-10`}
+                >
+                  <option value="Card" disabled={!cardPaymentsEnabled}>Card {cardPaymentsEnabled ? '' : '(Unavailable)'}</option>
+                  <option>Cash on Delivery</option>
+                  <option>Bank Transfer</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
+              </div>
+
+              {formState.paymentMethod === 'Card' && clientSecret && (
+                <div className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4">
+                  <Elements stripe={stripeInstance} options={stripeElementsOptions}>
+                    <StripePaymentForm onStripeContextChange={handleStripeContextChange} />
+                  </Elements>
+                </div>
+              )}
+              <textarea
+                value={formState.notes}
+                onChange={(event) => setFormState((current) => ({ ...current, notes: event.target.value }))}
+                placeholder="Additional notes"
+                rows={2}
+                className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
+              />
+              {submitError ? (
+                <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                  {submitError}
+                </div>
+              ) : null}
+              <button type="submit" disabled={isSubmitting || (formState.paymentMethod === 'Card' && !clientSecret)} className={`${cudyBluePrimaryButtonClassName} w-full rounded-lg bg-[var(--svs-primary)] px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70`}>
+                {isSubmitting ? 'Processing...' : (formState.paymentMethod === 'Card' ? 'Pay Now' : 'Place Order')}
+              </button>
+            </form>
+          </section>
+        </div>
+      )}
+    </PageFrame>
   );
 };
 
 const OrdersPage = ({ orders, cartItems, onCancelOrder }) => {
   const { t } = useTranslation();
-  const location = useLocation();
   const [cancellingOrderId, setCancellingOrderId] = useState('');
   const [cancelError, setCancelError] = useState('');
 
@@ -5744,11 +4597,6 @@ const OrdersPage = ({ orders, cartItems, onCancelOrder }) => {
       </div>
     ) : (
       <div className="space-y-4">
-        {location.state?.reference ? (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            Order {location.state.reference} was placed successfully.{location.state.guestCheckout ? ' Guest checkout details were captured for this purchase.' : ''}
-          </div>
-        ) : null}
         {cancelError ? (
           <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{cancelError}</div>
         ) : null}
@@ -5764,7 +4612,7 @@ const OrdersPage = ({ orders, cartItems, onCancelOrder }) => {
               <div>
                 <h3 className="text-xl font-bold text-[var(--svs-text)]">Order {order.reference}</h3>
                 <p className="mt-1 text-sm text-[var(--svs-muted)]">Placed on {formatDate(order.createdAt)}</p>
-                <p className="mt-1 text-sm text-[var(--svs-muted)]">{order.customer.fullName} â€¢ {order.customer.email || order.customer.contact || order.customer.phone || 'Guest checkout'}</p>
+                <p className="mt-1 text-sm text-[var(--svs-muted)]">{order.customer.fullName} GÇó {order.customer.email}</p>
               </div>
               <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getStatusClasses(order.status)}`}>
                 {order.status}
@@ -5804,7 +4652,7 @@ const OrdersPage = ({ orders, cartItems, onCancelOrder }) => {
                   <div className="flex items-center justify-between"><span>Payment status</span><span className="capitalize">{order.paymentStatus || 'pending'}</span></div>
                   {order.paymentReference ? <div className="flex items-center justify-between"><span>Reference</span><span>{order.paymentReference}</span></div> : null}
                   <div className="flex items-center justify-between"><span>Subtotal</span><span>{formatCheckoutAmount(order.subtotal)}</span></div>
-                  <div className="flex items-center justify-between"><span>Delivery & fees</span><span>{formatCheckoutAmount(order.serviceFee)}</span></div>
+                  <div className="flex items-center justify-between"><span>Service fee</span><span>{formatCheckoutAmount(order.serviceFee)}</span></div>
                   <div className="flex items-center justify-between border-t border-[var(--svs-border)] pt-3 text-base font-bold text-[var(--svs-text)]"><span>Total</span><span>{formatCheckoutAmount(order.total)}</span></div>
                 </div>
                 <div className="mt-4 border-t border-[var(--svs-border)] pt-3">
@@ -5855,7 +4703,6 @@ const ItemDetailsModal = ({
   item,
   onClose,
   onAddToCart,
-  onBuyNow,
   onToggleWishlist,
   isWishlisted = false,
   reviews = [],
@@ -6098,24 +4945,14 @@ const ItemDetailsModal = ({
             ) : null}
             <div className="mt-5 flex flex-wrap gap-2">
               {item.cartItem ? (
-                <>
-                  <button
-                    type="button"
-                    disabled={isOutOfStock}
-                    onClick={() => onAddToCart(item.cartItem)}
-                    className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-400`}
-                  >
-                    {isOutOfStock ? 'Out of stock' : 'Add to cart'}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={isOutOfStock}
-                    onClick={() => onBuyNow?.(item.cartItem)}
-                    className="rounded-md bg-[#111111] px-4 py-2 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-slate-400"
-                  >
-                    {isOutOfStock ? 'Out of stock' : 'Buy it now'}
-                  </button>
-                </>
+                <button
+                  type="button"
+                  disabled={isOutOfStock}
+                  onClick={() => onAddToCart(item.cartItem)}
+                  className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-400`}
+                >
+                  {isOutOfStock ? 'Out of stock' : 'Add to cart'}
+                </button>
               ) : null}
               {item.wishlistItem ? (
                 <button
@@ -6143,7 +4980,7 @@ const ItemDetailsModal = ({
                     ))}
                   </div>
                   <span className="text-sm font-semibold text-[var(--svs-text)]">
-                    {averageRating ? `${averageRating} Â· ` : ''}
+                    {averageRating ? `${averageRating} -+ ` : ''}
                     {reviews.length ? `${reviews.length} review${reviews.length === 1 ? '' : 's'}` : 'No reviews yet'}
                   </span>
                 </div>
@@ -6249,7 +5086,7 @@ const ItemDetailsModal = ({
   );
 };
 
-const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer, onPrimaryAction, onBuyNowAction, onToggleWishlist, isItemWishlisted, onOpenItemDetails }) => {
+const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer, onPrimaryAction, onToggleWishlist, isItemWishlisted, onOpenItemDetails }) => {
   const { t } = useTranslation();
 
   return (
@@ -6312,19 +5149,6 @@ const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer, onPr
                 >
                   {isOutOfStock ? 'Out of stock' : buttonLabel}
                 </button>
-                {onBuyNowAction ? (
-                  <button
-                    type="button"
-                    disabled={isOutOfStock}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onBuyNowAction(item);
-                    }}
-                    className="rounded-md bg-[#111111] px-3 py-2 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-slate-400 disabled:hover:bg-slate-400"
-                  >
-                    {isOutOfStock ? 'Out of stock' : 'Buy it now'}
-                  </button>
-                ) : null}
                 <button
                   type="button"
                   onClick={(event) => {
@@ -6393,14 +5217,14 @@ const SiteFooter = () => {
       </div>
 
       <div className="mx-auto mt-8 flex w-full max-w-7xl flex-wrap items-center justify-between gap-2 border-t border-white/20 pt-4 text-xs text-slate-100">
-        <p>{t('footer.last', { year: getCurrentYear() })} â€¢ SVS E-Commerce</p>
+        <p>{t('footer.last', { year: getCurrentYear() })} GÇó SVS E-Commerce</p>
         <p className="flex items-center gap-1"><ShieldCheck className="h-4 w-4" /> {t('footer.securePayments')}</p>
       </div>
     </footer>
   );
 };
 
-const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerItems, buyNowCheckout, onAddToCart, onBuyNow, onToggleWishlist, onRemoveWishlistItem, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder, onClearBuyNowCheckout, onCancelOrder, onSellerItemCreated, onDeleteSellerItem, onUpdateSellerItem, onUpdateOrderStatus, onOpenItemDetails }) => {
+const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerItems, onAddToCart, onToggleWishlist, onRemoveWishlistItem, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder, onCancelOrder, onSellerItemCreated, onDeleteSellerItem, onUpdateSellerItem, onUpdateOrderStatus, onOpenItemDetails }) => {
   const { t } = useTranslation();
 
   return (
@@ -6410,26 +5234,24 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/offers" element={<OffersPage />} />
     <Route path="/orders" element={<OrdersPage orders={orders} cartItems={cartItems} onCancelOrder={onCancelOrder} />} />
     <Route path="/wishlist" element={<WishlistPage wishlistItems={wishlistItems} onAddToCart={onAddToCart} onRemoveWishlistItem={onRemoveWishlistItem} onOpenItemDetails={onOpenItemDetails} />} />
-    <Route path="/checkout" element={<CheckoutPage cartItems={cartItems} buyNowCheckout={buyNowCheckout} onUpdateCartQuantity={onUpdateCartQuantity} onRemoveCartItem={onRemoveCartItem} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />
-    <Route path="/checkout/payfast" element={<PayfastCheckoutPage buyNowCheckout={buyNowCheckout} onPlaceOrder={onPlaceOrder} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />
+    <Route path="/checkout" element={<CheckoutPage cartItems={cartItems} onUpdateCartQuantity={onUpdateCartQuantity} onRemoveCartItem={onRemoveCartItem} onPlaceOrder={onPlaceOrder} />} />
     <Route path="/search" element={<SearchResultsPage />} />
 
-    <Route path="/e-commerce" element={<ECommercePage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
-    <Route path="/tickets" element={<TicketsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} onOpenItemDetails={onOpenItemDetails} />} />
-    <Route path="/bookings-tickets" element={<BookingsTicketsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/e-commerce" element={<ECommercePage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/tickets" element={<TicketsPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/bookings-tickets" element={<BookingsTicketsPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/voting-clients" element={<VotingClientsPage />} />
     <Route path="/voting-providers" element={<VotingProvidersPage />} />
-    <Route path="/groceries" element={<GroceriesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
-    <Route path="/fast-food" element={<FastFoodPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
-    <Route path="/beverages-liquors" element={<BeveragesLiquorsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
-    <Route path="/building-construction-tools" element={<ConstructionToolsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
-    <Route path="/wellness" element={<WellnessPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
-    <Route path="/stationery-office" element={<StationeryPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/groceries" element={<GroceriesPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/fast-food" element={<FastFoodPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/beverages-liquors" element={<BeveragesLiquorsPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/building-construction-tools" element={<ConstructionToolsPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/wellness" element={<WellnessPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/stationery-office" element={<StationeryPage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/home-care" element={<HomeCarePage />} />
-    <Route path="/hardware-software" element={<HardwareSoftwarePage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/hardware-software" element={<HardwareSoftwarePage onAddToCart={onAddToCart} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/seller/upload" element={<SellerUploadPage onSellerItemCreated={onSellerItemCreated} />} />
-    <Route path="/seller/dashboard" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onUpdateOrderStatus={onUpdateOrderStatus} initialView="listings" />} />
-    <Route path="/seller/orders" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onUpdateOrderStatus={onUpdateOrderStatus} initialView="orders" />} />
+    <Route path="/seller/dashboard" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onUpdateOrderStatus={onUpdateOrderStatus} />} />
     <Route path="/property-hub" element={<PropertyHubPage />} />
     <Route path="/international-lottery-games" element={<InternationalLotteryGamesPage />} />
     <Route path="/livestock-hub" element={<LivestockHubPage />} />
@@ -6439,10 +5261,6 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
 
     <Route path="/signin" element={<SigninPage />} />
     <Route path="/signup" element={<SignupPage />} />
-    <Route path="/sell" element={<SellerLandingPage />} />
-    <Route path="/sell/signin" element={<SellerSigninPage />} />
-    <Route path="/sell/signup" element={<SellerSignupPage />} />
-    <Route path="/sell/onboarding" element={<SellerOnboardingPage />} />
 
     <Route path="/about" element={<SimpleContentPage title={t('footer.about')} description={t('simplePages.about')} />} />
     <Route path="/blog" element={<SimpleContentPage title={t('footer.blog')} description={t('simplePages.blog')} />} />
@@ -6458,8 +5276,6 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
 };
 
 const App = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
   const [cartItems, setCartItems] = useState(getStoredCartItems);
   const [wishlistItems, setWishlistItems] = useState(getStoredWishlistItems(getCurrentUserEmail()));
   const [orders, setOrders] = useState(getStoredOrders);
@@ -6472,7 +5288,6 @@ const App = () => {
   const [activeUserEmail, setActiveUserEmail] = useState(getCurrentUserEmail);
   const [hasLoadedUserCollections, setHasLoadedUserCollections] = useState(false);
   const [actionNotice, setActionNotice] = useState('');
-  const [buyNowCheckout, setBuyNowCheckout] = useState(null);
   const skipNextOrderSyncRef = useRef(false);
   const normalizedActiveUserEmail = useMemo(() => normalizeEmail(activeUserEmail), [activeUserEmail]);
   const scopedOrders = useMemo(() => orders.filter((order) => {
@@ -6691,11 +5506,7 @@ const App = () => {
 
     // Only save orders if they belong to the current user (safety check for account switches)
     const normalizedEmail = normalizeEmail(activeUserEmail);
-    const expectedOwnerEmail = normalizedEmail || GUEST_ORDER_EMAIL;
-    const allOrdersBelongToUser = orders.length === 0 || orders.every((order) => {
-      const orderOwnerEmail = normalizeEmail(order.ownerEmail || '');
-      return orderOwnerEmail === expectedOwnerEmail;
-    });
+    const allOrdersBelongToUser = orders.length === 0 || orders.every(order => normalizeEmail(order.ownerEmail || '') === normalizedEmail);
     
     if (allOrdersBelongToUser) {
       window.localStorage.setItem(getUserScopedStorageKey(ORDERS_STORAGE_KEY, activeUserEmail), JSON.stringify(orders));
@@ -7062,29 +5873,6 @@ const App = () => {
     }
   }, [activeUserEmail, sellerItems]);
 
-  const handleClearBuyNowCheckout = useCallback(() => {
-    setBuyNowCheckout(null);
-  }, []);
-
-  const handleBuyNow = useCallback((cartItem) => {
-    if (!cartItem) {
-      return;
-    }
-
-    const singleItem = {
-      ...cartItem,
-      quantity: 1,
-    };
-
-    setBuyNowCheckout({
-      items: [singleItem],
-      startedAt: new Date().toISOString(),
-    });
-    setSelectedItemDetails(null);
-    setActionNotice(`Ready to checkout: ${cartItem.title}`);
-    navigate('/checkout', { state: { checkoutMode: 'buy-now' } });
-  }, [navigate]);
-
   const handleUpdateCartQuantity = useCallback((itemId, delta) => {
     let removedItemId = null;
     setCartItems((currentItems) => {
@@ -7190,21 +5978,13 @@ const App = () => {
     removeWishlistItemFromRemote(itemId);
   }, [removeWishlistItemFromRemote, activeUserEmail]);
 
-  const handlePlaceOrder = useCallback(async (customer, paymentDetails = null, checkoutOptions = {}) => {
-    const sourceItems = Array.isArray(checkoutOptions.items) && checkoutOptions.items.length
-      ? checkoutOptions.items
-      : cartItems;
-
-    if (!sourceItems.length) {
-      return null;
-    }
-
+  const handlePlaceOrder = useCallback(async (customer, paymentDetails = null) => {
     const sellerStockLookup = sellerItems.reduce((lookup, sellerItem) => {
       lookup.set(String(sellerItem.dbId || ''), normalizeListingQuantity(sellerItem.availableQuantity, 0));
       return lookup;
     }, new Map());
 
-    const outOfStockItem = sourceItems.find((item) => {
+    const outOfStockItem = cartItems.find((item) => {
       const listingDbId = getSellerListingIdFromItemKey(item.sku || item.id);
 
       if (!listingDbId) {
@@ -7225,9 +6005,7 @@ const App = () => {
       return null;
     }
 
-    const fallbackTotals = getCartTotals(sourceItems);
-    const orderFeeTotal = Math.max(Number(checkoutOptions.feeTotal), 0) || fallbackTotals.serviceFee;
-    const orderTotal = Math.max(Number(checkoutOptions.total), 0) || (fallbackTotals.subtotal + orderFeeTotal);
+    const totals = getCartTotals(cartItems);
     const sellerLookup = sellerItems.reduce((lookup, item) => {
       lookup.set(String(item.id || ''), {
         sellerEmail: normalizeEmail(item.sellerEmail || ''),
@@ -7236,7 +6014,7 @@ const App = () => {
       return lookup;
     }, new Map());
 
-    const orderItems = sourceItems.map((item) => {
+    const orderItems = cartItems.map((item) => {
       const existingSellerEmail = normalizeEmail(item.sellerEmail || '');
       const existingSellerName = item.sellerName || '';
 
@@ -7261,17 +6039,16 @@ const App = () => {
     });
 
     const resolvedPayment = paymentDetails || {
-      provider: customer.paymentMethod || 'Payfast',
-      status: 'processing',
+      provider: customer.paymentMethod,
+      status: customer.paymentMethod === 'Card' ? 'pending' : 'pending-offline',
       reference: '',
-      currency: 'ZAR',
+      currency: stripeCurrency,
     };
-    const orderOwnerEmail = normalizeEmail(activeUserEmail) || GUEST_ORDER_EMAIL;
     const order = {
       id: `order-${Date.now()}`,
       reference: `SVS-${String(Date.now()).slice(-8)}`,
       createdAt: new Date().toISOString(),
-      ownerEmail: orderOwnerEmail,
+      ownerEmail: normalizeEmail(activeUserEmail),
       customer,
       items: orderItems,
       paymentMethod: customer.paymentMethod,
@@ -7279,9 +6056,9 @@ const App = () => {
       paymentStatus: resolvedPayment.status,
       paymentReference: resolvedPayment.reference,
       currency: resolvedPayment.currency,
-      subtotal: fallbackTotals.subtotal,
-      serviceFee: orderFeeTotal,
-      total: orderTotal,
+      subtotal: totals.subtotal,
+      serviceFee: totals.serviceFee,
+      total: totals.total,
       status: 'Processing',
     };
 
@@ -7304,7 +6081,7 @@ const App = () => {
       if (hasSupabaseEnv && supabase) {
         const { data: inventoryResult, error: inventoryError } = await supabase.rpc('apply_inventory_deduction', {
           p_order_key: order.id,
-          p_user_email: orderOwnerEmail,
+          p_user_email: normalizeEmail(activeUserEmail),
           p_items: inventoryRequest,
         });
 
@@ -7361,17 +6138,6 @@ const App = () => {
       }
     }
 
-    if (hasSupabaseEnv && supabase) {
-      const { error: orderSaveError } = await supabase
-        .from(ORDERS_TABLE)
-        .upsert([toOrderRecord(orderOwnerEmail, order)], { onConflict: 'user_email,order_key' });
-
-      if (orderSaveError) {
-        setActionNotice(`Could not save your order record: ${orderSaveError.message || 'please try again.'}`);
-        return null;
-      }
-    }
-
     setOrders((currentOrders) => [order, ...currentOrders]);
 
     const sellerEmails = Array.from(new Set(
@@ -7390,20 +6156,16 @@ const App = () => {
       });
     });
 
-    if (getAuthState() && order.ownerEmail && order.ownerEmail !== GUEST_ORDER_EMAIL) {
-      pushNotificationToUser(order.ownerEmail, {
-        type: 'order',
-        title: 'Order placed',
-        message: `${order.reference} is now Processing.`,
-        href: '/orders',
-        orderId: order.id,
-      });
-    }
+    pushNotificationToUser(order.ownerEmail, {
+      type: 'order',
+      title: 'Order placed',
+      message: `${order.reference} is now Processing.`,
+      href: '/orders',
+      orderId: order.id,
+    });
 
-    if (checkoutOptions.mode !== 'buy-now') {
-      setCartItems([]);
-      clearCartFromRemote();
-    }
+    setCartItems([]);
+    clearCartFromRemote();
 
     return order;
   }, [activeUserEmail, cartItems, clearCartFromRemote, pushNotificationToUser, sellerItems]);
@@ -7744,35 +6506,26 @@ const App = () => {
     return () => window.clearInterval(intervalId);
   }, []);
 
-  const standaloneShellRoutes = new Set([
-    '/checkout',
-    '/checkout/payfast',
-    '/signin',
-    '/signup',
-    '/sell',
-    '/sell/signin',
-    '/sell/signup',
-    '/sell/onboarding',
-  ]);
-  const isStandaloneShellRoute = standaloneShellRoutes.has(location.pathname);
-
-  const appContent = (
-    <>
+  return (
+    <Shell
+      cartItemCount={getCartCount(cartItems)}
+      wishlistItemCount={wishlistItems.length}
+      notifications={notifications}
+      onMarkNotificationsRead={markNotificationsAsRead}
+      onClearNotifications={handleClearNotifications}
+    >
       <AppRoutes
         cartItems={cartItems}
         wishlistItems={wishlistItems}
         wishlistItemIds={wishlistItemIds}
         orders={scopedOrders}
         sellerItems={sellerItems}
-        buyNowCheckout={buyNowCheckout}
         onAddToCart={handleAddToCart}
-        onBuyNow={handleBuyNow}
         onToggleWishlist={handleToggleWishlist}
         onRemoveWishlistItem={handleRemoveWishlistItem}
         onUpdateCartQuantity={handleUpdateCartQuantity}
         onRemoveCartItem={handleRemoveCartItem}
         onPlaceOrder={handlePlaceOrder}
-        onClearBuyNowCheckout={handleClearBuyNowCheckout}
         onCancelOrder={handleCancelOrder}
         onSellerItemCreated={handleSellerItemCreated}
         onDeleteSellerItem={handleDeleteSellerItem}
@@ -7784,7 +6537,6 @@ const App = () => {
         item={selectedItemDetails}
         onClose={handleCloseItemDetails}
         onAddToCart={handleAddToCart}
-        onBuyNow={handleBuyNow}
         onToggleWishlist={handleToggleWishlist}
         isWishlisted={isDetailsItemWishlisted}
         reviews={productReviews}
@@ -7799,22 +6551,6 @@ const App = () => {
           {actionNotice}
         </div>
       ) : null}
-    </>
-  );
-
-  if (isStandaloneShellRoute) {
-    return appContent;
-  }
-
-  return (
-    <Shell
-      cartItemCount={getCartCount(cartItems)}
-      wishlistItemCount={wishlistItems.length}
-      notifications={notifications}
-      onMarkNotificationsRead={markNotificationsAsRead}
-      onClearNotifications={handleClearNotifications}
-    >
-      {appContent}
     </Shell>
   );
 };

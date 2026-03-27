@@ -16,7 +16,7 @@ export const getStripeInstance = async () => {
   return stripePromise;
 };
 
-export const startCardPayment = async ({ amount, email, fullName, phone, itemCount, stripe, confirmPayment }) => {
+export const startCardPayment = async ({ amount, email, fullName, phone, itemCount, stripe, confirmPayment, returnUrl, redirect = 'if_required' }) => {
   if (!embeddedCardCheckoutEnabled) {
     throw new Error('Card payments are currently unavailable. Please choose another payment method.');
   }
@@ -31,15 +31,19 @@ export const startCardPayment = async ({ amount, email, fullName, phone, itemCou
     throw new Error('Secure payment is not ready yet. Please try again.');
   }
 
-  if (!confirmPayment) {
+  const confirmPaymentFn = typeof confirmPayment === 'function' ? confirmPayment : confirmPayment?.confirmPayment;
+  const paymentElements = confirmPayment?.elements;
+
+  if (!confirmPaymentFn || !paymentElements) {
     throw new Error('Payment elements not ready.');
   }
 
   try {
-    const { error, paymentIntent } = await confirmPayment({
-      elements: confirmPayment.elements,
+    const { error, paymentIntent } = await confirmPaymentFn({
+      elements: paymentElements,
+      redirect,
       confirmParams: {
-        return_url: `${typeof window !== 'undefined' ? window.location.origin : ''}/orders`,
+        return_url: returnUrl || `${typeof window !== 'undefined' ? window.location.origin : ''}/orders`,
         receipt_email: email,
       },
     });
