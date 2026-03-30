@@ -1700,6 +1700,9 @@ const LanguageSelectorPopover = ({
   isOpen,
   pendingLanguageCode,
   focusedIndex,
+  filteredLanguages,
+  searchQuery,
+  onSearchQueryChange,
   onSelect,
   onFocusIndex,
   cardRefs,
@@ -1714,8 +1717,22 @@ const LanguageSelectorPopover = ({
       role="menu"
       aria-label="Language selector"
     >
+      <div className="border-b border-[var(--svs-border)] p-3">
+        <label className="relative block">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--svs-muted)]" />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(event) => onSearchQueryChange(event.target.value)}
+            placeholder="Search languages"
+            className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] py-2 pl-9 pr-3 text-sm text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30"
+            aria-label="Search languages"
+            autoFocus
+          />
+        </label>
+      </div>
       <div className="max-h-80 overflow-y-auto p-2">
-        {SUPPORTED_LANGUAGES.map((language, index) => {
+        {filteredLanguages.length ? filteredLanguages.map((language, index) => {
           const selected = pendingLanguageCode === language.code;
           return (
             <button
@@ -1746,7 +1763,11 @@ const LanguageSelectorPopover = ({
               />
             </button>
           );
-        })}
+        }) : (
+          <p className="px-3 py-4 text-sm text-[var(--svs-muted)]">
+            No matching languages found.
+          </p>
+        )}
       </div>
     </div>
   );
@@ -1848,6 +1869,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
   const [pendingLanguageCode, setPendingLanguageCode] = useState(DEFAULT_LANGUAGE_CODE);
   const [focusedLanguageIndex, setFocusedLanguageIndex] = useState(0);
+  const [languageSearchQuery, setLanguageSearchQuery] = useState('');
   const [query, setQuery] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(getAuthState);
   const [hasSellerAccess, setHasSellerAccess] = useState(getSellerAccessState);
@@ -1867,8 +1889,24 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
     () => notifications.reduce((count, notification) => (notification.read ? count : count + 1), 0),
     [notifications],
   );
+  const filteredLanguages = useMemo(() => {
+    const normalizedQuery = languageSearchQuery.trim().toLowerCase();
+
+    if (!normalizedQuery) {
+      return SUPPORTED_LANGUAGES;
+    }
+
+    return SUPPORTED_LANGUAGES.filter((language) => {
+      const haystack = [language.englishName, language.nativeName, language.code]
+        .join(' ')
+        .toLowerCase();
+
+      return haystack.includes(normalizedQuery);
+    });
+  }, [languageSearchQuery]);
 
   const closeLanguageModal = () => {
+    setLanguageSearchQuery('');
     setIsLanguageModalOpen(false);
   };
 
@@ -1982,11 +2020,21 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
 
   useEffect(() => {
     if (!isLanguageModalOpen) {
+      return;
+    }
+
+    const selectedIndex = filteredLanguages.findIndex((language) => language.code === pendingLanguageCode);
+    setFocusedLanguageIndex(selectedIndex >= 0 ? selectedIndex : 0);
+    languageCardRefs.current = languageCardRefs.current.slice(0, filteredLanguages.length);
+  }, [filteredLanguages, isLanguageModalOpen, pendingLanguageCode]);
+
+  useEffect(() => {
+    if (!isLanguageModalOpen) {
       return undefined;
     }
 
     const onKeyDown = (event) => {
-      const maxIndex = SUPPORTED_LANGUAGES.length - 1;
+      const maxIndex = filteredLanguages.length - 1;
 
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -1995,12 +2043,16 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
       }
 
       if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        if (!filteredLanguages.length) {
+          return;
+        }
+
         event.preventDefault();
         setFocusedLanguageIndex((currentIndex) => {
           const nextIndex = event.key === 'ArrowDown'
             ? (currentIndex >= maxIndex ? 0 : currentIndex + 1)
             : (currentIndex <= 0 ? maxIndex : currentIndex - 1);
-          const nextLanguage = SUPPORTED_LANGUAGES[nextIndex];
+          const nextLanguage = filteredLanguages[nextIndex];
           setPendingLanguageCode(nextLanguage.code);
           languageCardRefs.current[nextIndex]?.focus();
           languageCardRefs.current[nextIndex]?.scrollIntoView({ block: 'nearest' });
@@ -2009,8 +2061,12 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
       }
 
       if (event.key === 'Enter') {
+        if (!filteredLanguages.length) {
+          return;
+        }
+
         event.preventDefault();
-        const selectedLanguage = SUPPORTED_LANGUAGES[focusedLanguageIndex] || getLanguageByCode(pendingLanguageCode);
+        const selectedLanguage = filteredLanguages[focusedLanguageIndex] || getLanguageByCode(pendingLanguageCode);
         setPendingLanguageCode(selectedLanguage.code);
         applyLanguageCode(selectedLanguage.code);
       }
@@ -2018,7 +2074,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [applyLanguageCode, focusedLanguageIndex, isLanguageModalOpen, pendingLanguageCode]);
+  }, [applyLanguageCode, filteredLanguages, focusedLanguageIndex, isLanguageModalOpen, pendingLanguageCode]);
 
   useEffect(() => {
     if (!isLanguageModalOpen) {
@@ -2190,6 +2246,8 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                 <button
                   type="button"
                   onClick={() => {
+                    setLanguageSearchQuery('');
+                    setPendingLanguageCode(activeLanguage.code);
                     setFocusedLanguageIndex(SUPPORTED_LANGUAGES.findIndex((language) => language.code === activeLanguage.code));
                     setIsLanguageModalOpen((prev) => !prev);
                   }}
@@ -2205,9 +2263,12 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                   isOpen={isLanguageModalOpen}
                   pendingLanguageCode={pendingLanguageCode}
                   focusedIndex={focusedLanguageIndex}
+                  filteredLanguages={filteredLanguages}
+                  searchQuery={languageSearchQuery}
+                  onSearchQueryChange={setLanguageSearchQuery}
                   onSelect={async (code) => {
                     setPendingLanguageCode(code);
-                    setFocusedLanguageIndex(SUPPORTED_LANGUAGES.findIndex((language) => language.code === code));
+                    setFocusedLanguageIndex(filteredLanguages.findIndex((language) => language.code === code));
                     await applyLanguageCode(code);
                   }}
                   onFocusIndex={setFocusedLanguageIndex}
@@ -2371,6 +2432,8 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
               <button
                 type="button"
                 onClick={() => {
+                  setLanguageSearchQuery('');
+                  setPendingLanguageCode(activeLanguage.code);
                   setFocusedLanguageIndex(SUPPORTED_LANGUAGES.findIndex((language) => language.code === activeLanguage.code));
                   setIsLanguageModalOpen((prev) => !prev);
                 }}
@@ -2385,9 +2448,12 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                 isOpen={isLanguageModalOpen}
                 pendingLanguageCode={pendingLanguageCode}
                 focusedIndex={focusedLanguageIndex}
+                filteredLanguages={filteredLanguages}
+                searchQuery={languageSearchQuery}
+                onSearchQueryChange={setLanguageSearchQuery}
                 onSelect={async (code) => {
                   setPendingLanguageCode(code);
-                  setFocusedLanguageIndex(SUPPORTED_LANGUAGES.findIndex((language) => language.code === code));
+                  setFocusedLanguageIndex(filteredLanguages.findIndex((language) => language.code === code));
                   setMobileOpen(false);
                   await applyLanguageCode(code);
                 }}
