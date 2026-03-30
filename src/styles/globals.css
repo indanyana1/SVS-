@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Berkshire+Swash&display=swap');
+
 :root {
   --svs-primary: #00a8e8;
   --svs-primary-strong: #007b9c;
@@ -133,4 +135,10 @@ button,
 input,
 select {
   font-size: 16px;
+}
+
+.svs-berkshire-swash {
+  font-family: 'Berkshire Swash', cursive;
+  letter-spacing: 0.02em;
+  text-transform: none;
 }
