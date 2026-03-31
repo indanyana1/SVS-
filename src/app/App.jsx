@@ -61,13 +61,12 @@ const marketLinks = [
   { labelKey: 'markets.groceries', href: '/groceries' },
   { labelKey: 'markets.homeCare', href: '/home-care' },
   { labelKey: 'markets.ecommerce', href: '/e-commerce' },
+  { labelKey: 'markets.traditionalMedicines', href: '/traditional-medicines-herbs' },
   { labelKey: 'markets.livestockHub', href: '/livestock-hub' },
-  { labelKey: 'markets.internationalLotteryGames', href: '/international-lottery-games' },
+  { labelKey: 'markets.bettingLotteryGames', href: '/betting-lottery-games' },
   { labelKey: 'markets.wellness', href: '/wellness' },
   { labelKey: 'markets.propertyHub', href: '/property-hub' },
   { labelKey: 'markets.bookings', href: '/bookings-tickets' },
-  { labelKey: 'markets.bettingHub', href: '/betting-hub' },
-  { labelKey: 'markets.bettingVoting', href: '/betting-voting' },
   { labelKey: 'markets.stationery', href: '/stationery-office' },
 ];
 
@@ -81,6 +80,7 @@ const sellerMarketOptions = [
   { key: 'fastFood', labelKey: 'markets.fastFood', route: '/fast-food' },
   { key: 'groceries', labelKey: 'markets.groceries', route: '/groceries' },
   { key: 'ecommerce', labelKey: 'markets.ecommerce', route: '/e-commerce' },
+  { key: 'traditionalMedicines', labelKey: 'markets.traditionalMedicines', route: '/traditional-medicines-herbs' },
   { key: 'wellness', labelKey: 'markets.wellness', route: '/wellness' },
   { key: 'stationery', labelKey: 'markets.stationery', route: '/stationery-office' },
 ];
@@ -509,6 +509,54 @@ const wellnessItems = [
   },
 ];
 
+const traditionalMedicinesItems = [
+  {
+    id: 'tm1',
+    title: 'Wild Harvested African Ginger Root',
+    category: 'Herbs',
+    description: 'Dried root cuts for teas, tonics, and traditional wellness blends.',
+    price: '14.50',
+    image:
+      'https://images.pexels.com/photos/4198166/pexels-photo-4198166.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'tm2',
+    title: 'Moringa Leaf Powder Blend',
+    category: 'Traditional Supplements',
+    description: 'Stone-milled moringa leaf powder prepared for daily herbal use.',
+    price: '11.20',
+    image:
+      'https://images.pexels.com/photos/6693658/pexels-photo-6693658.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'tm3',
+    title: 'Herbal Steam Relief Mix',
+    category: 'Traditional Remedies',
+    description: 'Aromatic leaf and bark blend for home steam and inhalation rituals.',
+    price: '9.80',
+    image:
+      'https://images.pexels.com/photos/6157223/pexels-photo-6157223.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'tm4',
+    title: 'Dried Artemisia Herbal Bundle',
+    category: 'Medicinal Herbs',
+    description: 'Sun-dried herbal stems and leaves packaged for decoctions and infusions.',
+    price: '12.40',
+    image:
+      'https://images.pexels.com/photos/6941876/pexels-photo-6941876.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'tm5',
+    title: 'Traditional Wellness Bark Pack',
+    category: 'Botanical Remedies',
+    description: 'Mixed bark selection sourced for traditional healing preparations.',
+    price: '16.90',
+    image:
+      'https://images.pexels.com/photos/6693652/pexels-photo-6693652.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+];
+
 const homeCareProviders = [
   { id: 'h1', name: 'QuickFix Plumbing', rating: 4.7, type: 'Plumbing', city: 'Pietermaritzburg' },
   { id: 'h2', name: 'Bright Spark Electric', rating: 4.6, type: 'Electrical', city: 'Durban' },
@@ -888,6 +936,19 @@ const searchableCatalog = [
       'wellness health medicine medicines pharmacy tablets first aid',
     ]),
   })),
+  ...traditionalMedicinesItems.map((item) => ({
+    ...item,
+    section: 'Traditional Medicines and Herbs Market',
+    sectionKey: 'markets.traditionalMedicines',
+    route: '/traditional-medicines-herbs',
+    searchText: buildSearchText([
+      item.title,
+      item.category,
+      item.description,
+      item.price,
+      'traditional medicine medicines herbs herbal remedies roots bark leaves moringa ginger botanical healing',
+    ]),
+  })),
   ...stationeryItems.map((item) => ({
     ...item,
     section: 'Stationery and Office Supplies Hub',
@@ -939,15 +1000,15 @@ const searchableCatalog = [
   })),
   ...lotteryGames.map((item) => ({
     ...item,
-    section: 'Lottery Games Hub',
-    sectionKey: 'markets.internationalLotteryGames',
-    route: '/international-lottery-games',
+    section: 'Betting and Lottery Games',
+    sectionKey: 'markets.bettingLotteryGames',
+    route: '/betting-lottery-games',
     searchText: buildSearchText([
       item.title,
       item.region,
       item.drawDay,
       item.jackpot,
-      'lottery lotto jackpot draw games international millions powerball',
+      'lottery lotto jackpot draw games international millions powerball betting predictions odds',
     ]),
   })),
   ...livestockItems.map((item) => ({
@@ -3727,6 +3788,54 @@ const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
   );
 };
 
+const TraditionalMedicinesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
+  const { t } = useTranslation();
+  const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'traditionalMedicines'), ...traditionalMedicinesItems], [sellerItems]);
+  const buildCartItem = (item) => createCartItem({
+    ...item,
+    route: '/traditional-medicines-herbs',
+    marketName: t('markets.traditionalMedicines'),
+    details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Traditional herbal listing'}`,
+  });
+  const buildWishlistItem = (item) => createWishlistItem({
+    ...item,
+    route: '/traditional-medicines-herbs',
+    marketName: t('markets.traditionalMedicines'),
+    details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Traditional herbal listing'}`,
+  });
+
+  return (
+  <PageFrame title={t('markets.traditionalMedicines')} subtitle={t('pageSubtitles.traditionalMedicines')}>
+    <div className="mb-5 rounded-xl border border-[#d6c8a3] bg-[#fff9ec] p-3 text-sm text-[#7b5b12]">
+      Traditional remedies should be used responsibly. Buyers should follow local guidance and consult qualified practitioners when needed.
+    </div>
+    <CardGrid
+      items={marketItems}
+      buttonLabel={t('common.addToCart')}
+      secondaryButtonLabel={t('common.viewDetails')}
+      onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+      onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
+      onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+      onOpenItemDetails={(item) => {
+        const wishlistItem = buildWishlistItem(item);
+        onOpenItemDetails?.({
+          title: getTranslatedValue(t, item.titleKey, item.title),
+          image: item.image,
+          images: item.images || (item.image ? [item.image] : []),
+          marketName: t('markets.traditionalMedicines'),
+          details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Traditional herbal listing'}`,
+          priceLabel: getSalePrices(item.price).nowPrice,
+          cartItem: buildCartItem(item),
+          wishlistItem,
+        });
+      }}
+      isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/traditional-medicines-herbs', item.id))}
+      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • <SalePrice price={item.price} /></p>}
+    />
+  </PageFrame>
+  );
+};
+
 const StationeryPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'stationery'), ...stationeryItems], [sellerItems]);
@@ -4042,6 +4151,7 @@ const MARKET_BADGE_COLORS = {
   fashionStyle: 'bg-rose-100 text-rose-700',
   mobilityVehicles: 'bg-sky-100 text-sky-700',
   naturalResources: 'bg-lime-100 text-lime-700',
+  traditionalMedicines: 'bg-emerald-100 text-emerald-700',
   wellness: 'bg-teal-100 text-teal-700',
   stationery: 'bg-amber-100 text-amber-700',
   hardwareSoftware: 'bg-slate-100 text-slate-700',
@@ -5087,32 +5197,74 @@ const PropertyHubPage = () => {
   );
 };
 
-const InternationalLotteryGamesPage = () => {
+const BettingLotteryGamesPage = () => {
   const { t } = useTranslation();
 
   return (
-  <PageFrame title={t('markets.internationalLotteryGames')} subtitle={t('pageSubtitles.internationalLotteryGames')}>
+  <PageFrame title={t('markets.bettingLotteryGames')} subtitle={t('pageSubtitles.bettingLotteryGames')}>
     <div className="mb-5 rounded-xl border border-[#fcd34d] bg-[#fffbeb] p-4 text-sm text-[#92400e]">
       {t('internationalLotteryHub.notice')}
     </div>
-    <div className="grid gap-4 md:grid-cols-3">
-      {lotteryGames.map((game) => (
-        <article key={game.id} className="overflow-hidden rounded-xl border border-[#eeeeee] bg-white shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
-          <img src={game.image} alt={getTranslatedValue(t, game.titleKey, game.title)} className="h-44 w-full object-cover" loading="lazy" />
-          <div className="p-4">
-            <h3 className="text-lg font-bold">{getTranslatedValue(t, game.titleKey, game.title)}</h3>
-            <p className="mt-2 text-sm text-slate-600">{t('internationalLotteryHub.regionLabel')}: {getTranslatedValue(t, game.regionKey, game.region)}</p>
-            <p className="mt-1 text-sm text-slate-600">{t('internationalLotteryHub.drawDayLabel')}: {getTranslatedValue(t, game.drawDayKey, game.drawDay)}</p>
-            <div className="mt-3 text-sm text-[var(--svs-primary-strong)]">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('internationalLotteryHub.jackpotLabel')}</p>
-              <SalePrice price={game.jackpot} />
-            </div>
-            <button type="button" className={`${cudyBluePrimaryButtonClassName} mt-4 rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
-              {t('common.playNow')}
-            </button>
+    <div className="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
+      <section className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
+        <h3 className="text-lg font-bold text-[var(--svs-text)]">Lottery Games</h3>
+        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {lotteryGames.map((game) => (
+            <article key={game.id} className="overflow-hidden rounded-xl border border-[#eeeeee] bg-white shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
+              <img src={game.image} alt={getTranslatedValue(t, game.titleKey, game.title)} className="h-40 w-full object-cover" loading="lazy" />
+              <div className="p-4">
+                <h4 className="text-base font-bold">{getTranslatedValue(t, game.titleKey, game.title)}</h4>
+                <p className="mt-2 text-sm text-slate-600">{t('internationalLotteryHub.regionLabel')}: {getTranslatedValue(t, game.regionKey, game.region)}</p>
+                <p className="mt-1 text-sm text-slate-600">{t('internationalLotteryHub.drawDayLabel')}: {getTranslatedValue(t, game.drawDayKey, game.drawDay)}</p>
+                <div className="mt-3 text-sm text-[var(--svs-primary-strong)]">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('internationalLotteryHub.jackpotLabel')}</p>
+                  <SalePrice price={game.jackpot} />
+                </div>
+                <button type="button" className={`${cudyBluePrimaryButtonClassName} mt-4 rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
+                  {t('common.playNow')}
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <div className="space-y-4">
+        <section className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
+          <h3 className="text-lg font-bold">Popular Matches</h3>
+          <ul className="mt-3 space-y-2 text-sm">
+            {matchSeed.map((match) => (
+              <li key={`hub-${match.id}`} className="rounded-md bg-[#f8fdff] px-3 py-2">
+                {match.match} • Split: {match.split}
+              </li>
+            ))}
+          </ul>
+        </section>
+        <section className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
+          <h3 className="text-lg font-bold">Live Leaderboard</h3>
+          <div className="mt-3 space-y-3">
+            {leaderboardSeed.slice(0, 3).map((expert) => (
+              <div key={`lv-${expert.id}`} className="rounded-md bg-[#f8fdff] p-3">
+                <p className="font-semibold">{expert.name}</p>
+                <p className="text-sm text-slate-600">{expert.accuracy}% accuracy</p>
+              </div>
+            ))}
           </div>
-        </article>
-      ))}
+          <Link to="/voting-clients" className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
+            {t('common.voteNow')}
+          </Link>
+        </section>
+        <section className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
+          <h3 className="text-lg font-bold">Hot Travel Deals</h3>
+          <ul className="mt-3 space-y-2 text-sm">
+            {ticketEvents.filter((event) => event.type === 'Travel').map((event) => (
+              <li key={`travel-${event.id}`} className="rounded-md bg-[#f8fdff] px-3 py-2">
+                {event.title} • <SalePrice price={event.price} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
     </div>
   </PageFrame>
   );
@@ -5150,69 +5302,6 @@ const LivestockHubPage = () => {
           </div>
         </article>
       ))}
-    </div>
-  </PageFrame>
-  );
-};
-
-const BettingHubPage = () => {
-  const { t } = useTranslation();
-
-  return (
-  <PageFrame title={t('markets.bettingHub')} subtitle={t('pageSubtitles.bettingHub')}>
-    <div className="mb-5 rounded-xl border border-[#f44336] bg-[#fff4f4] p-3 text-sm text-[#b91c1c]">
-      Play Responsibly. 18+ Only. Verified transactions and encrypted payments.
-    </div>
-    <div className="grid gap-4 md:grid-cols-2">
-      <section className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
-        <h3 className="text-lg font-bold">Popular Matches</h3>
-        <ul className="mt-3 space-y-2 text-sm">
-          {matchSeed.map((match) => (
-            <li key={`hub-${match.id}`} className="rounded-md bg-[#f8fdff] px-3 py-2">
-              {match.match} • Split: {match.split}
-            </li>
-          ))}
-        </ul>
-      </section>
-      <section className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
-        <h3 className="text-lg font-bold">Hot Travel Deals</h3>
-        <ul className="mt-3 space-y-2 text-sm">
-          {ticketEvents.filter((event) => event.type === 'Travel').map((event) => (
-            <li key={`travel-${event.id}`} className="rounded-md bg-[#f8fdff] px-3 py-2">
-              {event.title} • <SalePrice price={event.price} />
-            </li>
-          ))}
-        </ul>
-      </section>
-    </div>
-  </PageFrame>
-  );
-};
-
-const BettingVotingMarketPage = () => {
-  const { t } = useTranslation();
-
-  return (
-  <PageFrame title={t('markets.bettingVoting')} subtitle={t('pageSubtitles.bettingVoting')}>
-    <div className="grid gap-4 md:grid-cols-2">
-      <section className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
-        <h3 className="text-lg font-bold">Live Leaderboard</h3>
-        <div className="mt-3 space-y-3">
-          {leaderboardSeed.slice(0, 3).map((expert) => (
-            <div key={`lv-${expert.id}`} className="rounded-md bg-[#f8fdff] p-3">
-              <p className="font-semibold">{expert.name}</p>
-              <p className="text-sm text-slate-600">{expert.accuracy}% accuracy</p>
-            </div>
-          ))}
-        </div>
-      </section>
-      <section className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
-        <h3 className="text-lg font-bold">Place a Prediction</h3>
-        <p className="mt-2 text-sm text-slate-600">Choose a match and submit your prediction in one click.</p>
-        <Link to="/voting-clients" className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
-          {t('common.voteNow')}
-        </Link>
-      </section>
     </div>
   </PageFrame>
   );
@@ -7206,6 +7295,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/beverages-liquors" element={<BeveragesLiquorsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/building-construction-tools" element={<ConstructionToolsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/fashion-style" element={<FashionStylePage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/traditional-medicines-herbs" element={<TraditionalMedicinesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/wellness" element={<WellnessPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/stationery-office" element={<StationeryPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/home-care" element={<HomeCarePage />} />
@@ -7216,10 +7306,11 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/seller/dashboard" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onUpdateOrderStatus={onUpdateOrderStatus} initialView="listings" />} />
     <Route path="/seller/orders" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onUpdateOrderStatus={onUpdateOrderStatus} initialView="orders" />} />
     <Route path="/property-hub" element={<PropertyHubPage />} />
-    <Route path="/international-lottery-games" element={<InternationalLotteryGamesPage />} />
+    <Route path="/betting-lottery-games" element={<BettingLotteryGamesPage />} />
+    <Route path="/international-lottery-games" element={<Navigate to="/betting-lottery-games" replace />} />
     <Route path="/livestock-hub" element={<LivestockHubPage />} />
-    <Route path="/betting-hub" element={<BettingHubPage />} />
-    <Route path="/betting-voting" element={<BettingVotingMarketPage />} />
+    <Route path="/betting-hub" element={<Navigate to="/betting-lottery-games" replace />} />
+    <Route path="/betting-voting" element={<Navigate to="/betting-lottery-games" replace />} />
     <Route path="/safety" element={<SafetyPage />} />
 
     <Route path="/signin" element={<SigninPage />} />
