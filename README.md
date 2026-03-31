@@ -47,6 +47,16 @@ Notes:
 - For production: set up your backend to securely create payment intents and handle webhook confirmations.
 - Test card: 4242 4242 4242 4242 with any future date and CVC.
 
+## Address Autofill
+
+Checkout address search now uses a free OpenStreetMap-backed lookup so shoppers can type a street number, area, or suburb and select a matching address to fill the form.
+
+Notes:
+
+- Address suggestions are proxied through the local Express server at `/api/address-autocomplete` and `/api/address-details`.
+- The checkout form currently biases results to South Africa.
+- The default implementation uses the public Nominatim service, which is suitable for development and light traffic. For heavier production usage, move to a hosted geocoding provider or your own instance.
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts

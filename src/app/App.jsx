@@ -22,6 +22,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import logo from '../assets/icons/logo.jpeg';
+import { createAddressLookupSessionToken, lookupAddressDetails, lookupAddressSuggestions } from '../lib/addressLookup';
 import { DEFAULT_LANGUAGE_CODE, getLanguageByCode, isRtlLanguage, SUPPORTED_LANGUAGES } from '../lib/languages';
 import { embeddedCardCheckoutEnabled, getStripeInstance, startCardPayment, stripeCurrency } from '../lib/payments';
 import { hasSupabaseEnv, supabase } from '../lib/supabase';
@@ -48,9 +49,12 @@ const sellerConsoleNavItems = [
 const marketLinks = [
   { labelKey: 'markets.beverages', href: '/beverages-liquors' },
   { labelKey: 'markets.constructionTools', href: '/building-construction-tools' },
+  { labelKey: 'markets.fashionStyle', href: '/fashion-style' },
   { labelKey: 'markets.votingClients', href: '/voting-clients' },
   { labelKey: 'markets.safety', href: '/safety' },
   { labelKey: 'markets.hardwareSoftware', href: '/hardware-software' },
+  { labelKey: 'markets.mobilityVehicles', href: '/mobility-vehicles' },
+  { labelKey: 'markets.naturalResources', href: '/natural-resources-minerals' },
   { labelKey: 'markets.tickets', href: '/tickets' },
   { labelKey: 'markets.votingProviders', href: '/voting-providers' },
   { labelKey: 'markets.fastFood', href: '/fast-food' },
@@ -70,7 +74,10 @@ const marketLinks = [
 const sellerMarketOptions = [
   { key: 'beverages', labelKey: 'markets.beverages', route: '/beverages-liquors' },
   { key: 'constructionTools', labelKey: 'markets.constructionTools', route: '/building-construction-tools' },
+  { key: 'fashionStyle', labelKey: 'markets.fashionStyle', route: '/fashion-style' },
   { key: 'hardwareSoftware', labelKey: 'markets.hardwareSoftware', route: '/hardware-software' },
+  { key: 'mobilityVehicles', labelKey: 'markets.mobilityVehicles', route: '/mobility-vehicles' },
+  { key: 'naturalResources', labelKey: 'markets.naturalResources', route: '/natural-resources-minerals' },
   { key: 'fastFood', labelKey: 'markets.fastFood', route: '/fast-food' },
   { key: 'groceries', labelKey: 'markets.groceries', route: '/groceries' },
   { key: 'ecommerce', labelKey: 'markets.ecommerce', route: '/e-commerce' },
@@ -82,6 +89,15 @@ const sellerMarketConfig = sellerMarketOptions.reduce((accumulator, option) => {
   accumulator[option.key] = option;
   return accumulator;
 }, {});
+
+const TRENDING_MARKET_HREFS = [
+  '/e-commerce',
+  '/groceries',
+  '/fast-food',
+  '/fashion-style',
+  '/hardware-software',
+  '/mobility-vehicles',
+];
 
 const productCards = [
   {
@@ -641,6 +657,150 @@ const livestockItems = [
   },
 ];
 
+const mobilityVehiclesItems = [
+  {
+    id: 'mv1',
+    title: 'CityCruise Sedan 1.8 Auto',
+    category: 'Car',
+    specification: '2022 model • 48,000 km • Automatic',
+    price: '289000',
+    image:
+      'https://images.pexels.com/photos/170811/pexels-photo-170811.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'mv2',
+    title: 'StormRider 650 Touring Bike',
+    category: 'Motorcycle',
+    specification: 'ABS • 12,400 km • Touring ready',
+    price: '118000',
+    image:
+      'https://images.pexels.com/photos/2116475/pexels-photo-2116475.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'mv3',
+    title: 'MetroLink Passenger Coach',
+    category: 'Rail',
+    specification: '84 seats • Refurbished interior • Fleet unit',
+    price: '4900000',
+    image:
+      'https://images.pexels.com/photos/302428/pexels-photo-302428.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'mv4',
+    title: 'AeroSwift Trainer Aircraft',
+    category: 'Aircraft',
+    specification: '2-seater • 2020 avionics package • Hangared',
+    price: '1850000',
+    image:
+      'https://images.pexels.com/photos/46148/aircraft-jet-landing-cloud-46148.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'mv5',
+    title: 'TrailVolt Carbon Adventure Bike',
+    category: 'Bicycle',
+    specification: '27-speed • Carbon frame • Trail setup',
+    price: '42000',
+    image:
+      'https://images.pexels.com/photos/100582/pexels-photo-100582.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+];
+
+const fashionStyleItems = [
+  {
+    id: 'fs1',
+    title: 'Tailored Linen Two-Piece Set',
+    category: 'Clothing',
+    specification: 'Breathable linen • Neutral palette',
+    price: '1799',
+    image:
+      'https://images.pexels.com/photos/934070/pexels-photo-934070.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'fs2',
+    title: 'Street Motion Leather Sneakers',
+    category: 'Footwear',
+    specification: 'Cushioned sole • Everyday wear',
+    price: '1299',
+    image:
+      'https://images.pexels.com/photos/2529148/pexels-photo-2529148.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'fs3',
+    title: 'Signature Occasion Heels',
+    category: 'Shoes',
+    specification: 'Evening finish • Comfort footbed',
+    price: '1599',
+    image:
+      'https://images.pexels.com/photos/267301/pexels-photo-267301.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'fs4',
+    title: 'Classic Denim Utility Jacket',
+    category: 'Outerwear',
+    specification: 'Layer-ready • Mid-weight denim',
+    price: '1149',
+    image:
+      'https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'fs5',
+    title: 'Travel Leather Weekender',
+    category: 'Accessories',
+    specification: 'Full-grain finish • Cabin-friendly',
+    price: '2499',
+    image:
+      'https://images.pexels.com/photos/1152077/pexels-photo-1152077.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+];
+
+const naturalResourcesItems = [
+  {
+    id: 'nr1',
+    title: 'Industrial Grade Copper Cathodes',
+    category: 'Minerals',
+    specification: '99.99% purity • Export-ready lots',
+    price: '86000',
+    image:
+      'https://source.unsplash.com/1200x900/?copper,metal,industry',
+  },
+  {
+    id: 'nr2',
+    title: 'Washed River Sand Bulk Supply',
+    category: 'Aggregates',
+    specification: 'Construction grade • Bulk delivery available',
+    price: '18500',
+    image:
+      'https://source.unsplash.com/1200x900/?sand,quarry,aggregate',
+  },
+  {
+    id: 'nr3',
+    title: 'Dimension Granite Blocks',
+    category: 'Stone',
+    specification: 'Cut-to-order • Quarry sourced',
+    price: '54000',
+    image:
+      'https://source.unsplash.com/1200x900/?granite,stone,quarry',
+  },
+  {
+    id: 'nr4',
+    title: 'Hardwood Timber Packs',
+    category: 'Natural Resources',
+    specification: 'Kiln-dried • Furniture and structural use',
+    price: '32000',
+    image:
+      'https://source.unsplash.com/1200x900/?timber,lumber,wood',
+  },
+  {
+    id: 'nr5',
+    title: 'Refined Sea Salt Mineral Stock',
+    category: 'Mineral Products',
+    specification: 'Food and industrial grade options',
+    price: '9500',
+    image:
+      'https://source.unsplash.com/1200x900/?sea-salt,mineral,salt',
+  },
+];
+
 const footerLinks = {
   quick: [
     { labelKey: 'footer.about', href: '/about' },
@@ -801,6 +961,45 @@ const searchableCatalog = [
       item.summary,
       item.price,
       'livestock cattle goats sheep farm buying selling agriculture hub',
+    ]),
+  })),
+  ...mobilityVehiclesItems.map((item) => ({
+    ...item,
+    section: 'Mobility and Vehicles Exchange',
+    sectionKey: 'markets.mobilityVehicles',
+    route: '/mobility-vehicles',
+    searchText: buildSearchText([
+      item.title,
+      item.category,
+      item.specification,
+      item.price,
+      'cars car motorcycles motorbikes train plane aircraft bicycle transport vehicles mobility exchange',
+    ]),
+  })),
+  ...fashionStyleItems.map((item) => ({
+    ...item,
+    section: 'Fashion, Clothing and Footwear Market',
+    sectionKey: 'markets.fashionStyle',
+    route: '/fashion-style',
+    searchText: buildSearchText([
+      item.title,
+      item.category,
+      item.specification,
+      item.price,
+      'fashion clothes clothing shoes sneakers heels apparel style boutique bags accessories',
+    ]),
+  })),
+  ...naturalResourcesItems.map((item) => ({
+    ...item,
+    section: 'Natural Resources and Minerals Exchange',
+    sectionKey: 'markets.naturalResources',
+    route: '/natural-resources-minerals',
+    searchText: buildSearchText([
+      item.title,
+      item.category,
+      item.specification,
+      item.price,
+      'natural resources minerals copper sand granite timber salt quarry mining bulk commodities',
     ]),
   })),
 ];
@@ -1769,6 +1968,231 @@ const LanguageSelectorPopover = ({
           </p>
         )}
       </div>
+    </div>
+  );
+};
+
+const PaymentMethodSelectorPopover = ({
+  isOpen,
+  selectedValue,
+  focusedIndex,
+  onSelect,
+  onFocusIndex,
+  cardRefs,
+  className = 'w-[min(92vw,360px)]',
+}) => {
+  if (!isOpen) {
+    return null;
+  }
+
+  return (
+    <div
+      className={`absolute right-0 top-[calc(100%+8px)] z-[70] overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-2xl ${className}`.trim()}
+      role="menu"
+      aria-label="Payment method selector"
+    >
+      <div className="max-h-80 overflow-y-auto p-2">
+        {PAYFAST_METHOD_OPTIONS.map((option, index) => {
+          const isSelected = selectedValue === option.value;
+          const isDefault = option.value === CARD_PAYMENT_METHOD_VALUE;
+
+          return (
+            <button
+              key={option.value}
+              ref={(node) => {
+                cardRefs.current[index] = node;
+              }}
+              type="button"
+              onClick={() => onSelect(option.value)}
+              onFocus={() => onFocusIndex(index)}
+              className={`mb-1 flex w-full items-center justify-between gap-3 rounded-xl px-3 py-3 text-left text-sm transition last:mb-0 ${
+                isSelected
+                  ? 'bg-[var(--svs-cyan-surface)] text-[var(--svs-primary-strong)]'
+                  : 'text-[var(--svs-text)] hover:bg-[var(--svs-surface-soft)]'
+              }`}
+              aria-checked={isSelected}
+              role="menuitemradio"
+              tabIndex={focusedIndex === index ? 0 : -1}
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-medium">{option.label}</span>
+                {isDefault ? (
+                  <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#1a73e8]">
+                    Default
+                  </span>
+                ) : null}
+              </span>
+              <span
+                className={`h-4 w-4 rounded-full border-2 ${
+                  isSelected ? 'border-[var(--svs-primary)] bg-[var(--svs-primary)]' : 'border-[var(--svs-border)] bg-transparent'
+                }`}
+                aria-hidden="true"
+              />
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const AddressAutocompleteField = ({
+  label,
+  value,
+  onChange,
+  onSelectAddress,
+  inputClassName,
+  placeholder = 'Start typing a street number, area, or suburb',
+}) => {
+  const [suggestions, setSuggestions] = useState([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isApplyingSelection, setIsApplyingSelection] = useState(false);
+  const [lookupError, setLookupError] = useState('');
+  const containerRef = useRef(null);
+  const suppressLookupRef = useRef(false);
+  const sessionTokenRef = useRef(createAddressLookupSessionToken());
+
+  useEffect(() => {
+    const query = String(value || '').trim();
+
+    if (suppressLookupRef.current) {
+      suppressLookupRef.current = false;
+      return undefined;
+    }
+
+    if (query.length < 3) {
+      setSuggestions([]);
+      setIsOpen(false);
+      setLookupError('');
+      setIsLoading(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setIsLoading(true);
+
+    const timeoutId = window.setTimeout(() => {
+      lookupAddressSuggestions({
+        input: query,
+        sessionToken: sessionTokenRef.current,
+        countryCode: 'za',
+      }).then((nextSuggestions) => {
+        if (cancelled) {
+          return;
+        }
+
+        setSuggestions(nextSuggestions);
+        setIsOpen(nextSuggestions.length > 0);
+        setLookupError('');
+      }).catch((error) => {
+        if (cancelled) {
+          return;
+        }
+
+        setSuggestions([]);
+        setIsOpen(false);
+        setLookupError(error instanceof Error ? error.message : 'Unable to load address suggestions.');
+      }).finally(() => {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      });
+    }, 280);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [value]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return undefined;
+    }
+
+    const handlePointerDown = (event) => {
+      if (!containerRef.current?.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    window.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('touchstart', handlePointerDown);
+
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('touchstart', handlePointerDown);
+    };
+  }, [isOpen]);
+
+  const handleSelectSuggestion = async (suggestion) => {
+    setIsApplyingSelection(true);
+    setLookupError('');
+
+    try {
+      const details = await lookupAddressDetails({
+        placeId: suggestion.placeId,
+        sessionToken: sessionTokenRef.current,
+      });
+
+      suppressLookupRef.current = true;
+      onSelectAddress(details);
+      setSuggestions([]);
+      setIsOpen(false);
+      sessionTokenRef.current = createAddressLookupSessionToken();
+    } catch (error) {
+      setLookupError(error instanceof Error ? error.message : 'Unable to apply the selected address.');
+    } finally {
+      setIsApplyingSelection(false);
+    }
+  };
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <span className="mb-2 block text-sm font-medium text-[var(--svs-text)]">{label}</span>
+      <label className="relative block">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--svs-muted)]" />
+        <input
+          type="text"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          className={`${inputClassName} pl-10 pr-10`}
+          autoComplete="street-address"
+        />
+        {isLoading || isApplyingSelection ? (
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[var(--svs-muted)]">
+            {isApplyingSelection ? 'Filling...' : 'Searching...'}
+          </span>
+        ) : null}
+      </label>
+      <p className="mt-2 text-xs text-[var(--svs-muted)]">Search by street number, area, or suburb and select a result to fill the address fields.</p>
+      {lookupError ? <p className="mt-2 text-xs font-medium text-[#d94d4d]">{lookupError}</p> : null}
+      {isOpen ? (
+        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-20 overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-2xl">
+          <div className="max-h-72 overflow-y-auto p-2">
+            {suggestions.map((suggestion) => (
+              <button
+                key={suggestion.placeId}
+                type="button"
+                onClick={() => {
+                  void handleSelectSuggestion(suggestion);
+                }}
+                className="mb-1 flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-[var(--svs-surface-soft)] last:mb-0"
+              >
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--svs-primary)]" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold text-[var(--svs-text)]">{suggestion.primaryText}</span>
+                  <span className="mt-1 block text-xs text-[var(--svs-muted)]">
+                    {suggestion.secondaryText || suggestion.fullText}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };
@@ -3474,12 +3898,150 @@ const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
   );
 };
 
+const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
+  const { t } = useTranslation();
+  const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'mobilityVehicles'), ...mobilityVehiclesItems], [sellerItems]);
+  const buildCartItem = (item) => createCartItem({
+    ...item,
+    route: '/mobility-vehicles',
+    marketName: t('markets.mobilityVehicles'),
+    details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Transport listing'}`,
+  });
+  const buildWishlistItem = (item) => createWishlistItem({
+    ...item,
+    route: '/mobility-vehicles',
+    marketName: t('markets.mobilityVehicles'),
+    details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Transport listing'}`,
+  });
+
+  return (
+  <PageFrame title={t('markets.mobilityVehicles')} subtitle={t('pageSubtitles.mobilityVehicles')}>
+    <CardGrid
+      items={marketItems}
+      buttonLabel={t('common.addToCart')}
+      secondaryButtonLabel={t('common.viewDetails')}
+      onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+      onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
+      onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+      onOpenItemDetails={(item) => {
+        const wishlistItem = buildWishlistItem(item);
+        onOpenItemDetails?.({
+          title: getTranslatedValue(t, item.titleKey, item.title),
+          image: item.image,
+          images: item.images || (item.image ? [item.image] : []),
+          marketName: t('markets.mobilityVehicles'),
+          details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Transport listing'}`,
+          priceLabel: getSalePrices(item.price).nowPrice,
+          cartItem: buildCartItem(item),
+          wishlistItem,
+        });
+      }}
+      isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/mobility-vehicles', item.id))}
+      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.specification || item.sellerName || 'Transport listing'} • <SalePrice price={item.price} /></p>}
+    />
+  </PageFrame>
+  );
+};
+
+const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
+  const { t } = useTranslation();
+  const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'fashionStyle'), ...fashionStyleItems], [sellerItems]);
+  const buildCartItem = (item) => createCartItem({
+    ...item,
+    route: '/fashion-style',
+    marketName: t('markets.fashionStyle'),
+    details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Style listing'}`,
+  });
+  const buildWishlistItem = (item) => createWishlistItem({
+    ...item,
+    route: '/fashion-style',
+    marketName: t('markets.fashionStyle'),
+    details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Style listing'}`,
+  });
+
+  return (
+  <PageFrame title={t('markets.fashionStyle')} subtitle={t('pageSubtitles.fashionStyle')}>
+    <CardGrid
+      items={marketItems}
+      buttonLabel={t('common.addToCart')}
+      secondaryButtonLabel={t('common.viewDetails')}
+      onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+      onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
+      onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+      onOpenItemDetails={(item) => {
+        const wishlistItem = buildWishlistItem(item);
+        onOpenItemDetails?.({
+          title: getTranslatedValue(t, item.titleKey, item.title),
+          image: item.image,
+          images: item.images || (item.image ? [item.image] : []),
+          marketName: t('markets.fashionStyle'),
+          details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Style listing'}`,
+          priceLabel: getSalePrices(item.price).nowPrice,
+          cartItem: buildCartItem(item),
+          wishlistItem,
+        });
+      }}
+      isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/fashion-style', item.id))}
+      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.specification || item.sellerName || 'Style listing'} • <SalePrice price={item.price} /></p>}
+    />
+  </PageFrame>
+  );
+};
+
+const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
+  const { t } = useTranslation();
+  const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'naturalResources'), ...naturalResourcesItems], [sellerItems]);
+  const buildCartItem = (item) => createCartItem({
+    ...item,
+    route: '/natural-resources-minerals',
+    marketName: t('markets.naturalResources'),
+    details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Resource listing'}`,
+  });
+  const buildWishlistItem = (item) => createWishlistItem({
+    ...item,
+    route: '/natural-resources-minerals',
+    marketName: t('markets.naturalResources'),
+    details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Resource listing'}`,
+  });
+
+  return (
+  <PageFrame title={t('markets.naturalResources')} subtitle={t('pageSubtitles.naturalResources')}>
+    <CardGrid
+      items={marketItems}
+      buttonLabel={t('common.addToCart')}
+      secondaryButtonLabel={t('common.viewDetails')}
+      onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+      onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
+      onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+      onOpenItemDetails={(item) => {
+        const wishlistItem = buildWishlistItem(item);
+        onOpenItemDetails?.({
+          title: getTranslatedValue(t, item.titleKey, item.title),
+          image: item.image,
+          images: item.images || (item.image ? [item.image] : []),
+          marketName: t('markets.naturalResources'),
+          details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Resource listing'}`,
+          priceLabel: getSalePrices(item.price).nowPrice,
+          cartItem: buildCartItem(item),
+          wishlistItem,
+        });
+      }}
+      isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/natural-resources-minerals', item.id))}
+      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.specification || item.sellerName || 'Resource listing'} • <SalePrice price={item.price} /></p>}
+    />
+  </PageFrame>
+  );
+};
+
 const MARKET_BADGE_COLORS = {
   ecommerce: 'bg-blue-100 text-blue-700',
   groceries: 'bg-green-100 text-green-700',
   fastFood: 'bg-orange-100 text-orange-700',
   beverages: 'bg-purple-100 text-purple-700',
   constructionTools: 'bg-yellow-100 text-yellow-800',
+  fashionStyle: 'bg-rose-100 text-rose-700',
+  mobilityVehicles: 'bg-sky-100 text-sky-700',
+  naturalResources: 'bg-lime-100 text-lime-700',
   wellness: 'bg-teal-100 text-teal-700',
   stationery: 'bg-amber-100 text-amber-700',
   hardwareSoftware: 'bg-slate-100 text-slate-700',
@@ -4673,10 +5235,22 @@ const SafetyPage = () => {
 
 const MarketsPage = () => {
   const { t } = useTranslation();
-  const sortedMarketLinks = useMemo(
-    () => [...marketLinks].sort((a, b) => t(a.labelKey).localeCompare(t(b.labelKey))),
+  const [showAllMarkets, setShowAllMarkets] = useState(false);
+  const orderedMarketLinks = useMemo(
+    () => {
+      const trendingMarkets = TRENDING_MARKET_HREFS
+        .map((href) => marketLinks.find((market) => market.href === href))
+        .filter(Boolean);
+      const remainingMarkets = marketLinks
+        .filter((market) => !TRENDING_MARKET_HREFS.includes(market.href))
+        .sort((a, b) => t(a.labelKey).localeCompare(t(b.labelKey)));
+
+      return [...trendingMarkets, ...remainingMarkets];
+    },
     [t],
   );
+  const visibleMarketLinks = showAllMarkets ? orderedMarketLinks : orderedMarketLinks.slice(0, 6);
+  const hasMoreMarkets = orderedMarketLinks.length > 6;
 
   return (
     <section className="bg-[var(--svs-bg)] px-4 py-10">
@@ -4692,7 +5266,7 @@ const MarketsPage = () => {
       </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {sortedMarketLinks.map((market, index) => (
+        {visibleMarketLinks.map((market, index) => (
           <Link
             key={`all-${market.href}`}
             to={market.href}
@@ -4712,6 +5286,18 @@ const MarketsPage = () => {
           </Link>
         ))}
       </div>
+
+      {hasMoreMarkets ? (
+        <div className="mt-6 flex justify-center">
+          <button
+            type="button"
+            onClick={() => setShowAllMarkets((current) => !current)}
+            className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 py-3 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
+          >
+            {showAllMarkets ? t('common.showLess') : t('common.viewMore')}
+          </button>
+        </div>
+      ) : null}
 
       <div className="mt-7 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
         <p className="text-sm text-[var(--svs-text)]">{t('marketsPage.quickTip')}</p>
@@ -4906,6 +5492,10 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [, setSubmitError] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
+  const [isMethodSelectorOpen, setIsMethodSelectorOpen] = useState(false);
+  const [focusedMethodIndex, setFocusedMethodIndex] = useState(0);
+  const methodCardRefs = useRef([]);
+  const methodMenuRef = useRef(null);
   const isPhoneMissing = !formState.phone.trim();
   const contactEmail = String(formState.contact || '').trim();
   const hasInvalidContactEmail = Boolean(contactEmail) && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail);
@@ -4933,6 +5523,47 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
       onClearBuyNowCheckout?.();
     }
   }, [buyNowCheckout, isBuyNowMode, onClearBuyNowCheckout]);
+
+  useEffect(() => {
+    const nextIndex = PAYFAST_METHOD_OPTIONS.findIndex((option) => option.value === formState.paymentMethod);
+    setFocusedMethodIndex(nextIndex >= 0 ? nextIndex : 0);
+  }, [formState.paymentMethod]);
+
+  useEffect(() => {
+    if (!isMethodSelectorOpen) {
+      return undefined;
+    }
+
+    const handlePointerDown = (event) => {
+      if (!methodMenuRef.current?.contains(event.target)) {
+        setIsMethodSelectorOpen(false);
+      }
+    };
+
+    window.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('touchstart', handlePointerDown);
+
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('touchstart', handlePointerDown);
+    };
+  }, [isMethodSelectorOpen]);
+
+  const applyAutofillAddress = useCallback((prefix, details) => {
+    const normalizeFieldName = (field) => (prefix ? `${prefix}${field.charAt(0).toUpperCase()}${field.slice(1)}` : field);
+
+    setFormState((current) => ({
+      ...current,
+      [normalizeFieldName('address1')]: details.address1 || current[normalizeFieldName('address1')],
+      [normalizeFieldName('address2')]: details.address2 || current[normalizeFieldName('address2')],
+      [normalizeFieldName('city')]: details.city || current[normalizeFieldName('city')],
+      [normalizeFieldName('province')]: SOUTH_AFRICA_PROVINCES.includes(details.province)
+        ? details.province
+        : current[normalizeFieldName('province')],
+      [normalizeFieldName('postalCode')]: details.postalCode || current[normalizeFieldName('postalCode')],
+      ...(prefix ? {} : { country: details.country || current.country }),
+    }));
+  }, []);
 
   const updateField = (field, value) => {
     setFormState((current) => ({ ...current, [field]: value }));
@@ -5221,10 +5852,15 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
               <span className={fieldLabelClassName}>Company (optional)</span>
               <input type="text" value={formState.company} onChange={(event) => updateField('company', event.target.value)} className={inputClassName} />
             </label>
-            <label className="md:col-span-2">
-              <span className={fieldLabelClassName}>Address</span>
-              <input type="text" value={formState.address1} onChange={(event) => updateField('address1', event.target.value)} className={inputClassName} />
-            </label>
+            <div className="md:col-span-2">
+              <AddressAutocompleteField
+                label="Address"
+                value={formState.address1}
+                onChange={(nextValue) => updateField('address1', nextValue)}
+                onSelectAddress={(details) => applyAutofillAddress('', details)}
+                inputClassName={inputClassName}
+              />
+            </div>
             <label className="md:col-span-2">
               <span className={fieldLabelClassName}>Apartment, suite, etc. (optional)</span>
               <input type="text" value={formState.address2} onChange={(event) => updateField('address2', event.target.value)} className={inputClassName} />
@@ -5305,20 +5941,40 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
             </div>
             <div className="mt-4 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-4 text-sm text-[var(--svs-text)]">
               <p className="font-semibold text-[var(--svs-text)]">Payment method</p>
-              <div className="mt-3 space-y-2">
-                {PAYFAST_METHOD_OPTIONS.map((option) => {
-                  const isSelected = formState.paymentMethod === option.value;
-
-                  return (
-                    <label key={option.value} className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm transition ${isSelected ? 'border-[var(--svs-primary)] bg-[var(--svs-cyan-surface)] text-[var(--svs-text)]' : 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)] text-[var(--svs-text)]'}`}>
-                      <span className="flex items-center gap-3">
-                        <input type="radio" name="payment-method" checked={isSelected} onChange={() => updateField('paymentMethod', option.value)} />
-                        <span className="font-medium">{option.label}</span>
+              <div className="relative mt-3" ref={methodMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFocusedMethodIndex(PAYFAST_METHOD_OPTIONS.findIndex((option) => option.value === formState.paymentMethod));
+                    setIsMethodSelectorOpen((prev) => !prev);
+                  }}
+                  className="flex w-full items-center justify-between gap-3 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-left text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)]"
+                  aria-haspopup="menu"
+                  aria-expanded={isMethodSelectorOpen}
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate">{PAYFAST_METHOD_OPTIONS.find((option) => option.value === formState.paymentMethod)?.label || PAYFAST_METHOD_OPTIONS[0].label}</span>
+                    {formState.paymentMethod === CARD_PAYMENT_METHOD_VALUE ? (
+                      <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#1a73e8]">
+                        Default
                       </span>
-                      {isSelected ? <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#1a73e8]">Default</span> : null}
-                    </label>
-                  );
-                })}
+                    ) : null}
+                  </span>
+                  <ChevronDown className={`h-4 w-4 shrink-0 transition ${isMethodSelectorOpen ? 'rotate-180' : ''}`} />
+                </button>
+                <PaymentMethodSelectorPopover
+                  isOpen={isMethodSelectorOpen}
+                  selectedValue={formState.paymentMethod}
+                  focusedIndex={focusedMethodIndex}
+                  onSelect={(value) => {
+                    updateField('paymentMethod', value);
+                    setFocusedMethodIndex(PAYFAST_METHOD_OPTIONS.findIndex((option) => option.value === value));
+                    setIsMethodSelectorOpen(false);
+                  }}
+                  onFocusIndex={setFocusedMethodIndex}
+                  cardRefs={methodCardRefs}
+                  className="w-full"
+                />
               </div>
               <p className="mt-4 text-sm text-[#4d463d]">Additional payment methods may be available on Payfast.</p>
             </div>
@@ -5343,7 +5999,15 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
               <input type="text" value={formState.billingFirstName} onChange={(event) => updateField('billingFirstName', event.target.value)} placeholder="Billing first name" className={inputClassName} />
               <input type="text" value={formState.billingLastName} onChange={(event) => updateField('billingLastName', event.target.value)} placeholder="Billing last name" className={inputClassName} />
               <input type="text" value={formState.billingCompany} onChange={(event) => updateField('billingCompany', event.target.value)} placeholder="Billing company (optional)" className={`md:col-span-2 ${inputClassName}`} />
-              <input type="text" value={formState.billingAddress1} onChange={(event) => updateField('billingAddress1', event.target.value)} placeholder="Billing address" className={`md:col-span-2 ${inputClassName}`} />
+              <div className="md:col-span-2">
+                <AddressAutocompleteField
+                  label="Billing address"
+                  value={formState.billingAddress1}
+                  onChange={(nextValue) => updateField('billingAddress1', nextValue)}
+                  onSelectAddress={(details) => applyAutofillAddress('billing', details)}
+                  inputClassName={inputClassName}
+                />
+              </div>
               <input type="text" value={formState.billingAddress2} onChange={(event) => updateField('billingAddress2', event.target.value)} placeholder="Apartment, suite, etc. (optional)" className={`md:col-span-2 ${inputClassName}`} />
               <input type="text" value={formState.billingCity} onChange={(event) => updateField('billingCity', event.target.value)} placeholder="Billing city" className={inputClassName} />
               <select value={formState.billingProvince} onChange={(event) => updateField('billingProvince', event.target.value)} className={inputClassName}>
@@ -5535,6 +6199,10 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
   const [stripeClientSecret, setStripeClientSecret] = useState('');
   const [isPreparingStripe, setIsPreparingStripe] = useState(false);
   const [stripeSetupError, setStripeSetupError] = useState('');
+  const [isMethodSelectorOpen, setIsMethodSelectorOpen] = useState(false);
+  const [focusedMethodIndex, setFocusedMethodIndex] = useState(() => PAYFAST_METHOD_OPTIONS.findIndex((option) => option.value === selectedMethod));
+  const methodCardRefs = useRef([]);
+  const methodMenuRef = useRef(null);
   const stripePromise = useMemo(() => getStripeInstance(), []);
   const isBuyNowMode = payfastSession?.mode === 'buy-now' && buyNowCheckout?.items?.length;
   const selectedMethodLabel = PAYFAST_METHOD_OPTIONS.find((option) => option.value === selectedMethod)?.label || PAYFAST_METHOD_OPTIONS[0].label;
@@ -5547,6 +6215,31 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
       writePendingPayfastSession(routeSession);
     }
   }, [routeSession]);
+
+  useEffect(() => {
+    const nextIndex = PAYFAST_METHOD_OPTIONS.findIndex((option) => option.value === selectedMethod);
+    setFocusedMethodIndex(nextIndex >= 0 ? nextIndex : 0);
+  }, [selectedMethod]);
+
+  useEffect(() => {
+    if (!isMethodSelectorOpen) {
+      return undefined;
+    }
+
+    const handlePointerDown = (event) => {
+      if (!methodMenuRef.current?.contains(event.target)) {
+        setIsMethodSelectorOpen(false);
+      }
+    };
+
+    window.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('touchstart', handlePointerDown);
+
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('touchstart', handlePointerDown);
+    };
+  }, [isMethodSelectorOpen]);
 
   useEffect(() => {
     if (!payfastSession || !isCardPaymentMethod) {
@@ -5715,20 +6408,43 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
 
           <div>
             <h2 className="text-2xl font-bold text-[#1f1f1f]">How will you be paying today?</h2>
-            <div className="mt-5 space-y-3">
-              {PAYFAST_METHOD_OPTIONS.map((option) => {
-                const isSelected = selectedMethod === option.value;
-
-                return (
-                  <label key={option.value} className={`flex cursor-pointer items-center justify-between gap-4 rounded-[22px] border px-5 py-4 text-sm transition ${isSelected ? 'border-[#1f1f1f] bg-[#fffdfa]' : 'border-[#e2dbd0] bg-[#fbfaf7]'}`}>
-                    <span className="flex items-center gap-3">
-                      <input type="radio" name="payfast-method" checked={isSelected} onChange={() => setSelectedMethod(option.value)} />
-                      <span className="font-semibold text-[#1f1f1f]">{option.label}</span>
-                    </span>
-                    {isSelected ? <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#1a73e8]">{option.value === CARD_PAYMENT_METHOD_VALUE ? 'Default' : 'Selected'}</span> : null}
-                  </label>
-                );
-              })}
+            <div className="mt-5 rounded-[22px] border border-[#e2dbd0] bg-[#fbfaf7] p-4" ref={methodMenuRef}>
+              <p className="text-sm font-semibold text-[#1f1f1f]">Payment method</p>
+              <div className="relative mt-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFocusedMethodIndex(PAYFAST_METHOD_OPTIONS.findIndex((option) => option.value === selectedMethod));
+                    setIsMethodSelectorOpen((prev) => !prev);
+                  }}
+                  className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[#d9d1c6] bg-white px-4 py-3 text-left text-sm font-semibold text-[#1f1f1f] transition hover:border-[#1f1f1f]"
+                  aria-haspopup="menu"
+                  aria-expanded={isMethodSelectorOpen}
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate">{selectedMethodLabel}</span>
+                    {isCardPaymentMethod ? (
+                      <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#1a73e8]">
+                        Default
+                      </span>
+                    ) : null}
+                  </span>
+                  <ChevronDown className={`h-4 w-4 shrink-0 transition ${isMethodSelectorOpen ? 'rotate-180' : ''}`} />
+                </button>
+                <PaymentMethodSelectorPopover
+                  isOpen={isMethodSelectorOpen}
+                  selectedValue={selectedMethod}
+                  focusedIndex={focusedMethodIndex}
+                  onSelect={(value) => {
+                    setSelectedMethod(value);
+                    setFocusedMethodIndex(PAYFAST_METHOD_OPTIONS.findIndex((option) => option.value === value));
+                    setIsMethodSelectorOpen(false);
+                  }}
+                  onFocusIndex={setFocusedMethodIndex}
+                  cardRefs={methodCardRefs}
+                  className="w-full"
+                />
+              </div>
             </div>
           </div>
 
@@ -6489,10 +7205,13 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/fast-food" element={<FastFoodPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/beverages-liquors" element={<BeveragesLiquorsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/building-construction-tools" element={<ConstructionToolsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/fashion-style" element={<FashionStylePage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/wellness" element={<WellnessPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/stationery-office" element={<StationeryPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/home-care" element={<HomeCarePage />} />
     <Route path="/hardware-software" element={<HardwareSoftwarePage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/mobility-vehicles" element={<MobilityVehiclesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/natural-resources-minerals" element={<NaturalResourcesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/seller/upload" element={<SellerUploadPage onSellerItemCreated={onSellerItemCreated} />} />
     <Route path="/seller/dashboard" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onUpdateOrderStatus={onUpdateOrderStatus} initialView="listings" />} />
     <Route path="/seller/orders" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onUpdateOrderStatus={onUpdateOrderStatus} initialView="orders" />} />
