@@ -142,3 +142,53 @@ select {
   letter-spacing: 0.02em;
   text-transform: none;
 }
+
+.svs-range-slider {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+}
+
+.svs-range-slider:focus {
+  outline: none;
+}
+
+.svs-range-slider::-webkit-slider-runnable-track {
+  height: 8px;
+  background: transparent;
+}
+
+.svs-range-slider::-moz-range-track {
+  height: 8px;
+  background: transparent;
+  border: 0;
+}
+
+.svs-range-slider::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  margin-top: -3px;
+  height: 14px;
+  width: 14px;
+  border-radius: 999px;
+  border: 2px solid #ffffff;
+  background: var(--svs-primary);
+  box-shadow: 0 3px 10px rgba(0, 123, 156, 0.24);
+}
+
+.svs-range-slider::-moz-range-thumb {
+  height: 14px;
+  width: 14px;
+  border-radius: 999px;
+  border: 2px solid #ffffff;
+  background: var(--svs-primary);
+  box-shadow: 0 3px 10px rgba(0, 123, 156, 0.24);
+}
+
+.svs-range-slider-min {
+  z-index: 2;
+}
+
+.svs-range-slider-max {
+  z-index: 3;
+}

@@ -250,7 +250,7 @@ const groceriesCategoryCards = [
     title: 'Meat & Seafood',
     subtitle: 'Fresh & quality cuts',
     image:
-      'https://images.pexels.com/photos/3298637/pexels-photo-3298637.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      'https://images.pexels.com/photos/13749941/pexels-photo-13749941.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
   {
     key: 'bakerySnacks',
@@ -261,10 +261,10 @@ const groceriesCategoryCards = [
   },
   {
     key: 'beverages',
-    title: 'Beverages',
+    title: 'Drinks',
     subtitle: 'Refreshing everyday drinks',
     image:
-      'https://images.pexels.com/photos/96974/pexels-photo-96974.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      'https://images.pexels.com/photos/4113669/pexels-photo-4113669.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
   {
     key: 'staplesGrains',
@@ -278,14 +278,14 @@ const groceriesCategoryCards = [
     title: 'Personal Care',
     subtitle: 'Daily care essentials',
     image:
-      'https://images.pexels.com/photos/4465124/pexels-photo-4465124.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?auto=format&fit=crop&w=1200&q=80',
   },
   {
     key: 'householdEssentials',
     title: 'Household Essentials',
     subtitle: 'Home care basics',
     image:
-      'https://images.pexels.com/photos/4239031/pexels-photo-4239031.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      'https://images.pexels.com/photos/7492919/pexels-photo-7492919.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
 ];
 
@@ -1491,6 +1491,22 @@ const sanitizeStorageSegment = (value) => String(value || 'seller')
   .replace(/[^a-z0-9]+/g, '-')
   .replace(/^-+|-+$/g, '') || 'seller';
 
+const getSellerImageStoragePaths = (urls = []) => {
+  const bucketPrefix = `/object/public/${SELLER_IMAGES_BUCKET}/`;
+
+  return (Array.isArray(urls) ? urls : [])
+    .map((url) => {
+      const bucketIndex = String(url || '').indexOf(bucketPrefix);
+
+      if (bucketIndex === -1) {
+        return '';
+      }
+
+      return url.slice(bucketIndex + bucketPrefix.length);
+    })
+    .filter(Boolean);
+};
+
 const normalizeReviewComment = (value) => String(value || '')
   .replace(/\s+/g, ' ')
   .trim();
@@ -1575,6 +1591,38 @@ const getStoredApprovedProductReviews = (itemKey) => sortProductReviews(
   getStoredProductReviews().filter((review) => review.itemKey === itemKey && review.moderationStatus !== 'rejected'),
 );
 
+const buildProductReviewSummaryMap = (reviews = []) => {
+  const groupedSummaries = reviews.reduce((summaryMap, review) => {
+    if (!review?.itemKey || review.moderationStatus === 'rejected') {
+      return summaryMap;
+    }
+
+    const currentSummary = summaryMap[review.itemKey] || { totalRating: 0, reviewCount: 0 };
+    const nextSummary = {
+      totalRating: currentSummary.totalRating + (Number(review.rating) || 0),
+      reviewCount: currentSummary.reviewCount + 1,
+    };
+
+    summaryMap[review.itemKey] = nextSummary;
+    return summaryMap;
+  }, {});
+
+  return Object.fromEntries(
+    Object.entries(groupedSummaries).map(([itemKey, summary]) => [
+      itemKey,
+      {
+        averageRating: summary.reviewCount ? Number((summary.totalRating / summary.reviewCount).toFixed(1)) : 0,
+        reviewCount: summary.reviewCount,
+      },
+    ]),
+  );
+};
+
+const getProductReviewSummary = (reviewSummaryMap, itemKey) => reviewSummaryMap?.[itemKey] || {
+  averageRating: 0,
+  reviewCount: 0,
+};
+
 const getMarketplaceItemSaveErrorMessage = (errorMessage) => {
   const normalizedMessage = String(errorMessage || '').toLowerCase();
 
@@ -1625,6 +1673,162 @@ const getNumericPriceValue = (price, discountRate = SALE_DISCOUNT_RATE) => {
   }
 
   return Math.max(amount * (1 - discountRate), 0);
+};
+
+const normalizePriceFilterInput = (value) => String(value || '')
+  .replace(/[^\d.]/g, '')
+  .replace(/(\..*)\./g, '$1');
+
+const parsePriceFilterInput = (value) => {
+  const normalizedValue = normalizePriceFilterInput(value);
+
+  if (!normalizedValue) {
+    return null;
+  }
+
+  const parsedValue = Number(normalizedValue);
+  return Number.isFinite(parsedValue) ? parsedValue : null;
+};
+
+const formatPriceFilterAmount = (amount) => {
+  const safeAmount = Number(amount) || 0;
+  const decimals = Number.isInteger(safeAmount) ? 0 : 2;
+  return formatSaleAmount(safeAmount, decimals);
+};
+
+const getPriceFilterStep = (minPrice, maxPrice) => {
+  const priceSpread = Math.max((Number(maxPrice) || 0) - (Number(minPrice) || 0), 0);
+
+  if (priceSpread <= 10) {
+    return 0.5;
+  }
+
+  if (priceSpread <= 100) {
+    return 1;
+  }
+
+  if (priceSpread <= 1000) {
+    return 10;
+  }
+
+  return 50;
+};
+
+const useMarketplacePriceFilter = (items = []) => {
+  const [isPriceFilterOpen, setIsPriceFilterOpen] = useState(false);
+  const [minPriceInput, setMinPriceInput] = useState('');
+  const [maxPriceInput, setMaxPriceInput] = useState('');
+
+  const availablePrices = useMemo(() => items
+    .map((item) => getNumericPriceValue(item?.price))
+    .filter((price) => Number.isFinite(price) && price >= 0), [items]);
+  const minimumAvailablePrice = availablePrices.length ? Math.min(...availablePrices) : 0;
+  const maximumAvailablePrice = availablePrices.length ? Math.max(...availablePrices) : 0;
+  const sliderStep = useMemo(
+    () => getPriceFilterStep(minimumAvailablePrice, maximumAvailablePrice),
+    [maximumAvailablePrice, minimumAvailablePrice],
+  );
+
+  const normalizedBounds = useMemo(() => {
+    const parsedMin = parsePriceFilterInput(minPriceInput);
+    const parsedMax = parsePriceFilterInput(maxPriceInput);
+
+    if (parsedMin !== null && parsedMax !== null && parsedMin > parsedMax) {
+      return { minimumPrice: parsedMax, maximumPrice: parsedMin };
+    }
+
+    return { minimumPrice: parsedMin, maximumPrice: parsedMax };
+  }, [maxPriceInput, minPriceInput]);
+
+  const filteredItems = useMemo(() => items.filter((item) => {
+    const numericPrice = getNumericPriceValue(item?.price);
+
+    if (normalizedBounds.minimumPrice !== null && numericPrice < normalizedBounds.minimumPrice) {
+      return false;
+    }
+
+    if (normalizedBounds.maximumPrice !== null && numericPrice > normalizedBounds.maximumPrice) {
+      return false;
+    }
+
+    return true;
+  }), [items, normalizedBounds]);
+
+  useEffect(() => {
+    if (!availablePrices.length) {
+      if (minPriceInput !== '' || maxPriceInput !== '') {
+        setMinPriceInput('');
+        setMaxPriceInput('');
+      }
+
+      return;
+    }
+
+    const parsedMin = parsePriceFilterInput(minPriceInput);
+    const parsedMax = parsePriceFilterInput(maxPriceInput);
+    const clampedMin = parsedMin === null
+      ? null
+      : Math.min(Math.max(parsedMin, minimumAvailablePrice), maximumAvailablePrice);
+    const clampedMax = parsedMax === null
+      ? null
+      : Math.min(Math.max(parsedMax, minimumAvailablePrice), maximumAvailablePrice);
+    const normalizedMin = clampedMin === null ? '' : String(Math.min(clampedMin, clampedMax ?? clampedMin));
+    const normalizedMax = clampedMax === null ? '' : String(Math.max(clampedMax, clampedMin ?? clampedMax));
+
+    if (normalizedMin !== minPriceInput) {
+      setMinPriceInput(normalizedMin);
+    }
+
+    if (normalizedMax !== maxPriceInput) {
+      setMaxPriceInput(normalizedMax);
+    }
+  }, [availablePrices.length, maximumAvailablePrice, maxPriceInput, minPriceInput, minimumAvailablePrice]);
+
+  const hasActivePriceFilter = minPriceInput !== '' || maxPriceInput !== '';
+  const sliderMinValue = normalizedBounds.minimumPrice ?? minimumAvailablePrice;
+  const sliderMaxValue = normalizedBounds.maximumPrice ?? maximumAvailablePrice;
+
+  const handleMinPriceChange = useCallback((value) => {
+    setMinPriceInput(normalizePriceFilterInput(value));
+  }, []);
+
+  const handleMaxPriceChange = useCallback((value) => {
+    setMaxPriceInput(normalizePriceFilterInput(value));
+  }, []);
+
+  const handleClearPriceFilter = useCallback(() => {
+    setMinPriceInput('');
+    setMaxPriceInput('');
+  }, []);
+
+  const handleSliderMinimumChange = useCallback((value) => {
+    const nextMinimum = Math.min(Number(value) || minimumAvailablePrice, sliderMaxValue);
+    setMinPriceInput(String(nextMinimum));
+  }, [minimumAvailablePrice, sliderMaxValue]);
+
+  const handleSliderMaximumChange = useCallback((value) => {
+    const nextMaximum = Math.max(Number(value) || maximumAvailablePrice, sliderMinValue);
+    setMaxPriceInput(String(nextMaximum));
+  }, [maximumAvailablePrice, sliderMinValue]);
+
+  return {
+    filteredItems,
+    hasActivePriceFilter,
+    isPriceFilterOpen,
+    minPriceInput,
+    maxPriceInput,
+    minimumAvailablePrice,
+    maximumAvailablePrice,
+    sliderMinValue,
+    sliderMaxValue,
+    sliderStep,
+    setIsPriceFilterOpen,
+    handleMinPriceChange,
+    handleMaxPriceChange,
+    handleClearPriceFilter,
+    handleSliderMinimumChange,
+    handleSliderMaximumChange,
+  };
 };
 
 const getCartCount = (cartItems) => cartItems.reduce((total, item) => total + item.quantity, 0);
@@ -2197,6 +2401,116 @@ const SalePrice = ({ price, className = '', wasClassName = '', nowClassName = ''
         {t('pricing.now', { price: nowPrice })}
       </span>
     </span>
+  );
+};
+
+const PriceFilterPanel = ({
+  filteredCount,
+  totalCount,
+  isPriceFilterOpen,
+  onToggleOpen,
+  minPriceInput,
+  maxPriceInput,
+  onMinPriceChange,
+  onMaxPriceChange,
+  onClearPriceFilter,
+  hasActivePriceFilter,
+  minimumAvailablePrice,
+  maximumAvailablePrice,
+  sliderMinValue,
+  sliderMaxValue,
+  sliderStep,
+  onSliderMinimumChange,
+  onSliderMaximumChange,
+}) => {
+  const sliderTrackStart = maximumAvailablePrice > minimumAvailablePrice
+    ? ((Math.min(sliderMinValue, sliderMaxValue) - minimumAvailablePrice) / (maximumAvailablePrice - minimumAvailablePrice)) * 100
+    : 0;
+  const sliderTrackEnd = maximumAvailablePrice > minimumAvailablePrice
+    ? ((Math.max(sliderMinValue, sliderMaxValue) - minimumAvailablePrice) / (maximumAvailablePrice - minimumAvailablePrice)) * 100
+    : 100;
+
+  return (
+    <section className="mb-3 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 sm:px-4 sm:py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2.5">
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--svs-primary-strong)]">Price filter</p>
+          <p className="mt-0.5 text-xs text-[var(--svs-muted)] sm:text-sm">
+            Showing {filteredCount} of {totalCount} items
+            {totalCount ? ` • Range ${formatPriceFilterAmount(minimumAvailablePrice)} to ${formatPriceFilterAmount(maximumAvailablePrice)}` : ''}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {hasActivePriceFilter ? (
+            <button
+              type="button"
+              onClick={onClearPriceFilter}
+              className="rounded-full border border-[var(--svs-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)] sm:text-sm"
+            >
+              Clear
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={onToggleOpen}
+            className="inline-flex items-center gap-2 rounded-full bg-[var(--svs-primary)] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[var(--svs-primary-strong)] sm:text-sm"
+            aria-expanded={isPriceFilterOpen}
+          >
+            {isPriceFilterOpen ? 'Hide filter' : 'Filter prices'}
+            <ChevronDown className={`h-4 w-4 transition ${isPriceFilterOpen ? 'rotate-180' : ''}`} />
+          </button>
+        </div>
+      </div>
+      {isPriceFilterOpen ? (
+        <div className="mt-2.5 space-y-2.5 border-t border-[var(--svs-border)] pt-2.5">
+          <div className="grid gap-3 lg:grid-cols-[5cm] lg:items-start">
+            <div className="w-full max-w-[5cm] space-y-2.5" role="group" aria-label="Price range slider">
+              <div className="flex justify-start">
+                <span className="inline-flex items-center gap-2 rounded-full bg-[var(--svs-surface-soft)] px-2 py-1 text-[11px] font-semibold text-[var(--svs-text)] sm:text-xs">
+                  <span className="text-[var(--svs-muted)]">Selected range:</span>
+                  <span>{formatPriceFilterAmount(Math.min(sliderMinValue, sliderMaxValue))} - {formatPriceFilterAmount(Math.max(sliderMinValue, sliderMaxValue))}</span>
+                </span>
+              </div>
+              <div className="relative px-1 py-2">
+                <div className="h-1.5 rounded-full bg-[var(--svs-border)]" />
+                <div
+                  className="pointer-events-none absolute top-2 h-1.5 rounded-full bg-[var(--svs-primary)]"
+                  style={{ left: `${sliderTrackStart}%`, width: `${Math.max(sliderTrackEnd - sliderTrackStart, 0)}%` }}
+                  aria-hidden="true"
+                />
+                <input
+                  type="range"
+                  min={minimumAvailablePrice}
+                  max={maximumAvailablePrice}
+                  step={sliderStep}
+                  value={Math.min(sliderMinValue, sliderMaxValue)}
+                  onChange={(event) => onSliderMinimumChange(event.target.value)}
+                  className="svs-range-slider svs-range-slider-min pointer-events-auto absolute inset-x-0 top-0 h-6 w-full cursor-pointer bg-transparent"
+                  aria-label="Minimum price slider"
+                />
+                <input
+                  type="range"
+                  min={minimumAvailablePrice}
+                  max={maximumAvailablePrice}
+                  step={sliderStep}
+                  value={Math.max(sliderMinValue, sliderMaxValue)}
+                  onChange={(event) => onSliderMaximumChange(event.target.value)}
+                  className="svs-range-slider svs-range-slider-max pointer-events-auto absolute inset-x-0 top-0 h-6 w-full cursor-pointer bg-transparent"
+                  aria-label="Maximum price slider"
+                />
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-[var(--svs-muted)] sm:text-xs">
+                <span>{formatPriceFilterAmount(minimumAvailablePrice)}</span>
+                <span>{formatPriceFilterAmount(maximumAvailablePrice)}</span>
+              </div>
+            </div>
+          </div>
+          <div className="text-[11px] text-[var(--svs-muted)] sm:text-xs">
+            Drag the slider to narrow the price range.
+            </div>
+        </div>
+      ) : null}
+    </section>
   );
 };
 
@@ -3405,7 +3719,7 @@ const KpiCard = ({ label, value }) => (
   </div>
 );
 
-const ECommercePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
+const ECommercePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'ecommerce'), ...productCards], [sellerItems]);
   const buildCartItem = (item) => createCartItem({
@@ -3431,6 +3745,8 @@ const ECommercePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
         items={marketItems}
         buttonLabel={t('common.addToCart')}
         secondaryButtonLabel={t('common.viewMore')}
+        reviewSummaryMap={productReviewSummaryMap}
+        getItemReviewKey={(item) => getCollectionItemId('/e-commerce', item.id)}
         onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
         onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
         onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
@@ -3467,6 +3783,24 @@ const TicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds 
       return byType && byLocation;
     });
   }, [typeFilter, locationFilter]);
+  const {
+    filteredItems: priceFilteredTickets,
+    hasActivePriceFilter,
+    isPriceFilterOpen,
+    minPriceInput,
+    maxPriceInput,
+    minimumAvailablePrice,
+    maximumAvailablePrice,
+    sliderMinValue,
+    sliderMaxValue,
+    sliderStep,
+    setIsPriceFilterOpen,
+    handleMinPriceChange,
+    handleMaxPriceChange,
+    handleClearPriceFilter,
+    handleSliderMinimumChange,
+    handleSliderMaximumChange,
+  } = useMarketplacePriceFilter(filtered);
 
   return (
     <PageFrame
@@ -3506,8 +3840,29 @@ const TicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds 
         </div>
       </div>
 
+      <PriceFilterPanel
+        filteredCount={priceFilteredTickets.length}
+        totalCount={filtered.length}
+        isPriceFilterOpen={isPriceFilterOpen}
+        onToggleOpen={() => setIsPriceFilterOpen((currentValue) => !currentValue)}
+        minPriceInput={minPriceInput}
+        maxPriceInput={maxPriceInput}
+        onMinPriceChange={handleMinPriceChange}
+        onMaxPriceChange={handleMaxPriceChange}
+        onClearPriceFilter={handleClearPriceFilter}
+        hasActivePriceFilter={hasActivePriceFilter}
+        minimumAvailablePrice={minimumAvailablePrice}
+        maximumAvailablePrice={maximumAvailablePrice}
+        sliderMinValue={sliderMinValue}
+        sliderMaxValue={sliderMaxValue}
+        sliderStep={sliderStep}
+        onSliderMinimumChange={handleSliderMinimumChange}
+        onSliderMaximumChange={handleSliderMaximumChange}
+      />
+
+      {priceFilteredTickets.length ? (
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {filtered.map((event) => (
+        {priceFilteredTickets.map((event) => (
           <article
             key={event.id}
             className="rounded-xl border border-[#eeeeee] bg-white shadow-[0_4px_8px_rgba(0,0,0,0.1)] transition hover:scale-[1.03]"
@@ -3603,6 +3958,11 @@ const TicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds 
           </article>
         ))}
       </div>
+      ) : (
+        <div className="rounded-2xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-8 text-sm text-[var(--svs-muted)]">
+          No ticket listings match that price range right now. Adjust your range to see more events.
+        </div>
+      )}
 
       <div className="mt-6 overflow-x-auto">
         <div className="flex min-w-max gap-4">
@@ -3620,6 +3980,25 @@ const TicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds 
 
 const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], onOpenItemDetails }) => {
   const { t } = useTranslation();
+  const bookingItems = useMemo(() => ticketEvents.slice(0, 2), []);
+  const {
+    filteredItems: priceFilteredBookingItems,
+    hasActivePriceFilter,
+    isPriceFilterOpen,
+    minPriceInput,
+    maxPriceInput,
+    minimumAvailablePrice,
+    maximumAvailablePrice,
+    sliderMinValue,
+    sliderMaxValue,
+    sliderStep,
+    setIsPriceFilterOpen,
+    handleMinPriceChange,
+    handleMaxPriceChange,
+    handleClearPriceFilter,
+    handleSliderMinimumChange,
+    handleSliderMaximumChange,
+  } = useMarketplacePriceFilter(bookingItems);
 
   return (
   <PageFrame
@@ -3629,8 +4008,30 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
     <p className="rounded-xl border border-[#b2ebf2] bg-[#e0f7fa] p-4 text-sm text-slate-700">
       Integrated booking flow: select event -&gt; choose seat and provider -&gt; complete secure payment -&gt; receive e-ticket.
     </p>
+    <div className="mt-4">
+      <PriceFilterPanel
+        filteredCount={priceFilteredBookingItems.length}
+        totalCount={bookingItems.length}
+        isPriceFilterOpen={isPriceFilterOpen}
+        onToggleOpen={() => setIsPriceFilterOpen((currentValue) => !currentValue)}
+        minPriceInput={minPriceInput}
+        maxPriceInput={maxPriceInput}
+        onMinPriceChange={handleMinPriceChange}
+        onMaxPriceChange={handleMaxPriceChange}
+        onClearPriceFilter={handleClearPriceFilter}
+        hasActivePriceFilter={hasActivePriceFilter}
+        minimumAvailablePrice={minimumAvailablePrice}
+        maximumAvailablePrice={maximumAvailablePrice}
+        sliderMinValue={sliderMinValue}
+        sliderMaxValue={sliderMaxValue}
+        sliderStep={sliderStep}
+        onSliderMinimumChange={handleSliderMinimumChange}
+        onSliderMaximumChange={handleSliderMaximumChange}
+      />
+    </div>
+    {priceFilteredBookingItems.length ? (
     <div className="mt-4 grid gap-4 md:grid-cols-2">
-      {ticketEvents.slice(0, 2).map((event) => (
+      {priceFilteredBookingItems.map((event) => (
         <article
           key={`booking-${event.id}`}
           className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]"
@@ -3712,6 +4113,11 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
         </article>
       ))}
     </div>
+    ) : (
+      <div className="mt-4 rounded-2xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-8 text-sm text-[var(--svs-muted)]">
+        No booking items match that price range right now. Adjust your price range to reopen the relevant options.
+      </div>
+    )}
   </PageFrame>
   );
 };
@@ -3829,7 +4235,7 @@ const VotingProvidersPage = () => {
   );
 };
 
-const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
+const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { categoryKey = '' } = useParams();
@@ -3890,7 +4296,9 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
           <CardGrid
             items={filteredMarketItems}
             buttonLabel={t('common.addToBasket')}
-            secondaryButtonLabel={t('common.deliveryOptions')}
+            secondaryButtonLabel={t('common.viewDetails')}
+            reviewSummaryMap={productReviewSummaryMap}
+            getItemReviewKey={(item) => getCollectionItemId('/groceries', item.id)}
             onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
             onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
             onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
@@ -3976,7 +4384,7 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
   );
 };
 
-const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
+const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'fastFood'), ...fastFoodItems], [sellerItems]);
   const buildCartItem = (item) => createCartItem({
@@ -4001,6 +4409,8 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
       items={marketItems}
       buttonLabel={t('common.orderNow')}
       secondaryButtonLabel={t('common.viewMeal')}
+      reviewSummaryMap={productReviewSummaryMap}
+      getItemReviewKey={(item) => getCollectionItemId('/fast-food', item.id)}
       onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
       onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
       onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
@@ -4024,7 +4434,7 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
   );
 };
 
-const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
+const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'beverages'), ...beveragesLiquorItems], [sellerItems]);
   const buildCartItem = (item) => createCartItem({
@@ -4053,6 +4463,8 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       items={marketItems}
       buttonLabel={t('common.addToCart')}
       secondaryButtonLabel={t('common.viewDetails')}
+      reviewSummaryMap={productReviewSummaryMap}
+      getItemReviewKey={(item) => getCollectionItemId('/beverages-liquors', item.id)}
       onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
       onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
       onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
@@ -4076,7 +4488,7 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
   );
 };
 
-const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
+const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'wellness'), ...wellnessItems], [sellerItems]);
   const buildCartItem = (item) => createCartItem({
@@ -4098,6 +4510,8 @@ const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
       items={marketItems}
       buttonLabel={t('common.add')}
       secondaryButtonLabel={t('common.uploadPrescription')}
+      reviewSummaryMap={productReviewSummaryMap}
+      getItemReviewKey={(item) => getCollectionItemId('/wellness', item.id)}
       onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
       onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
       onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
@@ -4121,7 +4535,7 @@ const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
   );
 };
 
-const TraditionalMedicinesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
+const TraditionalMedicinesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'traditionalMedicines'), ...traditionalMedicinesItems], [sellerItems]);
   const buildCartItem = (item) => createCartItem({
@@ -4146,6 +4560,8 @@ const TraditionalMedicinesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wis
       items={marketItems}
       buttonLabel={t('common.addToCart')}
       secondaryButtonLabel={t('common.viewDetails')}
+      reviewSummaryMap={productReviewSummaryMap}
+      getItemReviewKey={(item) => getCollectionItemId('/traditional-medicines-herbs', item.id)}
       onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
       onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
       onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
@@ -4169,7 +4585,7 @@ const TraditionalMedicinesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wis
   );
 };
 
-const StationeryPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
+const StationeryPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'stationery'), ...stationeryItems], [sellerItems]);
   const buildCartItem = (item) => createCartItem({
@@ -4191,6 +4607,8 @@ const StationeryPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
       items={marketItems}
       buttonLabel={t('common.addToCart')}
       secondaryButtonLabel={t('common.viewDetails')}
+      reviewSummaryMap={productReviewSummaryMap}
+      getItemReviewKey={(item) => getCollectionItemId('/stationery-office', item.id)}
       onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
       onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
       onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
@@ -4214,7 +4632,7 @@ const StationeryPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
   );
 };
 
-const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
+const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'constructionTools'), ...constructionToolsItems], [sellerItems]);
   const buildCartItem = (item) => createCartItem({
@@ -4236,6 +4654,8 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
       items={marketItems}
       buttonLabel={t('common.addToCart')}
       secondaryButtonLabel={t('common.viewDetails')}
+      reviewSummaryMap={productReviewSummaryMap}
+      getItemReviewKey={(item) => getCollectionItemId('/building-construction-tools', item.id)}
       onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
       onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
       onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
@@ -4295,7 +4715,7 @@ const HomeCarePage = () => {
   );
 };
 
-const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
+const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'hardwareSoftware'), ...techItems], [sellerItems]);
   const buildCartItem = (item) => createCartItem({
@@ -4317,6 +4737,8 @@ const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       items={marketItems}
       buttonLabel={t('common.addToCart')}
       secondaryButtonLabel={t('common.viewMore')}
+      reviewSummaryMap={productReviewSummaryMap}
+      getItemReviewKey={(item) => getCollectionItemId('/hardware-software', item.id)}
       onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
       onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
       onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
@@ -4340,7 +4762,7 @@ const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
   );
 };
 
-const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
+const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'mobilityVehicles'), ...mobilityVehiclesItems], [sellerItems]);
   const buildCartItem = (item) => createCartItem({
@@ -4362,6 +4784,8 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       items={marketItems}
       buttonLabel={t('common.addToCart')}
       secondaryButtonLabel={t('common.viewDetails')}
+      reviewSummaryMap={productReviewSummaryMap}
+      getItemReviewKey={(item) => getCollectionItemId('/mobility-vehicles', item.id)}
       onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
       onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
       onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
@@ -4385,7 +4809,7 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
   );
 };
 
-const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
+const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'fashionStyle'), ...fashionStyleItems], [sellerItems]);
   const buildCartItem = (item) => createCartItem({
@@ -4407,6 +4831,8 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
       items={marketItems}
       buttonLabel={t('common.addToCart')}
       secondaryButtonLabel={t('common.viewDetails')}
+      reviewSummaryMap={productReviewSummaryMap}
+      getItemReviewKey={(item) => getCollectionItemId('/fashion-style', item.id)}
       onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
       onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
       onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
@@ -4430,7 +4856,7 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
   );
 };
 
-const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
+const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'naturalResources'), ...naturalResourcesItems], [sellerItems]);
   const buildCartItem = (item) => createCartItem({
@@ -4452,6 +4878,8 @@ const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       items={marketItems}
       buttonLabel={t('common.addToCart')}
       secondaryButtonLabel={t('common.viewDetails')}
+      reviewSummaryMap={productReviewSummaryMap}
+      getItemReviewKey={(item) => getCollectionItemId('/natural-resources-minerals', item.id)}
       onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
       onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
       onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
@@ -4501,6 +4929,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
   const [loadError, setLoadError] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ title: '', description: '', price: '', quantity: '', marketKey: '' });
+  const [editExistingImages, setEditExistingImages] = useState([]);
   const [editImageFiles, setEditImageFiles] = useState([]);
   const [editImagePreviewUrls, setEditImagePreviewUrls] = useState([]);
   const [editMessage, setEditMessage] = useState('');
@@ -4604,7 +5033,15 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
     setEditImageFiles((current) => current.filter((_, index) => index !== indexToRemove));
   };
 
+  const handleRemoveExistingEditImage = (imageUrlToRemove) => {
+    setEditExistingImages((current) => current.filter((imageUrl) => imageUrl !== imageUrlToRemove));
+  };
+
   const openEdit = (item) => {
+    const existingImages = Array.isArray(item.images) && item.images.length
+      ? item.images.filter((imageUrl) => typeof imageUrl === 'string' && imageUrl.trim())
+      : (item.image ? [item.image] : []);
+
     setEditingId(item.dbId);
     setEditForm({
       title: item.title,
@@ -4613,6 +5050,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
       quantity: String(normalizeListingQuantity(item.availableQuantity, 0)),
       marketKey: item.marketKey,
     });
+    setEditExistingImages(existingImages);
     setEditImageFiles([]);
     setEditMessage('');
     setEditMessageType('idle');
@@ -4621,8 +5059,10 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
   const cancelEdit = () => {
     setEditingId(null);
     setEditForm({ title: '', description: '', price: '', quantity: '', marketKey: '' });
+    setEditExistingImages([]);
     setEditImageFiles([]);
     setEditMessage('');
+    setEditMessageType('idle');
   };
 
   const handleEditChange = (event) => {
@@ -4644,6 +5084,15 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
       return;
     }
 
+    const retainedImageUrls = editExistingImages.filter((imageUrl) => typeof imageUrl === 'string' && imageUrl.trim());
+
+    if (!retainedImageUrls.length && !editImageFiles.length) {
+      setEditMessage('Keep at least one current image or add a new one before saving this listing.');
+      setEditMessageType('error');
+      setIsSaving(false);
+      return;
+    }
+
     const result = await onUpdateSellerItem(
       item.dbId,
       {
@@ -4652,8 +5101,9 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
         price: editForm.price,
         quantity: normalizedQuantity,
         marketKey: editForm.marketKey,
-        imageUrl: item.image,
-        imageUrls: item.images || [],
+        previousImageUrl: item.image,
+        previousImageUrls: item.images || [],
+        imageUrls: retainedImageUrls,
       },
       editImageFiles,
     );
@@ -4668,7 +5118,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
     setMyListings((current) =>
       current.map((listing) => (listing.dbId === item.dbId ? mapSellerItemRecord(result.data) : listing)),
     );
-    setEditingId(null);
+    cancelEdit();
     setIsSaving(false);
   };
 
@@ -4985,7 +5435,30 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                       <textarea name="description" value={editForm.description} onChange={handleEditChange} rows={3} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Replace Images <span className="font-normal text-[var(--svs-muted)]">(optional)</span></label>
+                      <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Listing Images</label>
+                      {editExistingImages.length ? (
+                        <div className="mb-3 grid grid-cols-2 gap-2">
+                          {editExistingImages.map((imageUrl, index) => (
+                            <div key={`${imageUrl}-${index}`} className="relative overflow-hidden rounded-md border border-[var(--svs-border)] bg-white">
+                              <img
+                                src={imageUrl}
+                                alt={`${item.title} ${index + 1}`}
+                                className="h-24 w-full object-cover"
+                                loading="lazy"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveExistingEditImage(imageUrl)}
+                                className="absolute right-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mb-2 text-xs text-[var(--svs-muted)]">No current images will be kept unless you add new ones below.</p>
+                      )}
                       <input
                         type="file"
                         accept="image/*"
@@ -4993,10 +5466,10 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                         onChange={handleEditImagePick}
                         className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-xs text-[var(--svs-text)] outline-none"
                       />
-                      <p className="mt-1 text-xs text-[var(--svs-muted)]">Pick new images to replace the current ones. Leave empty to keep existing images.</p>
+                      <p className="mt-1 text-xs text-[var(--svs-muted)]">Add more images here. You can remove current images above or remove pending uploads before saving.</p>
                       {editImageFiles.length ? (
                         <div className="mt-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-2 text-xs text-[var(--svs-muted)]">
-                          <p className="font-semibold text-[var(--svs-text)]">{editImageFiles.length} image{editImageFiles.length === 1 ? '' : 's'} selected</p>
+                          <p className="font-semibold text-[var(--svs-text)]">{editImageFiles.length} new image{editImageFiles.length === 1 ? '' : 's'} selected</p>
                           <ul className="mt-1 max-h-20 space-y-0.5 overflow-y-auto pr-1">
                             {editImageFiles.map((file, index) => (
                               <li key={`${file.name}-${file.size}-${index}`} className="flex items-center justify-between gap-2">
@@ -7484,16 +7957,59 @@ const ItemDetailsModal = ({
   );
 };
 
-const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer, onPrimaryAction, onBuyNowAction, onToggleWishlist, isItemWishlisted, onOpenItemDetails }) => {
+const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer, onPrimaryAction, onBuyNowAction, onToggleWishlist, isItemWishlisted, onOpenItemDetails, reviewSummaryMap = {}, getItemReviewKey }) => {
   const { t } = useTranslation();
+  const {
+    filteredItems,
+    hasActivePriceFilter,
+    isPriceFilterOpen,
+    minPriceInput,
+    maxPriceInput,
+    minimumAvailablePrice,
+    maximumAvailablePrice,
+    sliderMinValue,
+    sliderMaxValue,
+    sliderStep,
+    setIsPriceFilterOpen,
+    handleMinPriceChange,
+    handleMaxPriceChange,
+    handleClearPriceFilter,
+    handleSliderMinimumChange,
+    handleSliderMaximumChange,
+  } = useMarketplacePriceFilter(items);
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {items.map((item) => {
+    <>
+      <PriceFilterPanel
+        filteredCount={filteredItems.length}
+        totalCount={items.length}
+        isPriceFilterOpen={isPriceFilterOpen}
+        onToggleOpen={() => setIsPriceFilterOpen((currentValue) => !currentValue)}
+        minPriceInput={minPriceInput}
+        maxPriceInput={maxPriceInput}
+        onMinPriceChange={handleMinPriceChange}
+        onMaxPriceChange={handleMaxPriceChange}
+        onClearPriceFilter={handleClearPriceFilter}
+        hasActivePriceFilter={hasActivePriceFilter}
+        minimumAvailablePrice={minimumAvailablePrice}
+        maximumAvailablePrice={maximumAvailablePrice}
+        sliderMinValue={sliderMinValue}
+        sliderMaxValue={sliderMaxValue}
+        sliderStep={sliderStep}
+        onSliderMinimumChange={handleSliderMinimumChange}
+        onSliderMaximumChange={handleSliderMaximumChange}
+      />
+      {filteredItems.length ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {filteredItems.map((item) => {
         const itemTitle = getTranslatedValue(t, item.titleKey, item.title);
         const hasStockValue = item.availableQuantity !== null && item.availableQuantity !== undefined;
         const availableQuantity = hasStockValue ? normalizeListingQuantity(item.availableQuantity, 0) : null;
         const isOutOfStock = availableQuantity !== null && availableQuantity <= 0;
+        const itemReviewKey = getItemReviewKey?.(item);
+        const reviewSummary = getProductReviewSummary(reviewSummaryMap, itemReviewKey);
+        const averageRatingLabel = reviewSummary.reviewCount ? reviewSummary.averageRating.toFixed(1) : '0.0';
+        const reviewCountLabel = `${reviewSummary.reviewCount} review${reviewSummary.reviewCount === 1 ? '' : 's'}`;
 
         return (
           <article
@@ -7570,12 +8086,23 @@ const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer, onPr
                 >
                   {secondaryButtonLabel}
                 </button>
+                <div className="inline-flex items-center gap-1 rounded-md border border-[var(--svs-border)] bg-white px-3 py-2 text-sm text-[var(--svs-muted)]">
+                  <Star className={`h-4 w-4 text-amber-500 ${reviewSummary.reviewCount ? 'fill-current' : ''}`} />
+                  <span className="font-semibold text-[var(--svs-text)]">{averageRatingLabel}</span>
+                  <span>{reviewCountLabel}</span>
+                </div>
               </div>
             </div>
           </article>
-        );
-      })}
-    </div>
+          );
+        })}
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-8 text-sm text-[var(--svs-muted)]">
+          No items match that price range yet. Adjust the minimum or maximum price to see more results.
+        </div>
+      )}
+    </>
   );
 };
 
@@ -7635,7 +8162,7 @@ const SiteFooter = () => {
   );
 };
 
-const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerItems, buyNowCheckout, onAddToCart, onBuyNow, onToggleWishlist, onRemoveWishlistItem, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder, onClearBuyNowCheckout, onCancelOrder, onSellerItemCreated, onDeleteSellerItem, onUpdateSellerItem, onUpdateOrderStatus, onOpenItemDetails }) => {
+const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerItems, buyNowCheckout, productReviewSummaryMap, onAddToCart, onBuyNow, onToggleWishlist, onRemoveWishlistItem, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder, onClearBuyNowCheckout, onCancelOrder, onSellerItemCreated, onDeleteSellerItem, onUpdateSellerItem, onUpdateOrderStatus, onOpenItemDetails }) => {
   const { t } = useTranslation();
 
   return (
@@ -7649,24 +8176,24 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/checkout/payfast" element={<PayfastCheckoutPage buyNowCheckout={buyNowCheckout} onPlaceOrder={onPlaceOrder} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />
     <Route path="/search" element={<SearchResultsPage />} />
 
-    <Route path="/e-commerce" element={<ECommercePage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/e-commerce" element={<ECommercePage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/tickets" element={<TicketsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/bookings-tickets" element={<BookingsTicketsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/voting-clients" element={<VotingClientsPage />} />
     <Route path="/voting-providers" element={<VotingProvidersPage />} />
-    <Route path="/groceries" element={<GroceriesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
-    <Route path="/groceries/:categoryKey" element={<GroceriesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
-    <Route path="/fast-food" element={<FastFoodPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
-    <Route path="/beverages-liquors" element={<BeveragesLiquorsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
-    <Route path="/building-construction-tools" element={<ConstructionToolsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
-    <Route path="/fashion-style" element={<FashionStylePage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
-    <Route path="/traditional-medicines-herbs" element={<TraditionalMedicinesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
-    <Route path="/wellness" element={<WellnessPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
-    <Route path="/stationery-office" element={<StationeryPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/groceries" element={<GroceriesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
+    <Route path="/groceries/:categoryKey" element={<GroceriesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
+    <Route path="/fast-food" element={<FastFoodPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
+    <Route path="/beverages-liquors" element={<BeveragesLiquorsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
+    <Route path="/building-construction-tools" element={<ConstructionToolsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
+    <Route path="/fashion-style" element={<FashionStylePage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
+    <Route path="/traditional-medicines-herbs" element={<TraditionalMedicinesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
+    <Route path="/wellness" element={<WellnessPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
+    <Route path="/stationery-office" element={<StationeryPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/home-care" element={<HomeCarePage />} />
-    <Route path="/hardware-software" element={<HardwareSoftwarePage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
-    <Route path="/mobility-vehicles" element={<MobilityVehiclesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
-    <Route path="/natural-resources-minerals" element={<NaturalResourcesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/hardware-software" element={<HardwareSoftwarePage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
+    <Route path="/mobility-vehicles" element={<MobilityVehiclesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
+    <Route path="/natural-resources-minerals" element={<NaturalResourcesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/seller/upload" element={<SellerUploadPage onSellerItemCreated={onSellerItemCreated} />} />
     <Route path="/seller/dashboard" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onUpdateOrderStatus={onUpdateOrderStatus} initialView="listings" />} />
     <Route path="/seller/orders" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onUpdateOrderStatus={onUpdateOrderStatus} initialView="orders" />} />
@@ -7707,6 +8234,7 @@ const App = () => {
   const [notifications, setNotifications] = useState(getStoredNotifications);
   const [sellerItems, setSellerItems] = useState([]);
   const [productReviews, setProductReviews] = useState([]);
+  const [productReviewSummaryMap, setProductReviewSummaryMap] = useState(() => buildProductReviewSummaryMap(getStoredProductReviews()));
   const [isLoadingProductReviews, setIsLoadingProductReviews] = useState(false);
   const [reviewNotice, setReviewNotice] = useState('');
   const [selectedItemDetails, setSelectedItemDetails] = useState(null);
@@ -8159,6 +8687,32 @@ const App = () => {
   useEffect(() => {
     loadSellerItems();
   }, [loadSellerItems]);
+
+  const loadProductReviewSummaries = useCallback(async () => {
+    if (!hasSupabaseEnv || !supabase) {
+      setProductReviewSummaryMap(buildProductReviewSummaryMap(getStoredProductReviews()));
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from(PRODUCT_REVIEWS_TABLE)
+      .select('item_key, rating, moderation_status');
+
+    if (error) {
+      setProductReviewSummaryMap(buildProductReviewSummaryMap(getStoredProductReviews()));
+      return;
+    }
+
+    setProductReviewSummaryMap(buildProductReviewSummaryMap((data || []).map((record) => ({
+      itemKey: record.item_key,
+      rating: record.rating,
+      moderationStatus: String(record.moderation_status || 'approved'),
+    }))));
+  }, []);
+
+  useEffect(() => {
+    loadProductReviewSummaries();
+  }, [loadProductReviewSummaries]);
 
   const loadReviewsForItem = useCallback(async (itemKey) => {
     if (!itemKey) {
@@ -8661,18 +9215,8 @@ const App = () => {
       return;
     }
 
-    const bucketPrefix = `/object/public/${SELLER_IMAGES_BUCKET}/`;
     const sourceUrls = Array.isArray(imageUrls) && imageUrls.length ? imageUrls : (imageUrl ? [imageUrl] : []);
-    const storagePaths = sourceUrls
-      .map((url) => {
-        const bucketIndex = String(url || '').indexOf(bucketPrefix);
-        if (bucketIndex === -1) {
-          return '';
-        }
-
-        return url.slice(bucketIndex + bucketPrefix.length);
-      })
-      .filter(Boolean);
+    const storagePaths = getSellerImageStoragePaths(sourceUrls);
 
     if (storagePaths.length) {
       await supabase.storage.from(SELLER_IMAGES_BUCKET).remove(storagePaths);
@@ -8694,12 +9238,16 @@ const App = () => {
       return { error: 'You must be signed in to update this listing.' };
     }
 
-    let imageUrl = updates.imageUrl;
-    let imageUrls = Array.isArray(updates.imageUrls) ? updates.imageUrls : (updates.imageUrl ? [updates.imageUrl] : []);
+    const previousImageUrls = Array.isArray(updates.previousImageUrls) && updates.previousImageUrls.length
+      ? updates.previousImageUrls.filter((imageUrl) => typeof imageUrl === 'string' && imageUrl.trim())
+      : (updates.previousImageUrl ? [updates.previousImageUrl] : []);
+    const retainedImageUrls = Array.isArray(updates.imageUrls)
+      ? updates.imageUrls.filter((imageUrl) => typeof imageUrl === 'string' && imageUrl.trim())
+      : [];
+    const uploadedImageUrls = [];
+    const uploadedStoragePaths = [];
 
     if (newImageFiles && newImageFiles.length) {
-      const uploadedImageUrls = [];
-
       for (const imageFile of newImageFiles) {
         const fileExtension = imageFile.name.split('.').pop() || 'jpg';
         const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExtension}`;
@@ -8709,15 +9257,32 @@ const App = () => {
           .from(SELLER_IMAGES_BUCKET)
           .upload(filePath, imageFile, { cacheControl: '3600', upsert: false });
 
-        if (uploadError) return { error: uploadError.message };
+        if (uploadError) {
+          if (uploadedStoragePaths.length) {
+            await supabase.storage.from(SELLER_IMAGES_BUCKET).remove(uploadedStoragePaths);
+          }
+
+          return { error: uploadError.message };
+        }
 
         const { data: publicUrlData } = supabase.storage.from(SELLER_IMAGES_BUCKET).getPublicUrl(filePath);
+        uploadedStoragePaths.push(filePath);
         uploadedImageUrls.push(publicUrlData.publicUrl);
       }
-
-      imageUrl = uploadedImageUrls[0];
-      imageUrls = uploadedImageUrls;
     }
+
+    const nextImageUrls = [...retainedImageUrls, ...uploadedImageUrls];
+
+    if (!nextImageUrls.length) {
+      if (uploadedStoragePaths.length) {
+        await supabase.storage.from(SELLER_IMAGES_BUCKET).remove(uploadedStoragePaths);
+      }
+
+      return { error: 'Add at least one image before saving this listing.' };
+    }
+
+    const removedImageUrls = previousImageUrls.filter((imageUrl) => !nextImageUrls.includes(imageUrl));
+    const imageUrl = nextImageUrls[0];
 
     const { data, error } = await supabase
       .from(SELLER_ITEMS_TABLE)
@@ -8727,7 +9292,8 @@ const App = () => {
         price: updates.price,
         quantity: normalizeListingQuantity(updates.quantity, 0),
         market_key: updates.marketKey,
-        ...(imageUrl !== undefined ? { image_url: imageUrl, image_urls: imageUrls } : {}),
+        image_url: imageUrl,
+        image_urls: nextImageUrls,
       })
       .eq('id', dbId)
       .eq('seller_email', sellerEmail)
@@ -8735,6 +9301,10 @@ const App = () => {
       .single();
 
     if (error) {
+      if (uploadedStoragePaths.length) {
+        await supabase.storage.from(SELLER_IMAGES_BUCKET).remove(uploadedStoragePaths);
+      }
+
       return {
         error: String(error.message || '').toLowerCase().includes('marketplace_items_market_key_check')
           ? `Rerun supabase/seller-marketplace.sql so the ${SELLER_ITEMS_TABLE} market_key constraint includes the selected market.`
@@ -8743,6 +9313,12 @@ const App = () => {
             : error.message,
       };
     }
+
+      const removedStoragePaths = getSellerImageStoragePaths(removedImageUrls);
+
+      if (removedStoragePaths.length) {
+        await supabase.storage.from(SELLER_IMAGES_BUCKET).remove(removedStoragePaths);
+      }
 
     setSellerItems((currentItems) =>
       currentItems.map((item) => (item.dbId === dbId ? mapSellerItemRecord(data) : item)),
@@ -8930,14 +9506,16 @@ const App = () => {
       }
 
       await loadReviewsForItem(itemKey);
+      await loadProductReviewSummaries();
     } else {
       const nextReviews = [nextReview, ...getStoredProductReviews()];
       window.localStorage.setItem(PRODUCT_REVIEWS_STORAGE_KEY, JSON.stringify(nextReviews));
       setProductReviews(getStoredApprovedProductReviews(itemKey));
+      setProductReviewSummaryMap(buildProductReviewSummaryMap(nextReviews));
     }
 
     setReviewNotice('Review published. It is now visible to shoppers.');
-  }, [loadReviewsForItem]);
+  }, [loadProductReviewSummaries, loadReviewsForItem]);
 
   useEffect(() => {
     if (!actionNotice) {
@@ -9006,6 +9584,7 @@ const App = () => {
         orders={scopedOrders}
         sellerItems={sellerItems}
         buyNowCheckout={buyNowCheckout}
+        productReviewSummaryMap={productReviewSummaryMap}
         onAddToCart={handleAddToCart}
         onBuyNow={handleBuyNow}
         onToggleWishlist={handleToggleWishlist}
