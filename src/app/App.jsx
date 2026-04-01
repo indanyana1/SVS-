@@ -19,7 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, Navigate, Route, Routes, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import logo from '../assets/icons/logo.jpeg';
 import { createAddressLookupSessionToken, lookupAddressDetails, lookupAddressSuggestions } from '../lib/addressLookup';
@@ -230,30 +230,274 @@ const matchSeed = [
   { id: 'm3', match: 'Barcelona vs Atletico', options: ['Barcelona Win', 'Draw', 'Atletico Win'], split: '62%' },
 ];
 
+const groceriesCategoryCards = [
+  {
+    key: 'fruitsVegetables',
+    title: 'Fruits & Vegetables',
+    subtitle: 'Fresh & farm-picked',
+    image:
+      'https://images.pexels.com/photos/1656663/pexels-photo-1656663.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    key: 'dairyEggs',
+    title: 'Dairy & Eggs',
+    subtitle: 'Pure daily essentials',
+    image:
+      'https://images.pexels.com/photos/248412/pexels-photo-248412.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    key: 'meatSeafood',
+    title: 'Meat & Seafood',
+    subtitle: 'Fresh & quality cuts',
+    image:
+      'https://images.pexels.com/photos/3298637/pexels-photo-3298637.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    key: 'bakerySnacks',
+    title: 'Bakery & Snacks',
+    subtitle: 'Baked fresh, always tasty',
+    image:
+      'https://images.pexels.com/photos/1775043/pexels-photo-1775043.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    key: 'beverages',
+    title: 'Beverages',
+    subtitle: 'Refreshing everyday drinks',
+    image:
+      'https://images.pexels.com/photos/96974/pexels-photo-96974.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    key: 'staplesGrains',
+    title: 'Staples & Grains',
+    subtitle: 'Pantry essentials',
+    image:
+      'https://images.pexels.com/photos/4110251/pexels-photo-4110251.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    key: 'personalCare',
+    title: 'Personal Care',
+    subtitle: 'Daily care essentials',
+    image:
+      'https://images.pexels.com/photos/4465124/pexels-photo-4465124.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    key: 'householdEssentials',
+    title: 'Household Essentials',
+    subtitle: 'Home care basics',
+    image:
+      'https://images.pexels.com/photos/4239031/pexels-photo-4239031.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+];
+
+const groceriesCategoryKeywordMap = {
+  fruitsVegetables: ['fruit', 'vegetable', 'produce', 'tomato', 'citrus', 'spinach', 'avocado', 'banana', 'apple', 'pepper', 'onion'],
+  dairyEggs: ['dairy', 'egg', 'milk', 'yoghurt', 'yogurt', 'cheese', 'butter'],
+  meatSeafood: ['meat', 'seafood', 'chicken', 'beef', 'fish', 'salmon', 'prawn'],
+  bakerySnacks: ['bakery', 'bread', 'loaf', 'croissant', 'snack', 'biscuit', 'chips', 'cookie'],
+  beverages: ['beverage', 'drink', 'juice', 'water', 'soda', 'tea', 'coffee'],
+  staplesGrains: ['staple', 'grain', 'rice', 'maize', 'flour', 'pasta', 'beans', 'cereal'],
+  personalCare: ['personal care', 'body wash', 'soap', 'toothpaste', 'lotion', 'shampoo', 'deodorant'],
+  householdEssentials: ['household', 'cleaner', 'detergent', 'dishwashing', 'laundry', 'tissue', 'paper towel'],
+};
+
+const resolveGroceriesCategoryKey = (item = {}) => {
+  if (item.categoryKey && groceriesCategoryCards.some((category) => category.key === item.categoryKey)) {
+    return item.categoryKey;
+  }
+
+  const haystack = `${item.category || ''} ${item.title || ''} ${item.description || ''}`.toLowerCase();
+
+  const matchedCategory = groceriesCategoryCards.find((category) => {
+    if (haystack.includes(category.title.toLowerCase())) {
+      return true;
+    }
+
+    return groceriesCategoryKeywordMap[category.key].some((keyword) => haystack.includes(keyword));
+  });
+
+  return matchedCategory?.key || null;
+};
+
 const groceries = [
   {
     id: 'g1',
+    categoryKey: 'fruitsVegetables',
     title: 'Fresh Tomatoes Pack',
     price: '4.50',
     discount: '20% Off',
+    description: 'Sun-ripened tomatoes for salads, stews, and sauces.',
     image:
       'https://images.pexels.com/photos/533280/pexels-photo-533280.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
   {
     id: 'g2',
+    categoryKey: 'dairyEggs',
     title: 'Organic Eggs 12 Pack',
     price: '5.99',
     discount: 'Buy 1 Get 1 Free',
+    description: 'Farm-fresh eggs for breakfast, baking, and family meals.',
     image:
       'https://images.pexels.com/photos/162712/egg-white-food-protein-162712.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
   {
     id: 'g3',
+    categoryKey: 'fruitsVegetables',
     title: 'Fresh Citrus Crate',
     price: '7.99',
     discount: 'Weekly Deal',
+    description: 'A bright mix of oranges, lemons, and grapefruit.',
     image:
       'https://images.pexels.com/photos/1132047/pexels-photo-1132047.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'g4',
+    categoryKey: 'fruitsVegetables',
+    title: 'Garden Spinach Bunch',
+    price: '3.25',
+    discount: 'Fresh Pick',
+    description: 'Leafy greens for smoothies, sautés, and quick salads.',
+    image:
+      'https://images.pexels.com/photos/2329440/pexels-photo-2329440.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'g5',
+    categoryKey: 'dairyEggs',
+    title: 'Whole Milk 2L',
+    price: '3.89',
+    discount: 'Family Saver',
+    description: 'Creamy full-cream milk for cereal, tea, and cooking.',
+    image:
+      'https://images.pexels.com/photos/5946721/pexels-photo-5946721.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'g6',
+    categoryKey: 'dairyEggs',
+    title: 'Aged Cheddar Block',
+    price: '6.49',
+    discount: 'Best Seller',
+    description: 'Rich cheddar cheese for sandwiches, platters, and sauces.',
+    image:
+      'https://images.pexels.com/photos/821365/pexels-photo-821365.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'g7',
+    categoryKey: 'meatSeafood',
+    title: 'Chicken Fillet Tray',
+    price: '8.99',
+    discount: 'Protein Pick',
+    description: 'Fresh boneless chicken fillets ready for grilling or frying.',
+    image:
+      'https://images.pexels.com/photos/616354/pexels-photo-616354.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'g8',
+    categoryKey: 'meatSeafood',
+    title: 'Salmon Portion Pack',
+    price: '12.99',
+    discount: 'Chef Choice',
+    description: 'Fresh salmon portions with a clean, buttery finish.',
+    image:
+      'https://images.pexels.com/photos/3296275/pexels-photo-3296275.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'g9',
+    categoryKey: 'bakerySnacks',
+    title: 'Soft Sandwich Loaf',
+    price: '2.95',
+    discount: 'Daily Bake',
+    description: 'Freshly baked bread for toast, lunches, and quick sandwiches.',
+    image:
+      'https://images.pexels.com/photos/1775037/pexels-photo-1775037.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'g10',
+    categoryKey: 'bakerySnacks',
+    title: 'Crunchy Snack Crisps',
+    price: '2.50',
+    discount: '2 for 1',
+    description: 'Crispy snack packs for lunchboxes, parties, and cravings.',
+    image:
+      'https://images.pexels.com/photos/568805/pexels-photo-568805.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'g11',
+    categoryKey: 'beverages',
+    title: 'Orange Juice Blend',
+    price: '3.40',
+    discount: 'Chilled Deal',
+    description: 'Bright citrus juice for breakfast tables and packed lunches.',
+    image:
+      'https://images.pexels.com/photos/96974/pexels-photo-96974.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'g12',
+    categoryKey: 'beverages',
+    title: 'Sparkling Water Six Pack',
+    price: '4.99',
+    discount: 'Weekend Special',
+    description: 'Refreshing sparkling water with a crisp, clean finish.',
+    image:
+      'https://images.pexels.com/photos/416528/pexels-photo-416528.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'g13',
+    categoryKey: 'staplesGrains',
+    title: 'Premium Jasmine Rice 5kg',
+    price: '10.99',
+    discount: 'Pantry Value',
+    description: 'Fragrant long-grain rice for everyday family meals.',
+    image:
+      'https://images.pexels.com/photos/4110251/pexels-photo-4110251.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'g14',
+    categoryKey: 'staplesGrains',
+    title: 'Stoneground Maize Meal',
+    price: '6.75',
+    discount: 'Kitchen Staple',
+    description: 'A household staple for porridge and hearty side dishes.',
+    image:
+      'https://images.pexels.com/photos/7421204/pexels-photo-7421204.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'g15',
+    categoryKey: 'personalCare',
+    title: 'Moisture Body Wash',
+    price: '4.89',
+    discount: 'Self Care Pick',
+    description: 'Gentle body wash for a soft, fresh daily routine.',
+    image:
+      'https://images.pexels.com/photos/4465124/pexels-photo-4465124.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'g16',
+    categoryKey: 'personalCare',
+    title: 'Fresh Mint Toothpaste',
+    price: '2.99',
+    discount: 'Dental Care',
+    description: 'Everyday toothpaste for a clean and refreshing finish.',
+    image:
+      'https://images.pexels.com/photos/298611/pexels-photo-298611.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'g17',
+    categoryKey: 'householdEssentials',
+    title: 'Dishwashing Liquid',
+    price: '3.10',
+    discount: 'Home Saver',
+    description: 'Cuts through grease while staying gentle on hands.',
+    image:
+      'https://images.pexels.com/photos/4108273/pexels-photo-4108273.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'g18',
+    categoryKey: 'householdEssentials',
+    title: 'Laundry Detergent Refill',
+    price: '8.25',
+    discount: 'Bulk Value',
+    description: 'Long-lasting detergent refill for bright, fresh laundry.',
+    image:
+      'https://images.pexels.com/photos/4239031/pexels-photo-4239031.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
 ];
 
@@ -3587,8 +3831,14 @@ const VotingProvidersPage = () => {
 
 const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
   const { t } = useTranslation();
-  const [tab, setTab] = useState('Fruits');
+  const navigate = useNavigate();
+  const { categoryKey = '' } = useParams();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'groceries'), ...groceries], [sellerItems]);
+  const activeCategory = groceriesCategoryCards.find((category) => category.key === categoryKey) || null;
+  const filteredMarketItems = useMemo(
+    () => marketItems.filter((item) => resolveGroceriesCategoryKey(item) === activeCategory?.key),
+    [marketItems, activeCategory],
+  );
   const buildCartItem = (item) => createCartItem({
     ...item,
     route: '/groceries',
@@ -3603,42 +3853,100 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
   });
 
   return (
-    <PageFrame title={t('markets.groceries')} subtitle={t('pageSubtitles.groceries')}>
-      <div className="mb-4 flex flex-wrap gap-2">
-        {['Fruits', 'Vegetables', 'Dairy', 'Bakery'].map((name) => (
-          <button
-            key={name}
-            type="button"
-            onClick={() => setTab(name)}
-            className={`rounded-md px-3 py-2 text-sm font-semibold ${tab === name ? 'bg-[var(--svs-primary)] text-white' : 'border border-[#b2ebf2] bg-white'}`}
-          >
-            {name}
-          </button>
-        ))}
+    <PageFrame
+      title="Groceries Market"
+      subtitle="Browse and order fresh groceries and pantry essentials from trusted brands"
+      heroImage="https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg?auto=compress&cs=tinysrgb&w=1600"
+      heroMediaClassName="scale-105 blur-[2px]"
+      heroOverlayClassName="bg-gradient-to-r from-black/75 via-black/65 to-black/55"
+      sectionClassName="px-0 pt-0 pb-8 sm:pt-0 sm:pb-10"
+      heroWrapperClassName="w-full max-w-none"
+      contentWrapperClassName="mx-auto w-full max-w-7xl px-4"
+      heroContainerClassName="rounded-none border-x-0 border-t-0 p-0 shadow-none"
+      heroContentClassName="flex min-h-[220px] flex-col items-center justify-center px-6 py-8 text-center sm:min-h-[260px] sm:px-8 sm:py-10"
+      titleClassName="text-xl text-white sm:text-2xl"
+      subtitleClassName="mt-2 text-xs text-white/90 sm:text-sm"
+    >
+      <div className="mb-5 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-4 shadow-[0_4px_8px_rgba(0,0,0,0.06)] sm:px-5">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <ShoppingCart className="h-8 w-8 shrink-0 text-[var(--svs-primary)] sm:h-10 sm:w-10" aria-hidden="true" />
+          <div>
+            <h2 className="text-base font-bold text-[var(--svs-text)] sm:text-lg">Shop by Category</h2>
+            <p className="mt-1 text-sm text-[var(--svs-muted)]">Browse our wide range of product categories</p>
+          </div>
+        </div>
       </div>
-      <CardGrid
-        items={marketItems}
-        buttonLabel={t('common.addToBasket')}
-        secondaryButtonLabel={t('common.deliveryOptions')}
-        onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-        onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
-        onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
-        onOpenItemDetails={(item) => {
-          const wishlistItem = buildWishlistItem(item);
-          onOpenItemDetails?.({
-            title: getTranslatedValue(t, item.titleKey, item.title),
-            image: item.image,
-            images: item.images || (item.image ? [item.image] : []),
-            marketName: t('markets.groceries'),
-            details: item.discount || item.description || item.sellerName,
-            priceLabel: getSalePrices(item.price).nowPrice,
-            cartItem: buildCartItem(item),
-            wishlistItem,
-          });
-        }}
-        isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/groceries', item.id))}
-        metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} /> • {item.discount || item.sellerName || 'Seller item'}</p>}
-      />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {groceriesCategoryCards.map((category) => {
+          const isActive = category.key === activeCategory?.key;
+
+          return (
+            <button
+              key={category.key}
+              type="button"
+              onClick={() => navigate(`/groceries/${category.key}`)}
+              className={`group overflow-hidden rounded-2xl border text-left transition duration-200 ${isActive ? 'border-[var(--svs-primary)] shadow-[0_18px_40px_rgba(8,145,178,0.18)]' : 'border-[var(--svs-border)] hover:-translate-y-1 hover:border-[var(--svs-primary)] hover:shadow-[0_18px_36px_rgba(15,23,42,0.14)]'}`}
+            >
+              <div className="relative h-48">
+                <img
+                  src={category.image}
+                  alt={category.title}
+                  className={`h-full w-full object-cover transition duration-500 ${isActive ? 'scale-105' : 'group-hover:scale-105'}`}
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0f766e]/95 via-[#0f766e]/45 to-transparent" aria-hidden="true" />
+                <div className="absolute left-4 top-4 rounded-full bg-white/92 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#0f766e]">
+                  Category
+                </div>
+                <div className="absolute inset-x-0 bottom-0 p-4 text-white">
+                  <h3 className="text-lg font-bold">{category.title}</h3>
+                  <p className="mt-1 text-sm text-white/90">{category.subtitle}</p>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      {activeCategory ? (
+        filteredMarketItems.length ? (
+          <>
+            <div className="mb-4 mt-6 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--svs-primary-strong)]">Now showing</p>
+                <h3 className="mt-1 text-xl font-bold text-[var(--svs-text)]">{activeCategory.title}</h3>
+                <p className="mt-1 text-sm text-[var(--svs-muted)]">{filteredMarketItems.length} products available in this category</p>
+              </div>
+            </div>
+            <CardGrid
+              items={filteredMarketItems}
+              buttonLabel={t('common.addToBasket')}
+              secondaryButtonLabel={t('common.deliveryOptions')}
+              onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+              onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
+              onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+              onOpenItemDetails={(item) => {
+                const wishlistItem = buildWishlistItem(item);
+                onOpenItemDetails?.({
+                  title: getTranslatedValue(t, item.titleKey, item.title),
+                  image: item.image,
+                  images: item.images || (item.image ? [item.image] : []),
+                  marketName: t('markets.groceries'),
+                  details: item.discount || item.description || item.sellerName,
+                  priceLabel: getSalePrices(item.price).nowPrice,
+                  cartItem: buildCartItem(item),
+                  wishlistItem,
+                });
+              }}
+              isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/groceries', item.id))}
+              metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} /> • {item.discount || item.description || item.sellerName || 'Seller item'}</p>}
+            />
+          </>
+        ) : (
+          <div className="mt-6 rounded-2xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-8 text-sm text-[var(--svs-muted)]">
+            No items are available in {activeCategory.title} yet.
+          </div>
+        )
+      ) : null}
     </PageFrame>
   );
 };
@@ -6710,15 +7018,46 @@ const SimpleContentPage = ({ title, description }) => (
   </PageFrame>
 );
 
-const PageFrame = ({ title, subtitle, children, darkHero = false }) => (
-  <section className={`${darkHero ? 'bg-[#121212] text-white' : 'bg-[var(--svs-bg)] text-[var(--svs-text)]'} px-4 py-8 sm:py-10`}>
-    <div className="mx-auto w-full max-w-7xl">
-      <div className={`${darkHero ? 'border-[#2a2a2a] bg-[#1e1e1e]' : 'border-[var(--svs-border)] bg-[var(--svs-surface)]'} rounded-2xl border p-6 shadow-[0_4px_8px_rgba(0,0,0,0.1)]`}>
-        <h1 className="text-3xl font-bold sm:text-4xl">{title}</h1>
-        <p className={`${darkHero ? 'text-slate-300' : 'text-[var(--svs-muted)]'} mt-2 text-sm sm:text-base`}>{subtitle}</p>
+const PageFrame = ({ title, subtitle, children, darkHero = false, heroImage = '', heroImages = [], heroMediaClassName = '', heroOverlayClassName = '', titleClassName = '', subtitleClassName = '', sectionClassName = '', heroWrapperClassName = '', contentWrapperClassName = '', heroContainerClassName = '', heroContentClassName = '' }) => (
+  <section className={`${darkHero ? 'bg-[#121212] text-white' : 'bg-[var(--svs-bg)] text-[var(--svs-text)]'} px-4 py-8 sm:py-10 ${sectionClassName}`.trim()}>
+    <div className={`${heroWrapperClassName || 'mx-auto w-full max-w-7xl'}`.trim()}>
+      <div className={`${darkHero ? 'border-[#2a2a2a] bg-[#1e1e1e]' : 'border-[var(--svs-border)] bg-[var(--svs-surface)]'} relative overflow-hidden rounded-2xl border p-6 shadow-[0_4px_8px_rgba(0,0,0,0.1)] ${heroContainerClassName}`.trim()}>
+        {heroImages.length ? (
+          <>
+            <div className="absolute inset-0 grid grid-cols-3" aria-hidden="true">
+              {heroImages.slice(0, 3).map((imageUrl, index) => (
+                <div
+                  key={`${imageUrl}-${index}`}
+                  className="h-full bg-cover bg-center"
+                  style={{ backgroundImage: `url(${imageUrl})` }}
+                />
+              ))}
+            </div>
+            <div
+              className={`absolute inset-0 ${heroOverlayClassName || (darkHero ? 'bg-gradient-to-r from-[#121212]/95 via-[#121212]/82 to-[#121212]/70' : 'bg-gradient-to-r from-white/95 via-white/88 to-white/72')}`}
+              aria-hidden="true"
+            />
+          </>
+        ) : heroImage ? (
+          <>
+            <div
+              className={`absolute inset-0 bg-cover bg-center opacity-30 ${heroMediaClassName}`.trim()}
+              style={{ backgroundImage: `url(${heroImage})` }}
+              aria-hidden="true"
+            />
+            <div
+              className={`absolute inset-0 ${heroOverlayClassName || (darkHero ? 'bg-gradient-to-r from-[#121212]/95 via-[#121212]/82 to-[#121212]/70' : 'bg-gradient-to-r from-white/95 via-white/88 to-white/72')}`}
+              aria-hidden="true"
+            />
+          </>
+        ) : null}
+        <div className={`relative z-10 ${heroContentClassName}`.trim()}>
+          <h1 className={`text-3xl font-bold sm:text-4xl ${titleClassName}`.trim()}>{title}</h1>
+          <p className={`${darkHero ? 'text-slate-300' : 'text-[var(--svs-muted)]'} mt-2 text-sm sm:text-base ${subtitleClassName}`.trim()}>{subtitle}</p>
+        </div>
       </div>
-      <div className="mt-5">{children}</div>
     </div>
+    <div className={`${contentWrapperClassName || 'mx-auto mt-5 w-full max-w-7xl'} ${contentWrapperClassName ? 'mt-5' : ''}`.trim()}>{children}</div>
   </section>
 );
 
@@ -7291,6 +7630,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/voting-clients" element={<VotingClientsPage />} />
     <Route path="/voting-providers" element={<VotingProvidersPage />} />
     <Route path="/groceries" element={<GroceriesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/groceries/:categoryKey" element={<GroceriesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/fast-food" element={<FastFoodPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/beverages-liquors" element={<BeveragesLiquorsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/building-construction-tools" element={<ConstructionToolsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
