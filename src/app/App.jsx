@@ -3852,6 +3852,73 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
     details: item.discount || item.description || item.sellerName,
   });
 
+  if (categoryKey && !activeCategory) {
+    return <Navigate to="/groceries" replace />;
+  }
+
+  if (activeCategory) {
+    return (
+      <PageFrame
+        title={activeCategory.title}
+        subtitle={activeCategory.subtitle}
+        heroImage={activeCategory.image}
+        heroMediaClassName="scale-105"
+        heroOverlayClassName="bg-gradient-to-r from-black/80 via-black/60 to-black/45"
+        sectionClassName="px-0 pt-0 pb-8 sm:pt-0 sm:pb-10"
+        heroWrapperClassName="w-full max-w-none"
+        contentWrapperClassName="mx-auto w-full max-w-7xl px-4"
+        heroContainerClassName="rounded-none border-x-0 border-t-0 p-0 shadow-none"
+        heroContentClassName="flex min-h-[220px] flex-col items-center justify-center px-6 py-8 text-center sm:min-h-[260px] sm:px-8 sm:py-10"
+        titleClassName="text-xl text-white sm:text-2xl"
+        subtitleClassName="mt-2 text-xs text-white/90 sm:text-sm"
+      >
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-4 shadow-[0_4px_8px_rgba(0,0,0,0.06)] sm:px-5">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--svs-primary-strong)]">Groceries category</p>
+            <h2 className="mt-1 text-xl font-bold text-[var(--svs-text)] sm:text-2xl">{activeCategory.title}</h2>
+            <p className="mt-1 text-sm text-[var(--svs-muted)]">{filteredMarketItems.length} products available in this category</p>
+          </div>
+          <Link
+            to="/groceries"
+            className="inline-flex items-center gap-2 rounded-full border border-[var(--svs-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
+          >
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+            Back to categories
+          </Link>
+        </div>
+        {filteredMarketItems.length ? (
+          <CardGrid
+            items={filteredMarketItems}
+            buttonLabel={t('common.addToBasket')}
+            secondaryButtonLabel={t('common.deliveryOptions')}
+            onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+            onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
+            onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+            onOpenItemDetails={(item) => {
+              const wishlistItem = buildWishlistItem(item);
+              onOpenItemDetails?.({
+                title: getTranslatedValue(t, item.titleKey, item.title),
+                image: item.image,
+                images: item.images || (item.image ? [item.image] : []),
+                marketName: t('markets.groceries'),
+                details: item.discount || item.description || item.sellerName,
+                priceLabel: getSalePrices(item.price).nowPrice,
+                cartItem: buildCartItem(item),
+                wishlistItem,
+              });
+            }}
+            isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/groceries', item.id))}
+            metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} /> • {item.discount || item.description || item.sellerName || 'Seller item'}</p>}
+          />
+        ) : (
+          <div className="rounded-2xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-8 text-sm text-[var(--svs-muted)]">
+            No items are available in {activeCategory.title} yet.
+          </div>
+        )}
+      </PageFrame>
+    );
+  }
+
   return (
     <PageFrame
       title="Groceries Market"
@@ -3878,20 +3945,18 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {groceriesCategoryCards.map((category) => {
-          const isActive = category.key === activeCategory?.key;
-
           return (
             <button
               key={category.key}
               type="button"
               onClick={() => navigate(`/groceries/${category.key}`)}
-              className={`group overflow-hidden rounded-2xl border text-left transition duration-200 ${isActive ? 'border-[var(--svs-primary)] shadow-[0_18px_40px_rgba(8,145,178,0.18)]' : 'border-[var(--svs-border)] hover:-translate-y-1 hover:border-[var(--svs-primary)] hover:shadow-[0_18px_36px_rgba(15,23,42,0.14)]'}`}
+              className="group overflow-hidden rounded-2xl border border-[var(--svs-border)] text-left transition duration-200 hover:-translate-y-1 hover:border-[var(--svs-primary)] hover:shadow-[0_18px_36px_rgba(15,23,42,0.14)]"
             >
               <div className="relative h-48">
                 <img
                   src={category.image}
                   alt={category.title}
-                  className={`h-full w-full object-cover transition duration-500 ${isActive ? 'scale-105' : 'group-hover:scale-105'}`}
+                  className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                   loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0f766e]/95 via-[#0f766e]/45 to-transparent" aria-hidden="true" />
@@ -3907,46 +3972,6 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
           );
         })}
       </div>
-      {activeCategory ? (
-        filteredMarketItems.length ? (
-          <>
-            <div className="mb-4 mt-6 flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--svs-primary-strong)]">Now showing</p>
-                <h3 className="mt-1 text-xl font-bold text-[var(--svs-text)]">{activeCategory.title}</h3>
-                <p className="mt-1 text-sm text-[var(--svs-muted)]">{filteredMarketItems.length} products available in this category</p>
-              </div>
-            </div>
-            <CardGrid
-              items={filteredMarketItems}
-              buttonLabel={t('common.addToBasket')}
-              secondaryButtonLabel={t('common.deliveryOptions')}
-              onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-              onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
-              onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
-              onOpenItemDetails={(item) => {
-                const wishlistItem = buildWishlistItem(item);
-                onOpenItemDetails?.({
-                  title: getTranslatedValue(t, item.titleKey, item.title),
-                  image: item.image,
-                  images: item.images || (item.image ? [item.image] : []),
-                  marketName: t('markets.groceries'),
-                  details: item.discount || item.description || item.sellerName,
-                  priceLabel: getSalePrices(item.price).nowPrice,
-                  cartItem: buildCartItem(item),
-                  wishlistItem,
-                });
-              }}
-              isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/groceries', item.id))}
-              metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} /> • {item.discount || item.description || item.sellerName || 'Seller item'}</p>}
-            />
-          </>
-        ) : (
-          <div className="mt-6 rounded-2xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-8 text-sm text-[var(--svs-muted)]">
-            No items are available in {activeCategory.title} yet.
-          </div>
-        )
-      ) : null}
     </PageFrame>
   );
 };
