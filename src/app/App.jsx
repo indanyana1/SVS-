@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  Flag,
   Heart,
   MapPin,
   Menu,
@@ -80,6 +81,7 @@ const sellerMarketOptions = [
   { key: 'fastFood', labelKey: 'markets.fastFood', route: '/fast-food' },
   { key: 'groceries', labelKey: 'markets.groceries', route: '/groceries' },
   { key: 'ecommerce', labelKey: 'markets.ecommerce', route: '/e-commerce' },
+  { key: 'tickets', labelKey: 'markets.tickets', route: '/tickets' },
   { key: 'traditionalMedicines', labelKey: 'markets.traditionalMedicines', route: '/traditional-medicines-herbs' },
   { key: 'wellness', labelKey: 'markets.wellness', route: '/wellness' },
   { key: 'stationery', labelKey: 'markets.stationery', route: '/stationery-office' },
@@ -89,6 +91,31 @@ const sellerMarketConfig = sellerMarketOptions.reduce((accumulator, option) => {
   accumulator[option.key] = option;
   return accumulator;
 }, {});
+
+const EMPTY_GROCERIES_LISTING_FIELDS = {
+  categoryKey: '',
+  brand: '',
+  volume: '',
+  freshness: '',
+  storage: '',
+  origin: '',
+  expiryDate: '',
+  discount: '',
+};
+
+const createSellerListingFormState = () => ({
+  title: '',
+  description: '',
+  price: '',
+  quantity: '',
+  marketKey: '',
+  ...EMPTY_GROCERIES_LISTING_FIELDS,
+});
+
+const clearGroceriesListingFields = (formState) => ({
+  ...formState,
+  ...EMPTY_GROCERIES_LISTING_FIELDS,
+});
 
 const TRENDING_MARKET_HREFS = [
   '/e-commerce',
@@ -188,6 +215,233 @@ const ticketEvents = [
       'https://images.pexels.com/photos/1008155/pexels-photo-1008155.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
 ];
+
+const bookingsPrototypeCategoryTabs = ['All', 'Movies', 'Concerts', 'Sports', 'Travel'];
+
+const bookingsPrototypeDateOptions = [
+  { value: 'all', label: 'Select Date' },
+  { value: '2025-11-25', label: 'Nov 25, 2025' },
+  { value: '2025-11-28', label: 'Nov 28, 2025' },
+  { value: '2025-12-02', label: 'Dec 2, 2025' },
+];
+
+const bookingsPrototypeCountryOptions = [
+  { value: 'all', label: 'Select Country' },
+  { value: 'South Africa', label: 'South Africa' },
+  { value: 'Kenya', label: 'Kenya' },
+  { value: 'Uganda', label: 'Uganda' },
+  { value: 'Nigeria', label: 'Nigeria' },
+  { value: 'Tanzania', label: 'Tanzania' },
+  { value: 'United Arab Emirates', label: 'United Arab Emirates' },
+];
+
+const bookingsPrototypeCategoryCards = [
+  {
+    id: 'bookings-movies-card',
+    category: 'Movies',
+    title: 'Movies',
+    description: 'Book the latest movies in your favorite cinemas.',
+    image: 'https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'bookings-concerts-card',
+    category: 'Concerts',
+    title: 'Concerts',
+    description: 'Find live shows, music events, and artist performances.',
+    image: 'https://images.pexels.com/photos/1105666/pexels-photo-1105666.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'bookings-sports-card',
+    category: 'Sports',
+    title: 'Sports',
+    description: 'Get tickets for matches, tournaments, and sports events.',
+    image: 'https://images.pexels.com/photos/399187/pexels-photo-399187.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'bookings-travel-card',
+    category: 'Travel',
+    title: 'Travel',
+    description: 'Book flights, buses, and travel passes instantly.',
+    image: 'https://images.pexels.com/photos/46148/aircraft-jet-landing-cloud-46148.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+];
+
+const bookingsPrototypeMovieItems = [
+  {
+    id: 'booking-movie-1',
+    category: 'Movies',
+    title: 'Midnight Movie Premiere',
+    subtitle: 'Cineworld Luxe Opening Night',
+    date: '2025-11-25',
+    location: 'V&A Waterfront Cinema, Cape Town',
+    country: 'South Africa',
+    price: '649.00',
+    image: 'https://images.pexels.com/photos/7991319/pexels-photo-7991319.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'booking-movie-2',
+    category: 'Movies',
+    title: 'Pan African Film Gala',
+    subtitle: 'Red Carpet Feature Screening',
+    date: '2025-11-28',
+    location: 'Westgate Premiere Hall, Nairobi',
+    country: 'Kenya',
+    price: '899.00',
+    image: 'https://images.pexels.com/photos/274937/pexels-photo-274937.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'booking-movie-3',
+    category: 'Movies',
+    title: 'Cinema Under The Stars',
+    subtitle: 'Open-Air Family Pass',
+    date: '2025-12-02',
+    location: 'Lake Victoria Gardens, Kampala',
+    country: 'Uganda',
+    price: '499.00',
+    image: 'https://images.pexels.com/photos/109669/pexels-photo-109669.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+];
+
+const bookingsPrototypeConcertItems = [
+  {
+    id: 'booking-concert-1',
+    category: 'Concerts',
+    title: 'Sunburn Festival 2025',
+    subtitle: '',
+    date: '2025-11-25',
+    location: 'Clifton Beach, Cape Town',
+    country: 'South Africa',
+    price: '1,499.00',
+    image: 'https://images.pexels.com/photos/1190298/pexels-photo-1190298.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'booking-concert-2',
+    category: 'Concerts',
+    title: 'Rock Revolution',
+    subtitle: 'Multi Artist',
+    date: '2025-11-28',
+    location: 'Nairobi Arboretum Grounds',
+    country: 'Kenya',
+    price: '3,999.00',
+    image: 'https://images.pexels.com/photos/167636/pexels-photo-167636.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'booking-concert-3',
+    category: 'Concerts',
+    title: 'DJ Alan Walker',
+    subtitle: '',
+    date: '2025-12-02',
+    location: 'Lugogo Grounds, Kampala',
+    country: 'Uganda',
+    price: '1,999.00',
+    image: 'https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+];
+
+const bookingsPrototypeSportsItems = [
+  {
+    id: 'booking-sports-1',
+    category: 'Sports',
+    title: 'Kenya vs Uganda',
+    subtitle: 'East Africa Cup',
+    date: '2025-11-25',
+    location: 'St George\'s Park, South Africa',
+    country: 'South Africa',
+    price: '505.99',
+    image: 'https://images.pexels.com/photos/3621104/pexels-photo-3621104.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'booking-sports-2',
+    category: 'Sports',
+    title: 'Morocco vs Senegal',
+    subtitle: 'World Cup Qualifier',
+    date: '2025-11-28',
+    location: 'FNB Stadium, Johannesburg',
+    country: 'South Africa',
+    price: '1,999.00',
+    image: 'https://images.pexels.com/photos/274506/pexels-photo-274506.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'booking-sports-3',
+    category: 'Sports',
+    title: 'Uganda vs Zambia',
+    subtitle: 'Victoria Cup',
+    date: '2025-12-02',
+    location: 'Loftus Versfeld, Pretoria',
+    country: 'South Africa',
+    price: '1,999.00',
+    image: 'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+];
+
+const bookingsPrototypeTravelItems = [
+  {
+    id: 'booking-travel-1',
+    category: 'Travel',
+    title: 'Lagos to Dubai',
+    subtitle: 'Direct Flight',
+    meta: 'Flexible dates',
+    provider: 'Emirates Airlines',
+    date: '',
+    sortDate: '2025-12-31',
+    location: 'Dubai International',
+    country: 'United Arab Emirates',
+    price: '22,499.00',
+    image: 'https://images.pexels.com/photos/912050/pexels-photo-912050.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'booking-travel-2',
+    category: 'Travel',
+    title: 'Nairobi to Mombasa',
+    subtitle: 'Luxury Bus',
+    meta: 'Daily departures',
+    provider: 'Comfortable Sleeper Coach',
+    date: '',
+    sortDate: '2025-12-15',
+    location: 'Kenya Coastal Route',
+    country: 'Kenya',
+    price: '889.99',
+    image: 'https://images.pexels.com/photos/210182/pexels-photo-210182.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'booking-travel-3',
+    category: 'Travel',
+    title: 'Nairobi to Zanzibar',
+    subtitle: 'Island Hop Coastal Air',
+    meta: 'Dec 2, 2025',
+    provider: 'Zanzibar Airlines',
+    date: '2025-12-02',
+    sortDate: '2025-12-02',
+    location: 'Zanzibar International',
+    country: 'Tanzania',
+    price: '45,999.00',
+    image: 'https://images.pexels.com/photos/46148/aircraft-jet-landing-cloud-46148.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+];
+
+const buildBookingsPrototypeDetails = (item, locale = 'en-US') => {
+  const parts = [];
+
+  if (item.subtitle) {
+    parts.push(item.subtitle);
+  }
+
+  if (item.meta) {
+    parts.push(item.meta);
+  } else if (item.date) {
+    parts.push(formatDate(item.date, locale));
+  }
+
+  if (item.provider) {
+    parts.push(item.provider);
+  }
+
+  if (item.location) {
+    parts.push(item.location);
+  }
+
+  return parts.filter(Boolean).join(' • ');
+};
 
 const homeHeroSlides = [
   {
@@ -317,6 +571,10 @@ const resolveGroceriesCategoryKey = (item = {}) => {
 
   return matchedCategory?.key || null;
 };
+
+const getGroceriesCategoryTitle = (categoryKey = '') => (
+  groceriesCategoryCards.find((category) => category.key === categoryKey)?.title || ''
+);
 
 const groceries = [
   {
@@ -1634,6 +1892,10 @@ const getMarketplaceItemSaveErrorMessage = (errorMessage) => {
     return `Item save failed: ${errorMessage}. Run supabase/add-marketplace-item-quantity.sql, then try again.`;
   }
 
+  if (normalizedMessage.includes('details_json')) {
+    return `Item save failed: ${errorMessage}. Rerun supabase/seller-marketplace.sql so seller listing metadata fields are available.`;
+  }
+
   return `Item save failed: ${errorMessage}. Create or update the ${SELLER_ITEMS_TABLE} table before using seller uploads.`;
 };
 
@@ -1648,6 +1910,90 @@ const formatDate = (value, locale = 'en-US') =>
     month: 'short',
     day: 'numeric',
   });
+
+const formatListingDateLabel = (value) => {
+  const trimmedValue = String(value || '').trim();
+
+  if (!trimmedValue) {
+    return '';
+  }
+
+  const parsedDate = new Date(`${trimmedValue}T00:00:00`);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return trimmedValue;
+  }
+
+  return parsedDate.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
+const getGroceriesListingValidationMessage = (formState) => {
+  if (formState.marketKey !== 'groceries') {
+    return '';
+  }
+
+  const hasCategory = String(formState.categoryKey || '').trim();
+  const hasBrand = String(formState.brand || '').trim();
+  const hasVolume = String(formState.volume || '').trim();
+  const hasFreshness = String(formState.freshness || '').trim();
+
+  if (hasCategory && hasBrand && hasVolume && hasFreshness) {
+    return '';
+  }
+
+  return 'For grocery listings, select the grocery category and add the brand, pack size, and freshness details before publishing.';
+};
+
+const buildSellerItemDetailsJson = (formState) => {
+  if (formState.marketKey !== 'groceries') {
+    return {};
+  }
+
+  const categoryKey = String(formState.categoryKey || '').trim();
+  const categoryTitle = getGroceriesCategoryTitle(categoryKey);
+
+  return Object.fromEntries(
+    Object.entries({
+      categoryKey,
+      category: categoryTitle,
+      brand: String(formState.brand || '').trim(),
+      volume: String(formState.volume || '').trim(),
+      freshness: String(formState.freshness || '').trim(),
+      storage: String(formState.storage || '').trim(),
+      origin: String(formState.origin || '').trim(),
+      expiryDate: String(formState.expiryDate || '').trim(),
+      discount: String(formState.discount || '').trim(),
+    }).filter(([, value]) => Boolean(String(value || '').trim())),
+  );
+};
+
+const getGroceriesListingMetaText = (item = {}) => {
+  const categoryLabel = item.category || getGroceriesCategoryTitle(item.categoryKey);
+  const parts = [categoryLabel, item.brand, item.volume, item.discount || item.freshness].filter(Boolean);
+
+  return parts.join(' • ') || item.description || item.sellerName || 'Seller item';
+};
+
+const getGroceriesListingDetailsText = (item = {}) => {
+  const categoryLabel = item.category || getGroceriesCategoryTitle(item.categoryKey);
+  const parts = [
+    item.discount,
+    categoryLabel,
+    item.brand,
+    item.volume,
+    item.freshness,
+    item.storage ? `Storage: ${item.storage}` : '',
+    item.origin ? `Origin: ${item.origin}` : '',
+    item.expiryDate ? `Best before ${formatListingDateLabel(item.expiryDate)}` : '',
+    item.description,
+  ].filter(Boolean);
+
+  return parts.join(' • ') || item.sellerName || 'Seller item';
+};
 
 const SALE_DISCOUNT_RATE = 0.2;
 
@@ -2324,6 +2670,19 @@ const mapSellerItemRecord = (record) => {
     ? record.image_urls.filter((url) => typeof url === 'string' && url.trim())
     : [];
   const primaryImage = record.image_url || imageList[0] || '';
+  const rawDetailsJson = record.details_json && typeof record.details_json === 'object' && !Array.isArray(record.details_json)
+    ? record.details_json
+    : {};
+  const resolvedCategoryKey = String(rawDetailsJson.categoryKey || '').trim()
+    || (record.market_key === 'groceries'
+      ? resolveGroceriesCategoryKey({
+        categoryKey: rawDetailsJson.categoryKey,
+        category: rawDetailsJson.category,
+        title: record.title,
+        description: record.description,
+      })
+      : '');
+  const resolvedCategory = String(rawDetailsJson.category || '').trim() || getGroceriesCategoryTitle(resolvedCategoryKey);
 
   return {
     id: `seller-${record.id}`,
@@ -2338,6 +2697,15 @@ const mapSellerItemRecord = (record) => {
     route: marketConfig.route,
     sellerName: record.seller_name || record.seller_email || 'Seller',
     sellerEmail: record.seller_email || '',
+    category: resolvedCategory,
+    categoryKey: resolvedCategoryKey,
+    brand: String(rawDetailsJson.brand || '').trim(),
+    volume: String(rawDetailsJson.volume || '').trim(),
+    freshness: String(rawDetailsJson.freshness || '').trim(),
+    storage: String(rawDetailsJson.storage || '').trim(),
+    origin: String(rawDetailsJson.origin || '').trim(),
+    expiryDate: String(rawDetailsJson.expiryDate || '').trim(),
+    discount: String(rawDetailsJson.discount || '').trim(),
     createdAt: record.created_at,
   };
 };
@@ -3719,6 +4087,130 @@ const KpiCard = ({ label, value }) => (
   </div>
 );
 
+const GroceriesSellerFields = ({ formData, onFieldChange, prefix = 'seller-grocery', isCompact = false }) => {
+  const containerClassName = isCompact
+    ? 'rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3'
+    : 'sm:col-span-2 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4';
+  const labelClassName = isCompact
+    ? 'mb-1 block text-xs font-medium text-[var(--svs-text)]'
+    : 'mb-1 block text-sm font-medium text-[var(--svs-text)]';
+  const inputClassName = isCompact
+    ? 'w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none'
+    : 'w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none';
+  const helperClassName = isCompact
+    ? 'mt-1 text-[10px] text-[var(--svs-muted)]'
+    : 'mt-1 text-xs text-[var(--svs-muted)]';
+
+  return (
+    <div className={containerClassName}>
+      <div className="mb-3">
+        <h3 className={`${isCompact ? 'text-sm' : 'text-base'} font-bold text-[var(--svs-text)]`}>Groceries Listing Details</h3>
+        <p className={`${helperClassName} mt-1`}>
+          Grocery listings need category, brand, pack size, and freshness details so buyers can find the right product quickly.
+        </p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label htmlFor={`${prefix}-category`} className={labelClassName}>Grocery category</label>
+          <select
+            id={`${prefix}-category`}
+            name="categoryKey"
+            value={formData.categoryKey}
+            onChange={onFieldChange}
+            required
+            className={inputClassName}
+          >
+            <option value="">Select grocery category</option>
+            {groceriesCategoryCards.map((category) => (
+              <option key={category.key} value={category.key}>{category.title}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor={`${prefix}-brand`} className={labelClassName}>Brand</label>
+          <input
+            id={`${prefix}-brand`}
+            name="brand"
+            value={formData.brand}
+            onChange={onFieldChange}
+            required
+            placeholder="e.g. Fresh Valley"
+            className={inputClassName}
+          />
+        </div>
+        <div>
+          <label htmlFor={`${prefix}-volume`} className={labelClassName}>Pack size / weight / volume</label>
+          <input
+            id={`${prefix}-volume`}
+            name="volume"
+            value={formData.volume}
+            onChange={onFieldChange}
+            required
+            placeholder="e.g. 1kg, 500g, 2L, 12 pack"
+            className={inputClassName}
+          />
+        </div>
+        <div>
+          <label htmlFor={`${prefix}-freshness`} className={labelClassName}>Freshness or product state</label>
+          <input
+            id={`${prefix}-freshness`}
+            name="freshness"
+            value={formData.freshness}
+            onChange={onFieldChange}
+            required
+            placeholder="e.g. Fresh today, chilled, frozen"
+            className={inputClassName}
+          />
+        </div>
+        <div>
+          <label htmlFor={`${prefix}-expiry`} className={labelClassName}>Best before / expiry date</label>
+          <input
+            id={`${prefix}-expiry`}
+            name="expiryDate"
+            type="date"
+            value={formData.expiryDate}
+            onChange={onFieldChange}
+            className={inputClassName}
+          />
+        </div>
+        <div>
+          <label htmlFor={`${prefix}-origin`} className={labelClassName}>Origin / source</label>
+          <input
+            id={`${prefix}-origin`}
+            name="origin"
+            value={formData.origin}
+            onChange={onFieldChange}
+            placeholder="e.g. Local farm, imported from Kenya"
+            className={inputClassName}
+          />
+        </div>
+        <div>
+          <label htmlFor={`${prefix}-storage`} className={labelClassName}>Storage guidance</label>
+          <input
+            id={`${prefix}-storage`}
+            name="storage"
+            value={formData.storage}
+            onChange={onFieldChange}
+            placeholder="e.g. Keep refrigerated"
+            className={inputClassName}
+          />
+        </div>
+        <div>
+          <label htmlFor={`${prefix}-discount`} className={labelClassName}>Offer badge</label>
+          <input
+            id={`${prefix}-discount`}
+            name="discount"
+            value={formData.discount}
+            onChange={onFieldChange}
+            placeholder="e.g. Fresh Pick, Weekly Deal"
+            className={inputClassName}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ECommercePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'ecommerce'), ...productCards], [sellerItems]);
@@ -3770,355 +4262,339 @@ const ECommercePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
   );
 };
 
-const TicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], onOpenItemDetails }) => {
-  const { t, i18n } = useTranslation();
-  const [typeFilter, setTypeFilter] = useState('All');
-  const [locationFilter, setLocationFilter] = useState('All');
-  const currentLocale = i18n.resolvedLanguage || i18n.language || 'en';
+const TicketsPage = (props) => <BookingsTicketsPage {...props} />;
 
-  const filtered = useMemo(() => {
-    return ticketEvents.filter((event) => {
-      const byType = typeFilter === 'All' || event.type === typeFilter;
-      const byLocation = locationFilter === 'All' || event.location.includes(locationFilter);
-      return byType && byLocation;
+const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], onOpenItemDetails }) => {
+  const { t, i18n } = useTranslation();
+  const currentLocale = i18n.resolvedLanguage || i18n.language || 'en-US';
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedDate, setSelectedDate] = useState('all');
+  const [selectedCountry, setSelectedCountry] = useState('all');
+  const [activeCategory, setActiveCategory] = useState('All');
+  const [sortOrder, setSortOrder] = useState('Newest');
+
+  const allBookingPrototypeItems = useMemo(
+    () => [
+      ...bookingsPrototypeMovieItems,
+      ...bookingsPrototypeConcertItems,
+      ...bookingsPrototypeSportsItems,
+      ...bookingsPrototypeTravelItems,
+    ],
+    [],
+  );
+
+  const filteredBookingPrototypeItems = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+
+    const nextItems = allBookingPrototypeItems.filter((item) => {
+      const matchesCategory = activeCategory === 'All' || item.category === activeCategory;
+      const matchesDate = selectedDate === 'all' || item.date === selectedDate;
+      const matchesCountry = selectedCountry === 'all' || item.country === selectedCountry;
+      const matchesQuery = !normalizedQuery || [item.title, item.subtitle, item.meta, item.provider, item.location, item.category]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(normalizedQuery));
+
+      return matchesCategory && matchesDate && matchesCountry && matchesQuery;
     });
-  }, [typeFilter, locationFilter]);
-  const {
-    filteredItems: priceFilteredTickets,
-    hasActivePriceFilter,
-    isPriceFilterOpen,
-    minPriceInput,
-    maxPriceInput,
-    minimumAvailablePrice,
-    maximumAvailablePrice,
-    sliderMinValue,
-    sliderMaxValue,
-    sliderStep,
-    setIsPriceFilterOpen,
-    handleMinPriceChange,
-    handleMaxPriceChange,
-    handleClearPriceFilter,
-    handleSliderMinimumChange,
-    handleSliderMaximumChange,
-  } = useMarketplacePriceFilter(filtered);
+
+    return nextItems.sort((leftItem, rightItem) => {
+      const leftTimestamp = new Date(leftItem.sortDate || leftItem.date || '1970-01-01').getTime();
+      const rightTimestamp = new Date(rightItem.sortDate || rightItem.date || '1970-01-01').getTime();
+
+      return sortOrder === 'Oldest' ? leftTimestamp - rightTimestamp : rightTimestamp - leftTimestamp;
+    });
+  }, [activeCategory, allBookingPrototypeItems, searchQuery, selectedCountry, selectedDate, sortOrder]);
+
+  const filteredMovies = filteredBookingPrototypeItems.filter((item) => item.category === 'Movies');
+  const filteredConcerts = filteredBookingPrototypeItems.filter((item) => item.category === 'Concerts');
+  const filteredSports = filteredBookingPrototypeItems.filter((item) => item.category === 'Sports');
+  const filteredTravel = filteredBookingPrototypeItems.filter((item) => item.category === 'Travel');
+
+  const shouldShowMoviesSection = activeCategory === 'Movies' || ((searchQuery.trim() || selectedDate !== 'all' || selectedCountry !== 'all') && filteredMovies.length > 0);
+
+  const openBookingItemDetails = (item) => {
+    const details = buildBookingsPrototypeDetails(item, currentLocale);
+    const cartItem = createCartItem({
+      ...item,
+      route: '/bookings-tickets',
+      marketName: t('markets.bookings'),
+      details,
+    });
+    const wishlistItem = createWishlistItem({
+      ...item,
+      route: '/bookings-tickets',
+      marketName: t('markets.bookings'),
+      details,
+    });
+
+    onOpenItemDetails?.({
+      title: item.title,
+      image: item.image,
+      images: item.images || (item.image ? [item.image] : []),
+      marketName: t('markets.bookings'),
+      details,
+      priceLabel: item.price,
+      cartItem,
+      wishlistItem,
+    });
+  };
+
+  const bookingsSections = [
+    {
+      id: 'bookings-movies-section',
+      category: 'Movies',
+      title: 'Movies',
+      subtitle: 'Book the latest movies in your favorite cinemas.',
+      items: filteredMovies,
+      show: shouldShowMoviesSection,
+    },
+    {
+      id: 'bookings-concerts-section',
+      category: 'Concerts',
+      title: 'Trending Concerts',
+      subtitle: 'Catch the hottest live performances',
+      items: filteredConcerts,
+      show: activeCategory === 'All' || activeCategory === 'Concerts',
+    },
+    {
+      id: 'bookings-sports-section',
+      category: 'Sports',
+      title: 'Popular Matches',
+      subtitle: 'Catch the most exciting matches happening now',
+      items: filteredSports,
+      show: activeCategory === 'All' || activeCategory === 'Sports',
+    },
+    {
+      id: 'bookings-travel-section',
+      category: 'Travel',
+      title: 'Hot Travel Deals',
+      subtitle: 'Grab the most exciting travel offers before they’re gone',
+      items: filteredTravel,
+      show: activeCategory === 'All' || activeCategory === 'Travel',
+    },
+  ].filter((section) => section.show && section.items.length > 0);
 
   return (
     <PageFrame
-      title={t('markets.tickets')}
-      subtitle={t('ticketsPage.subtitle')}
+      title="Bookings And Tickets Sales Market"
+      subtitle="Book movies, concerts, sports, and travel instantly with date and location filters."
+      heroImages={[
+        'https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=1200',
+        'https://images.pexels.com/photos/1190298/pexels-photo-1190298.jpeg?auto=compress&cs=tinysrgb&w=1200',
+        'https://images.pexels.com/photos/912050/pexels-photo-912050.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      ]}
+      heroOverlayClassName="bg-gradient-to-b from-black/70 via-black/55 to-black/70"
+      heroContainerClassName="rounded-none border-x-0 border-t-0 p-0 shadow-none"
+      heroContentClassName="flex min-h-[220px] flex-col items-center justify-center px-6 py-8 text-center sm:min-h-[260px] sm:px-8 sm:py-10"
+      sectionClassName="px-0 pt-0 pb-8 sm:pt-0 sm:pb-10"
+      heroWrapperClassName="w-full max-w-none"
+      contentWrapperClassName="mx-auto w-full max-w-7xl px-4"
+      titleClassName="text-xl text-white sm:text-2xl"
+      subtitleClassName="mt-2 text-xs text-white/90 sm:text-sm"
     >
-      <div className="mb-5 flex flex-wrap gap-2">
-        <div className="relative min-w-[190px]">
-          <select
-            value={typeFilter}
-            onChange={(event) => setTypeFilter(event.target.value)}
-            className={`${languageFeatureSelectClassName} pr-10`}
-            aria-label={t('ticketsPage.filters.typeAria')}
-          >
-            <option value="All">{t('ticketsPage.filters.all')}</option>
-            <option value="Concert">{t('ticketsPage.types.concert')}</option>
-            <option value="Movie">{t('ticketsPage.types.movie')}</option>
-            <option value="Sports">{t('ticketsPage.types.sports')}</option>
-            <option value="Travel">{t('ticketsPage.types.travel')}</option>
-          </select>
-          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
-        </div>
-        <div className="relative min-w-[190px]">
-          <select
-            value={locationFilter}
-            onChange={(event) => setLocationFilter(event.target.value)}
-            className={`${languageFeatureSelectClassName} pr-10`}
-            aria-label={t('ticketsPage.filters.locationAria')}
-          >
-            <option value="All">{t('ticketsPage.filters.all')}</option>
-            <option value="Cape Town">{t('ticketsPage.locations.capeTown')}</option>
-            <option value="Nu Metro">{t('ticketsPage.locations.nuMetro')}</option>
-            <option value="Kings">{t('ticketsPage.locations.kings')}</option>
-            <option value="Durban">{t('ticketsPage.locations.durban')}</option>
-          </select>
-          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
-        </div>
-      </div>
-
-      <PriceFilterPanel
-        filteredCount={priceFilteredTickets.length}
-        totalCount={filtered.length}
-        isPriceFilterOpen={isPriceFilterOpen}
-        onToggleOpen={() => setIsPriceFilterOpen((currentValue) => !currentValue)}
-        minPriceInput={minPriceInput}
-        maxPriceInput={maxPriceInput}
-        onMinPriceChange={handleMinPriceChange}
-        onMaxPriceChange={handleMaxPriceChange}
-        onClearPriceFilter={handleClearPriceFilter}
-        hasActivePriceFilter={hasActivePriceFilter}
-        minimumAvailablePrice={minimumAvailablePrice}
-        maximumAvailablePrice={maximumAvailablePrice}
-        sliderMinValue={sliderMinValue}
-        sliderMaxValue={sliderMaxValue}
-        sliderStep={sliderStep}
-        onSliderMinimumChange={handleSliderMinimumChange}
-        onSliderMaximumChange={handleSliderMaximumChange}
-      />
-
-      {priceFilteredTickets.length ? (
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {priceFilteredTickets.map((event) => (
-          <article
-            key={event.id}
-            className="rounded-xl border border-[#eeeeee] bg-white shadow-[0_4px_8px_rgba(0,0,0,0.1)] transition hover:scale-[1.03]"
-            role="button"
-            tabIndex={0}
-            onClick={() => {
-              const details = `${formatDate(event.date, currentLocale)} • ${t(event.locationKey, { defaultValue: event.location })}`;
-              const cartItem = createCartItem({ ...event, route: '/tickets', marketName: t('markets.tickets'), details });
-              const wishlistItem = createWishlistItem({ ...event, route: '/tickets', marketName: t('markets.tickets'), details });
-              onOpenItemDetails?.({
-                title: t(event.titleKey, { defaultValue: event.title }),
-                image: event.image,
-                images: event.images || (event.image ? [event.image] : []),
-                marketName: t('markets.tickets'),
-                details,
-                priceLabel: getSalePrices(event.price).nowPrice,
-                cartItem,
-                wishlistItem,
-              });
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                e.currentTarget.click();
-              }
-            }}
-          >
-            <img
-              src={event.image}
-              alt=""
-              aria-hidden="true"
-              className="h-40 w-full rounded-t-xl object-cover"
-              loading="lazy"
-              onError={(event) => {
-                event.currentTarget.style.display = 'none';
-              }}
+      {/* ── Search + Filter Bar ── */}
+      <div className="mt-8 sm:mt-10">
+        {/* Search bar — centered, max 700px */}
+        <div className="mx-auto max-w-[700px]">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search tickets, events, routes, or venues"
+              className="h-10 w-full rounded-full border border-[var(--svs-border)] bg-white pl-11 pr-4 text-xs font-medium text-[var(--svs-text)] shadow-sm outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30"
             />
-            <div className="p-4">
-              <h3 className="text-base font-bold">{t(event.titleKey, { defaultValue: event.title })}</h3>
-              <p className="mt-1 flex items-center gap-1 text-sm text-slate-600"><CalendarDays className="h-4 w-4" /> {formatDate(event.date, currentLocale)}</p>
-              <p className="mt-1 flex items-center gap-1 text-sm text-slate-600"><MapPin className="h-4 w-4" /> {t(event.locationKey, { defaultValue: event.location })}</p>
-              <p className="mt-2 text-sm text-[var(--svs-primary-strong)]">{t(event.typeKey, { defaultValue: event.type })} • <SalePrice price={event.price} /></p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAddToCart(createCartItem({
-                    ...event,
-                    route: '/tickets',
-                    marketName: t('markets.tickets'),
-                    details: `${formatDate(event.date, currentLocale)} • ${t(event.locationKey, { defaultValue: event.location })}`,
-                    }));
-                  }}
-                  className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}
+          </div>
+        </div>
+
+        {/* Filter row — card container */}
+        <div className="mt-4 rounded-xl border border-[var(--svs-border)] bg-white/80 px-4 py-3 shadow-[0_2px_8px_rgba(15,23,42,0.06)] backdrop-blur sm:px-5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+              {/* Date dropdown */}
+              <div className="relative">
+                <CalendarDays className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
+                <select
+                  value={selectedDate}
+                  onChange={(event) => setSelectedDate(event.target.value)}
+                  className="h-9 w-full appearance-none rounded-full border border-[var(--svs-border)] bg-white pl-9 pr-8 text-xs font-semibold text-[var(--svs-text)] outline-none transition hover:border-[var(--svs-primary)] focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30 sm:w-[180px]"
                 >
-                  {t('ticketsPage.bookNow')}
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onBuyNow?.(createCartItem({
-                    ...event,
-                    route: '/tickets',
-                    marketName: t('markets.tickets'),
-                    details: `${formatDate(event.date, currentLocale)} • ${t(event.locationKey, { defaultValue: event.location })}`,
-                    }));
-                  }}
-                  className="rounded-md bg-[#111111] px-3 py-2 text-sm font-semibold text-white transition hover:bg-black"
+                  {bookingsPrototypeDateOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
+              </div>
+
+              {/* Country dropdown */}
+              <div className="relative">
+                <Flag className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
+                <select
+                  value={selectedCountry}
+                  onChange={(event) => setSelectedCountry(event.target.value)}
+                  className="h-9 w-full appearance-none rounded-full border border-[var(--svs-border)] bg-white pl-9 pr-8 text-xs font-semibold text-[var(--svs-text)] outline-none transition hover:border-[var(--svs-primary)] focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30 sm:w-[190px]"
                 >
-                  Buy it now
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleWishlist(createWishlistItem({
-                    ...event,
-                    route: '/tickets',
-                    marketName: t('markets.tickets'),
-                    details: `${formatDate(event.date, currentLocale)} • ${t(event.locationKey, { defaultValue: event.location })}`,
-                    }));
-                  }}
-                  aria-pressed={wishlistItemIds.includes(getCollectionItemId('/tickets', event.id))}
-                  className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition ${wishlistItemIds.includes(getCollectionItemId('/tickets', event.id)) ? 'border-rose-200 bg-rose-50 text-rose-600' : 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)] text-[var(--svs-text)]'}`}
-                >
-                  <Heart className={`h-4 w-4 ${wishlistItemIds.includes(getCollectionItemId('/tickets', event.id)) ? 'fill-current' : ''}`} />
-                  Wishlist
-                </button>
+                  {bookingsPrototypeCountryOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
+              </div>
+
+              {/* Category pill tabs */}
+              <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0">
+                {bookingsPrototypeCategoryTabs.map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setActiveCategory(tab)}
+                    className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition ${activeCategory === tab ? 'bg-[#0f9fb2] text-white shadow-[0_4px_14px_rgba(15,159,178,0.30)]' : 'border border-[var(--svs-border)] bg-white text-[var(--svs-text)] hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]'}`}
+                  >
+                    {tab}
+                  </button>
+                ))}
               </div>
             </div>
-          </article>
-        ))}
-      </div>
-      ) : (
-        <div className="rounded-2xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-8 text-sm text-[var(--svs-muted)]">
-          No ticket listings match that price range right now. Adjust your range to see more events.
-        </div>
-      )}
 
-      <div className="mt-6 overflow-x-auto">
-        <div className="flex min-w-max gap-4">
-          {ticketEvents.map((event) => (
-            <div key={`${event.id}-carousel`} className="w-64 shrink-0 rounded-xl border border-[#b2ebf2] bg-[#e0f7fa] p-3">
-              <p className="text-xs text-slate-600">{t('ticketsPage.upcomingHighlight')}</p>
-              <p className="font-semibold">{t(event.titleKey, { defaultValue: event.title })}</p>
+            {/* Sort dropdown */}
+            <div className="relative shrink-0">
+              <select
+                value={sortOrder}
+                onChange={(event) => setSortOrder(event.target.value)}
+                className="h-9 w-full appearance-none rounded-full border border-[var(--svs-border)] bg-white px-4 pr-8 text-xs font-semibold text-[var(--svs-text)] outline-none transition hover:border-[var(--svs-primary)] focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30 sm:w-[130px]"
+              >
+                <option value="Newest">Newest</option>
+                <option value="Oldest">Oldest</option>
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── 4 Category Cards ── */}
+      <div className="mt-[50px] sm:mt-[60px]">
+        <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {bookingsPrototypeCategoryCards.map((card) => (
+            <article
+              key={card.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => setActiveCategory(card.category)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  setActiveCategory(card.category);
+                }
+              }}
+              className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl shadow-[0_4px_16px_rgba(15,23,42,0.10)] transition-all duration-200 hover:-translate-y-1 hover:scale-[1.03] hover:shadow-[0_12px_32px_rgba(15,23,42,0.18)]"
+            >
+              <div className="relative h-[180px] w-full sm:h-[200px] lg:h-[210px]">
+                <img src={card.image} alt={card.title} className="h-full w-full object-cover" loading="lazy" />
+              </div>
+              <div className="flex flex-1 flex-col justify-between bg-[#0c2a32] px-5 py-4 text-white">
+                <div>
+                  <h2 className="text-[22px] font-bold leading-tight">{card.title}</h2>
+                  <p className="mt-1.5 text-[15px] leading-snug text-slate-300">{card.description}</p>
+                </div>
+                <div className="mt-4 flex justify-end">
+                  <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#8cecf5] transition-all group-hover:gap-2.5">
+                    Explore
+                    <ChevronRight className="h-4 w-4" />
+                  </span>
+                </div>
+              </div>
+            </article>
           ))}
         </div>
       </div>
-    </PageFrame>
-  );
-};
 
-const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], onOpenItemDetails }) => {
-  const { t } = useTranslation();
-  const bookingItems = useMemo(() => ticketEvents.slice(0, 2), []);
-  const {
-    filteredItems: priceFilteredBookingItems,
-    hasActivePriceFilter,
-    isPriceFilterOpen,
-    minPriceInput,
-    maxPriceInput,
-    minimumAvailablePrice,
-    maximumAvailablePrice,
-    sliderMinValue,
-    sliderMaxValue,
-    sliderStep,
-    setIsPriceFilterOpen,
-    handleMinPriceChange,
-    handleMaxPriceChange,
-    handleClearPriceFilter,
-    handleSliderMinimumChange,
-    handleSliderMaximumChange,
-  } = useMarketplacePriceFilter(bookingItems);
+      {/* ── Content Sections (Concerts / Matches / Travel) ── */}
+      {bookingsSections.length ? (
+        bookingsSections.map((section, sectionIndex) => (
+          <div key={section.id} id={section.id} className={sectionIndex === 0 ? 'mt-10 sm:mt-12' : 'mt-10 sm:mt-14'}>
+            <div className="mb-5 text-center">
+              <h2 className="text-xl font-bold tracking-tight text-[var(--svs-text)] sm:text-2xl">{section.title}</h2>
+              <p className="mt-1.5 text-xs text-[var(--svs-muted)] sm:text-sm">{section.subtitle}</p>
+            </div>
 
-  return (
-  <PageFrame
-    title={t('markets.bookings')}
-    subtitle={t('pageSubtitles.bookings')}
-  >
-    <p className="rounded-xl border border-[#b2ebf2] bg-[#e0f7fa] p-4 text-sm text-slate-700">
-      Integrated booking flow: select event -&gt; choose seat and provider -&gt; complete secure payment -&gt; receive e-ticket.
-    </p>
-    <div className="mt-4">
-      <PriceFilterPanel
-        filteredCount={priceFilteredBookingItems.length}
-        totalCount={bookingItems.length}
-        isPriceFilterOpen={isPriceFilterOpen}
-        onToggleOpen={() => setIsPriceFilterOpen((currentValue) => !currentValue)}
-        minPriceInput={minPriceInput}
-        maxPriceInput={maxPriceInput}
-        onMinPriceChange={handleMinPriceChange}
-        onMaxPriceChange={handleMaxPriceChange}
-        onClearPriceFilter={handleClearPriceFilter}
-        hasActivePriceFilter={hasActivePriceFilter}
-        minimumAvailablePrice={minimumAvailablePrice}
-        maximumAvailablePrice={maximumAvailablePrice}
-        sliderMinValue={sliderMinValue}
-        sliderMaxValue={sliderMaxValue}
-        sliderStep={sliderStep}
-        onSliderMinimumChange={handleSliderMinimumChange}
-        onSliderMaximumChange={handleSliderMaximumChange}
-      />
-    </div>
-    {priceFilteredBookingItems.length ? (
-    <div className="mt-4 grid gap-4 md:grid-cols-2">
-      {priceFilteredBookingItems.map((event) => (
-        <article
-          key={`booking-${event.id}`}
-          className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]"
-          role="button"
-          tabIndex={0}
-          onClick={() => {
-            const details = `${formatDate(event.date)} • ${event.location}`;
-            const cartItem = createCartItem({ ...event, route: '/bookings-tickets', marketName: t('markets.bookings'), details });
-            const wishlistItem = createWishlistItem({ ...event, route: '/bookings-tickets', marketName: t('markets.bookings'), details });
-            onOpenItemDetails?.({
-              title: event.title,
-              image: event.image,
-              images: event.images || (event.image ? [event.image] : []),
-              marketName: t('markets.bookings'),
-              details,
-              priceLabel: getSalePrices(event.price).nowPrice,
-              cartItem,
-              wishlistItem,
-            });
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              e.currentTarget.click();
-            }
-          }}
-        >
-          <h3 className="text-lg font-bold">{event.title}</h3>
-          <p className="mt-1 text-sm text-slate-600">{formatDate(event.date)} • {event.location}</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAddToCart(createCartItem({
-                ...event,
-                route: '/bookings-tickets',
-                marketName: t('markets.bookings'),
-                details: `${formatDate(event.date)} • ${event.location}`,
-                }));
-              }}
-              className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white`}
-            >
-              {t('common.bookNow')}
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onBuyNow?.(createCartItem({
-                ...event,
-                route: '/bookings-tickets',
-                marketName: t('markets.bookings'),
-                details: `${formatDate(event.date)} • ${event.location}`,
-                }));
-              }}
-              className="rounded-md bg-[#111111] px-3 py-2 text-sm font-semibold text-white transition hover:bg-black"
-            >
-              Buy it now
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleWishlist(createWishlistItem({
-                ...event,
-                route: '/bookings-tickets',
-                marketName: t('markets.bookings'),
-                details: `${formatDate(event.date)} • ${event.location}`,
-                }));
-              }}
-              aria-pressed={wishlistItemIds.includes(getCollectionItemId('/bookings-tickets', event.id))}
-              className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition ${wishlistItemIds.includes(getCollectionItemId('/bookings-tickets', event.id)) ? 'border-rose-200 bg-rose-50 text-rose-600' : 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)] text-[var(--svs-text)]'}`}
-            >
-              <Heart className={`h-4 w-4 ${wishlistItemIds.includes(getCollectionItemId('/bookings-tickets', event.id)) ? 'fill-current' : ''}`} />
-              Wishlist
-            </button>
+            <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {section.items.map((item) => (
+                <article
+                  key={item.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openBookingItemDetails(item)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      openBookingItemDetails(item);
+                    }
+                  }}
+                  className="flex cursor-pointer flex-col overflow-hidden rounded-xl bg-white shadow-[0_2px_12px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_8px_28px_rgba(15,23,42,0.14)]"
+                >
+                  <img src={item.image} alt={item.title} className="h-[160px] w-full object-cover sm:h-[180px]" loading="lazy" />
+                  <div className="flex flex-1 flex-col p-4">
+                    <h3 className="text-base font-bold text-[var(--svs-text)]">{item.title}</h3>
+                    {item.subtitle ? (
+                      <p className="mt-0.5 text-xs text-[var(--svs-muted)]">{item.subtitle}</p>
+                    ) : null}
+                    <div className="mt-2 space-y-1 text-xs text-[var(--svs-muted)]">
+                      {item.date ? (
+                        <p className="flex items-center gap-1.5">
+                          <CalendarDays className="h-3.5 w-3.5 shrink-0 text-[var(--svs-primary)]" />
+                          <span>{formatDate(item.date, currentLocale)}</span>
+                        </p>
+                      ) : null}
+                      {item.meta ? (
+                        <p className="text-xs text-[var(--svs-muted)]">{item.meta}</p>
+                      ) : null}
+                      {item.location ? (
+                        <p className="flex items-center gap-1.5">
+                          <MapPin className="h-3.5 w-3.5 shrink-0 text-[var(--svs-primary)]" />
+                          <span>{item.location}</span>
+                        </p>
+                      ) : null}
+                      {item.provider ? (
+                        <p className="text-xs text-[var(--svs-muted)]">{item.provider}</p>
+                      ) : null}
+                    </div>
+                    <p className="mt-3 text-base font-bold text-[var(--svs-text)]">{item.price}</p>
+                    <div className="mt-3">
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openBookingItemDetails(item);
+                        }}
+                        className={`${cudyBluePrimaryButtonClassName} rounded-full bg-[#0f9fb2] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#0d8a9c]`}
+                      >
+                        Book Now
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <div className="mt-6 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setActiveCategory(section.category)}
+                className="rounded-full bg-[#0f9fb2] px-6 py-2 text-xs font-semibold text-white transition hover:bg-[#0d8a9c]"
+              >
+                View More
+              </button>
+            </div>
           </div>
-        </article>
-      ))}
-    </div>
-    ) : (
-      <div className="mt-4 rounded-2xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-8 text-sm text-[var(--svs-muted)]">
-        No booking items match that price range right now. Adjust your price range to reopen the relevant options.
-      </div>
-    )}
-  </PageFrame>
+        ))
+      ) : (
+        <div className="mt-10 rounded-xl border border-dashed border-[var(--svs-border)] bg-white px-5 py-10 text-center text-xs text-[var(--svs-muted)]">
+          No bookings match your current search and filters. Adjust the date, country, or category to see more options.
+        </div>
+      )}
+    </PageFrame>
   );
 };
 
@@ -4249,13 +4725,13 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
     ...item,
     route: '/groceries',
     marketName: t('markets.groceries'),
-    details: item.discount || item.description || item.sellerName,
+    details: getGroceriesListingDetailsText(item),
   });
   const buildWishlistItem = (item) => createWishlistItem({
     ...item,
     route: '/groceries',
     marketName: t('markets.groceries'),
-    details: item.discount || item.description || item.sellerName,
+    details: getGroceriesListingDetailsText(item),
   });
 
   if (categoryKey && !activeCategory) {
@@ -4309,14 +4785,14 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
                 image: item.image,
                 images: item.images || (item.image ? [item.image] : []),
                 marketName: t('markets.groceries'),
-                details: item.discount || item.description || item.sellerName,
+                details: getGroceriesListingDetailsText(item),
                 priceLabel: getSalePrices(item.price).nowPrice,
                 cartItem: buildCartItem(item),
                 wishlistItem,
               });
             }}
             isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/groceries', item.id))}
-            metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} /> • {item.discount || item.description || item.sellerName || 'Seller item'}</p>}
+            metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} /> • {getGroceriesListingMetaText(item)}</p>}
           />
         ) : (
           <div className="rounded-2xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-8 text-sm text-[var(--svs-muted)]">
@@ -4928,12 +5404,14 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [editingId, setEditingId] = useState(null);
-  const [editForm, setEditForm] = useState({ title: '', description: '', price: '', quantity: '', marketKey: '' });
+  const [editForm, setEditForm] = useState(() => createSellerListingFormState());
   const [editExistingImages, setEditExistingImages] = useState([]);
   const [editImageFiles, setEditImageFiles] = useState([]);
   const [editImagePreviewUrls, setEditImagePreviewUrls] = useState([]);
   const [editMessage, setEditMessage] = useState('');
   const [editMessageType, setEditMessageType] = useState('idle');
+  const [listActionMessage, setListActionMessage] = useState('');
+  const [listActionMessageType, setListActionMessageType] = useState('idle');
   const [isSaving, setIsSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -5037,11 +5515,22 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
     setEditExistingImages((current) => current.filter((imageUrl) => imageUrl !== imageUrlToRemove));
   };
 
+  const handleEditMarketChange = (marketKey) => {
+    setEditForm((current) => (
+      marketKey === 'groceries'
+        ? { ...current, marketKey }
+        : clearGroceriesListingFields({ ...current, marketKey })
+    ));
+  };
+
   const openEdit = (item) => {
     const existingImages = Array.isArray(item.images) && item.images.length
       ? item.images.filter((imageUrl) => typeof imageUrl === 'string' && imageUrl.trim())
       : (item.image ? [item.image] : []);
 
+    setConfirmDeleteId(null);
+    setListActionMessage('');
+    setListActionMessageType('idle');
     setEditingId(item.dbId);
     setEditForm({
       title: item.title,
@@ -5049,6 +5538,14 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
       price: item.price,
       quantity: String(normalizeListingQuantity(item.availableQuantity, 0)),
       marketKey: item.marketKey,
+      categoryKey: item.categoryKey || '',
+      brand: item.brand || '',
+      volume: item.volume || '',
+      freshness: item.freshness || '',
+      storage: item.storage || '',
+      origin: item.origin || '',
+      expiryDate: item.expiryDate || '',
+      discount: item.discount || '',
     });
     setEditExistingImages(existingImages);
     setEditImageFiles([]);
@@ -5058,7 +5555,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
 
   const cancelEdit = () => {
     setEditingId(null);
-    setEditForm({ title: '', description: '', price: '', quantity: '', marketKey: '' });
+    setEditForm(createSellerListingFormState());
     setEditExistingImages([]);
     setEditImageFiles([]);
     setEditMessage('');
@@ -5074,11 +5571,22 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
     setIsSaving(true);
     setEditMessage('');
     setEditMessageType('idle');
+    setListActionMessage('');
+    setListActionMessageType('idle');
 
     const normalizedQuantity = normalizeListingQuantity(editForm.quantity, NaN);
 
     if (!Number.isFinite(normalizedQuantity)) {
       setEditMessage('Enter a valid stock quantity using whole numbers (0 or more).');
+      setEditMessageType('error');
+      setIsSaving(false);
+      return;
+    }
+
+    const groceriesValidationMessage = getGroceriesListingValidationMessage(editForm);
+
+    if (groceriesValidationMessage) {
+      setEditMessage(groceriesValidationMessage);
       setEditMessageType('error');
       setIsSaving(false);
       return;
@@ -5101,6 +5609,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
         price: editForm.price,
         quantity: normalizedQuantity,
         marketKey: editForm.marketKey,
+        detailsJson: buildSellerItemDetailsJson(editForm),
         previousImageUrl: item.image,
         previousImageUrls: item.images || [],
         imageUrls: retainedImageUrls,
@@ -5118,14 +5627,28 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
     setMyListings((current) =>
       current.map((listing) => (listing.dbId === item.dbId ? mapSellerItemRecord(result.data) : listing)),
     );
+    setListActionMessage('Listing updated successfully.');
+    setListActionMessageType('success');
     cancelEdit();
     setIsSaving(false);
   };
 
   const handleDelete = async (item) => {
+    setListActionMessage('');
+    setListActionMessageType('idle');
     setDeletingId(item.dbId);
-    await onDeleteSellerItem(item.dbId, item.images || [], item.image);
+    const result = await onDeleteSellerItem(item.dbId, item.images || [], item.image);
+
+    if (result?.error) {
+      setListActionMessage(`Failed to remove listing: ${result.error}`);
+      setListActionMessageType('error');
+      setDeletingId(null);
+      return;
+    }
+
     setMyListings((current) => current.filter((listing) => listing.dbId !== item.dbId));
+    setListActionMessage('Listing removed from your store.');
+    setListActionMessageType('success');
     setConfirmDeleteId(null);
     setDeletingId(null);
   };
@@ -5354,6 +5877,12 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
               </Link>
             </div>
 
+            {listActionMessage ? (
+              <div className={`mb-5 rounded-xl px-4 py-3 text-sm ${listActionMessageType === 'error' ? 'border border-rose-200 bg-rose-50 text-rose-700' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+                {listActionMessage}
+              </div>
+            ) : null}
+
             {loadError ? (
               <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{loadError}</div>
             ) : isLoading ? (
@@ -5377,189 +5906,195 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
               <div className="grid gap-5 sm:grid-cols-2 2xl:grid-cols-3">
                 {myListings.map((item) => (
                   <article key={item.dbId} className="overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-              <div className="relative h-48 overflow-hidden bg-[var(--svs-surface-soft)]">
-                <img src={item.image} alt={item.title} className="h-full w-full object-cover" loading="lazy" />
-                <span className={`absolute left-3 top-3 rounded-full px-2.5 py-0.5 text-xs font-semibold ${MARKET_BADGE_COLORS[item.marketKey] || 'bg-slate-100 text-slate-700'}`}>
-                  {t(sellerMarketConfig[item.marketKey]?.labelKey || '')}
-                </span>
-              </div>
+                    <div className="relative h-48 overflow-hidden bg-[var(--svs-surface-soft)]">
+                      <img src={item.image} alt={item.title} className="h-full w-full object-cover" loading="lazy" />
+                      <span className={`absolute left-3 top-3 rounded-full px-2.5 py-0.5 text-xs font-semibold ${MARKET_BADGE_COLORS[item.marketKey] || 'bg-slate-100 text-slate-700'}`}>
+                        {t(sellerMarketConfig[item.marketKey]?.labelKey || '')}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => (editingId === item.dbId ? cancelEdit() : openEdit(item))}
+                        className="absolute right-3 top-3 rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold text-[var(--svs-primary-strong)] shadow-sm transition hover:bg-white"
+                      >
+                        {editingId === item.dbId ? 'Close' : 'Edit'}
+                      </button>
+                    </div>
 
-              <div className="flex h-full flex-col p-4">
-                <h3 className="text-base font-bold leading-tight text-[var(--svs-text)]">{item.title}</h3>
-                <p className="mt-0.5 text-sm font-semibold text-[var(--svs-primary-strong)]"><SalePrice price={item.price} /></p>
-                <p className="mt-1 text-xs text-[var(--svs-muted)]">
-                  Quantity in stock: {normalizeListingQuantity(item.availableQuantity, 0)}
-                  {normalizeListingQuantity(item.availableQuantity, 0) === 0 ? ' (Out of stock - buyers can only wishlist this item).' : ''}
-                </p>
-                {item.description ? (
-                  <p className="mt-1.5 line-clamp-2 text-xs text-[var(--svs-muted)]">{item.description}</p>
-                ) : null}
+                    <div className="flex h-full flex-col p-4">
+                      <h3 className="text-base font-bold leading-tight text-[var(--svs-text)]">{item.title}</h3>
+                      <p className="mt-0.5 text-sm font-semibold text-[var(--svs-primary-strong)]"><SalePrice price={item.price} /></p>
+                      <p className="mt-1 text-xs text-[var(--svs-muted)]">
+                        Quantity in stock: {normalizeListingQuantity(item.availableQuantity, 0)}
+                        {normalizeListingQuantity(item.availableQuantity, 0) === 0 ? ' (Out of stock - buyers can only wishlist this item).' : ''}
+                      </p>
+                      {item.description ? (
+                        <p className="mt-1.5 line-clamp-2 text-xs text-[var(--svs-muted)]">{item.description}</p>
+                      ) : null}
 
-                {editingId === item.dbId ? (
-                  <div className="mt-4 space-y-3 border-t border-[var(--svs-border)] pt-4">
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Product Name</label>
-                      <input name="title" value={editForm.title} onChange={handleEditChange} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Price</label>
-                        <input name="price" value={editForm.price} onChange={handleEditChange} placeholder="e.g. 29.99" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Quantity</label>
-                        <input
-                          name="quantity"
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={editForm.quantity}
-                          onChange={handleEditChange}
-                          placeholder="e.g. 25"
-                          className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
-                        />
-                        <p className="mt-1 text-[10px] text-[var(--svs-muted)]">This is how many units are available for checkout.</p>
-                      </div>
-                      <div className="col-span-2">
-                        <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Market</label>
-                        <MarketSelectorField
-                          id={`edit-market-${item.dbId}`}
-                          value={editForm.marketKey}
-                          onChange={(marketKey) => setEditForm((current) => ({ ...current, marketKey }))}
-                          ariaLabel="Edit listing market"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Description</label>
-                      <textarea name="description" value={editForm.description} onChange={handleEditChange} rows={3} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Listing Images</label>
-                      {editExistingImages.length ? (
-                        <div className="mb-3 grid grid-cols-2 gap-2">
-                          {editExistingImages.map((imageUrl, index) => (
-                            <div key={`${imageUrl}-${index}`} className="relative overflow-hidden rounded-md border border-[var(--svs-border)] bg-white">
-                              <img
-                                src={imageUrl}
-                                alt={`${item.title} ${index + 1}`}
-                                className="h-24 w-full object-cover"
-                                loading="lazy"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveExistingEditImage(imageUrl)}
-                                className="absolute right-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700"
-                              >
-                                Remove
-                              </button>
+                      {editingId === item.dbId ? (
+                        <div className="mt-4 space-y-3 border-t border-[var(--svs-border)] pt-4">
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Product Name</label>
+                            <input name="title" value={editForm.title} onChange={handleEditChange} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Price</label>
+                              <input name="price" value={editForm.price} onChange={handleEditChange} placeholder="e.g. 29.99" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
                             </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="mb-2 text-xs text-[var(--svs-muted)]">No current images will be kept unless you add new ones below.</p>
-                      )}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handleEditImagePick}
-                        className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-xs text-[var(--svs-text)] outline-none"
-                      />
-                      <p className="mt-1 text-xs text-[var(--svs-muted)]">Add more images here. You can remove current images above or remove pending uploads before saving.</p>
-                      {editImageFiles.length ? (
-                        <div className="mt-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-2 text-xs text-[var(--svs-muted)]">
-                          <p className="font-semibold text-[var(--svs-text)]">{editImageFiles.length} new image{editImageFiles.length === 1 ? '' : 's'} selected</p>
-                          <ul className="mt-1 max-h-20 space-y-0.5 overflow-y-auto pr-1">
-                            {editImageFiles.map((file, index) => (
-                              <li key={`${file.name}-${file.size}-${index}`} className="flex items-center justify-between gap-2">
-                                <span className="truncate">{file.name}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveEditImage(index)}
-                                  className="rounded border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700"
-                                >
-                                  Remove
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                          {editImagePreviewUrls.length ? (
-                            <div className="mt-2 grid grid-cols-2 gap-2">
-                              {editImagePreviewUrls.map((previewUrl, index) => (
-                                <div key={`${previewUrl}-${index}`} className="relative overflow-hidden rounded-md border border-[var(--svs-border)] bg-white">
-                                  <img
-                                    src={previewUrl}
-                                    alt={`Selected preview ${index + 1}`}
-                                    className="h-24 w-full object-cover"
-                                    loading="lazy"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveEditImage(index)}
-                                    className="absolute right-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700"
-                                  >
-                                    x
-                                  </button>
-                                </div>
-                              ))}
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Quantity</label>
+                              <input
+                                name="quantity"
+                                type="number"
+                                min="0"
+                                step="1"
+                                value={editForm.quantity}
+                                onChange={handleEditChange}
+                                placeholder="e.g. 25"
+                                className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
+                              />
+                              <p className="mt-1 text-[10px] text-[var(--svs-muted)]">This is how many units are available for checkout.</p>
+                            </div>
+                            <div className="col-span-2">
+                              <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Market</label>
+                              <MarketSelectorField
+                                id={`edit-market-${item.dbId}`}
+                                value={editForm.marketKey}
+                                onChange={handleEditMarketChange}
+                                ariaLabel="Edit listing market"
+                              />
+                            </div>
+                          </div>
+                          {editForm.marketKey === 'groceries' ? (
+                            <GroceriesSellerFields
+                              formData={editForm}
+                              onFieldChange={handleEditChange}
+                              prefix={`edit-grocery-${item.dbId}`}
+                              isCompact
+                            />
+                          ) : null}
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Description</label>
+                            <textarea name="description" value={editForm.description} onChange={handleEditChange} rows={3} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Listing Images</label>
+                            {editExistingImages.length ? (
+                              <div className="mb-3 grid grid-cols-2 gap-2">
+                                {editExistingImages.map((imageUrl, index) => (
+                                  <div key={`${imageUrl}-${index}`} className="relative overflow-hidden rounded-md border border-[var(--svs-border)] bg-white">
+                                    <img
+                                      src={imageUrl}
+                                      alt={`${item.title} ${index + 1}`}
+                                      className="h-24 w-full object-cover"
+                                      loading="lazy"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveExistingEditImage(imageUrl)}
+                                      className="absolute right-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="mb-2 text-xs text-[var(--svs-muted)]">No current images will be kept unless you add new ones below.</p>
+                            )}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              onChange={handleEditImagePick}
+                              className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-xs text-[var(--svs-text)] outline-none"
+                            />
+                            <p className="mt-1 text-xs text-[var(--svs-muted)]">Add more images here. You can remove current images above or remove pending uploads before saving.</p>
+                            {editImageFiles.length ? (
+                              <div className="mt-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-2 text-xs text-[var(--svs-muted)]">
+                                <p className="font-semibold text-[var(--svs-text)]">{editImageFiles.length} new image{editImageFiles.length === 1 ? '' : 's'} selected</p>
+                                <ul className="mt-1 max-h-20 space-y-0.5 overflow-y-auto pr-1">
+                                  {editImageFiles.map((file, index) => (
+                                    <li key={`${file.name}-${file.size}-${index}`} className="flex items-center justify-between gap-2">
+                                      <span className="truncate">{file.name}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveEditImage(index)}
+                                        className="rounded border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700"
+                                      >
+                                        Remove
+                                      </button>
+                                    </li>
+                                  ))}
+                                </ul>
+                                {editImagePreviewUrls.length ? (
+                                  <div className="mt-2 grid grid-cols-2 gap-2">
+                                    {editImagePreviewUrls.map((previewUrl, index) => (
+                                      <div key={`${previewUrl}-${index}`} className="relative overflow-hidden rounded-md border border-[var(--svs-border)] bg-white">
+                                        <img
+                                          src={previewUrl}
+                                          alt={`Selected preview ${index + 1}`}
+                                          className="h-24 w-full object-cover"
+                                          loading="lazy"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => handleRemoveEditImage(index)}
+                                          className="absolute right-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700"
+                                        >
+                                          x
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : null}
+                              </div>
+                            ) : null}
+                          </div>
+                          {editMessage ? (
+                            <div className={`rounded-lg px-3 py-2 text-xs ${editMessageType === 'error' ? 'border border-rose-200 bg-rose-50 text-rose-700' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+                              {editMessage}
                             </div>
                           ) : null}
+                          <div className="flex gap-2">
+                            <button type="button" onClick={() => handleSaveEdit(item)} disabled={isSaving} className={`${cudyBluePrimaryButtonClassName} flex-1 rounded-lg bg-[var(--svs-primary)] px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-60`}>
+                              {isSaving ? 'Saving\u2026' : 'Save Changes'}
+                            </button>
+                            <button type="button" onClick={cancelEdit} disabled={isSaving} className="rounded-lg border border-[var(--svs-border)] px-3 py-2.5 text-sm font-semibold text-[var(--svs-text)]">
+                              Cancel
+                            </button>
+                          </div>
                         </div>
-                      ) : null}
+                      ) : (
+                        <div className="mt-auto flex gap-2 pt-4">
+                          {confirmDeleteId === item.dbId ? (
+                            <>
+                              <span className="flex-1 self-center text-xs text-[var(--svs-muted)]">Remove this listing?</span>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(item)}
+                                disabled={deletingId === item.dbId}
+                                className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-60"
+                              >
+                                {deletingId === item.dbId ? 'Removing\u2026' : 'Yes, Remove'}
+                              </button>
+                              <button type="button" onClick={() => setConfirmDeleteId(null)} className="rounded-lg border border-[var(--svs-border)] px-3 py-2 text-xs font-semibold text-[var(--svs-text)]">
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteId(item.dbId)}
+                              className="ml-auto rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    {editMessage ? (
-                      <div className={`rounded-lg px-3 py-2 text-xs ${editMessageType === 'error' ? 'border border-rose-200 bg-rose-50 text-rose-700' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
-                        {editMessage}
-                      </div>
-                    ) : null}
-                    <div className="flex gap-2">
-                      <button type="button" onClick={() => handleSaveEdit(item)} disabled={isSaving} className={`${cudyBluePrimaryButtonClassName} flex-1 rounded-lg bg-[var(--svs-primary)] px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-60`}>
-                        {isSaving ? 'Saving\u2026' : 'Save Changes'}
-                      </button>
-                      <button type="button" onClick={cancelEdit} disabled={isSaving} className="rounded-lg border border-[var(--svs-border)] px-3 py-2.5 text-sm font-semibold text-[var(--svs-text)]">
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-auto flex gap-2 pt-4">
-                    {confirmDeleteId === item.dbId ? (
-                      <>
-                        <span className="flex-1 self-center text-xs text-[var(--svs-muted)]">Remove this listing?</span>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(item)}
-                          disabled={deletingId === item.dbId}
-                          className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-60"
-                        >
-                          {deletingId === item.dbId ? 'Removing\u2026' : 'Yes, Remove'}
-                        </button>
-                        <button type="button" onClick={() => setConfirmDeleteId(null)} className="rounded-lg border border-[var(--svs-border)] px-3 py-2 text-xs font-semibold text-[var(--svs-text)]">
-                          Cancel
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => openEdit(item)}
-                          className="flex-1 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)]"
-                        >
-                          Edit Listing
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setConfirmDeleteId(item.dbId)}
-                          className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
-                        >
-                          Remove
-                        </button>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
                   </article>
                 ))}
               </div>
@@ -5681,13 +6216,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
 const SellerUploadPage = ({ onSellerItemCreated }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    price: '',
-    quantity: '',
-    marketKey: '',
-  });
+  const [formData, setFormData] = useState(() => createSellerListingFormState());
   const [imageFiles, setImageFiles] = useState([]);
   const [imagePreviewUrls, setImagePreviewUrls] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -5714,6 +6243,14 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
   const handleChange = (event) => {
     const { name, value } = event.target;
     setFormData((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleMarketChange = (marketKey) => {
+    setFormData((current) => (
+      marketKey === 'groceries'
+        ? { ...current, marketKey }
+        : clearGroceriesListingFields({ ...current, marketKey })
+    ));
   };
 
   const handleImagePick = (event) => {
@@ -5752,6 +6289,14 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
 
     if (!Number.isFinite(normalizedQuantity)) {
       setMessage('Enter a valid quantity in whole numbers (0 or more).');
+      setMessageType('error');
+      return;
+    }
+
+    const groceriesValidationMessage = getGroceriesListingValidationMessage(formData);
+
+    if (groceriesValidationMessage) {
+      setMessage(groceriesValidationMessage);
       setMessageType('error');
       return;
     }
@@ -5812,6 +6357,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
         quantity: normalizedQuantity,
         price: trimmedPrice,
         market_key: formData.marketKey,
+        details_json: buildSellerItemDetailsJson(formData),
         image_url: uploadedImageUrls[0],
         image_urls: uploadedImageUrls,
       })
@@ -5828,7 +6374,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
     onSellerItemCreated(mapSellerItemRecord(data));
     setMessage(`Item uploaded successfully to ${t(selectedMarket.labelKey)}.`);
     setMessageType('success');
-    setFormData({ title: '', description: '', price: '', quantity: '', marketKey: '' });
+    setFormData(createSellerListingFormState());
     setImageFiles([]);
     setIsSubmitting(false);
 
@@ -5884,11 +6430,14 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                 <MarketSelectorField
                   id="seller-market"
                   value={formData.marketKey}
-                  onChange={(marketKey) => setFormData((current) => ({ ...current, marketKey }))}
+                  onChange={handleMarketChange}
                   placeholder="Select Market"
                   ariaLabel="Select listing market"
                 />
               </div>
+              {formData.marketKey === 'groceries' ? (
+                <GroceriesSellerFields formData={formData} onFieldChange={handleChange} prefix="seller-grocery" />
+              ) : null}
               <div className="sm:col-span-2">
                 <label htmlFor="seller-description" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Description</label>
                 <textarea id="seller-description" name="description" value={formData.description} onChange={handleChange} rows={4} required placeholder="Short details that should appear with the product in its market." className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
@@ -5966,6 +6515,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
               <p>Set an accurate quantity so shoppers know stock availability before checkout.</p>
               <p>Use a clean, bright image where the product fills most of the frame.</p>
               <p>Set a realistic price so your listing performs better in market results.</p>
+              {formData.marketKey === 'groceries' ? <p>For groceries, add the correct category, brand, pack size, freshness, and storage information so buyers can compare like-for-like products.</p> : null}
               <p>After publishing, you can edit or remove the item anytime from My Store.</p>
             </div>
           </section>
@@ -6130,7 +6680,6 @@ const SafetyPage = () => {
 
 const MarketsPage = () => {
   const { t } = useTranslation();
-  const [showAllMarkets, setShowAllMarkets] = useState(false);
   const orderedMarketLinks = useMemo(
     () => {
       const trendingMarkets = TRENDING_MARKET_HREFS
@@ -6144,8 +6693,6 @@ const MarketsPage = () => {
     },
     [t],
   );
-  const visibleMarketLinks = showAllMarkets ? orderedMarketLinks : orderedMarketLinks.slice(0, 6);
-  const hasMoreMarkets = orderedMarketLinks.length > 6;
 
   return (
     <section className="bg-[var(--svs-bg)] px-4 py-10">
@@ -6161,7 +6708,7 @@ const MarketsPage = () => {
       </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {visibleMarketLinks.map((market, index) => (
+        {orderedMarketLinks.map((market, index) => (
           <Link
             key={`all-${market.href}`}
             to={market.href}
@@ -6181,18 +6728,6 @@ const MarketsPage = () => {
           </Link>
         ))}
       </div>
-
-      {hasMoreMarkets ? (
-        <div className="mt-6 flex justify-center">
-          <button
-            type="button"
-            onClick={() => setShowAllMarkets((current) => !current)}
-            className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 py-3 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
-          >
-            {showAllMarkets ? t('common.showLess') : t('common.viewMore')}
-          </button>
-        </div>
-      ) : null}
 
       <div className="mt-7 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
         <p className="text-sm text-[var(--svs-text)]">{t('marketsPage.quickTip')}</p>
@@ -8110,53 +8645,114 @@ const SiteFooter = () => {
   const { t } = useTranslation();
 
   return (
-    <footer className="bg-gradient-to-b from-[#121212] to-[#007b9c] px-4 py-10 text-white">
-      <div className="mx-auto grid w-full max-w-7xl gap-8 md:grid-cols-4">
-        <div>
-          <h3 className="text-xl font-bold">SVS E-Commerce</h3>
-          <p className="mt-2 text-sm text-slate-100">{t('site.tagline')}</p>
-          <p className="mt-3 text-sm text-slate-200">{t('site.address')}</p>
-        </div>
-
-        <div>
-          <h4 className="text-sm font-semibold uppercase tracking-wide text-cyan-100">{t('footer.quickLinks')}</h4>
-          <ul className="mt-2 space-y-1 text-sm">
-            {footerLinks.quick.map((item) => (
-              <li key={item.href}>
-                <Link to={item.href} className="text-slate-100 transition hover:text-white">{t(item.labelKey)}</Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div>
-          <h4 className="text-sm font-semibold uppercase tracking-wide text-cyan-100">{t('footer.support')}</h4>
-          <ul className="mt-2 space-y-1 text-sm">
-            {footerLinks.support.map((item) => (
-              <li key={item.href}>
-                <Link to={item.href} className="text-slate-100 transition hover:text-white">{t(item.labelKey)}</Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div>
-          <h4 className="text-sm font-semibold uppercase tracking-wide text-cyan-100">{t('footer.subscribe')}</h4>
-          <div className="mt-2 space-y-2">
-            <input type="text" placeholder={t('footer.subscribePlaceholder')} className="w-full rounded-md border border-cyan-200/40 bg-white/10 px-3 py-2 text-sm text-white placeholder:text-slate-200" aria-label={t('footer.subscribeAria')} />
-            <button type="button" className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold`}>{t('footer.subscribe')}</button>
+    <footer className="bg-gradient-to-b from-[#0c2a32] to-[#0f6674] text-white">
+      {/* ── Main Footer Grid ── */}
+      <div className="mx-auto w-full max-w-7xl px-6 pt-[60px] pb-10 sm:px-8">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Column 1 – Brand */}
+          <div>
+            <h3 className="text-xl font-bold">SVS E-Commerce</h3>
+            <p className="mt-3 text-sm leading-relaxed text-slate-200">
+              {t('site.tagline', { defaultValue: 'Your one-stop marketplace for everything you need – from groceries to tickets!' })}
+            </p>
+            <p className="mt-3 text-sm text-slate-300">{t('site.address')}</p>
+            {/* Social icons */}
+            <div className="mt-5 flex items-center gap-3">
+              {/* Facebook */}
+              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="text-white transition hover:text-cyan-200">
+                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" /></svg>
+              </a>
+              {/* X / Twitter */}
+              <a href="https://x.com" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)" className="text-white transition hover:text-cyan-200">
+                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+              </a>
+              {/* LinkedIn */}
+              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="text-white transition hover:text-cyan-200">
+                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
+              </a>
+              {/* Instagram */}
+              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="text-white transition hover:text-cyan-200">
+                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" /></svg>
+              </a>
+              {/* YouTube */}
+              <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="text-white transition hover:text-cyan-200">
+                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" /></svg>
+              </a>
+              {/* WhatsApp */}
+              <a href="https://wa.me" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="text-white transition hover:text-cyan-200">
+                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
+              </a>
+            </div>
           </div>
-          <div className="mt-3 flex gap-2">
-            <span className="rounded-full bg-white/20 px-2 py-1 text-xs">FB</span>
-            <span className="rounded-full bg-white/20 px-2 py-1 text-xs">TW</span>
-            <span className="rounded-full bg-white/20 px-2 py-1 text-xs">IG</span>
+
+          {/* Column 2 – Quick Links */}
+          <div>
+            <h4 className="text-sm font-bold uppercase tracking-wide">{t('footer.quickLinks')}</h4>
+            <ul className="mt-4 space-y-2 text-sm">
+              {footerLinks.quick.map((item) => (
+                <li key={item.href}>
+                  <Link to={item.href} className="text-slate-200 transition hover:text-white hover:underline">{t(item.labelKey)}</Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Column 3 – Support */}
+          <div>
+            <h4 className="text-sm font-bold uppercase tracking-wide">{t('footer.support')}</h4>
+            <ul className="mt-4 space-y-2 text-sm">
+              {footerLinks.support.map((item) => (
+                <li key={item.href}>
+                  <Link to={item.href} className="text-slate-200 transition hover:text-white hover:underline">{t(item.labelKey)}</Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Column 4 – Subscribe to Offers */}
+          <div>
+            <h4 className="text-sm font-bold uppercase tracking-wide">{t('footer.subscribe')}</h4>
+            <p className="mt-3 text-sm text-slate-300">{t('footer.subscribeText')}</p>
+            <div className="mt-4 flex gap-2">
+              <input
+                type="text"
+                placeholder={t('footer.subscribePlaceholder')}
+                className="min-w-0 flex-1 rounded-full border border-white/20 bg-white/10 px-4 py-2.5 text-sm text-white placeholder:text-slate-300 focus:border-cyan-300 focus:outline-none focus:ring-1 focus:ring-cyan-300"
+                aria-label={t('footer.subscribeAria')}
+              />
+              <button
+                type="button"
+                className={`${cudyBluePrimaryButtonClassName} shrink-0 rounded-full bg-[var(--svs-primary)] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0088b8]`}
+              >
+                Subscribe
+              </button>
+            </div>
+            {/* Small social circles */}
+            <div className="mt-4 flex items-center gap-2.5">
+              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25">
+                <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" /></svg>
+              </a>
+              <a href="https://x.com" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)" className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25">
+                <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+              </a>
+              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25">
+                <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" /></svg>
+              </a>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="mx-auto mt-8 flex w-full max-w-7xl flex-wrap items-center justify-between gap-2 border-t border-white/20 pt-4 text-xs text-slate-100">
-        <p>{t('footer.last', { year: getCurrentYear() })} • SVS E-Commerce</p>
-        <p className="flex items-center gap-1"><ShieldCheck className="h-4 w-4" /> {t('footer.securePayments')}</p>
+      {/* ── Bottom Bar ── */}
+      <div className="border-t border-white/15 bg-[#082028]">
+        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-6 py-4 text-xs text-slate-300 sm:px-8">
+          <p>{t('footer.est')}</p>
+          <p className="hidden text-center sm:block">{t('site.address')}</p>
+          <p className="flex items-center gap-1.5">
+            <ShieldCheck className="h-4 w-4" />
+            {t('footer.securePayments')}
+          </p>
+        </div>
       </div>
     </footer>
   );
@@ -9208,12 +9804,20 @@ const App = () => {
   }, []);
 
   const handleDeleteSellerItem = useCallback(async (dbId, imageUrls = [], imageUrl = '') => {
-    if (!hasSupabaseEnv || !supabase) return;
+    if (!hasSupabaseEnv || !supabase) return { error: 'Supabase is not configured.' };
     const sellerEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
 
     if (!sellerEmail) {
-      return;
+      return { error: 'You must be signed in to remove this listing.' };
     }
+
+    const normalizedDbId = String(dbId || '').trim();
+
+    if (!normalizedDbId) {
+      return { error: 'Missing listing id.' };
+    }
+
+    const sellerItemKeys = [`seller-${normalizedDbId}`, normalizedDbId];
 
     const sourceUrls = Array.isArray(imageUrls) && imageUrls.length ? imageUrls : (imageUrl ? [imageUrl] : []);
     const storagePaths = getSellerImageStoragePaths(sourceUrls);
@@ -9222,12 +9826,53 @@ const App = () => {
       await supabase.storage.from(SELLER_IMAGES_BUCKET).remove(storagePaths);
     }
 
-    await supabase
+    const [cartCleanup, wishlistCleanup, reviewsCleanup] = await Promise.all([
+      supabase
+        .from(CART_ITEMS_TABLE)
+        .delete()
+        .or(`item_key.in.("${sellerItemKeys.join('","')}"),sku.in.("${sellerItemKeys.join('","')}")`),
+      supabase
+        .from(WISHLIST_ITEMS_TABLE)
+        .delete()
+        .or(`item_key.in.("${sellerItemKeys.join('","')}"),sku.in.("${sellerItemKeys.join('","')}")`),
+      supabase
+        .from(PRODUCT_REVIEWS_TABLE)
+        .delete()
+        .in('item_key', sellerItemKeys),
+    ]);
+
+    const cleanupError = cartCleanup.error || wishlistCleanup.error || reviewsCleanup.error;
+
+    if (cleanupError) {
+      return { error: cleanupError.message };
+    }
+
+    const { error } = await supabase
       .from(SELLER_ITEMS_TABLE)
       .delete()
       .eq('id', dbId)
       .eq('seller_email', sellerEmail);
+
+    if (error) {
+      return { error: error.message };
+    }
+
     setSellerItems((currentItems) => currentItems.filter((item) => item.dbId !== dbId));
+    setCartItems((currentItems) => currentItems.filter((item) => !sellerItemKeys.includes(String(item.id || '')) && !sellerItemKeys.includes(String(item.sku || ''))));
+    setWishlistItems((currentItems) => currentItems.filter((item) => !sellerItemKeys.includes(String(item.id || '')) && !sellerItemKeys.includes(String(item.sku || ''))));
+    setProductReviews((currentReviews) => currentReviews.filter((review) => !sellerItemKeys.includes(String(review.itemKey || ''))));
+    setProductReviewSummaryMap((currentMap) => {
+      const nextMap = new Map(currentMap);
+      sellerItemKeys.forEach((itemKey) => nextMap.delete(itemKey));
+      return nextMap;
+    });
+
+    if (typeof window !== 'undefined') {
+      const nextStoredReviews = getStoredProductReviews().filter((review) => !sellerItemKeys.includes(String(review.itemKey || '')));
+      window.localStorage.setItem(PRODUCT_REVIEWS_STORAGE_KEY, JSON.stringify(nextStoredReviews));
+    }
+
+    return { success: true };
   }, []);
 
   const handleUpdateSellerItem = useCallback(async (dbId, updates, newImageFiles) => {
@@ -9292,6 +9937,7 @@ const App = () => {
         price: updates.price,
         quantity: normalizeListingQuantity(updates.quantity, 0),
         market_key: updates.marketKey,
+        details_json: updates.detailsJson || {},
         image_url: imageUrl,
         image_urls: nextImageUrls,
       })

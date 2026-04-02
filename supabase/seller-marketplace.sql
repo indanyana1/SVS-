@@ -6,6 +6,7 @@ create table if not exists public.marketplace_items (
   seller_name text,
   title text not null,
   description text,
+  details_json jsonb not null default '{}'::jsonb,
   quantity integer not null default 0 check (quantity >= 0),
   price text not null,
   market_key text not null,
@@ -16,6 +17,9 @@ create table if not exists public.marketplace_items (
 
 alter table public.marketplace_items
 add column if not exists image_urls jsonb not null default '[]'::jsonb;
+
+alter table public.marketplace_items
+add column if not exists details_json jsonb not null default '{}'::jsonb;
 
 alter table public.marketplace_items
 add column if not exists quantity integer not null default 0;
