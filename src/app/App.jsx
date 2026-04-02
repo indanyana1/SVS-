@@ -277,8 +277,34 @@ const bookingsPrototypeMovieItems = [
     city: 'Cape Town',
     country: 'South Africa',
     genre: 'Action',
+    genres: ['Action', 'Thriller'],
     language: 'English',
+    languages: ['English', 'Zulu'],
     showtime: 'Evening',
+    duration: '2h 15min',
+    rating: 4.5,
+    ageRating: '16+',
+    director: 'Akin Omotoso',
+    writer: 'Kagiso Lediga',
+    overview: 'A gripping action thriller set in the heart of Cape Town. When a veteran detective uncovers a conspiracy that reaches the highest levels of power, he must navigate a web of deception, betrayal, and danger to expose the truth. Featuring breathtaking chase sequences through the streets of the Mother City and a star-studded cast, this premiere event promises an unforgettable cinematic experience with exclusive behind-the-scenes access and a post-screening Q&A with the director.',
+    cast: [
+      { name: 'Thuso Mbedu', role: 'Detective Naledi', photo: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=300' },
+      { name: 'John Boyega', role: 'Marcus Cole', photo: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=300' },
+      { name: 'Nomzamo Mbatha', role: 'Zara Obi', photo: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=300' },
+      { name: 'Idris Elba', role: 'Commander Shaw', photo: 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=300' },
+      { name: 'Pearl Thusi', role: 'Agent Khumalo', photo: 'https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=300' },
+    ],
+    cinemas: [
+      { name: 'Ster-Kinekor V&A Waterfront', location: 'V&A Waterfront, Cape Town', showtimes: ['10:00 AM', '1:30 PM', '5:00 PM', '8:30 PM'], price: '149.00' },
+      { name: 'Nu Metro Canal Walk', location: 'Canal Walk Mall, Cape Town', showtimes: ['11:00 AM', '3:00 PM', '7:00 PM'], price: '129.00' },
+      { name: 'Ster-Kinekor Cavendish', location: 'Cavendish Square, Claremont', showtimes: ['12:00 PM', '4:30 PM', '9:00 PM'], price: '139.00' },
+    ],
+    gallery: [
+      'https://images.pexels.com/photos/7991319/pexels-photo-7991319.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      'https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      'https://images.pexels.com/photos/65128/pexels-photo-65128.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      'https://images.pexels.com/photos/436413/pexels-photo-436413.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    ],
     price: '649.00',
     image: 'https://images.pexels.com/photos/7991319/pexels-photo-7991319.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -292,8 +318,31 @@ const bookingsPrototypeMovieItems = [
     city: 'Nairobi',
     country: 'Kenya',
     genre: 'Drama',
+    genres: ['Drama', 'Romance'],
     language: 'Swahili',
+    languages: ['Swahili', 'English', 'Yoruba'],
     showtime: 'Afternoon',
+    duration: '1h 58min',
+    rating: 4.8,
+    ageRating: '13+',
+    director: 'Wanuri Kahiu',
+    writer: 'Jenna Bass',
+    overview: 'An emotional masterpiece celebrating the rich tapestry of African storytelling. This gala screening features a powerful drama that follows three generations of women in Nairobi as they navigate love, loss, and legacy. With stunning cinematography capturing the beauty of East Africa and performances that have already earned standing ovations at Cannes, this is a cinematic event not to be missed. The gala includes a red carpet reception and exclusive panel discussion.',
+    cast: [
+      { name: 'Lupita Nyong\'o', role: 'Mama Wanjiku', photo: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=300' },
+      { name: 'Omotola Jalade', role: 'Amara', photo: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=300' },
+      { name: 'Chiwetel Ejiofor', role: 'Professor Okafor', photo: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=300' },
+      { name: 'Adesua Etomi', role: 'Young Wanjiku', photo: 'https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=300' },
+    ],
+    cinemas: [
+      { name: 'Westgate Premiere Hall', location: 'Westgate Mall, Nairobi', showtimes: ['2:00 PM', '5:30 PM', '8:00 PM'], price: '199.00' },
+      { name: 'IMAX Garden City', location: 'Garden City Mall, Nairobi', showtimes: ['3:00 PM', '6:30 PM', '9:30 PM'], price: '249.00' },
+    ],
+    gallery: [
+      'https://images.pexels.com/photos/274937/pexels-photo-274937.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      'https://images.pexels.com/photos/7234394/pexels-photo-7234394.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      'https://images.pexels.com/photos/1117132/pexels-photo-1117132.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    ],
     price: '899.00',
     image: 'https://images.pexels.com/photos/274937/pexels-photo-274937.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -307,8 +356,31 @@ const bookingsPrototypeMovieItems = [
     city: 'Kampala',
     country: 'Uganda',
     genre: 'Comedy',
+    genres: ['Comedy', 'Family'],
     language: 'English',
+    languages: ['English', 'Swahili'],
     showtime: 'Late Night',
+    duration: '1h 42min',
+    rating: 4.2,
+    ageRating: 'PG',
+    director: 'Katende Morris',
+    writer: 'Patience Ndidi',
+    overview: 'A heartwarming family comedy set against the breathtaking backdrop of Lake Victoria. When a quirky Ugandan family inherits a dilapidated outdoor cinema, they must come together to restore it before a property developer swoops in. Filled with laugh-out-loud moments, vibrant musical numbers, and a touching message about community and heritage, this open-air screening under the stars is the perfect outing for the whole family. Bring your blankets and enjoy the magic of outdoor cinema!',
+    cast: [
+      { name: 'Daniel Kaluuya', role: 'Uncle Mukasa', photo: 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=300' },
+      { name: 'Anne Kansiime', role: 'Auntie Rose', photo: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=300' },
+      { name: 'Maimouna Doumbia', role: 'Nana', photo: 'https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=300' },
+    ],
+    cinemas: [
+      { name: 'Lake Victoria Open Air', location: 'Lake Victoria Gardens, Kampala', showtimes: ['6:30 PM', '9:00 PM'], price: '99.00' },
+      { name: 'Acacia Mall Cinema', location: 'Acacia Mall, Kampala', showtimes: ['4:00 PM', '7:30 PM', '10:00 PM'], price: '119.00' },
+    ],
+    gallery: [
+      'https://images.pexels.com/photos/109669/pexels-photo-109669.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      'https://images.pexels.com/photos/1200450/pexels-photo-1200450.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      'https://images.pexels.com/photos/1117132/pexels-photo-1117132.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      'https://images.pexels.com/photos/7234394/pexels-photo-7234394.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    ],
     price: '499.00',
     image: 'https://images.pexels.com/photos/109669/pexels-photo-109669.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -4274,10 +4346,260 @@ const ECommercePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
   );
 };
 
+const MovieDetailsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [] }) => {
+  const { movieId } = useParams();
+  const navigate = useNavigate();
+  const { t } = useTranslation();
+  const movie = bookingsPrototypeMovieItems.find((m) => m.id === movieId);
+
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const [cinemaCountry, setCinemaCountry] = useState(movie?.country || 'all');
+  const [cinemaCity, setCinemaCity] = useState(movie?.city || 'all');
+  const [cinemaDate, setCinemaDate] = useState(movie?.date || 'all');
+  const castScrollRef = useRef(null);
+
+  if (!movie) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4 text-center">
+        <h2 className="text-2xl font-bold text-[var(--svs-text)]">Movie not found</h2>
+        <button type="button" onClick={() => navigate('/bookings-tickets')} className="rounded-full bg-[#0f9fb2] px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0d8a9c]">Back to Bookings</button>
+      </div>
+    );
+  }
+
+  const gallery = movie.gallery || [movie.image];
+  const similarMovies = bookingsPrototypeMovieItems.filter((m) => m.id !== movie.id);
+  const stars = Array.from({ length: 5 }, (_, i) => i < Math.round(movie.rating || 0));
+
+  return (
+    <div className="min-h-screen overflow-x-hidden bg-white">
+      {/* ── 1. Hero Cover Section — 460-520px desktop, 380-420px mobile ── */}
+      <section className="relative w-full bg-[#0c1a20]">
+        {/* Back to Bookings — top-left overlay */}
+        <button type="button" onClick={() => navigate('/bookings-tickets')} className="absolute left-4 top-4 z-20 flex items-center gap-1.5 text-sm font-medium text-white/90 transition hover:text-white sm:left-6 sm:top-5">
+          <ChevronLeft className="h-4 w-4" /> Back to Bookings
+        </button>
+
+        <div className="mx-auto flex max-w-7xl flex-col lg:h-[480px] lg:flex-row">
+          {/* Left side (~60%) — large hero image filling the height */}
+          <div className="relative h-[380px] w-full sm:h-[400px] lg:h-full lg:w-[60%]">
+            <img src={movie.image} alt={movie.title} className="h-full w-full object-cover" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#0c1a20] opacity-90 hidden lg:block" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#0c1a20] opacity-95 lg:hidden" />
+          </div>
+
+          {/* Right side (~40%) — dark overlay panel with movie info */}
+          <div className="relative flex flex-col justify-center px-5 pb-8 pt-4 text-white sm:px-7 lg:w-[40%] lg:px-8 lg:py-8">
+            {/* Rating badges — top-right area */}
+            <div className="flex flex-wrap items-center gap-2">
+              {movie.ageRating ? <span className="rounded bg-white/20 px-2.5 py-1 text-xs font-semibold">{movie.ageRating}</span> : null}
+              {(movie.genres || [movie.genre]).map((g) => (
+                <span key={g} className="rounded bg-[#0f9fb2]/30 px-2.5 py-1 text-xs font-semibold text-cyan-200">{g}</span>
+              ))}
+            </div>
+
+            {/* Main title — 42-48px desktop, 32-36px mobile */}
+            <h1 className="mt-4 text-[32px] font-bold leading-[1.1] sm:text-[36px] lg:text-[46px]">{movie.title}</h1>
+
+            {/* Subtitle — 20-24px */}
+            <p className="mt-2 text-[20px] text-slate-300 sm:text-[22px] lg:text-[24px]">{movie.subtitle}</p>
+
+            {/* Rating & details line */}
+            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-200 sm:gap-4">
+              <div className="flex items-center gap-1">
+                {stars.map((filled, i) => (
+                  <Star key={i} className={`h-4 w-4 ${filled ? 'fill-yellow-400 text-yellow-400' : 'text-slate-500'}`} />
+                ))}
+                <span className="ml-1 font-semibold">{movie.rating}</span>
+              </div>
+              {movie.duration ? <span>• {movie.duration}</span> : null}
+              {movie.date ? <span>• {movie.date}</span> : null}
+            </div>
+
+            {/* Languages as tags */}
+            {movie.languages ? (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {movie.languages.map((lang) => (
+                  <span key={lang} className="rounded-full border border-white/25 px-3 py-0.5 text-xs text-slate-200">{lang}</span>
+                ))}
+              </div>
+            ) : null}
+
+            {/* Two prominent buttons — large and touch-friendly */}
+            <div className="mt-6 flex flex-wrap gap-3 sm:mt-8">
+              <button
+                type="button"
+                onClick={() => {
+                  const section = document.getElementById('movie-showtimes');
+                  section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}
+                className={`${cudyBluePrimaryButtonClassName} rounded-full bg-[#0f9fb2] px-8 py-3.5 text-[15px] font-semibold text-white transition hover:bg-[#0d8a9c] sm:px-10 sm:py-4 sm:text-base`}
+              >
+                Book Ticket
+              </button>
+              <button
+                type="button"
+                onClick={() => onToggleWishlist?.({ id: movie.id, title: movie.title, image: movie.image, price: movie.price, route: '/bookings-tickets' })}
+                className="flex items-center gap-2 rounded-full border border-white/30 px-6 py-3.5 text-[15px] font-semibold text-white transition hover:bg-white/10 sm:px-8 sm:py-4 sm:text-base"
+              >
+                <Heart className={`h-5 w-5 ${wishlistItemIds.includes(movie.id) ? 'fill-red-400 text-red-400' : ''}`} />
+                Add to Wishlist
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── 2. Overview Section ── */}
+      <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 sm:pt-14 lg:pt-[70px]">
+        <h2 className="text-[22px] font-bold text-[var(--svs-text)] sm:text-[24px]">Overview</h2>
+        <p className="mt-4 max-w-4xl text-[15px] leading-[1.7] text-slate-600 sm:text-[16px] sm:leading-[1.65]">{movie.overview}</p>
+
+        {/* Director & Writer — two-column desktop, stacked mobile */}
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 sm:gap-6">
+          <div>
+            <span className="text-sm font-semibold text-[var(--svs-text)]">Director</span>
+            <p className="mt-1 text-[15px] text-slate-600">{movie.director}</p>
+          </div>
+          <div>
+            <span className="text-sm font-semibold text-[var(--svs-text)]">Writer</span>
+            <p className="mt-1 text-[15px] text-slate-600">{movie.writer}</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── 3. Cast & Crew Section ── */}
+      {movie.cast && movie.cast.length > 0 ? (
+        <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 sm:pt-14 lg:pt-[70px]">
+          <h2 className="text-[22px] font-bold text-[var(--svs-text)] sm:text-[24px]">Cast &amp; Crew</h2>
+          <div ref={castScrollRef} className="mt-5 flex gap-5 overflow-x-auto pb-3 sm:gap-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {movie.cast.map((person) => (
+              <div key={person.name} className="flex w-[130px] shrink-0 flex-col items-center sm:w-[150px]">
+                <img src={person.photo} alt={person.name} className="h-[130px] w-[130px] rounded-full object-cover shadow-md sm:h-[150px] sm:w-[150px]" loading="lazy" />
+                <h3 className="mt-3 text-center text-[15px] font-semibold text-[var(--svs-text)]">{person.name}</h3>
+                <p className="mt-0.5 text-center text-xs text-[var(--svs-muted)]">{person.role}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {/* ── 4. Showtimes & Cinemas Section ── */}
+      <section id="movie-showtimes" className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 sm:pt-14 lg:pt-[70px]">
+        <h2 className="text-[22px] font-bold text-[var(--svs-text)] sm:text-[24px]">Showtimes &amp; Cinemas</h2>
+
+        {/* Three dropdown filters */}
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <select value={cinemaCountry} onChange={(e) => { setCinemaCountry(e.target.value); setCinemaCity('all'); }} className="h-12 w-full rounded-lg border border-[var(--svs-border)] bg-white px-3 text-[15px] text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30">
+            <option value="all">Select Country</option>
+            <option value={movie.country}>{movie.country}</option>
+          </select>
+          <select value={cinemaCity} onChange={(e) => setCinemaCity(e.target.value)} className="h-12 w-full rounded-lg border border-[var(--svs-border)] bg-white px-3 text-[15px] text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30">
+            <option value="all">Select City</option>
+            <option value={movie.city}>{movie.city}</option>
+          </select>
+          <select value={cinemaDate} onChange={(e) => setCinemaDate(e.target.value)} className="h-12 w-full rounded-lg border border-[var(--svs-border)] bg-white px-3 text-[15px] text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30">
+            <option value="all">Select Date</option>
+            {movie.date ? <option value={movie.date}>{movie.date}</option> : null}
+          </select>
+        </div>
+
+        {/* Cinema list — stacked vertically */}
+        <div className="mt-6 space-y-4">
+          {(movie.cinemas || []).map((cinema) => (
+            <div key={cinema.name} className="rounded-xl border border-[var(--svs-border)] bg-white p-5 shadow-[0_2px_8px_rgba(15,23,42,0.06)] sm:p-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-[16px] font-bold text-[var(--svs-text)]">{cinema.name}</h3>
+                  <p className="mt-1 flex items-center gap-1.5 text-[15px] text-[var(--svs-muted)]">
+                    <MapPin className="h-4 w-4 shrink-0 text-[var(--svs-primary)]" />
+                    {cinema.location}
+                  </p>
+                </div>
+                <p className="text-lg font-bold text-[var(--svs-text)] sm:text-xl">R {cinema.price}</p>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {cinema.showtimes.map((time) => (
+                  <span key={time} className="rounded-full bg-[#0f9fb2]/10 px-4 py-1.5 text-xs font-semibold text-[#0f9fb2]">{time}</span>
+                ))}
+              </div>
+              <button
+                type="button"
+                className={`${cudyBluePrimaryButtonClassName} mt-4 w-full rounded-lg bg-[#0f9fb2] py-3.5 text-[15px] font-semibold text-white transition hover:bg-[#0d8a9c]`}
+              >
+                Book Now
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── 5. Gallery Section ── */}
+      {gallery.length > 1 ? (
+        <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 sm:pt-14 lg:pt-[70px]">
+          <h2 className="text-[22px] font-bold text-[var(--svs-text)] sm:text-[24px]">Gallery</h2>
+          <div className="relative mt-5 overflow-hidden rounded-xl">
+            <img src={gallery[galleryIndex]} alt={`Gallery ${galleryIndex + 1}`} className="h-[260px] w-full object-cover sm:h-[380px] lg:h-[460px]" />
+            {/* Left / right arrows */}
+            <button type="button" onClick={() => setGalleryIndex((prev) => (prev === 0 ? gallery.length - 1 : prev - 1))} className="absolute left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white transition hover:bg-black/70" aria-label="Previous image">
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button type="button" onClick={() => setGalleryIndex((prev) => (prev === gallery.length - 1 ? 0 : prev + 1))} className="absolute right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white transition hover:bg-black/70" aria-label="Next image">
+              <ChevronRight className="h-5 w-5" />
+            </button>
+            {/* "1/4" indicator */}
+            <span className="absolute bottom-3 right-3 rounded-full bg-black/60 px-3.5 py-1 text-sm font-semibold text-white">{galleryIndex + 1}/{gallery.length}</span>
+          </div>
+          {/* Thumbnail strip — horizontal scroll on mobile */}
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {gallery.map((img, i) => (
+              <button key={i} type="button" onClick={() => setGalleryIndex(i)} className={`h-16 w-24 shrink-0 overflow-hidden rounded-lg border-2 transition sm:h-20 sm:w-28 ${i === galleryIndex ? 'border-[#0f9fb2]' : 'border-transparent opacity-60 hover:opacity-100'}`}>
+                <img src={img} alt={`Thumb ${i + 1}`} className="h-full w-full object-cover" loading="lazy" />
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {/* ── 6. Similar Movies Section ── */}
+      {similarMovies.length > 0 ? (
+        <section className="mx-auto max-w-7xl px-4 pt-10 pb-16 sm:px-6 sm:pt-14 sm:pb-20 lg:pt-[70px]">
+          <h2 className="text-[22px] font-bold text-[var(--svs-text)] sm:text-[24px]">Similar Movies</h2>
+          <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {similarMovies.map((m) => (
+              <article key={m.id} className="flex flex-col overflow-hidden rounded-xl bg-white shadow-[0_2px_12px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_8px_28px_rgba(15,23,42,0.14)]">
+                <img src={m.image} alt={m.title} className="h-[180px] w-full object-cover sm:h-[200px]" loading="lazy" />
+                <div className="flex flex-1 flex-col p-4 sm:p-5">
+                  <h3 className="text-[16px] font-bold text-[var(--svs-text)]">{m.title}</h3>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {(m.genres || [m.genre]).map((g) => (
+                      <span key={g} className="rounded bg-slate-100 px-2.5 py-0.5 text-xs text-slate-600">{g}</span>
+                    ))}
+                  </div>
+                  <div className="mt-auto pt-4">
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/movie/${m.id}`)}
+                      className={`${cudyBluePrimaryButtonClassName} w-full rounded-lg bg-[#0f9fb2] py-3 text-[15px] font-semibold text-white transition hover:bg-[#0d8a9c]`}
+                    >
+                      View Details
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+    </div>
+  );
+};
+
 const TicketsPage = (props) => <BookingsTicketsPage {...props} />;
 
 const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], onOpenItemDetails }) => {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const currentLocale = i18n.resolvedLanguage || i18n.language || 'en-US';
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDate, setSelectedDate] = useState('all');
@@ -4767,11 +5089,11 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
                   key={item.id}
                   role="button"
                   tabIndex={0}
-                  onClick={() => openBookingItemDetails(item)}
+                  onClick={() => item.category === 'Movies' ? navigate(`/movie/${item.id}`) : openBookingItemDetails(item)}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault();
-                      openBookingItemDetails(item);
+                      item.category === 'Movies' ? navigate(`/movie/${item.id}`) : openBookingItemDetails(item);
                     }
                   }}
                   className="flex cursor-pointer flex-col overflow-hidden rounded-xl bg-white shadow-[0_2px_12px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_8px_28px_rgba(15,23,42,0.14)]"
@@ -4808,7 +5130,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
                         type="button"
                         onClick={(event) => {
                           event.stopPropagation();
-                          openBookingItemDetails(item);
+                          item.category === 'Movies' ? navigate(`/movie/${item.id}`) : openBookingItemDetails(item);
                         }}
                         className={`${cudyBluePrimaryButtonClassName} rounded-full bg-[#0f9fb2] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#0d8a9c]`}
                       >
@@ -9021,6 +9343,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/e-commerce" element={<ECommercePage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/tickets" element={<TicketsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/bookings-tickets" element={<BookingsTicketsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/movie/:movieId" element={<MovieDetailsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} />} />
     <Route path="/voting-clients" element={<VotingClientsPage />} />
     <Route path="/voting-providers" element={<VotingProvidersPage />} />
     <Route path="/groceries" element={<GroceriesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
