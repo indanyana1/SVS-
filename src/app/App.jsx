@@ -274,7 +274,11 @@ const bookingsPrototypeMovieItems = [
     subtitle: 'Cineworld Luxe Opening Night',
     date: '2025-11-25',
     location: 'V&A Waterfront Cinema, Cape Town',
+    city: 'Cape Town',
     country: 'South Africa',
+    genre: 'Action',
+    language: 'English',
+    showtime: 'Evening',
     price: '649.00',
     image: 'https://images.pexels.com/photos/7991319/pexels-photo-7991319.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -285,7 +289,11 @@ const bookingsPrototypeMovieItems = [
     subtitle: 'Red Carpet Feature Screening',
     date: '2025-11-28',
     location: 'Westgate Premiere Hall, Nairobi',
+    city: 'Nairobi',
     country: 'Kenya',
+    genre: 'Drama',
+    language: 'Swahili',
+    showtime: 'Afternoon',
     price: '899.00',
     image: 'https://images.pexels.com/photos/274937/pexels-photo-274937.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -296,7 +304,11 @@ const bookingsPrototypeMovieItems = [
     subtitle: 'Open-Air Family Pass',
     date: '2025-12-02',
     location: 'Lake Victoria Gardens, Kampala',
+    city: 'Kampala',
     country: 'Uganda',
+    genre: 'Comedy',
+    language: 'English',
+    showtime: 'Late Night',
     price: '499.00',
     image: 'https://images.pexels.com/photos/109669/pexels-photo-109669.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -4273,6 +4285,48 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
   const [activeCategory, setActiveCategory] = useState('All');
   const [sortOrder, setSortOrder] = useState('Newest');
   const [sectionVisibleCounts, setSectionVisibleCounts] = useState({});
+  const [movieSidebarOpen, setMovieSidebarOpen] = useState(false);
+  const [movieGenreFilters, setMovieGenreFilters] = useState([]);
+  const [movieLanguageFilters, setMovieLanguageFilters] = useState([]);
+  const [movieShowtimeFilters, setMovieShowtimeFilters] = useState([]);
+  const [movieFilterCountry, setMovieFilterCountry] = useState('all');
+  const [movieFilterCity, setMovieFilterCity] = useState('all');
+  const [sidebarGenreOpen, setSidebarGenreOpen] = useState(false);
+  const [sidebarLanguageOpen, setSidebarLanguageOpen] = useState(false);
+  const [sidebarLocationOpen, setSidebarLocationOpen] = useState(false);
+  const [sidebarShowtimeOpen, setSidebarShowtimeOpen] = useState(false);
+
+  const movieGenreOptions = ['Action', 'Drama', 'Comedy', 'Thriller', 'Horror', 'Romantic'];
+  const movieShowtimeOptions = ['Morning', 'Afternoon', 'Evening', 'Late Night'];
+
+  const movieLanguageOptions = useMemo(
+    () => [...new Set(bookingsPrototypeMovieItems.map((item) => item.language).filter(Boolean))].sort(),
+    [],
+  );
+
+  const movieCountryOptions = useMemo(
+    () => [...new Set(bookingsPrototypeMovieItems.map((item) => item.country).filter(Boolean))].sort(),
+    [],
+  );
+
+  const movieCityOptions = useMemo(() => {
+    const movies = movieFilterCountry === 'all'
+      ? bookingsPrototypeMovieItems
+      : bookingsPrototypeMovieItems.filter((item) => item.country === movieFilterCountry);
+    return [...new Set(movies.map((item) => item.city).filter(Boolean))].sort();
+  }, [movieFilterCountry]);
+
+  const toggleMovieFilter = (setter, value) => {
+    setter((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
+  };
+
+  const applyMovieSidebarFilters = () => {
+    setMovieSidebarOpen(false);
+  };
+
+  useEffect(() => {
+    setMovieSidebarOpen(activeCategory === 'Movies');
+  }, [activeCategory]);
 
   const allBookingPrototypeItems = useMemo(
     () => [
@@ -4306,7 +4360,15 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
     });
   }, [activeCategory, allBookingPrototypeItems, searchQuery, selectedCountry, selectedDate, sortOrder]);
 
-  const filteredMovies = filteredBookingPrototypeItems.filter((item) => item.category === 'Movies');
+  const filteredMovies = useMemo(() => {
+    let movies = filteredBookingPrototypeItems.filter((item) => item.category === 'Movies');
+    if (movieGenreFilters.length > 0) movies = movies.filter((item) => movieGenreFilters.includes(item.genre));
+    if (movieLanguageFilters.length > 0) movies = movies.filter((item) => movieLanguageFilters.includes(item.language));
+    if (movieShowtimeFilters.length > 0) movies = movies.filter((item) => movieShowtimeFilters.includes(item.showtime));
+    if (movieFilterCountry !== 'all') movies = movies.filter((item) => item.country === movieFilterCountry);
+    if (movieFilterCity !== 'all') movies = movies.filter((item) => item.city === movieFilterCity);
+    return movies;
+  }, [filteredBookingPrototypeItems, movieGenreFilters, movieLanguageFilters, movieShowtimeFilters, movieFilterCountry, movieFilterCity]);
   const filteredConcerts = filteredBookingPrototypeItems.filter((item) => item.category === 'Concerts');
   const filteredSports = filteredBookingPrototypeItems.filter((item) => item.category === 'Sports');
   const filteredTravel = filteredBookingPrototypeItems.filter((item) => item.category === 'Travel');
@@ -4529,14 +4591,175 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
         </div>
       </div>
 
-      {/* ── Content Sections (Concerts / Matches / Travel) ── */}
-      {bookingsSections.length ? (
+      {/* ── Movie Sidebar + Content Sections ── */}
+      {/* Section heading placed above the flex row so sidebar & cards align horizontally */}
+      {movieSidebarOpen && bookingsSections.length > 0 ? (
+        <div className="mb-5 mt-10 text-center sm:mt-12">
+          <h2 className="text-xl font-bold tracking-tight text-[var(--svs-text)] sm:text-2xl">{bookingsSections[0].title}</h2>
+          <p className="mt-1.5 text-xs text-[var(--svs-muted)] sm:text-sm">{bookingsSections[0].subtitle}</p>
+        </div>
+      ) : null}
+      <div className={`${movieSidebarOpen ? 'flex flex-col lg:flex-row lg:items-start lg:gap-6' : ''} ${movieSidebarOpen ? '' : 'mt-10 sm:mt-12'}`}>
+
+        {/* ── Movie Filter Sidebar (desktop: fixed left, mobile: slide-in drawer) ── */}
+        {movieSidebarOpen ? (
+          <>
+            {/* Mobile overlay */}
+            <div
+              className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+              onClick={() => setMovieSidebarOpen(false)}
+              onKeyDown={() => {}}
+              role="presentation"
+            />
+
+            {/* Sidebar panel */}
+            <aside className="fixed left-0 top-0 z-50 flex h-full w-[320px] flex-col overflow-y-auto border-r border-[var(--svs-border)] bg-white px-5 pb-6 pt-6 shadow-lg sm:w-[340px] lg:sticky lg:top-4 lg:z-auto lg:h-auto lg:max-h-[calc(100vh-2rem)] lg:w-[280px] lg:shrink-0 lg:rounded-xl lg:border lg:shadow-[0_2px_12px_rgba(15,23,42,0.08)]">
+              {/* Close button (mobile only) */}
+              <button
+                type="button"
+                onClick={() => setMovieSidebarOpen(false)}
+                className="mb-4 self-end rounded-full p-1.5 text-[var(--svs-muted)] transition hover:bg-slate-100 hover:text-[var(--svs-text)] lg:hidden"
+                aria-label="Close filters"
+              >
+                <X className="h-5 w-5" />
+              </button>
+
+              {/* Movie Genre */}
+              <div className="border-b border-slate-200 pb-4">
+                <button type="button" onClick={() => setSidebarGenreOpen((p) => !p)} className="flex w-full items-center justify-between">
+                  <h3 className="text-[16px] font-bold text-[var(--svs-text)]">Movie Genre</h3>
+                  <ChevronDown className={`h-4.5 w-4.5 text-[var(--svs-muted)] transition-transform ${sidebarGenreOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {sidebarGenreOpen ? (
+                  <div className="mt-3 space-y-2.5">
+                    {movieGenreOptions.map((genre) => (
+                      <label key={genre} className="flex cursor-pointer items-center gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={movieGenreFilters.includes(genre)}
+                          onChange={() => toggleMovieFilter(setMovieGenreFilters, genre)}
+                          className="h-4 w-4 rounded border-slate-300 text-[var(--svs-primary)] accent-[var(--svs-primary)]"
+                        />
+                        <span className="text-[15px] text-[var(--svs-text)]">{genre}</span>
+                      </label>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Language (dynamic) */}
+              <div className="mt-5 border-b border-slate-200 pb-4">
+                <button type="button" onClick={() => setSidebarLanguageOpen((p) => !p)} className="flex w-full items-center justify-between">
+                  <h3 className="text-[16px] font-bold text-[var(--svs-text)]">Language</h3>
+                  <ChevronDown className={`h-4.5 w-4.5 text-[var(--svs-muted)] transition-transform ${sidebarLanguageOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {sidebarLanguageOpen ? (
+                  <div className="mt-3 space-y-2.5">
+                    {movieLanguageOptions.length > 0 ? movieLanguageOptions.map((lang) => (
+                      <label key={lang} className="flex cursor-pointer items-center gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={movieLanguageFilters.includes(lang)}
+                          onChange={() => toggleMovieFilter(setMovieLanguageFilters, lang)}
+                          className="h-4 w-4 rounded border-slate-300 text-[var(--svs-primary)] accent-[var(--svs-primary)]"
+                        />
+                        <span className="text-[15px] text-[var(--svs-text)]">{lang}</span>
+                      </label>
+                    )) : (
+                      <p className="text-sm text-[var(--svs-muted)]">No languages available</p>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Cinema Location */}
+              <div className="mt-5 border-b border-slate-200 pb-4">
+                <button type="button" onClick={() => setSidebarLocationOpen((p) => !p)} className="flex w-full items-center justify-between">
+                  <h3 className="text-[16px] font-bold text-[var(--svs-text)]">Cinema Location</h3>
+                  <ChevronDown className={`h-4.5 w-4.5 text-[var(--svs-muted)] transition-transform ${sidebarLocationOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {sidebarLocationOpen ? (
+                  <div className="mt-3 space-y-3">
+                    <select
+                      value={movieFilterCountry}
+                      onChange={(event) => { setMovieFilterCountry(event.target.value); setMovieFilterCity('all'); }}
+                      className="h-10 w-full appearance-none rounded-lg border border-[var(--svs-border)] bg-white px-3 text-sm text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30"
+                    >
+                      <option value="all">Select Country</option>
+                      {movieCountryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <select
+                      value={movieFilterCity}
+                      onChange={(event) => setMovieFilterCity(event.target.value)}
+                      className="h-10 w-full appearance-none rounded-lg border border-[var(--svs-border)] bg-white px-3 text-sm text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30"
+                    >
+                      <option value="all">Select City</option>
+                      {movieCityOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Showtime */}
+              <div className="mt-5 border-b border-slate-200 pb-4">
+                <button type="button" onClick={() => setSidebarShowtimeOpen((p) => !p)} className="flex w-full items-center justify-between">
+                  <h3 className="text-[16px] font-bold text-[var(--svs-text)]">Showtime</h3>
+                  <ChevronDown className={`h-4.5 w-4.5 text-[var(--svs-muted)] transition-transform ${sidebarShowtimeOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {sidebarShowtimeOpen ? (
+                  <div className="mt-3 space-y-2.5">
+                    {movieShowtimeOptions.map((time) => (
+                      <label key={time} className="flex cursor-pointer items-center gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={movieShowtimeFilters.includes(time)}
+                          onChange={() => toggleMovieFilter(setMovieShowtimeFilters, time)}
+                          className="h-4 w-4 rounded border-slate-300 text-[var(--svs-primary)] accent-[var(--svs-primary)]"
+                        />
+                        <span className="text-[15px] text-[var(--svs-text)]">{time}</span>
+                      </label>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Apply Filters button */}
+              <button
+                type="button"
+                onClick={applyMovieSidebarFilters}
+                className={`${cudyBluePrimaryButtonClassName} mt-8 w-full rounded-lg bg-[#0f9fb2] py-3 text-sm font-semibold text-white transition hover:bg-[#0d8a9c]`}
+              >
+                Apply Filters
+              </button>
+            </aside>
+          </>
+        ) : null}
+
+        {/* ── Main content area ── */}
+        <div className={movieSidebarOpen ? 'min-w-0 flex-1' : ''}>
+          {/* Mobile "Open Filters" button (visible when sidebar is closed on mobile & Movies active) */}
+          {activeCategory === 'Movies' && !movieSidebarOpen ? (
+            <div className="mb-4 lg:hidden">
+              <button
+                type="button"
+                onClick={() => setMovieSidebarOpen(true)}
+                className="rounded-lg border border-[var(--svs-border)] bg-white px-4 py-2 text-xs font-semibold text-[var(--svs-text)] shadow-sm transition hover:border-[var(--svs-primary)]"
+              >
+                Open Movie Filters
+              </button>
+            </div>
+          ) : null}
+
+          {/* Content Sections */}
+          {bookingsSections.length ? (
         bookingsSections.map((section, sectionIndex) => (
-          <div key={section.id} id={section.id} className={sectionIndex === 0 ? 'mt-10 sm:mt-12' : 'mt-10 sm:mt-14'}>
+          <div key={section.id} id={section.id} className={sectionIndex === 0 && movieSidebarOpen ? '' : sectionIndex === 0 ? 'mt-10 sm:mt-12' : 'mt-10 sm:mt-14'}>
+            {sectionIndex === 0 && movieSidebarOpen ? null : (
             <div className="mb-5 text-center">
               <h2 className="text-xl font-bold tracking-tight text-[var(--svs-text)] sm:text-2xl">{section.title}</h2>
               <p className="mt-1.5 text-xs text-[var(--svs-muted)] sm:text-sm">{section.subtitle}</p>
             </div>
+            )}
 
             <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {section.items.slice(0, sectionVisibleCounts[section.id] || 3).map((item) => (
@@ -4615,6 +4838,8 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
           No bookings match your current search and filters. Adjust the date, country, or category to see more options.
         </div>
       )}
+        </div>
+      </div>
     </PageFrame>
   );
 };
