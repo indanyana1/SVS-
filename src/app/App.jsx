@@ -4272,6 +4272,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
   const [selectedCountry, setSelectedCountry] = useState('all');
   const [activeCategory, setActiveCategory] = useState('All');
   const [sortOrder, setSortOrder] = useState('Newest');
+  const [sectionVisibleCounts, setSectionVisibleCounts] = useState({});
 
   const allBookingPrototypeItems = useMemo(
     () => [
@@ -4448,7 +4449,15 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
                   <button
                     key={tab}
                     type="button"
-                    onClick={() => setActiveCategory(tab)}
+                    onClick={() => {
+                      setActiveCategory(tab);
+                      if (tab !== 'All') {
+                        setTimeout(() => {
+                          const sectionId = `bookings-${tab.toLowerCase()}-section`;
+                          document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 100);
+                      }
+                    }}
                     className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition ${activeCategory === tab ? 'bg-[#0f9fb2] text-white shadow-[0_4px_14px_rgba(15,159,178,0.30)]' : 'border border-[var(--svs-border)] bg-white text-[var(--svs-text)] hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]'}`}
                   >
                     {tab}
@@ -4481,11 +4490,21 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
               key={card.id}
               role="button"
               tabIndex={0}
-              onClick={() => setActiveCategory(card.category)}
+              onClick={() => {
+                setActiveCategory(card.category);
+                setTimeout(() => {
+                  const sectionId = `bookings-${card.category.toLowerCase()}-section`;
+                  document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+              }}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
                   event.preventDefault();
                   setActiveCategory(card.category);
+                  setTimeout(() => {
+                    const sectionId = `bookings-${card.category.toLowerCase()}-section`;
+                    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }, 100);
                 }
               }}
               className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl shadow-[0_4px_16px_rgba(15,23,42,0.10)] transition-all duration-200 hover:-translate-y-1 hover:scale-[1.03] hover:shadow-[0_12px_32px_rgba(15,23,42,0.18)]"
@@ -4520,7 +4539,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
             </div>
 
             <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {section.items.map((item) => (
+              {section.items.slice(0, sectionVisibleCounts[section.id] || 3).map((item) => (
                 <article
                   key={item.id}
                   role="button"
@@ -4578,15 +4597,17 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
               ))}
             </div>
 
-            <div className="mt-6 flex justify-center">
-              <button
-                type="button"
-                onClick={() => setActiveCategory(section.category)}
-                className="rounded-full bg-[#0f9fb2] px-6 py-2 text-xs font-semibold text-white transition hover:bg-[#0d8a9c]"
-              >
-                View More
-              </button>
-            </div>
+            {(sectionVisibleCounts[section.id] || 3) < section.items.length ? (
+              <div className="mt-6 flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => setSectionVisibleCounts((prev) => ({ ...prev, [section.id]: (prev[section.id] || 3) + 3 }))}
+                  className="rounded-full bg-[#0f9fb2] px-6 py-2 text-xs font-semibold text-white transition hover:bg-[#0d8a9c]"
+                >
+                  View More
+                </button>
+              </div>
+            ) : null}
           </div>
         ))
       ) : (
