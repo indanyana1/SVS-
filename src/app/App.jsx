@@ -67,7 +67,7 @@ const marketLinks = [
   { labelKey: 'markets.bettingLotteryGames', href: '/betting-lottery-games' },
   { labelKey: 'markets.wellness', href: '/wellness' },
   { labelKey: 'markets.propertyHub', href: '/property-hub' },
-  { labelKey: 'markets.bookings', href: '/bookings-tickets' },
+  { labelKey: 'markets.secondhand', href: '/secondhand-central' },
   { labelKey: 'markets.stationery', href: '/stationery-office' },
 ];
 
@@ -919,6 +919,36 @@ const constructionToolsItems = [
     image:
       'https://images.pexels.com/photos/159358/construction-site-build-construction-work-159358.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
+];
+
+const secondhandCategoryCards = [
+  { key: 'phones', title: 'Phones & Tablets', subtitle: 'Pre-owned smartphones & tablets', image: 'https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=1200' },
+  { key: 'laptops', title: 'Laptops & Computers', subtitle: 'Refurbished laptops & desktops', image: 'https://images.pexels.com/photos/18105/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=1200' },
+  { key: 'gaming', title: 'Gaming & Consoles', subtitle: 'Used consoles & accessories', image: 'https://images.pexels.com/photos/275033/pexels-photo-275033.jpeg?auto=compress&cs=tinysrgb&w=1200' },
+  { key: 'clothing', title: 'Clothing & Shoes', subtitle: 'Thrift fashion & footwear', image: 'https://images.pexels.com/photos/1148957/pexels-photo-1148957.jpeg?auto=compress&cs=tinysrgb&w=1200' },
+  { key: 'furniture', title: 'Furniture & Decor', subtitle: 'Pre-loved home furnishings', image: 'https://images.pexels.com/photos/1350789/pexels-photo-1350789.jpeg?auto=compress&cs=tinysrgb&w=1200' },
+  { key: 'appliances', title: 'Home Appliances', subtitle: 'Used kitchen & household items', image: 'https://images.pexels.com/photos/213162/pexels-photo-213162.jpeg?auto=compress&cs=tinysrgb&w=1200' },
+  { key: 'audio', title: 'Audio & Wearables', subtitle: 'Earbuds, headphones & smartwatches', image: 'https://images.pexels.com/photos/3394666/pexels-photo-3394666.jpeg?auto=compress&cs=tinysrgb&w=1200' },
+  { key: 'books', title: 'Books & Media', subtitle: 'Second-hand books, DVDs & vinyl', image: 'https://images.pexels.com/photos/159711/books-bookstore-book-reading-159711.jpeg?auto=compress&cs=tinysrgb&w=1200' },
+];
+
+const secondhandItems = [
+  { id: 'sh1', categoryKey: 'phones', title: 'iPhone 14 Pro – 128 GB', condition: 'Excellent', description: 'Minor signs of use, battery health 92 %. Includes charger.', price: '549.99', image: 'https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=1200' },
+  { id: 'sh2', categoryKey: 'phones', title: 'Samsung Galaxy S23 Ultra', condition: 'Good', description: 'Light scratches on back, fully functional. No box.', price: '469.00', image: 'https://images.pexels.com/photos/214487/pexels-photo-214487.jpeg?auto=compress&cs=tinysrgb&w=1200' },
+  { id: 'sh3', categoryKey: 'phones', title: 'Google Pixel 8 – 256 GB', condition: 'Like New', description: 'Barely used, original packaging included.', price: '399.00', image: 'https://images.pexels.com/photos/607812/pexels-photo-607812.jpeg?auto=compress&cs=tinysrgb&w=1200' },
+  { id: 'sh4', categoryKey: 'laptops', title: 'MacBook Air M2 – 2022', condition: 'Excellent', description: '8 GB RAM, 256 GB SSD. Battery cycle count: 87.', price: '729.00', image: 'https://images.pexels.com/photos/18105/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=1200' },
+  { id: 'sh5', categoryKey: 'laptops', title: 'Dell XPS 15 – i7, 16 GB', condition: 'Good', description: 'Refurbished, new battery installed. Minor cosmetic wear.', price: '595.00', image: 'https://images.pexels.com/photos/7974/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=1200' },
+  { id: 'sh6', categoryKey: 'gaming', title: 'PlayStation 5 – Disc Edition', condition: 'Good', description: 'Comes with 2 controllers and 3 games.', price: '349.99', image: 'https://images.pexels.com/photos/275033/pexels-photo-275033.jpeg?auto=compress&cs=tinysrgb&w=1200' },
+  { id: 'sh7', categoryKey: 'gaming', title: 'Nintendo Switch OLED', condition: 'Like New', description: 'With case and screen protector. Warranty until Dec 2026.', price: '239.00', image: 'https://images.pexels.com/photos/371924/pexels-photo-371924.jpeg?auto=compress&cs=tinysrgb&w=1200' },
+  { id: 'sh8', categoryKey: 'clothing', title: 'Nike Air Jordan 1 Retro – Size 10', condition: 'Lightly Worn', description: 'Authentic, cleaned and sanitised.', price: '89.00', image: 'https://images.pexels.com/photos/1148957/pexels-photo-1148957.jpeg?auto=compress&cs=tinysrgb&w=1200' },
+  { id: 'sh9', categoryKey: 'clothing', title: 'Levi\'s 501 Vintage Jeans – W32', condition: 'Good', description: 'Classic wash, no rips. True vintage piece.', price: '45.00', image: 'https://images.pexels.com/photos/1082529/pexels-photo-1082529.jpeg?auto=compress&cs=tinysrgb&w=1200' },
+  { id: 'sh10', categoryKey: 'furniture', title: 'IKEA KALLAX Shelf Unit – White', condition: 'Good', description: '4 × 4 cube shelving, fully assembled. Minor scuffs.', price: '55.00', image: 'https://images.pexels.com/photos/1350789/pexels-photo-1350789.jpeg?auto=compress&cs=tinysrgb&w=1200' },
+  { id: 'sh11', categoryKey: 'appliances', title: 'Dyson V11 Cordless Vacuum', condition: 'Excellent', description: 'Battery holds 50 min charge. All attachments included.', price: '199.00', image: 'https://images.pexels.com/photos/213162/pexels-photo-213162.jpeg?auto=compress&cs=tinysrgb&w=1200' },
+  { id: 'sh12', categoryKey: 'audio', title: 'Apple AirPods Pro 2nd Gen', condition: 'Good', description: 'Noise cancellation working perfectly. Includes case.', price: '129.00', image: 'https://images.pexels.com/photos/3394666/pexels-photo-3394666.jpeg?auto=compress&cs=tinysrgb&w=1200' },
+  { id: 'sh13', categoryKey: 'audio', title: 'Samsung Galaxy Watch 5 – 44 mm', condition: 'Like New', description: 'Sapphire crystal, no scratches. Original band.', price: '159.00', image: 'https://images.pexels.com/photos/437037/pexels-photo-437037.jpeg?auto=compress&cs=tinysrgb&w=1200' },
+  { id: 'sh14', categoryKey: 'books', title: 'Harry Potter Complete Box Set', condition: 'Good', description: 'All 7 books, paperback. Light shelf wear.', price: '25.00', image: 'https://images.pexels.com/photos/159711/books-bookstore-book-reading-159711.jpeg?auto=compress&cs=tinysrgb&w=1200' },
+  { id: 'sh15', categoryKey: 'laptops', title: 'Lenovo ThinkPad X1 Carbon Gen 10', condition: 'Excellent', description: 'i7, 16 GB, 512 GB SSD. Business-grade, like new.', price: '685.00', image: 'https://images.pexels.com/photos/7974/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=1200' },
+  { id: 'sh16', categoryKey: 'phones', title: 'iPhone 13 Mini – 128 GB', condition: 'Good', description: 'Compact powerhouse. Battery health 88 %.', price: '319.00', image: 'https://images.pexels.com/photos/607812/pexels-photo-607812.jpeg?auto=compress&cs=tinysrgb&w=1200' },
 ];
 
 const fastFoodItems = [
@@ -5428,6 +5458,484 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
   );
 };
 
+const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { categoryKey = '' } = useParams();
+
+  /* ── state ── */
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState('All');
+  const [sortOrder, setSortOrder] = useState('Newest');
+  const [selectedCondition, setSelectedCondition] = useState('all');
+  const [sectionVisibleCounts, setSectionVisibleCounts] = useState({});
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarConditionOpen, setSidebarConditionOpen] = useState(false);
+  const [sidebarPriceOpen, setSidebarPriceOpen] = useState(false);
+  const [sidebarConditionFilters, setSidebarConditionFilters] = useState([]);
+  const [sidebarMinPrice, setSidebarMinPrice] = useState('');
+  const [sidebarMaxPrice, setSidebarMaxPrice] = useState('');
+
+  const conditionOptions = ['Like New', 'Excellent', 'Good', 'Lightly Worn'];
+
+  const activeCategoryCard = secondhandCategoryCards.find((c) => c.key === categoryKey) || null;
+
+  /* ── derived filtered items (all-categories mode) ── */
+  const allItems = secondhandItems;
+
+  const filteredAllItems = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return allItems.filter((item) => {
+      const matchesCondition = selectedCondition === 'all' || item.condition === selectedCondition;
+      const matchesQuery = !q || [item.title, item.condition, item.description, item.categoryKey].some((v) => String(v || '').toLowerCase().includes(q));
+      return matchesCondition && matchesQuery;
+    }).sort((a, b) => {
+      if (sortOrder === 'Price Low') return getNumericPriceValue(a.price) - getNumericPriceValue(b.price);
+      if (sortOrder === 'Price High') return getNumericPriceValue(b.price) - getNumericPriceValue(a.price);
+      return 0;
+    });
+  }, [allItems, searchQuery, selectedCondition, sortOrder]);
+
+  /* ── sections grouped by category (bookings-style) ── */
+  const sections = useMemo(() => {
+    return secondhandCategoryCards.map((cat) => ({
+      id: `sh-section-${cat.key}`,
+      categoryKey: cat.key,
+      title: cat.title,
+      subtitle: cat.subtitle,
+      items: filteredAllItems.filter((item) => item.categoryKey === cat.key),
+    })).filter((s) => {
+      if (activeCategory === 'All') return s.items.length > 0;
+      return s.categoryKey === activeCategory && s.items.length > 0;
+    });
+  }, [filteredAllItems, activeCategory]);
+
+  /* category detail-mode items (with sidebar filtering) */
+  const filteredCategoryItems = useMemo(() => {
+    if (!activeCategoryCard) return [];
+    return allItems.filter((item) => {
+      if (item.categoryKey !== activeCategoryCard.key) return false;
+      if (sidebarConditionFilters.length > 0 && !sidebarConditionFilters.includes(item.condition)) return false;
+      const price = getNumericPriceValue(item.price);
+      if (sidebarMinPrice && price < Number(sidebarMinPrice)) return false;
+      if (sidebarMaxPrice && price > Number(sidebarMaxPrice)) return false;
+      return true;
+    });
+  }, [allItems, activeCategoryCard, sidebarConditionFilters, sidebarMinPrice, sidebarMaxPrice]);
+
+  const toggleSidebarFilter = (setter, value) => {
+    setter((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
+  };
+
+  const buildCartItem = (item) => createCartItem({
+    ...item,
+    route: '/secondhand-central',
+    marketName: t('markets.secondhand'),
+    details: `${item.condition || 'Pre-owned'} • ${item.description || ''}`,
+  });
+  const buildWishlistItem = (item) => createWishlistItem({
+    ...item,
+    route: '/secondhand-central',
+    marketName: t('markets.secondhand'),
+    details: `${item.condition || 'Pre-owned'} • ${item.description || ''}`,
+  });
+
+  /* ── category detail view w/ sidebar (from Bookings movies pattern) ── */
+  if (categoryKey && !activeCategoryCard) {
+    return <Navigate to="/secondhand-central" replace />;
+  }
+
+  if (activeCategoryCard) {
+    return (
+      <PageFrame
+        title={activeCategoryCard.title}
+        subtitle={activeCategoryCard.subtitle}
+        heroImage={activeCategoryCard.image}
+        heroMediaClassName="scale-105"
+        heroOverlayClassName="bg-gradient-to-r from-black/80 via-black/60 to-black/45"
+        sectionClassName="px-0 pt-0 pb-8 sm:pt-0 sm:pb-10"
+        heroWrapperClassName="w-full max-w-none"
+        contentWrapperClassName="mx-auto w-full max-w-7xl px-4"
+        heroContainerClassName="rounded-none border-x-0 border-t-0 p-0 shadow-none"
+        heroContentClassName="flex min-h-[220px] flex-col items-center justify-center px-6 py-8 text-center sm:min-h-[260px] sm:px-8 sm:py-10"
+        titleClassName="text-xl text-white sm:text-2xl"
+        subtitleClassName="mt-2 text-xs text-white/90 sm:text-sm"
+      >
+        {/* Info bar */}
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-4 shadow-[0_4px_8px_rgba(0,0,0,0.06)] sm:px-5">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--svs-primary-strong)]">SecondHand category</p>
+            <h2 className="mt-1 text-xl font-bold text-[var(--svs-text)] sm:text-2xl">{activeCategoryCard.title}</h2>
+            <p className="mt-1 text-sm text-[var(--svs-muted)]">{filteredCategoryItems.length} item{filteredCategoryItems.length === 1 ? '' : 's'} available</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Mobile filter toggle */}
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--svs-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)] lg:hidden"
+            >
+              <Search className="h-3.5 w-3.5" /> Filters
+            </button>
+            <Link
+              to="/secondhand-central"
+              className="inline-flex items-center gap-2 rounded-full border border-[var(--svs-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
+            >
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+              Back to categories
+            </Link>
+          </div>
+        </div>
+
+        {/* Sidebar + Cards layout (like Bookings movie sidebar) */}
+        <div className="flex flex-col lg:flex-row lg:items-start lg:gap-6">
+          {/* ── Filter Sidebar ── */}
+          {/* Mobile overlay */}
+          {sidebarOpen ? (
+            <div
+              className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+              onClick={() => setSidebarOpen(false)}
+              onKeyDown={() => {}}
+              role="presentation"
+            />
+          ) : null}
+
+          <aside className={`${sidebarOpen ? 'fixed left-0 top-0 z-50 flex h-full w-[320px] sm:w-[340px]' : 'hidden lg:flex lg:w-[280px]'} flex-col overflow-y-auto border-r border-[var(--svs-border)] bg-white px-5 pb-6 pt-6 shadow-lg lg:sticky lg:top-4 lg:z-auto lg:h-auto lg:max-h-[calc(100vh-2rem)] lg:shrink-0 lg:rounded-xl lg:border lg:shadow-[0_2px_12px_rgba(15,23,42,0.08)]`}>
+            {/* Close (mobile only) */}
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              className="mb-4 self-end rounded-full p-1.5 text-[var(--svs-muted)] transition hover:bg-slate-100 hover:text-[var(--svs-text)] lg:hidden"
+              aria-label="Close filters"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            {/* Condition filter */}
+            <div className="border-b border-slate-200 pb-4">
+              <button type="button" onClick={() => setSidebarConditionOpen((p) => !p)} className="flex w-full items-center justify-between">
+                <h3 className="text-[16px] font-bold text-[var(--svs-text)]">Condition</h3>
+                <ChevronDown className={`h-4 w-4 text-[var(--svs-muted)] transition-transform ${sidebarConditionOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {sidebarConditionOpen ? (
+                <div className="mt-3 space-y-2.5">
+                  {conditionOptions.map((cond) => (
+                    <label key={cond} className="flex cursor-pointer items-center gap-2.5">
+                      <input
+                        type="checkbox"
+                        checked={sidebarConditionFilters.includes(cond)}
+                        onChange={() => toggleSidebarFilter(setSidebarConditionFilters, cond)}
+                        className="h-4 w-4 rounded border-slate-300 text-[var(--svs-primary)] accent-[var(--svs-primary)]"
+                      />
+                      <span className="text-[15px] text-[var(--svs-text)]">{cond}</span>
+                    </label>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            {/* Price range filter */}
+            <div className="mt-5 border-b border-slate-200 pb-4">
+              <button type="button" onClick={() => setSidebarPriceOpen((p) => !p)} className="flex w-full items-center justify-between">
+                <h3 className="text-[16px] font-bold text-[var(--svs-text)]">Price Range</h3>
+                <ChevronDown className={`h-4 w-4 text-[var(--svs-muted)] transition-transform ${sidebarPriceOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {sidebarPriceOpen ? (
+                <div className="mt-3 space-y-3">
+                  <input
+                    type="number"
+                    placeholder="Min price"
+                    value={sidebarMinPrice}
+                    onChange={(e) => setSidebarMinPrice(e.target.value)}
+                    className="h-10 w-full rounded-lg border border-[var(--svs-border)] bg-white px-3 text-sm text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Max price"
+                    value={sidebarMaxPrice}
+                    onChange={(e) => setSidebarMaxPrice(e.target.value)}
+                    className="h-10 w-full rounded-lg border border-[var(--svs-border)] bg-white px-3 text-sm text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30"
+                  />
+                </div>
+              ) : null}
+            </div>
+
+            {/* Apply Filters */}
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              className={`${cudyBluePrimaryButtonClassName} mt-8 w-full rounded-lg bg-[#0f766e] py-3 text-sm font-semibold text-white transition hover:bg-[#0d6357]`}
+            >
+              Apply Filters
+            </button>
+          </aside>
+
+          {/* ── Items Grid ── */}
+          <div className="min-w-0 flex-1">
+            {filteredCategoryItems.length ? (
+              <CardGrid
+                items={filteredCategoryItems}
+                buttonLabel={t('common.addToCart')}
+                secondaryButtonLabel={t('common.viewDetails')}
+                reviewSummaryMap={productReviewSummaryMap}
+                getItemReviewKey={(item) => getCollectionItemId('/secondhand-central', item.id)}
+                onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+                onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
+                onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+                onOpenItemDetails={(item) => {
+                  navigate(`/secondhand-central/product/${item.id}`);
+                }}
+                isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/secondhand-central', item.id))}
+                metaRenderer={(item) => (
+                  <p className="text-sm text-slate-600">
+                    <SalePrice price={item.price} /> • {item.condition}
+                  </p>
+                )}
+              />
+            ) : (
+              <div className="rounded-2xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-8 text-sm text-[var(--svs-muted)]">
+                No items match your filters in {activeCategoryCard.title}. Adjust condition or price to see more results.
+              </div>
+            )}
+          </div>
+        </div>
+      </PageFrame>
+    );
+  }
+
+  /* ── All-categories landing (enhanced with Bookings patterns) ── */
+  return (
+    <PageFrame
+      title={t('markets.secondhand')}
+      subtitle="Buy and sell quality pre-owned phones, laptops, fashion, furniture, and more — all at unbeatable prices"
+      heroImages={[
+        'https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=1200',
+        'https://images.pexels.com/photos/18105/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=1200',
+        'https://images.pexels.com/photos/1148957/pexels-photo-1148957.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      ]}
+      heroOverlayClassName="bg-gradient-to-b from-black/70 via-black/55 to-black/70"
+      sectionClassName="px-0 pt-0 pb-8 sm:pt-0 sm:pb-10"
+      heroWrapperClassName="w-full max-w-none"
+      contentWrapperClassName="mx-auto w-full max-w-7xl px-4"
+      heroContainerClassName="rounded-none border-x-0 border-t-0 p-0 shadow-none"
+      heroContentClassName="flex min-h-[220px] flex-col items-center justify-center px-6 py-8 text-center sm:min-h-[260px] sm:px-8 sm:py-10"
+      titleClassName="text-xl text-white sm:text-2xl"
+      subtitleClassName="mt-2 text-xs text-white/90 sm:text-sm"
+    >
+      {/* ── Search + Filter Bar (from Bookings) ── */}
+      <div className="mt-8 sm:mt-10">
+        {/* Search bar */}
+        <div className="mx-auto max-w-[700px]">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search pre-owned phones, laptops, fashion, furniture…"
+              className="h-10 w-full rounded-full border border-[var(--svs-border)] bg-white pl-11 pr-4 text-xs font-medium text-[var(--svs-text)] shadow-sm outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30"
+            />
+          </div>
+        </div>
+
+        {/* Filter row */}
+        <div className="mt-4 rounded-xl border border-[var(--svs-border)] bg-white/80 px-4 py-3 shadow-[0_2px_8px_rgba(15,23,42,0.06)] backdrop-blur sm:px-5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+              {/* Condition dropdown */}
+              <div className="relative">
+                <ShieldCheck className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
+                <select
+                  value={selectedCondition}
+                  onChange={(e) => setSelectedCondition(e.target.value)}
+                  className="h-9 w-full appearance-none rounded-full border border-[var(--svs-border)] bg-white pl-9 pr-8 text-xs font-semibold text-[var(--svs-text)] outline-none transition hover:border-[var(--svs-primary)] focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30 sm:w-[180px]"
+                >
+                  <option value="all">All Conditions</option>
+                  {conditionOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
+              </div>
+
+              {/* Category pill tabs */}
+              <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0">
+                {['All', ...secondhandCategoryCards.map((c) => c.key)].map((tab) => {
+                  const label = tab === 'All' ? 'All' : secondhandCategoryCards.find((c) => c.key === tab)?.title || tab;
+                  return (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => {
+                        setActiveCategory(tab);
+                        if (tab !== 'All') {
+                          setTimeout(() => {
+                            document.getElementById(`sh-section-${tab}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          }, 100);
+                        }
+                      }}
+                      className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition ${activeCategory === tab ? 'bg-[#0f766e] text-white shadow-[0_4px_14px_rgba(15,118,110,0.30)]' : 'border border-[var(--svs-border)] bg-white text-[var(--svs-text)] hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]'}`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Sort dropdown */}
+            <div className="relative shrink-0">
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+                className="h-9 w-full appearance-none rounded-full border border-[var(--svs-border)] bg-white px-4 pr-8 text-xs font-semibold text-[var(--svs-text)] outline-none transition hover:border-[var(--svs-primary)] focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30 sm:w-[145px]"
+              >
+                <option value="Newest">Default</option>
+                <option value="Price Low">Price: Low → High</option>
+                <option value="Price High">Price: High → Low</option>
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── 4 Category Cards (Bookings-style with dark panel) ── */}
+      <div className="mt-[50px] sm:mt-[60px]">
+        <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {secondhandCategoryCards.map((card) => (
+            <article
+              key={card.key}
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate(`/secondhand-central/${card.key}`)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  navigate(`/secondhand-central/${card.key}`);
+                }
+              }}
+              className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl shadow-[0_4px_16px_rgba(15,23,42,0.10)] transition-all duration-200 hover:-translate-y-1 hover:scale-[1.03] hover:shadow-[0_12px_32px_rgba(15,23,42,0.18)]"
+            >
+              <div className="relative h-[180px] w-full sm:h-[200px] lg:h-[210px]">
+                <img src={card.image} alt={card.title} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy" />
+                <div className="absolute left-4 top-4 rounded-full bg-white/92 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#0f766e]">
+                  Pre-owned
+                </div>
+              </div>
+              <div className="flex flex-1 flex-col justify-between bg-[#0c2a32] px-5 py-4 text-white">
+                <div>
+                  <h2 className="text-[22px] font-bold leading-tight">{card.title}</h2>
+                  <p className="mt-1.5 text-[15px] leading-snug text-slate-300">{card.subtitle}</p>
+                </div>
+                <div className="mt-4 flex justify-end">
+                  <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#8cecf5] transition-all group-hover:gap-2.5">
+                    Explore
+                    <ChevronRight className="h-4 w-4" />
+                  </span>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Section-based listings (from Bookings pattern) ── */}
+      {sections.length ? (
+        sections.map((section, sectionIndex) => (
+          <div key={section.id} id={section.id} className={sectionIndex === 0 ? 'mt-10 sm:mt-12' : 'mt-10 sm:mt-14'}>
+            <div className="mb-5 text-center">
+              <h2 className="text-xl font-bold tracking-tight text-[var(--svs-text)] sm:text-2xl">{section.title}</h2>
+              <p className="mt-1.5 text-xs text-[var(--svs-muted)] sm:text-sm">{section.subtitle}</p>
+            </div>
+
+            <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {section.items.slice(0, sectionVisibleCounts[section.id] || 4).map((item) => {
+                const isWishlisted = wishlistItemIds.includes(getCollectionItemId('/secondhand-central', item.id));
+                return (
+                  <article
+                    key={item.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate(`/secondhand-central/product/${item.id}`)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        navigate(`/secondhand-central/product/${item.id}`);
+                      }
+                    }}
+                    className="flex cursor-pointer flex-col overflow-hidden rounded-xl bg-white shadow-[0_2px_12px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_8px_28px_rgba(15,23,42,0.14)]"
+                  >
+                    <div className="relative">
+                      <img src={item.image} alt={item.title} className="h-[160px] w-full object-cover sm:h-[180px]" loading="lazy" />
+                      <span className="absolute left-3 top-3 rounded-full bg-[#0f766e]/90 px-2.5 py-1 text-[10px] font-bold text-white">{item.condition}</span>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); onToggleWishlist(buildWishlistItem(item)); }}
+                        className={`absolute right-3 top-3 rounded-full border p-2 transition ${isWishlisted ? 'border-rose-200 bg-rose-50 text-rose-600' : 'border-white/70 bg-white/90 text-slate-700 hover:bg-white'}`}
+                        aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+                      >
+                        <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-current' : ''}`} />
+                      </button>
+                    </div>
+                    <div className="flex flex-1 flex-col p-4">
+                      <h3 className="text-base font-bold text-[var(--svs-text)]">{item.title}</h3>
+                      <div className="mt-2 space-y-1 text-xs text-[var(--svs-muted)]">
+                        {item.description ? <p className="line-clamp-2">{item.description}</p> : null}
+                        <p className="flex items-center gap-1.5">
+                          <MapPin className="h-3.5 w-3.5 shrink-0 text-[var(--svs-primary)]" />
+                          <span>Nairobi (Kenya)</span>
+                        </p>
+                      </div>
+                      <p className="mt-3 text-base font-bold text-[var(--svs-text)]"><SalePrice price={item.price} /></p>
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onAddToCart(buildCartItem(item));
+                          }}
+                          className={`${cudyBluePrimaryButtonClassName} rounded-full bg-[#0f766e] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#0d6357]`}
+                        >
+                          Add to Cart
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            navigate(`/secondhand-central/product/${item.id}`);
+                          }}
+                          className="rounded-full border border-[var(--svs-border)] bg-white px-4 py-2 text-xs font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
+                        >
+                          View Details
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            {(sectionVisibleCounts[section.id] || 4) < section.items.length ? (
+              <div className="mt-6 flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => setSectionVisibleCounts((prev) => ({ ...prev, [section.id]: (prev[section.id] || 4) + 4 }))}
+                  className="rounded-full bg-[#0f766e] px-6 py-2 text-xs font-semibold text-white transition hover:bg-[#0d6357]"
+                >
+                  View More
+                </button>
+              </div>
+            ) : null}
+          </div>
+        ))
+      ) : (
+        <div className="mt-10 rounded-xl border border-dashed border-[var(--svs-border)] bg-white px-5 py-10 text-center text-xs text-[var(--svs-muted)]">
+          No items match your current search and filters. Adjust the condition, category, or search query to see more options.
+        </div>
+      )}
+    </PageFrame>
+  );
+};
+
 const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'fastFood'), ...fastFoodItems], [sellerItems]);
@@ -7276,7 +7784,90 @@ const MarketsPage = () => {
       </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {orderedMarketLinks.map((market, index) => (
+        {orderedMarketLinks.map((market, index) => {
+          const isFastFood = market.href === '/fast-food';
+          const isFashion = market.href === '/fashion-style';
+          const isBookings = market.href === '/tickets';
+          const isBeverages = market.href === '/beverages-liquors';
+          const isGroceries = market.href === '/groceries';
+          const isMobility = market.href === '/mobility-vehicles';
+          const isEcommerce = market.href === '/e-commerce';
+          const isElectronics = market.href === '/hardware-software';
+          const isBetting = market.href === '/betting-lottery-games';
+          const isConstruction = market.href === '/building-construction-tools';
+          const isLivestock = market.href === '/livestock-hub';
+          const isHomeCare = market.href === '/home-care';
+          const isNaturalResources = market.href === '/natural-resources-minerals';
+          const isWellness = market.href === '/wellness';
+          const isStationery = market.href === '/stationery-office';
+          const isProperty = market.href === '/property-hub';
+          const isHerbs = market.href === '/traditional-medicines-herbs';
+          const isSecondhand = market.href === '/secondhand-central';
+          const hasHeroImage = isFastFood || isFashion || isBookings || isBeverages || isGroceries || isMobility || isEcommerce || isElectronics || isBetting || isConstruction || isLivestock || isHomeCare || isNaturalResources || isWellness || isStationery || isProperty || isHerbs || isSecondhand;
+          const heroImageUrl = isFastFood
+            ? 'https://images.pexels.com/photos/2983101/pexels-photo-2983101.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            : isFashion
+            ? 'https://images.pexels.com/photos/2529148/pexels-photo-2529148.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            : isBookings
+            ? 'https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            : isBeverages
+            ? 'https://images.pexels.com/photos/1283219/pexels-photo-1283219.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            : isGroceries
+            ? 'https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg?auto=compress&cs=tinysrgb&w=1600'
+            : isMobility
+            ? 'https://images.pexels.com/photos/120049/pexels-photo-120049.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            : isEcommerce
+            ? 'https://images.pexels.com/photos/1444416/pexels-photo-1444416.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            : isElectronics
+            ? 'https://images.pexels.com/photos/393047/pexels-photo-393047.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            : isBetting
+            ? 'https://images.pexels.com/photos/6664248/pexels-photo-6664248.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            : isConstruction
+            ? 'https://images.pexels.com/photos/1249611/pexels-photo-1249611.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            : isLivestock
+            ? 'https://images.pexels.com/photos/422218/pexels-photo-422218.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            : isHomeCare
+            ? 'https://images.pexels.com/photos/3846022/pexels-photo-3846022.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            : isNaturalResources
+            ? 'https://images.pexels.com/photos/2101137/pexels-photo-2101137.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            : isWellness
+            ? 'https://images.pexels.com/photos/159211/headache-pain-pills-medication-159211.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            : isStationery
+            ? 'https://images.pexels.com/photos/6444/pencil-typography-black-design.jpg?auto=compress&cs=tinysrgb&w=1200'
+            : isProperty
+            ? 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            : isHerbs
+            ? 'https://images.pexels.com/photos/906150/pexels-photo-906150.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            : isSecondhand
+            ? 'https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            : '';
+          return hasHeroImage ? (
+            <Link
+              key={`all-${market.href}`}
+              to={market.href}
+              className="group relative overflow-hidden rounded-2xl border border-[var(--svs-border)] shadow-[0_4px_8px_rgba(0,0,0,0.1)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_12px_22px_rgba(0,168,232,0.2)]"
+            >
+              <div
+                className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
+                style={{ backgroundImage: `url('${heroImageUrl}')` }}
+                aria-hidden="true"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" aria-hidden="true" />
+              <div className="relative z-10 p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-primary-strong)] drop-shadow">{t('marketsPage.marketLabel', { number: String(index + 1).padStart(2, '0') })}</p>
+                    <p className="mt-1 text-lg font-bold text-[var(--svs-text)] drop-shadow">{t(market.labelKey)}</p>
+                  </div>
+                  <span className="svs-berkshire-swash rounded-full bg-[var(--svs-cyan-surface)] px-2 py-1 text-sm text-[var(--svs-primary-strong)]">SVS</span>
+                </div>
+                <p className="mt-3 text-sm text-[var(--svs-muted)] drop-shadow">{t('marketsPage.openMarket')}</p>
+                <div className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex items-center gap-2 rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition group-hover:bg-[#33b9f2]`}>
+                  {t('marketsPage.enterMarket')} <span aria-hidden="true">-&gt;</span>
+                </div>
+              </div>
+            </Link>
+          ) : (
           <Link
             key={`all-${market.href}`}
             to={market.href}
@@ -7294,7 +7885,8 @@ const MarketsPage = () => {
               {t('marketsPage.enterMarket')} <span aria-hidden="true">-&gt;</span>
             </div>
           </Link>
-        ))}
+          );
+        })}
       </div>
 
       <div className="mt-7 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
@@ -9060,6 +9652,509 @@ const ItemDetailsModal = ({
   );
 };
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   SecondHand Product Detail Page – matches "Second-Hand Electronics Market
+   Detail Page" prototype exactly.
+   ───────────────────────────────────────────────────────────────────────────── */
+const secondhandProductDetailData = {
+  'sh-iphone13promax': {
+    id: 'sh-iphone13promax',
+    title: 'iPhone 13 Pro Max 256GB',
+    category: 'Mobile Phones',
+    brand: 'Apple',
+    price: '75,999/-',
+    rating: 4.8,
+    ratingCount: 5,
+    overallRating: 4.9,
+    totalReviews: 1247,
+    condition: 'Like New',
+    sellerType: 'Individual',
+    location: 'Nairobi (Kenya)',
+    availability: 'Available Now',
+    images: [
+      'https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      'https://images.pexels.com/photos/607812/pexels-photo-607812.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      'https://images.pexels.com/photos/699122/pexels-photo-699122.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      'https://images.pexels.com/photos/1092644/pexels-photo-1092644.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      'https://images.pexels.com/photos/47261/pexels-photo-47261.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      'https://images.pexels.com/photos/341523/pexels-photo-341523.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      'https://images.pexels.com/photos/1042143/pexels-photo-1042143.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    ],
+    description: [
+      'This iPhone 13 Pro Max is in excellent condition with minimal signs of use. It comes with the original box, charging cable, and all included accessories. The device has been thoroughly tested and is fully functional.',
+      'The 6.7-inch Super Retina XDR display is scratch-free, and the battery health remains at 92%. Powered by the A15 Bionic chip, this phone handles everything from everyday tasks to demanding games with ease. The triple 12MP camera system delivers outstanding photos and cinematic-quality video.',
+      'This is an unlocked device compatible with all major carriers. A great opportunity to own a premium Apple device at a fraction of the retail price.',
+    ],
+    highlights: [
+      'Fully tested & genuine Apple device',
+      'Minimal wear',
+      '256GB storage',
+      'A15 Bionic Chip & 6.7" Super Retina XDR Display',
+      '12MP Triple-Camera System',
+    ],
+    specs: [
+      { label: 'Display', value: '6.7" Super Retina XDR' },
+      { label: 'Processor', value: 'A15 Bionic Chip' },
+      { label: 'RAM', value: '6GB' },
+      { label: 'Storage', value: '256GB' },
+      { label: 'Camera', value: '12MP Triple Camera' },
+      { label: 'Battery', value: '4352 mAh' },
+      { label: 'Color', value: 'Graphite' },
+      { label: 'Connectivity', value: '5G, Wi-Fi 6, Bluetooth 5.0' },
+      { label: 'OS', value: 'iOS 15 (Upgradeable)' },
+      { label: 'Condition', value: 'Good' },
+      { label: 'Age', value: '6 Month' },
+    ],
+    trustSafety: [
+      { icon: 'shield', text: 'Verified Seller' },
+      { icon: 'check', text: 'Device Quality Check' },
+      { icon: 'lock', text: 'Secure communication' },
+    ],
+    seller: {
+      name: 'Rajesh Kumar',
+      type: 'Individual',
+      location: 'Nairobi (Kenya)',
+      avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=300',
+    },
+    reviews: [
+      { id: 'r1', name: 'Amina W.', date: '2 weeks ago', rating: 5, comment: 'Excellent condition, exactly as described! Delivery was fast and the seller was very responsive.', helpful: 24 },
+      { id: 'r2', name: 'David O.', date: '1 month ago', rating: 5, comment: 'Great phone at a fantastic price. Battery life is impressive. Would buy from this seller again.', helpful: 18 },
+      { id: 'r3', name: 'Fatima K.', date: '1 month ago', rating: 4, comment: 'Phone works perfectly. Minor scratch on the side but nothing major. Good value overall.', helpful: 11 },
+      { id: 'r4', name: 'James M.', date: '2 months ago', rating: 5, comment: 'Came with all original accessories and the box. Feels brand new. Very happy with this purchase.', helpful: 9 },
+    ],
+    ratingBreakdown: { 5: 78, 4: 15, 3: 4, 2: 2, 1: 1 },
+    similarProducts: [
+      { id: 'sim1', title: 'Samsung Galaxy S22 Ultra', price: '62,999/-', location: 'Nairobi', image: 'https://images.pexels.com/photos/214487/pexels-photo-214487.jpeg?auto=compress&cs=tinysrgb&w=600' },
+      { id: 'sim2', title: 'iPhone 12 Pro 128GB', price: '52,499/-', location: 'Mombasa', image: 'https://images.pexels.com/photos/607812/pexels-photo-607812.jpeg?auto=compress&cs=tinysrgb&w=600' },
+      { id: 'sim3', title: 'Google Pixel 7 Pro', price: '48,999/-', location: 'Kisumu', image: 'https://images.pexels.com/photos/699122/pexels-photo-699122.jpeg?auto=compress&cs=tinysrgb&w=600' },
+    ],
+  },
+};
+
+const getSecondhandDetailProduct = (itemId) => {
+  if (secondhandProductDetailData[itemId]) return secondhandProductDetailData[itemId];
+  const shItem = secondhandItems.find((i) => i.id === itemId);
+  if (!shItem) return null;
+  return {
+    id: shItem.id,
+    title: shItem.title,
+    category: secondhandCategoryCards.find((c) => c.key === shItem.categoryKey)?.title || shItem.categoryKey,
+    brand: '',
+    price: shItem.price,
+    rating: 4.5,
+    ratingCount: 5,
+    overallRating: 4.5,
+    totalReviews: 0,
+    condition: shItem.condition || 'Pre-owned',
+    sellerType: 'Individual',
+    location: 'Nairobi (Kenya)',
+    availability: 'Available Now',
+    images: shItem.image ? [shItem.image] : [],
+    description: [shItem.description || ''],
+    highlights: [],
+    specs: [],
+    trustSafety: [
+      { icon: 'shield', text: 'Verified Seller' },
+      { icon: 'check', text: 'Device Quality Check' },
+      { icon: 'lock', text: 'Secure communication' },
+    ],
+    seller: { name: 'Seller', type: 'Individual', location: 'Nairobi (Kenya)', avatar: '' },
+    reviews: [],
+    ratingBreakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+    similarProducts: [],
+  };
+};
+
+const SecondHandProductDetailPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [] }) => {
+  const { itemId } = useParams();
+  const navigate = useNavigate();
+  const product = getSecondhandDetailProduct(itemId);
+  const [selectedImage, setSelectedImage] = useState(0);
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const [visibleReviews, setVisibleReviews] = useState(3);
+  const thumbnailStripRef = useRef(null);
+
+  if (!product) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4 text-center">
+        <h2 className="text-2xl font-bold text-[var(--svs-text)]">Product not found</h2>
+        <p className="mt-2 text-[var(--svs-muted)]">The item you're looking for doesn't exist or has been removed.</p>
+        <button type="button" onClick={() => navigate('/secondhand-central')} className="rounded-full bg-[#0f766e] px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0d6357]">
+          Back to Secondhand Central
+        </button>
+      </div>
+    );
+  }
+
+  const currentImage = product.images[selectedImage] || product.images[0] || '';
+  const gallery = product.images.length > 1 ? product.images : [];
+  const totalRatings = Object.values(product.ratingBreakdown).reduce((a, b) => a + b, 0);
+  const similarProducts = product.similarProducts || [];
+
+  const buildCartItem = () => createCartItem({
+    id: product.id,
+    title: product.title,
+    image: product.images[0] || '',
+    price: product.price,
+    route: '/secondhand-central',
+    marketName: 'Secondhand Central',
+    details: `${product.condition} • ${product.description?.[0] || ''}`,
+  });
+
+  const buildWishlistItem = () => createWishlistItem({
+    id: product.id,
+    title: product.title,
+    image: product.images[0] || '',
+    price: product.price,
+    route: '/secondhand-central',
+    marketName: 'Secondhand Central',
+    details: `${product.condition} • ${product.description?.[0] || ''}`,
+  });
+
+  const isWishlisted = wishlistItemIds.includes(getCollectionItemId('/secondhand-central', product.id));
+
+  const renderStars = (rating, size = 'h-5 w-5') =>
+    Array.from({ length: 5 }, (_, i) => (
+      <Star key={i} className={`${size} ${i < Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'text-slate-300'}`} />
+    ));
+
+  return (
+    <div className="min-h-screen overflow-x-hidden bg-white">
+      {/* ── 1. HERO SECTION (MovieDetailsPage style — dark bg, 60/40 split) ── */}
+      <section className="relative w-full bg-[#0c1a20]">
+        {/* Back to Market — top-left overlay */}
+        <button type="button" onClick={() => navigate(-1)} className="absolute left-4 top-4 z-20 flex items-center gap-1.5 text-sm font-medium text-white/90 transition hover:text-white sm:left-6 sm:top-5">
+          <ChevronLeft className="h-4 w-4" /> Back to Market
+        </button>
+
+        <div className="mx-auto flex max-w-7xl flex-col lg:h-[500px] lg:flex-row">
+          {/* Left side (~60%) — large image */}
+          <div className="relative h-[380px] w-full sm:h-[420px] lg:h-full lg:w-[60%]">
+            <img src={currentImage} alt={product.title} className="h-full w-full object-cover" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#0c1a20] opacity-90 hidden lg:block" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#0c1a20] opacity-95 lg:hidden" />
+          </div>
+
+          {/* Right side (~40%) — dark panel with product info */}
+          <div className="relative flex flex-col justify-center px-5 pb-8 pt-4 text-white sm:px-7 lg:w-[40%] lg:px-8 lg:py-8">
+            {/* Category + condition badges */}
+            <div className="flex flex-wrap items-center gap-2">
+              {product.category ? <span className="rounded bg-[#0f766e]/30 px-2.5 py-1 text-xs font-semibold text-emerald-200">{product.category}</span> : null}
+              <span className="rounded bg-white/20 px-2.5 py-1 text-xs font-semibold">{product.condition}</span>
+              {product.brand ? <span className="rounded bg-white/15 px-2.5 py-1 text-xs font-semibold">{product.brand}</span> : null}
+            </div>
+
+            {/* Title — 42-48px desktop, 32-36px mobile (from MovieDetailsPage) */}
+            <h1 className="mt-4 text-[28px] font-bold leading-[1.1] sm:text-[32px] lg:text-[40px]">{product.title}</h1>
+
+            {/* Rating line */}
+            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-200 sm:gap-4">
+              <div className="flex items-center gap-1">
+                {renderStars(product.rating, 'h-4 w-4')}
+                <span className="ml-1 font-semibold">{product.rating}/5.0</span>
+              </div>
+              <span>• {product.condition}</span>
+              <span>• {product.location}</span>
+            </div>
+
+            {/* Price — bold large */}
+            <p className="mt-5 text-[28px] font-bold text-white sm:text-[34px]">{product.price}</p>
+
+            {/* Badge pills (like language pills in MovieDetailsPage) */}
+            <div className="mt-4 flex flex-wrap gap-1.5">
+              {[
+                { label: product.sellerType },
+                { label: product.availability },
+                { label: product.location },
+              ].map((badge) => (
+                <span key={badge.label} className="rounded-full border border-white/25 px-3 py-0.5 text-xs text-slate-200">{badge.label}</span>
+              ))}
+            </div>
+
+            {/* Action Buttons (large, touch-friendly — from MovieDetailsPage) */}
+            <div className="mt-6 flex flex-wrap gap-3 sm:mt-8">
+              <button
+                type="button"
+                onClick={() => onBuyNow?.(buildCartItem())}
+                className={`${cudyBluePrimaryButtonClassName} rounded-full bg-[#0f766e] px-8 py-3.5 text-[15px] font-semibold text-white transition hover:bg-[#0d6357] sm:px-10 sm:py-4 sm:text-base`}
+              >
+                Buy Now
+              </button>
+              <button
+                type="button"
+                onClick={() => onToggleWishlist?.(buildWishlistItem())}
+                className="flex items-center gap-2 rounded-full border border-white/30 px-6 py-3.5 text-[15px] font-semibold text-white transition hover:bg-white/10 sm:px-8 sm:py-4 sm:text-base"
+              >
+                <Heart className={`h-5 w-5 ${isWishlisted ? 'fill-red-400 text-red-400' : ''}`} />
+                {isWishlisted ? 'Wishlisted' : 'Add to Wishlist'}
+              </button>
+              <button
+                type="button"
+                onClick={() => onAddToCart?.(buildCartItem())}
+                className="flex items-center gap-2 rounded-full border border-white/30 px-6 py-3.5 text-[15px] font-semibold text-white transition hover:bg-white/10 sm:px-8 sm:py-4 sm:text-base"
+              >
+                <ShoppingCart className="h-5 w-5" />
+                Add to Cart
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Thumbnail Strip (below hero, from original) */}
+      {product.images.length > 1 ? (
+        <div className="mx-auto w-full max-w-7xl overflow-x-auto border-b border-[var(--svs-border)] bg-white px-4 py-3" ref={thumbnailStripRef}>
+          <div className="flex gap-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {product.images.map((img, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setSelectedImage(idx)}
+                className={`h-16 w-24 shrink-0 overflow-hidden rounded-lg border-2 transition sm:h-20 sm:w-28 ${idx === selectedImage ? 'border-[#0f766e]' : 'border-transparent opacity-60 hover:opacity-100'}`}
+              >
+                <img src={img} alt={`${product.title} ${idx + 1}`} className="h-full w-full object-cover" loading="lazy" />
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {/* ── Content Sections ── */}
+
+      {/* ── 2. PRODUCT DESCRIPTION (Overview style from MovieDetailsPage) ── */}
+      {product.description?.length ? (
+        <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 sm:pt-14 lg:pt-[70px]">
+          <h2 className="text-[22px] font-bold text-[var(--svs-text)] sm:text-[24px]">Product Description</h2>
+          <div className="mt-4 max-w-4xl space-y-4">
+            {product.description.map((para, i) => (
+              <p key={i} className="text-[15px] leading-[1.7] text-slate-600 sm:text-[16px] sm:leading-[1.65]">{para}</p>
+            ))}
+          </div>
+
+          {/* Product meta — two-column (from MovieDetailsPage director/writer) */}
+          {product.brand || product.condition ? (
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 sm:gap-6">
+              {product.brand ? (
+                <div>
+                  <span className="text-sm font-semibold text-[var(--svs-text)]">Brand</span>
+                  <p className="mt-1 text-[15px] text-slate-600">{product.brand}</p>
+                </div>
+              ) : null}
+              <div>
+                <span className="text-sm font-semibold text-[var(--svs-text)]">Condition</span>
+                <p className="mt-1 text-[15px] text-slate-600">{product.condition}</p>
+              </div>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      {/* ── 3. HIGHLIGHTS ── */}
+      {product.highlights?.length ? (
+        <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 sm:pt-14 lg:pt-[70px]">
+          <h2 className="text-[22px] font-bold text-[var(--svs-text)] sm:text-[24px]">Highlights</h2>
+          <ul className="mt-4 space-y-3">
+            {product.highlights.map((hl, i) => (
+              <li key={i} className="flex items-start gap-3 text-[15px] text-slate-600 sm:text-base">
+                <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#e0f2f1] text-[#0f766e]">
+                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                </span>
+                {hl}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {/* ── 4. PRODUCT DETAILS TABLE ── */}
+      {product.specs?.length ? (
+        <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 sm:pt-14 lg:pt-[70px]">
+          <h2 className="text-[22px] font-bold text-[var(--svs-text)] sm:text-[24px]">Product Details</h2>
+          <div className="mt-4 overflow-hidden rounded-xl border border-[var(--svs-border)]">
+            <table className="w-full text-left text-[15px] sm:text-base">
+              <tbody>
+                {product.specs.map((spec, i) => (
+                  <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                    <td className="whitespace-nowrap px-5 py-3 font-semibold text-[var(--svs-text)]">{spec.label}</td>
+                    <td className="px-5 py-3 text-slate-600">{spec.value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
+
+      {/* ── 5. GALLERY SECTION (from MovieDetailsPage — with arrows and counter) ── */}
+      {gallery.length > 1 ? (
+        <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 sm:pt-14 lg:pt-[70px]">
+          <h2 className="text-[22px] font-bold text-[var(--svs-text)] sm:text-[24px]">Gallery</h2>
+          <div className="relative mt-5 overflow-hidden rounded-xl">
+            <img src={gallery[galleryIndex]} alt={`Gallery ${galleryIndex + 1}`} className="h-[260px] w-full object-cover sm:h-[380px] lg:h-[460px]" />
+            {/* Left / right arrows */}
+            <button type="button" onClick={() => setGalleryIndex((prev) => (prev === 0 ? gallery.length - 1 : prev - 1))} className="absolute left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white transition hover:bg-black/70" aria-label="Previous image">
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button type="button" onClick={() => setGalleryIndex((prev) => (prev === gallery.length - 1 ? 0 : prev + 1))} className="absolute right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white transition hover:bg-black/70" aria-label="Next image">
+              <ChevronRight className="h-5 w-5" />
+            </button>
+            {/* Counter indicator */}
+            <span className="absolute bottom-3 right-3 rounded-full bg-black/60 px-3.5 py-1 text-sm font-semibold text-white">{galleryIndex + 1}/{gallery.length}</span>
+          </div>
+          {/* Gallery thumbnail strip */}
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {gallery.map((img, i) => (
+              <button key={i} type="button" onClick={() => setGalleryIndex(i)} className={`h-16 w-24 shrink-0 overflow-hidden rounded-lg border-2 transition sm:h-20 sm:w-28 ${i === galleryIndex ? 'border-[#0f766e]' : 'border-transparent opacity-60 hover:opacity-100'}`}>
+                <img src={img} alt={`Thumb ${i + 1}`} className="h-full w-full object-cover" loading="lazy" />
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {/* ── 6. TRUST & SAFETY ── */}
+      {product.trustSafety?.length ? (
+        <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 sm:pt-14 lg:pt-[70px]">
+          <h2 className="text-[22px] font-bold text-[var(--svs-text)] sm:text-[24px]">Trust &amp; Safety</h2>
+          <ul className="mt-4 space-y-3">
+            {product.trustSafety.map((item, i) => (
+              <li key={i} className="flex items-center gap-3 text-[15px] sm:text-base">
+                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#e0f2f1] text-[#0f766e]">
+                  {item.icon === 'shield' ? <ShieldCheck className="h-4 w-4" /> : item.icon === 'lock' ? (
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                  ) : (
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                  )}
+                </span>
+                <span className="text-slate-600">{item.text}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {/* ── 7. SELLER INFORMATION ── */}
+      {product.seller ? (
+        <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 sm:pt-14 lg:pt-[70px]">
+          <h2 className="text-[22px] font-bold text-[var(--svs-text)] sm:text-[24px]">Seller Information</h2>
+          <div className="mt-4 flex flex-col items-start gap-5 rounded-xl border border-[var(--svs-border)] bg-white p-5 shadow-[0_2px_8px_rgba(15,23,42,0.06)] sm:flex-row sm:items-center sm:p-6">
+            <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-full border-2 border-[var(--svs-border)] bg-slate-100">
+              {product.seller.avatar ? (
+                <img src={product.seller.avatar} alt={product.seller.name} className="h-full w-full object-cover" />
+              ) : (
+                <User className="h-full w-full p-3 text-slate-400" />
+              )}
+            </div>
+            <div className="flex-1">
+              <h3 className="text-[16px] font-bold text-[var(--svs-text)]">{product.seller.name}</h3>
+              <p className="mt-1 flex items-center gap-1.5 text-[15px] text-[var(--svs-muted)]">
+                <MapPin className="h-4 w-4 shrink-0 text-[var(--svs-primary)]" />
+                {product.seller.type} &bull; {product.seller.location}
+              </p>
+            </div>
+            <button type="button" className={`${cudyBluePrimaryButtonClassName} w-full rounded-lg bg-[#0f766e] py-3.5 text-[15px] font-semibold text-white transition hover:bg-[#0d6357] sm:w-auto sm:px-8`}>
+              Contact Seller
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      {/* ── 8. RATINGS & REVIEWS ── */}
+      {product.reviews?.length || product.totalReviews ? (
+        <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 sm:pt-14 lg:pt-[70px]">
+          <h2 className="text-[22px] font-bold text-[var(--svs-text)] sm:text-[24px]">Ratings &amp; Reviews</h2>
+
+          {/* Summary row */}
+          <div className="mt-4 flex flex-col gap-6 rounded-xl border border-[var(--svs-border)] bg-white p-5 shadow-[0_2px_8px_rgba(15,23,42,0.06)] sm:flex-row sm:items-start sm:p-6">
+            <div className="flex flex-col items-center sm:pr-8 sm:border-r sm:border-[var(--svs-border)]">
+              <span className="text-5xl font-bold text-[var(--svs-text)]">{product.overallRating}</span>
+              <div className="mt-1.5 flex">{renderStars(product.overallRating, 'h-5 w-5')}</div>
+              <p className="mt-1 text-sm text-[var(--svs-muted)]">{product.totalReviews.toLocaleString()} reviews</p>
+            </div>
+            <div className="flex-1 space-y-2">
+              {[5, 4, 3, 2, 1].map((star) => {
+                const count = product.ratingBreakdown[star] || 0;
+                const pct = totalRatings ? Math.round((count / totalRatings) * 100) : 0;
+                return (
+                  <div key={star} className="flex items-center gap-3 text-sm">
+                    <span className="w-8 text-right font-medium">{star}★</span>
+                    <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-full rounded-full bg-amber-400 transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="w-10 text-right text-[var(--svs-muted)]">{pct}%</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Individual reviews */}
+          <div className="mt-6 space-y-4">
+            {product.reviews.slice(0, visibleReviews).map((review) => (
+              <div key={review.id} className="rounded-xl border border-[var(--svs-border)] bg-white p-5 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold">{review.name}</span>
+                  <span className="text-xs text-[var(--svs-muted)]">{review.date}</span>
+                </div>
+                <div className="mt-1 flex">{renderStars(review.rating, 'h-4 w-4')}</div>
+                <p className="mt-2 text-[15px] leading-relaxed text-slate-600">{review.comment}</p>
+                {review.helpful ? (
+                  <p className="mt-2 text-xs text-[var(--svs-muted)]">👍 {review.helpful} found this helpful</p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+
+          {product.reviews.length > visibleReviews ? (
+            <div className="mt-6 text-center">
+              <button
+                type="button"
+                onClick={() => setVisibleReviews((prev) => prev + 4)}
+                className="rounded-full bg-[#0f766e] px-8 py-3 text-sm font-bold text-white transition hover:bg-[#0d6357]"
+              >
+                Load More Reviews
+              </button>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      {/* ── 9. SIMILAR PRODUCTS (from MovieDetailsPage similar movies pattern) ── */}
+      {similarProducts.length > 0 ? (
+        <section className="mx-auto max-w-7xl px-4 pt-10 pb-16 sm:px-6 sm:pt-14 sm:pb-20 lg:pt-[70px]">
+          <h2 className="text-[22px] font-bold text-[var(--svs-text)] sm:text-[24px]">Similar Products</h2>
+          <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {similarProducts.map((sim) => (
+              <article key={sim.id} className="flex flex-col overflow-hidden rounded-xl bg-white shadow-[0_2px_12px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_8px_28px_rgba(15,23,42,0.14)]">
+                <img src={sim.image} alt={sim.title} className="h-[180px] w-full object-cover sm:h-[200px]" loading="lazy" />
+                <div className="flex flex-1 flex-col p-4 sm:p-5">
+                  <h3 className="text-[16px] font-bold text-[var(--svs-text)]">{sim.title}</h3>
+                  <p className="mt-1 text-base font-bold text-[#0f766e]">{sim.price}</p>
+                  {sim.location ? (
+                    <p className="mt-1 flex items-center gap-1.5 text-xs text-[var(--svs-muted)]">
+                      <MapPin className="h-3.5 w-3.5 shrink-0 text-[var(--svs-primary)]" />
+                      {sim.location}
+                    </p>
+                  ) : null}
+                  <div className="mt-auto pt-4">
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/secondhand-central/product/${sim.id}`)}
+                      className={`${cudyBluePrimaryButtonClassName} w-full rounded-lg bg-[#0f766e] py-3 text-[15px] font-semibold text-white transition hover:bg-[#0d6357]`}
+                    >
+                      View Details
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+    </div>
+  );
+};
+
 const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer, onPrimaryAction, onBuyNowAction, onToggleWishlist, isItemWishlisted, onOpenItemDetails, reviewSummaryMap = {}, getItemReviewKey }) => {
   const { t } = useTranslation();
   const {
@@ -9355,6 +10450,9 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/traditional-medicines-herbs" element={<TraditionalMedicinesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/wellness" element={<WellnessPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/stationery-office" element={<StationeryPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
+    <Route path="/secondhand-central" element={<SecondHandPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
+    <Route path="/secondhand-central/product/:itemId" element={<SecondHandProductDetailPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} />} />
+    <Route path="/secondhand-central/:categoryKey" element={<SecondHandPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/home-care" element={<HomeCarePage />} />
     <Route path="/hardware-software" element={<HardwareSoftwarePage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/mobility-vehicles" element={<MobilityVehiclesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
