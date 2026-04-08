@@ -532,25 +532,49 @@ const homeHeroSlides = [
     id: 'hero-1',
     image:
       'https://images.pexels.com/photos/6169668/pexels-photo-6169668.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'Trending Innovation',
+    label: 'Trending Fashion',
     title: 'Fashion Forward Collection',
     subtitle: 'Trending styles for the modern you',
   },
   {
     id: 'hero-2',
     image:
-      'https://images.pexels.com/photos/5632398/pexels-photo-5632398.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'Trending Innovation',
-    title: 'Fashion Forward Collection',
-    subtitle: 'Trending styles for the modern you',
+      'https://images.pexels.com/photos/356056/pexels-photo-356056.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'Smart Tech Deals',
+    title: 'Electronics & Gadgets',
+    subtitle: 'Latest devices at unbeatable prices',
   },
   {
     id: 'hero-3',
     image:
-      'https://images.pexels.com/photos/5632402/pexels-photo-5632402.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'Trending Innovation',
-    title: 'Fashion Forward Collection',
-    subtitle: 'Trending styles for the modern you',
+      'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'Fresh & Fast',
+    title: 'Groceries & Fresh Produce',
+    subtitle: 'Farm-fresh essentials delivered to your door',
+  },
+  {
+    id: 'hero-4',
+    image:
+      'https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'Order Now',
+    title: 'Fast Food & Takeaway',
+    subtitle: 'Your favourite meals ready in minutes',
+  },
+  {
+    id: 'hero-5',
+    image:
+      'https://images.pexels.com/photos/2747449/pexels-photo-2747449.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'Live Events',
+    title: 'Tickets & Entertainment',
+    subtitle: 'Book concerts, sports, and showbiz events',
+  },
+  {
+    id: 'hero-6',
+    image:
+      'https://images.pexels.com/photos/3735149/pexels-photo-3735149.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'Self-Care',
+    title: 'Wellness & Home Care',
+    subtitle: 'Premium wellness products for a healthier lifestyle',
   },
 ];
 
@@ -4057,6 +4081,89 @@ const HomePage = () => {
   const isAuthenticated = getAuthState();
   const [activeSlide, setActiveSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const touchStartX = useRef(null);
+
+  const [activeFeatureSlide, setActiveFeatureSlide] = useState(0);
+  const [isFeaturePaused, setIsFeaturePaused] = useState(false);
+  const featureTouchStartX = useRef(null);
+
+  const featureSlides = [
+    {
+      id: 'feat-1',
+      image: 'https://images.pexels.com/photos/437037/pexels-photo-437037.jpeg?auto=compress&cs=tinysrgb&w=1600',
+      title: 'Smart Electronics & Gadgets',
+      subtitle: 'Discover the latest smartphones, wearables, and smart home devices — powered by innovation and delivered with trust.',
+    },
+    {
+      id: 'feat-2',
+      image: 'https://images.pexels.com/photos/1656663/pexels-photo-1656663.jpeg?auto=compress&cs=tinysrgb&w=1600',
+      title: 'Fresh Groceries & Produce',
+      subtitle: 'Farm-fresh fruits, vegetables, dairy, and pantry staples delivered straight to your doorstep.',
+    },
+    {
+      id: 'feat-3',
+      image: 'https://images.pexels.com/photos/934070/pexels-photo-934070.jpeg?auto=compress&cs=tinysrgb&w=1600',
+      title: 'Fashion & Style',
+      subtitle: 'Browse the trendiest clothing, footwear, and accessories for every occasion.',
+    },
+    {
+      id: 'feat-4',
+      image: 'https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?auto=compress&cs=tinysrgb&w=1600',
+      title: 'Fast Food & Takeaway',
+      subtitle: 'Order your favourite meals from top restaurants and street vendors — hot and fast.',
+    },
+    {
+      id: 'feat-5',
+      image: 'https://images.pexels.com/photos/3735149/pexels-photo-3735149.jpeg?auto=compress&cs=tinysrgb&w=1600',
+      title: 'Wellness & Home Care',
+      subtitle: 'Premium health, beauty, and household essentials for everyday living.',
+    },
+    {
+      id: 'feat-6',
+      image: 'https://images.pexels.com/photos/2747449/pexels-photo-2747449.jpeg?auto=compress&cs=tinysrgb&w=1600',
+      title: 'Tickets & Entertainment',
+      subtitle: 'Book tickets for concerts, sports events, and live entertainment in seconds.',
+    },
+  ];
+
+  useEffect(() => {
+    if (isFeaturePaused) return undefined;
+    const timer = window.setInterval(() => {
+      setActiveFeatureSlide((prev) => (prev + 1) % featureSlides.length);
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [isFeaturePaused, featureSlides.length]);
+
+  const goToFeatureSlide = (index) => {
+    const normalized = (index + featureSlides.length) % featureSlides.length;
+    setActiveFeatureSlide(normalized);
+  };
+
+  const handleFeatureTouchStart = (e) => {
+    featureTouchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleFeatureTouchEnd = (e) => {
+    if (featureTouchStartX.current === null) return;
+    const diff = featureTouchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      goToFeatureSlide(activeFeatureSlide + (diff > 0 ? 1 : -1));
+    }
+    featureTouchStartX.current = null;
+  };
+
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e) => {
+    if (touchStartX.current === null) return;
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      goToSlide(activeSlide + (diff > 0 ? 1 : -1));
+    }
+    touchStartX.current = null;
+  };
 
   useEffect(() => {
     if (isPaused) {
@@ -4065,7 +4172,7 @@ const HomePage = () => {
 
     const timer = window.setInterval(() => {
       setActiveSlide((prev) => (prev + 1) % homeHeroSlides.length);
-    }, 7000);
+    }, 5000);
 
     return () => window.clearInterval(timer);
   }, [isPaused]);
@@ -4083,13 +4190,15 @@ const HomePage = () => {
         className="relative overflow-hidden bg-[#000000] px-4 py-16 text-white sm:py-24"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
         <div className="absolute inset-0 bg-gradient-to-br from-black via-[#141424] to-[#0a2030]" aria-hidden="true" />
         <div className="mx-auto w-full max-w-7xl">
           <div className="relative overflow-hidden rounded-3xl border border-white/10">
             <img
               src={slide.image}
-              alt="Shopping cart overflowing with delivery boxes"
+              alt={slide.title}
               className="h-[420px] w-full object-cover md:h-[520px]"
               loading="eager"
             />
@@ -4154,22 +4263,54 @@ const HomePage = () => {
         </div>
       </section>
 
-      <section className="bg-white px-4 py-12">
+      <section
+        className="bg-white px-4 py-12"
+        onMouseEnter={() => setIsFeaturePaused(true)}
+        onMouseLeave={() => setIsFeaturePaused(false)}
+        onTouchStart={handleFeatureTouchStart}
+        onTouchEnd={handleFeatureTouchEnd}
+      >
         <div className="mx-auto grid w-full max-w-7xl gap-8 lg:grid-cols-2 lg:items-center">
-          <div className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-[#f3f6fb] shadow-[0_4px_12px_rgba(0,0,0,0.1)]">
+          <div className="relative overflow-hidden rounded-2xl border border-[#e5e7eb] bg-[#f3f6fb] shadow-[0_4px_12px_rgba(0,0,0,0.1)]">
             <img
-              src="https://images.pexels.com/photos/437037/pexels-photo-437037.jpeg?auto=compress&cs=tinysrgb&w=1600"
-              alt="Premium black smartwatch product preview"
-              className="h-[380px] w-full object-cover"
+              src={featureSlides[activeFeatureSlide].image}
+              alt={featureSlides[activeFeatureSlide].title}
+              className="h-[380px] w-full object-cover transition-opacity duration-500"
               loading="lazy"
             />
+            <button
+              type="button"
+              onClick={() => goToFeatureSlide(activeFeatureSlide - 1)}
+              className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/35 p-2 text-white transition hover:bg-black/60"
+              aria-label="Previous slide"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => goToFeatureSlide(activeFeatureSlide + 1)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/35 p-2 text-white transition hover:bg-black/60"
+              aria-label="Next slide"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+            <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-2">
+              {featureSlides.map((fs, index) => (
+                <button
+                  key={fs.id}
+                  type="button"
+                  onClick={() => goToFeatureSlide(index)}
+                  className={`h-2.5 w-2.5 rounded-full transition ${index === activeFeatureSlide ? 'bg-[var(--svs-primary)]' : 'bg-white/60'}`}
+                  aria-label={`Go to slide ${index + 1}`}
+                />
+              ))}
+            </div>
           </div>
 
           <div>
-            <h2 className="text-3xl font-bold text-[#111827] sm:text-4xl">Smart Electronics and Gadgets</h2>
+            <h2 className="text-3xl font-bold text-[#111827] sm:text-4xl">{featureSlides[activeFeatureSlide].title}</h2>
             <p className="mt-4 text-lg leading-8 text-[#555555]">
-              Discover the latest smartphones, wearables, and smart home devices - powered by innovation and delivered
-              with trust.
+              {featureSlides[activeFeatureSlide].subtitle}
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link
