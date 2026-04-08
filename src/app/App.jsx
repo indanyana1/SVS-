@@ -4248,13 +4248,13 @@ const HomePage = () => {
         </div>
       </section>
 
-      <section className="h-10 bg-gradient-to-b from-[#f4f7fa] to-[#f8f9fa]" />
+      <section className="h-10 bg-gradient-to-b from-[var(--svs-bg)] to-[var(--svs-surface-soft)]" />
 
-      <section className="bg-[#f8f9fa] px-4 py-12">
+      <section className="bg-[var(--svs-surface-soft)] px-4 py-12">
         <div className="mx-auto w-full max-w-4xl text-center">
-          <h2 className="text-3xl font-bold text-[#111827] sm:text-4xl">What SVS E-COMMERCE Offers</h2>
-          <div className="mt-5 rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
-            <p className="mt-4 text-base leading-7 text-[#555555] sm:text-lg">
+          <h2 className="text-3xl font-bold text-[var(--svs-text)] sm:text-4xl">What SVS E-COMMERCE Offers</h2>
+          <div className="mt-5 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
+            <p className="mt-4 text-base leading-7 text-[var(--svs-muted)] sm:text-lg">
               Shop, order, and book service provider you need - all in one intelligent platform. From daily essentials,
               food, and medicines to groceries, liquor, and tickets - enjoy a smooth, AI-powered experience with
               real-time tracking, personalized recommendations, and secure payments designed for your convenience.
