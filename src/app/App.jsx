@@ -535,6 +535,7 @@ const homeHeroSlides = [
     label: 'Trending Fashion',
     title: 'Fashion Forward Collection',
     subtitle: 'Trending styles for the modern you',
+    route: '/fashion-style',
   },
   {
     id: 'hero-2',
@@ -543,6 +544,7 @@ const homeHeroSlides = [
     label: 'Smart Tech Deals',
     title: 'Electronics & Gadgets',
     subtitle: 'Latest devices at unbeatable prices',
+    route: '/hardware-software',
   },
   {
     id: 'hero-3',
@@ -551,6 +553,7 @@ const homeHeroSlides = [
     label: 'Fresh & Fast',
     title: 'Groceries & Fresh Produce',
     subtitle: 'Farm-fresh essentials delivered to your door',
+    route: '/groceries',
   },
   {
     id: 'hero-4',
@@ -559,6 +562,7 @@ const homeHeroSlides = [
     label: 'Order Now',
     title: 'Fast Food & Takeaway',
     subtitle: 'Your favourite meals ready in minutes',
+    route: '/fast-food',
   },
   {
     id: 'hero-5',
@@ -567,6 +571,7 @@ const homeHeroSlides = [
     label: 'Live Events',
     title: 'Tickets & Entertainment',
     subtitle: 'Book concerts, sports, and showbiz events',
+    route: '/tickets',
   },
   {
     id: 'hero-6',
@@ -575,6 +580,46 @@ const homeHeroSlides = [
     label: 'Self-Care',
     title: 'Wellness & Home Care',
     subtitle: 'Premium wellness products for a healthier lifestyle',
+    route: '/wellness',
+  },
+];
+
+const featureSlides = [
+  {
+    id: 'feat-1',
+    image: 'https://images.pexels.com/photos/437037/pexels-photo-437037.jpeg?auto=compress&cs=tinysrgb&w=1600',
+    title: 'Smart Electronics & Gadgets',
+    subtitle: 'Discover the latest smartphones, wearables, and smart home devices \u2014 powered by innovation and delivered with trust.',
+  },
+  {
+    id: 'feat-2',
+    image: 'https://images.pexels.com/photos/1656663/pexels-photo-1656663.jpeg?auto=compress&cs=tinysrgb&w=1600',
+    title: 'Fresh Groceries & Produce',
+    subtitle: 'Farm-fresh fruits, vegetables, dairy, and pantry staples delivered straight to your doorstep.',
+  },
+  {
+    id: 'feat-3',
+    image: 'https://images.pexels.com/photos/934070/pexels-photo-934070.jpeg?auto=compress&cs=tinysrgb&w=1600',
+    title: 'Fashion & Style',
+    subtitle: 'Browse the trendiest clothing, footwear, and accessories for every occasion.',
+  },
+  {
+    id: 'feat-4',
+    image: 'https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?auto=compress&cs=tinysrgb&w=1600',
+    title: 'Fast Food & Takeaway',
+    subtitle: 'Order your favourite meals from top restaurants and street vendors \u2014 hot and fast.',
+  },
+  {
+    id: 'feat-5',
+    image: 'https://images.pexels.com/photos/3735149/pexels-photo-3735149.jpeg?auto=compress&cs=tinysrgb&w=1600',
+    title: 'Wellness & Home Care',
+    subtitle: 'Premium health, beauty, and household essentials for everyday living.',
+  },
+  {
+    id: 'feat-6',
+    image: 'https://images.pexels.com/photos/2747449/pexels-photo-2747449.jpeg?auto=compress&cs=tinysrgb&w=1600',
+    title: 'Tickets & Entertainment',
+    subtitle: 'Book tickets for concerts, sports events, and live entertainment in seconds.',
   },
 ];
 
@@ -4078,61 +4123,20 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
 
 const HomePage = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const isAuthenticated = getAuthState();
   const [activeSlide, setActiveSlide] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
   const touchStartX = useRef(null);
 
   const [activeFeatureSlide, setActiveFeatureSlide] = useState(0);
-  const [isFeaturePaused, setIsFeaturePaused] = useState(false);
   const featureTouchStartX = useRef(null);
 
-  const featureSlides = [
-    {
-      id: 'feat-1',
-      image: 'https://images.pexels.com/photos/437037/pexels-photo-437037.jpeg?auto=compress&cs=tinysrgb&w=1600',
-      title: 'Smart Electronics & Gadgets',
-      subtitle: 'Discover the latest smartphones, wearables, and smart home devices — powered by innovation and delivered with trust.',
-    },
-    {
-      id: 'feat-2',
-      image: 'https://images.pexels.com/photos/1656663/pexels-photo-1656663.jpeg?auto=compress&cs=tinysrgb&w=1600',
-      title: 'Fresh Groceries & Produce',
-      subtitle: 'Farm-fresh fruits, vegetables, dairy, and pantry staples delivered straight to your doorstep.',
-    },
-    {
-      id: 'feat-3',
-      image: 'https://images.pexels.com/photos/934070/pexels-photo-934070.jpeg?auto=compress&cs=tinysrgb&w=1600',
-      title: 'Fashion & Style',
-      subtitle: 'Browse the trendiest clothing, footwear, and accessories for every occasion.',
-    },
-    {
-      id: 'feat-4',
-      image: 'https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?auto=compress&cs=tinysrgb&w=1600',
-      title: 'Fast Food & Takeaway',
-      subtitle: 'Order your favourite meals from top restaurants and street vendors — hot and fast.',
-    },
-    {
-      id: 'feat-5',
-      image: 'https://images.pexels.com/photos/3735149/pexels-photo-3735149.jpeg?auto=compress&cs=tinysrgb&w=1600',
-      title: 'Wellness & Home Care',
-      subtitle: 'Premium health, beauty, and household essentials for everyday living.',
-    },
-    {
-      id: 'feat-6',
-      image: 'https://images.pexels.com/photos/2747449/pexels-photo-2747449.jpeg?auto=compress&cs=tinysrgb&w=1600',
-      title: 'Tickets & Entertainment',
-      subtitle: 'Book tickets for concerts, sports events, and live entertainment in seconds.',
-    },
-  ];
-
   useEffect(() => {
-    if (isFeaturePaused) return undefined;
     const timer = window.setInterval(() => {
       setActiveFeatureSlide((prev) => (prev + 1) % featureSlides.length);
     }, 5000);
     return () => window.clearInterval(timer);
-  }, [isFeaturePaused, featureSlides.length]);
+  }, []);
 
   const goToFeatureSlide = (index) => {
     const normalized = (index + featureSlides.length) % featureSlides.length;
@@ -4166,16 +4170,11 @@ const HomePage = () => {
   };
 
   useEffect(() => {
-    if (isPaused) {
-      return undefined;
-    }
-
     const timer = window.setInterval(() => {
       setActiveSlide((prev) => (prev + 1) % homeHeroSlides.length);
     }, 5000);
-
     return () => window.clearInterval(timer);
-  }, [isPaused]);
+  }, []);
 
   const goToSlide = (index) => {
     const normalized = (index + homeHeroSlides.length) % homeHeroSlides.length;
@@ -4188,8 +4187,6 @@ const HomePage = () => {
     <>
       <section
         className="relative overflow-hidden bg-[#000000] px-4 py-16 text-white sm:py-24"
-        onMouseEnter={() => setIsPaused(true)}
-        onMouseLeave={() => setIsPaused(false)}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
@@ -4210,6 +4207,7 @@ const HomePage = () => {
               <p className="mt-3 text-lg text-slate-100 sm:text-2xl">{slide.subtitle}</p>
               <button
                 type="button"
+                onClick={() => navigate(slide.route)}
                 className={`${cudyBluePrimaryButtonClassName} mt-6 rounded-full bg-[var(--svs-primary)] px-8 py-3 text-base font-semibold text-white shadow-lg transition hover:scale-105 hover:bg-[#33b9f2]`}
               >
                 {t('common.learnMore')}
@@ -4265,8 +4263,6 @@ const HomePage = () => {
 
       <section
         className="bg-white px-4 py-12"
-        onMouseEnter={() => setIsFeaturePaused(true)}
-        onMouseLeave={() => setIsFeaturePaused(false)}
         onTouchStart={handleFeatureTouchStart}
         onTouchEnd={handleFeatureTouchEnd}
       >
