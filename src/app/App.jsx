@@ -6493,6 +6493,7 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
 };
 
 const HomeCarePage = () => {
+  const providersSectionRef = useRef(null);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState(['All']);
   const [selectedServiceTypes, setSelectedServiceTypes] = useState(['All']);
@@ -6511,6 +6512,21 @@ const HomeCarePage = () => {
   };
 
   const visibleCities = selectedCountry ? (citiesByCountry[selectedCountry] || []) : [];
+
+  const handleViewAllProviders = () => {
+    setSelectedCategories(['All']);
+    setSelectedServiceTypes(['All']);
+    setSelectedProfessionalPreference('Any');
+    setSelectedExperienceLevels([]);
+    setSelectedAvailability('Any');
+    setSelectedCountry('');
+    setSelectedCity('');
+    setIsFilterDrawerOpen(false);
+
+    requestAnimationFrame(() => {
+      providersSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
 
   const matchesExperienceLevel = (years = 0, level = '') => {
     if (level === '0-1 Year') {
@@ -6772,7 +6788,7 @@ const HomeCarePage = () => {
             {FilterPanel}
           </aside>
 
-          <main>
+          <main ref={providersSectionRef}>
             <div className="grid justify-items-center gap-6 md:grid-cols-2 xl:grid-cols-3">
               {filteredProviders.map((provider) => renderServiceCard(provider))}
             </div>
@@ -6785,7 +6801,13 @@ const HomeCarePage = () => {
                 ))}
               </div>
               <div className="mt-8 flex justify-center">
-                <button type="button" className="h-[52px] rounded-lg bg-[#0f9fb2] px-12 text-base font-medium text-white transition hover:bg-[#0d8a9c]">View All</button>
+                <button
+                  type="button"
+                  onClick={handleViewAllProviders}
+                  className="h-[52px] rounded-lg bg-[#0f9fb2] px-12 text-base font-medium text-white transition hover:bg-[#0d8a9c]"
+                >
+                  View All
+                </button>
               </div>
             </section>
           </main>
