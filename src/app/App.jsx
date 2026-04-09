@@ -6525,7 +6525,7 @@ const HomeCarePage = () => {
                   type="checkbox"
                   checked={selectedCategories.includes(option)}
                   onChange={() => toggleMultiSelect(option, selectedCategories, setSelectedCategories)}
-                  className="h-4 w-4 rounded border-[#D1D5DB] text-[#0052CC] focus:ring-[#0052CC]"
+                  className="h-4 w-4 rounded border-[#D1D5DB] text-[#0f9fb2] focus:ring-[#0f9fb2]"
                 />
                 <span>{option}</span>
               </label>
@@ -6542,7 +6542,7 @@ const HomeCarePage = () => {
                   type="checkbox"
                   checked={selectedServiceTypes.includes(option)}
                   onChange={() => toggleMultiSelect(option, selectedServiceTypes, setSelectedServiceTypes)}
-                  className="h-4 w-4 rounded border-[#D1D5DB] text-[#0052CC] focus:ring-[#0052CC]"
+                  className="h-4 w-4 rounded border-[#D1D5DB] text-[#0f9fb2] focus:ring-[#0f9fb2]"
                 />
                 <span>{option}</span>
               </label>
@@ -6560,7 +6560,7 @@ const HomeCarePage = () => {
                   name="professional-preference"
                   checked={selectedProfessionalPreference === option}
                   onChange={() => setSelectedProfessionalPreference(option)}
-                  className="h-4 w-4 border-[#D1D5DB] text-[#0052CC] focus:ring-[#0052CC]"
+                  className="h-4 w-4 border-[#D1D5DB] text-[#0f9fb2] focus:ring-[#0f9fb2]"
                 />
                 <span>{option}</span>
               </label>
@@ -6583,7 +6583,7 @@ const HomeCarePage = () => {
                         : [...current, option]
                     ));
                   }}
-                  className="h-4 w-4 rounded border-[#D1D5DB] text-[#0052CC] focus:ring-[#0052CC]"
+                  className="h-4 w-4 rounded border-[#D1D5DB] text-[#0f9fb2] focus:ring-[#0f9fb2]"
                 />
                 <span>{option}</span>
               </label>
@@ -6601,7 +6601,7 @@ const HomeCarePage = () => {
                   setSelectedCountry(event.target.value);
                   setSelectedCity('');
                 }}
-                className="h-11 w-full appearance-none rounded-lg border border-[#E5E7EB] bg-white px-3 pr-10 text-sm text-[#1A1A1A] outline-none focus:border-[#0052CC]"
+                className="h-11 w-full appearance-none rounded-lg border border-[#E5E7EB] bg-white px-3 pr-10 text-sm text-[#1A1A1A] outline-none focus:border-[#0f9fb2]"
               >
                 <option value="">Select Country</option>
                 {countries.map((country) => (
@@ -6614,7 +6614,7 @@ const HomeCarePage = () => {
               <select
                 value={selectedCity}
                 onChange={(event) => setSelectedCity(event.target.value)}
-                className="h-11 w-full appearance-none rounded-lg border border-[#E5E7EB] bg-white px-3 pr-10 text-sm text-[#1A1A1A] outline-none focus:border-[#0052CC]"
+                className="h-11 w-full appearance-none rounded-lg border border-[#E5E7EB] bg-white px-3 pr-10 text-sm text-[#1A1A1A] outline-none focus:border-[#0f9fb2]"
               >
                 <option value="">Select City</option>
                 {visibleCities.map((city) => (
@@ -6636,7 +6636,7 @@ const HomeCarePage = () => {
                   name="availability"
                   checked={selectedAvailability === option}
                   onChange={() => setSelectedAvailability(option)}
-                  className="h-4 w-4 border-[#D1D5DB] text-[#0052CC] focus:ring-[#0052CC]"
+                  className="h-4 w-4 border-[#D1D5DB] text-[#0f9fb2] focus:ring-[#0f9fb2]"
                 />
                 <span>{option}</span>
               </label>
@@ -6649,7 +6649,7 @@ const HomeCarePage = () => {
         <button
           type="button"
           onClick={() => setIsFilterDrawerOpen(false)}
-          className="h-[52px] w-full rounded-lg bg-[#0052CC] text-base font-medium text-white transition hover:bg-[#003f9c]"
+          className="h-[52px] w-full rounded-lg bg-[#0f9fb2] text-base font-medium text-white transition hover:bg-[#0d8a9c]"
         >
           Apply Filters
         </button>
@@ -6672,35 +6672,35 @@ const HomeCarePage = () => {
         <p className="flex items-center gap-2 text-sm text-[#6B7280]"><User className="h-4 w-4" /> {provider.experience}</p>
         <p className="flex items-center gap-2 text-sm text-[#6B7280]"><CalendarDays className="h-4 w-4" /> {provider.availability}</p>
         <p className="flex items-center gap-2 text-sm text-[#374151]"><Star className="h-4 w-4 fill-[#FBBF24] text-[#FBBF24]" /> 4.8 (145 reviews)</p>
-        <button type="button" className="mt-1 h-12 w-full rounded-lg bg-[#0052CC] text-sm font-medium text-white transition hover:bg-[#003f9c]">{provider.buttonLabel}</button>
+        <button type="button" className="mt-1 h-12 w-full rounded-lg bg-[#0f9fb2] text-sm font-medium text-white transition hover:bg-[#0d8a9c]">{provider.buttonLabel}</button>
       </div>
     </article>
   );
 
   return (
-    <section className="bg-white px-4 py-8 font-['Inter',sans-serif] text-[#1A1A1A] sm:px-6 lg:py-10">
+    <section className="bg-[var(--svs-bg)] px-4 py-8 font-['Inter',sans-serif] text-[#1A1A1A] sm:px-6 lg:py-10">
       <div className="mx-auto w-full max-w-[1280px]">
-        <section className="relative h-[420px] overflow-hidden rounded-2xl">
+        <section className="relative h-[220px] overflow-hidden rounded-2xl sm:h-[260px]">
           <img
-            src="https://images.pexels.com/photos/3768131/pexels-photo-3768131.jpeg?auto=compress&cs=tinysrgb&w=1920"
+            src="https://images.pexels.com/photos/3846022/pexels-photo-3846022.jpeg?auto=compress&cs=tinysrgb&w=1920"
             alt="Book Home Care Services"
             className="h-full w-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/65" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/55 to-black/70" />
           <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
-            <h1 className="text-[34px] font-bold leading-[1.1] text-white md:text-[48px]">Book @ Home-Care Services</h1>
-            <p className="mt-4 max-w-[680px] text-base text-white md:text-[20px]">
+            <h1 className="text-xl font-bold text-white sm:text-2xl">Book @ Home-Care Services</h1>
+            <p className="mt-2 max-w-[680px] text-xs text-white/90 sm:text-sm">
               Stay connected to trusted home services with a curated selection of skilled professionals available to serve you anytime, anywhere.
             </p>
           </div>
         </section>
 
         <div className="mt-8 flex items-center justify-between lg:hidden">
-          <h2 className="text-xl font-semibold text-[#1A1A1A]">Filters</h2>
+          <h2 className="text-xl font-semibold text-[var(--svs-text)]">Filters</h2>
           <button
             type="button"
             onClick={() => setIsFilterDrawerOpen(true)}
-            className="inline-flex items-center gap-2 rounded-lg border border-[#E5E7EB] bg-[#E6F0FF] px-4 py-2 text-sm font-medium text-[#0052CC]"
+            className="inline-flex items-center gap-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-4 py-2 text-sm font-medium text-[#0f9fb2]"
           >
             <Menu className="h-4 w-4" />
             Filter Services
@@ -6718,14 +6718,14 @@ const HomeCarePage = () => {
             </div>
 
             <section className="mt-14">
-              <h2 className="text-[24px] font-bold text-[#1A1A1A]">Trending Services &amp; Trusted Professionals</h2>
+              <h2 className="text-[24px] font-bold text-[var(--svs-text)]">Trending Services &amp; Trusted Professionals</h2>
               <div className="mt-6 flex gap-6 overflow-x-auto pb-2">
                 {trendingProviders.map((provider) => (
                   <div key={`trending-${provider.id}`} className="w-[340px] shrink-0">{renderServiceCard(provider)}</div>
                 ))}
               </div>
               <div className="mt-8 flex justify-center">
-                <button type="button" className="h-[52px] rounded-lg bg-[#0052CC] px-12 text-base font-medium text-white transition hover:bg-[#003f9c]">View All</button>
+                <button type="button" className="h-[52px] rounded-lg bg-[#0f9fb2] px-12 text-base font-medium text-white transition hover:bg-[#0d8a9c]">View All</button>
               </div>
             </section>
           </main>
@@ -8269,7 +8269,7 @@ const MarketsPage = () => {
         {orderedMarketLinks.map((market, index) => {
           const isFastFood = market.href === '/fast-food';
           const isFashion = market.href === '/fashion-style';
-          const isBookings = market.href === '/tickets';
+          const isBookings = market.href === '/tickets' || market.href === '/home-care';
           const isBeverages = market.href === '/beverages-liquors';
           const isGroceries = market.href === '/groceries';
           const isMobility = market.href === '/mobility-vehicles';
@@ -8285,6 +8285,25 @@ const MarketsPage = () => {
           const isProperty = market.href === '/property-hub';
           const isHerbs = market.href === '/traditional-medicines-herbs';
           const isSecondhand = market.href === '/secondhand-central';
+          const useBookingsPreset = isBookings;
+          const overlayClassName = useBookingsPreset
+            ? 'absolute inset-0 bg-gradient-to-t from-[#041a26]/90 via-[#0f6f84]/55 to-[#14b8a6]/30'
+            : 'absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20';
+          const marketLabelClassName = useBookingsPreset
+            ? 'text-xs font-semibold uppercase tracking-wide text-[#8eeaff] drop-shadow'
+            : 'text-xs font-semibold uppercase tracking-wide text-[var(--svs-primary-strong)] drop-shadow';
+          const marketTitleClassName = useBookingsPreset
+            ? 'mt-1 text-lg font-bold text-white drop-shadow'
+            : 'mt-1 text-lg font-bold text-[var(--svs-text)] drop-shadow';
+          const badgeClassName = useBookingsPreset
+            ? 'svs-berkshire-swash rounded-full border border-white/35 bg-white/15 px-2 py-1 text-sm text-white'
+            : 'svs-berkshire-swash rounded-full bg-[var(--svs-cyan-surface)] px-2 py-1 text-sm text-[var(--svs-primary-strong)]';
+          const openMarketClassName = useBookingsPreset
+            ? 'mt-3 text-sm text-white/90 drop-shadow'
+            : 'mt-3 text-sm text-[var(--svs-muted)] drop-shadow';
+          const ctaClassName = useBookingsPreset
+            ? `${cudyBluePrimaryButtonClassName} mt-4 inline-flex items-center gap-2 rounded-md bg-[#0f9fb2] px-3 py-2 text-sm font-semibold text-white transition group-hover:bg-[#0d8a9c]`
+            : `${cudyBluePrimaryButtonClassName} mt-4 inline-flex items-center gap-2 rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition group-hover:bg-[#33b9f2]`;
           const hasHeroImage = isFastFood || isFashion || isBookings || isBeverages || isGroceries || isMobility || isEcommerce || isElectronics || isBetting || isConstruction || isLivestock || isHomeCare || isNaturalResources || isWellness || isStationery || isProperty || isHerbs || isSecondhand;
           const heroImageUrl = isFastFood
             ? 'https://images.pexels.com/photos/2983101/pexels-photo-2983101.jpeg?auto=compress&cs=tinysrgb&w=1200'
@@ -8334,17 +8353,17 @@ const MarketsPage = () => {
                 style={{ backgroundImage: `url('${heroImageUrl}')` }}
                 aria-hidden="true"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" aria-hidden="true" />
+              <div className={overlayClassName} aria-hidden="true" />
               <div className="relative z-10 p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-primary-strong)] drop-shadow">{t('marketsPage.marketLabel', { number: String(index + 1).padStart(2, '0') })}</p>
-                    <p className="mt-1 text-lg font-bold text-[var(--svs-text)] drop-shadow">{t(market.labelKey)}</p>
+                    <p className={marketLabelClassName}>{t('marketsPage.marketLabel', { number: String(index + 1).padStart(2, '0') })}</p>
+                    <p className={marketTitleClassName}>{t(market.labelKey)}</p>
                   </div>
-                  <span className="svs-berkshire-swash rounded-full bg-[var(--svs-cyan-surface)] px-2 py-1 text-sm text-[var(--svs-primary-strong)]">SVS</span>
+                  <span className={badgeClassName}>SVS</span>
                 </div>
-                <p className="mt-3 text-sm text-[var(--svs-muted)] drop-shadow">{t('marketsPage.openMarket')}</p>
-                <div className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex items-center gap-2 rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition group-hover:bg-[#33b9f2]`}>
+                <p className={openMarketClassName}>{t('marketsPage.openMarket')}</p>
+                <div className={ctaClassName}>
                   {t('marketsPage.enterMarket')} <span aria-hidden="true">-&gt;</span>
                 </div>
               </div>
