@@ -1269,80 +1269,104 @@ const homeCareProviders = [
   {
     id: 'hc1',
     name: 'Michael Chen',
+    professionalPreference: 'Male',
     category: 'Nursing Care',
     location: 'Cape Town, South Africa',
+    serviceType: 'Weekly',
+    availabilityWindow: 'Full Day',
     experience: '5 Years Experience',
-    availability: 'Weekly',
+    experienceYears: 5,
     image: 'https://images.pexels.com/photos/3760263/pexels-photo-3760263.jpeg?auto=compress&cs=tinysrgb&w=1200',
     buttonLabel: 'View Details',
   },
   {
     id: 'hc2',
     name: 'Sophia Moyo',
+    professionalPreference: 'Female',
     category: 'Elderly Care',
     location: 'Durban, South Africa',
+    serviceType: 'Daily',
+    availabilityWindow: 'Morning',
     experience: '4 Years Experience',
-    availability: 'Daily',
+    experienceYears: 4,
     image: 'https://images.pexels.com/photos/5327580/pexels-photo-5327580.jpeg?auto=compress&cs=tinysrgb&w=1200',
     buttonLabel: 'View Profile',
   },
   {
     id: 'hc3',
     name: 'Liam Nkosi',
+    professionalPreference: 'Male',
     category: 'Physiotherapist',
     location: 'Johannesburg, South Africa',
+    serviceType: 'Monthly',
+    availabilityWindow: 'Afternoon',
     experience: '6 Years Experience',
-    availability: 'Monthly',
+    experienceYears: 6,
     image: 'https://images.pexels.com/photos/7176300/pexels-photo-7176300.jpeg?auto=compress&cs=tinysrgb&w=1200',
     buttonLabel: 'View Profile',
   },
   {
     id: 'hc4',
     name: 'Emma Dlamini',
+    professionalPreference: 'Female',
     category: 'Baby Care',
     location: 'Pretoria, South Africa',
+    serviceType: 'Hourly',
+    availabilityWindow: 'Morning',
     experience: '3 Years Experience',
-    availability: 'Hourly',
+    experienceYears: 3,
     image: 'https://images.pexels.com/photos/7551687/pexels-photo-7551687.jpeg?auto=compress&cs=tinysrgb&w=1200',
     buttonLabel: 'View Profile',
   },
   {
     id: 'hc5',
     name: 'Noah Peterson',
+    professionalPreference: 'Male',
     category: 'Electrician',
     location: 'Pietermaritzburg, South Africa',
+    serviceType: 'Daily',
+    availabilityWindow: 'Full Day',
     experience: '8 Years Experience',
-    availability: 'Full Day',
+    experienceYears: 8,
     image: 'https://images.pexels.com/photos/8486972/pexels-photo-8486972.jpeg?auto=compress&cs=tinysrgb&w=1200',
     buttonLabel: 'View Profile',
   },
   {
     id: 'hc6',
     name: 'Aisha Khan',
+    professionalPreference: 'Female',
     category: 'Cleaning Services',
     location: 'Nairobi, Kenya',
+    serviceType: 'Daily',
+    availabilityWindow: 'Morning',
     experience: '5 Years Experience',
-    availability: 'Morning',
+    experienceYears: 5,
     image: 'https://images.pexels.com/photos/4108714/pexels-photo-4108714.jpeg?auto=compress&cs=tinysrgb&w=1200',
     buttonLabel: 'View Profile',
   },
   {
     id: 'hc7',
     name: 'Daniel Okoro',
+    professionalPreference: 'Male',
     category: 'Plumber',
     location: 'Kampala, Uganda',
+    serviceType: 'Daily',
+    availabilityWindow: 'Afternoon',
     experience: '7 Years Experience',
-    availability: 'Afternoon',
+    experienceYears: 7,
     image: 'https://images.pexels.com/photos/8092483/pexels-photo-8092483.jpeg?auto=compress&cs=tinysrgb&w=1200',
     buttonLabel: 'View Profile',
   },
   {
     id: 'hc8',
     name: 'Grace Bello',
+    professionalPreference: 'Female',
     category: 'Home Attendant',
     location: 'Lagos, Nigeria',
+    serviceType: 'Daily',
+    availabilityWindow: 'Evening',
     experience: '2 Years Experience',
-    availability: 'Evening',
+    experienceYears: 2,
     image: 'https://images.pexels.com/photos/3769135/pexels-photo-3769135.jpeg?auto=compress&cs=tinysrgb&w=1200',
     buttonLabel: 'View Profile',
   },
@@ -6488,6 +6512,23 @@ const HomeCarePage = () => {
 
   const visibleCities = selectedCountry ? (citiesByCountry[selectedCountry] || []) : [];
 
+  const matchesExperienceLevel = (years = 0, level = '') => {
+    if (level === '0-1 Year') {
+      return years >= 0 && years <= 1;
+    }
+    if (level === '1-3 Years') {
+      return years >= 1 && years <= 3;
+    }
+    if (level === '4-5 Years') {
+      return years >= 4 && years <= 5;
+    }
+    if (level === '5+ Years') {
+      return years >= 5;
+    }
+
+    return false;
+  };
+
   const toggleMultiSelect = (value, selectedValues, setSelectedValues) => {
     if (value === 'All' || value === 'Any') {
       setSelectedValues([value]);
@@ -6503,13 +6544,32 @@ const HomeCarePage = () => {
   const filteredProviders = useMemo(() => {
     return homeCareProviders.filter((provider) => {
       const categoryMatch = selectedCategories.includes('All') || selectedCategories.includes(provider.category);
-      const serviceTypeMatch = selectedServiceTypes.includes('All') || selectedServiceTypes.includes(provider.availability);
-      const availabilityMatch = selectedAvailability === 'Any' || provider.availability === selectedAvailability;
+      const serviceTypeMatch = selectedServiceTypes.includes('All') || selectedServiceTypes.includes(provider.serviceType);
+      const professionalPreferenceMatch = selectedProfessionalPreference === 'Any' || provider.professionalPreference === selectedProfessionalPreference;
+      const providerYears = Number(provider.experienceYears || 0);
+      const experienceMatch = selectedExperienceLevels.length === 0
+        || selectedExperienceLevels.some((level) => matchesExperienceLevel(providerYears, level));
+      const countryMatch = !selectedCountry || provider.location.includes(selectedCountry);
       const cityMatch = !selectedCity || provider.location.includes(selectedCity);
+      const availabilityMatch = selectedAvailability === 'Any' || provider.availabilityWindow === selectedAvailability;
 
-      return categoryMatch && serviceTypeMatch && availabilityMatch && cityMatch;
+      return categoryMatch
+        && serviceTypeMatch
+        && professionalPreferenceMatch
+        && experienceMatch
+        && countryMatch
+        && cityMatch
+        && availabilityMatch;
     });
-  }, [selectedCategories, selectedServiceTypes, selectedAvailability, selectedCity]);
+  }, [
+    selectedAvailability,
+    selectedCategories,
+    selectedCity,
+    selectedCountry,
+    selectedExperienceLevels,
+    selectedProfessionalPreference,
+    selectedServiceTypes,
+  ]);
 
   const trendingProviders = homeCareProviders.slice(0, 4);
 
@@ -6670,7 +6730,7 @@ const HomeCarePage = () => {
         <h3 className="text-[20px] font-bold leading-tight text-[#1A1A1A]">{provider.name}</h3>
         <p className="flex items-center gap-2 text-sm text-[#6B7280]"><MapPin className="h-4 w-4" /> {provider.location}</p>
         <p className="flex items-center gap-2 text-sm text-[#6B7280]"><User className="h-4 w-4" /> {provider.experience}</p>
-        <p className="flex items-center gap-2 text-sm text-[#6B7280]"><CalendarDays className="h-4 w-4" /> {provider.availability}</p>
+        <p className="flex items-center gap-2 text-sm text-[#6B7280]"><CalendarDays className="h-4 w-4" /> {provider.serviceType} • {provider.availabilityWindow}</p>
         <p className="flex items-center gap-2 text-sm text-[#374151]"><Star className="h-4 w-4 fill-[#FBBF24] text-[#FBBF24]" /> 4.8 (145 reviews)</p>
         <button type="button" className="mt-1 h-12 w-full rounded-lg bg-[#0f9fb2] text-sm font-medium text-white transition hover:bg-[#0d8a9c]">{provider.buttonLabel}</button>
       </div>
