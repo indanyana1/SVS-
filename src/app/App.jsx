@@ -1242,10 +1242,110 @@ const traditionalMedicinesItems = [
   },
 ];
 
+const homeCareServiceCategories = [
+  'All',
+  'Elderly Care',
+  'Nursing Care',
+  'Physiotherapist',
+  'Baby Care',
+  'Post-Surgery Care',
+  'Home Attendant',
+  'Electrician',
+  'Plumber',
+  'Carpenter',
+  'AC Repair & Servicing',
+  'Cleaning Services',
+  'Pest Control',
+  'Appliances Repairing',
+  'Home Painter',
+];
+
+const homeCareServiceTypes = ['All', 'Hourly', 'Daily', 'Weekly', 'Monthly'];
+const homeCareProfessionalPreferences = ['Any', 'Male', 'Female'];
+const homeCareExperienceLevels = ['0-1 Year', '1-3 Years', '4-5 Years', '5+ Years'];
+const homeCareAvailabilityOptions = ['Any', 'Morning', 'Afternoon', 'Evening', 'Full Day'];
+
 const homeCareProviders = [
-  { id: 'h1', name: 'QuickFix Plumbing', rating: 4.7, type: 'Plumbing', city: 'Pietermaritzburg' },
-  { id: 'h2', name: 'Bright Spark Electric', rating: 4.6, type: 'Electrical', city: 'Durban' },
-  { id: 'h3', name: 'HomeClean Pro', rating: 4.8, type: 'Cleaning', city: 'Cape Town' },
+  {
+    id: 'hc1',
+    name: 'Michael Chen',
+    category: 'Nursing Care',
+    location: 'Cape Town, South Africa',
+    experience: '5 Years Experience',
+    availability: 'Weekly',
+    image: 'https://images.pexels.com/photos/3760263/pexels-photo-3760263.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    buttonLabel: 'View Details',
+  },
+  {
+    id: 'hc2',
+    name: 'Sophia Moyo',
+    category: 'Elderly Care',
+    location: 'Durban, South Africa',
+    experience: '4 Years Experience',
+    availability: 'Daily',
+    image: 'https://images.pexels.com/photos/5327580/pexels-photo-5327580.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    buttonLabel: 'View Profile',
+  },
+  {
+    id: 'hc3',
+    name: 'Liam Nkosi',
+    category: 'Physiotherapist',
+    location: 'Johannesburg, South Africa',
+    experience: '6 Years Experience',
+    availability: 'Monthly',
+    image: 'https://images.pexels.com/photos/7176300/pexels-photo-7176300.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    buttonLabel: 'View Profile',
+  },
+  {
+    id: 'hc4',
+    name: 'Emma Dlamini',
+    category: 'Baby Care',
+    location: 'Pretoria, South Africa',
+    experience: '3 Years Experience',
+    availability: 'Hourly',
+    image: 'https://images.pexels.com/photos/7551687/pexels-photo-7551687.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    buttonLabel: 'View Profile',
+  },
+  {
+    id: 'hc5',
+    name: 'Noah Peterson',
+    category: 'Electrician',
+    location: 'Pietermaritzburg, South Africa',
+    experience: '8 Years Experience',
+    availability: 'Full Day',
+    image: 'https://images.pexels.com/photos/8486972/pexels-photo-8486972.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    buttonLabel: 'View Profile',
+  },
+  {
+    id: 'hc6',
+    name: 'Aisha Khan',
+    category: 'Cleaning Services',
+    location: 'Nairobi, Kenya',
+    experience: '5 Years Experience',
+    availability: 'Morning',
+    image: 'https://images.pexels.com/photos/4108714/pexels-photo-4108714.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    buttonLabel: 'View Profile',
+  },
+  {
+    id: 'hc7',
+    name: 'Daniel Okoro',
+    category: 'Plumber',
+    location: 'Kampala, Uganda',
+    experience: '7 Years Experience',
+    availability: 'Afternoon',
+    image: 'https://images.pexels.com/photos/8092483/pexels-photo-8092483.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    buttonLabel: 'View Profile',
+  },
+  {
+    id: 'hc8',
+    name: 'Grace Bello',
+    category: 'Home Attendant',
+    location: 'Lagos, Nigeria',
+    experience: '2 Years Experience',
+    availability: 'Evening',
+    image: 'https://images.pexels.com/photos/3769135/pexels-photo-3769135.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    buttonLabel: 'View Profile',
+  },
 ];
 
 const techItems = [
@@ -6369,38 +6469,283 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
 };
 
 const HomeCarePage = () => {
-  const { t } = useTranslation();
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState(['All']);
+  const [selectedServiceTypes, setSelectedServiceTypes] = useState(['All']);
+  const [selectedProfessionalPreference, setSelectedProfessionalPreference] = useState('Any');
+  const [selectedExperienceLevels, setSelectedExperienceLevels] = useState([]);
+  const [selectedAvailability, setSelectedAvailability] = useState('Any');
+  const [selectedCountry, setSelectedCountry] = useState('');
+  const [selectedCity, setSelectedCity] = useState('');
 
-  return (
-  <PageFrame title={t('markets.homeCare')} subtitle={t('pageSubtitles.homeCare')}>
-    <div className="mb-5 grid gap-2 sm:grid-cols-3">
-      <input type="search" placeholder="Search providers" className="rounded-md border border-[#b2ebf2] bg-white px-3 py-2 text-sm" aria-label="Search providers" />
-      <input type="search" placeholder="Location" className="rounded-md border border-[#b2ebf2] bg-white px-3 py-2 text-sm" aria-label="Filter location" />
-      <div className="relative">
-        <select className={`${languageFeatureSelectClassName} pr-10`} aria-label="Filter service type">
-          <option>All Types</option>
-          <option>Plumbing</option>
-          <option>Electrical</option>
-          <option>Cleaning</option>
-        </select>
-        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
+  const countries = ['South Africa', 'Kenya', 'Nigeria', 'Uganda'];
+  const citiesByCountry = {
+    'South Africa': ['Cape Town', 'Durban', 'Johannesburg', 'Pretoria', 'Pietermaritzburg'],
+    Kenya: ['Nairobi', 'Mombasa', 'Kisumu'],
+    Nigeria: ['Lagos', 'Abuja', 'Ibadan'],
+    Uganda: ['Kampala', 'Entebbe'],
+  };
+
+  const visibleCities = selectedCountry ? (citiesByCountry[selectedCountry] || []) : [];
+
+  const toggleMultiSelect = (value, selectedValues, setSelectedValues) => {
+    if (value === 'All' || value === 'Any') {
+      setSelectedValues([value]);
+      return;
+    }
+
+    const withoutAll = selectedValues.filter((item) => item !== 'All' && item !== 'Any');
+    const exists = withoutAll.includes(value);
+    const nextValues = exists ? withoutAll.filter((item) => item !== value) : [...withoutAll, value];
+    setSelectedValues(nextValues.length ? nextValues : ['All']);
+  };
+
+  const filteredProviders = useMemo(() => {
+    return homeCareProviders.filter((provider) => {
+      const categoryMatch = selectedCategories.includes('All') || selectedCategories.includes(provider.category);
+      const serviceTypeMatch = selectedServiceTypes.includes('All') || selectedServiceTypes.includes(provider.availability);
+      const availabilityMatch = selectedAvailability === 'Any' || provider.availability === selectedAvailability;
+      const cityMatch = !selectedCity || provider.location.includes(selectedCity);
+
+      return categoryMatch && serviceTypeMatch && availabilityMatch && cityMatch;
+    });
+  }, [selectedCategories, selectedServiceTypes, selectedAvailability, selectedCity]);
+
+  const trendingProviders = homeCareProviders.slice(0, 4);
+
+  const FilterPanel = (
+    <div className="flex h-full flex-col bg-white font-['Inter',sans-serif]">
+      <div className="space-y-7 px-6 py-8">
+        <div>
+          <h3 className="text-base font-medium text-[#1A1A1A]">Service Category</h3>
+          <div className="mt-4 space-y-2.5">
+            {homeCareServiceCategories.map((option) => (
+              <label key={option} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input
+                  type="checkbox"
+                  checked={selectedCategories.includes(option)}
+                  onChange={() => toggleMultiSelect(option, selectedCategories, setSelectedCategories)}
+                  className="h-4 w-4 rounded border-[#D1D5DB] text-[#0052CC] focus:ring-[#0052CC]"
+                />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-base font-medium text-[#1A1A1A]">Service Type</h3>
+          <div className="mt-4 space-y-2.5">
+            {homeCareServiceTypes.map((option) => (
+              <label key={option} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input
+                  type="checkbox"
+                  checked={selectedServiceTypes.includes(option)}
+                  onChange={() => toggleMultiSelect(option, selectedServiceTypes, setSelectedServiceTypes)}
+                  className="h-4 w-4 rounded border-[#D1D5DB] text-[#0052CC] focus:ring-[#0052CC]"
+                />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-base font-medium text-[#1A1A1A]">Professional Preference</h3>
+          <div className="mt-4 space-y-2.5">
+            {homeCareProfessionalPreferences.map((option) => (
+              <label key={option} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input
+                  type="radio"
+                  name="professional-preference"
+                  checked={selectedProfessionalPreference === option}
+                  onChange={() => setSelectedProfessionalPreference(option)}
+                  className="h-4 w-4 border-[#D1D5DB] text-[#0052CC] focus:ring-[#0052CC]"
+                />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-base font-medium text-[#1A1A1A]">Experience Level</h3>
+          <div className="mt-4 space-y-2.5">
+            {homeCareExperienceLevels.map((option) => (
+              <label key={option} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input
+                  type="checkbox"
+                  checked={selectedExperienceLevels.includes(option)}
+                  onChange={() => {
+                    setSelectedExperienceLevels((current) => (
+                      current.includes(option)
+                        ? current.filter((item) => item !== option)
+                        : [...current, option]
+                    ));
+                  }}
+                  className="h-4 w-4 rounded border-[#D1D5DB] text-[#0052CC] focus:ring-[#0052CC]"
+                />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-base font-medium text-[#1A1A1A]">Location</h3>
+          <div className="mt-4 space-y-3">
+            <div className="relative">
+              <select
+                value={selectedCountry}
+                onChange={(event) => {
+                  setSelectedCountry(event.target.value);
+                  setSelectedCity('');
+                }}
+                className="h-11 w-full appearance-none rounded-lg border border-[#E5E7EB] bg-white px-3 pr-10 text-sm text-[#1A1A1A] outline-none focus:border-[#0052CC]"
+              >
+                <option value="">Select Country</option>
+                {countries.map((country) => (
+                  <option key={country} value={country}>{country}</option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B7280]" />
+            </div>
+            <div className="relative">
+              <select
+                value={selectedCity}
+                onChange={(event) => setSelectedCity(event.target.value)}
+                className="h-11 w-full appearance-none rounded-lg border border-[#E5E7EB] bg-white px-3 pr-10 text-sm text-[#1A1A1A] outline-none focus:border-[#0052CC]"
+              >
+                <option value="">Select City</option>
+                {visibleCities.map((city) => (
+                  <option key={city} value={city}>{city}</option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B7280]" />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-base font-medium text-[#1A1A1A]">Availability</h3>
+          <div className="mt-4 space-y-2.5">
+            {homeCareAvailabilityOptions.map((option) => (
+              <label key={option} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input
+                  type="radio"
+                  name="availability"
+                  checked={selectedAvailability === option}
+                  onChange={() => setSelectedAvailability(option)}
+                  className="h-4 w-4 border-[#D1D5DB] text-[#0052CC] focus:ring-[#0052CC]"
+                />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-auto border-t border-[#E5E7EB] p-6">
+        <button
+          type="button"
+          onClick={() => setIsFilterDrawerOpen(false)}
+          className="h-[52px] w-full rounded-lg bg-[#0052CC] text-base font-medium text-white transition hover:bg-[#003f9c]"
+        >
+          Apply Filters
+        </button>
       </div>
     </div>
+  );
 
-    <div className="grid gap-4 md:grid-cols-3">
-      {homeCareProviders.map((provider) => (
-        <article key={provider.id} className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
-          <h3 className="text-lg font-bold">{provider.name}</h3>
-          <p className="mt-1 text-sm text-slate-600">{provider.type} • {provider.city}</p>
-          <p className="mt-2 flex items-center gap-1 text-sm text-slate-700"><Star className="h-4 w-4 text-amber-500" /> {provider.rating}</p>
-          <div className="mt-3 flex gap-2">
-            <button type="button" className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white`}>{t('common.bookNow')}</button>
-            <button type="button" className="rounded-md border border-[#b2ebf2] px-3 py-2 text-sm font-semibold">{t('common.chatWithProvider')}</button>
+  const renderServiceCard = (provider) => (
+    <article
+      key={provider.id}
+      className="w-full max-w-[340px] overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_4px_12px_rgba(0,0,0,0.08)]"
+    >
+      <div className="relative">
+        <img src={provider.image} alt={provider.name} className="h-[180px] w-full object-cover" loading="lazy" />
+        <span className="absolute right-3 top-3 rounded-md bg-black px-2.5 py-1 text-xs font-medium text-white">{provider.category}</span>
+      </div>
+      <div className="space-y-2.5 p-4">
+        <h3 className="text-[20px] font-bold leading-tight text-[#1A1A1A]">{provider.name}</h3>
+        <p className="flex items-center gap-2 text-sm text-[#6B7280]"><MapPin className="h-4 w-4" /> {provider.location}</p>
+        <p className="flex items-center gap-2 text-sm text-[#6B7280]"><User className="h-4 w-4" /> {provider.experience}</p>
+        <p className="flex items-center gap-2 text-sm text-[#6B7280]"><CalendarDays className="h-4 w-4" /> {provider.availability}</p>
+        <p className="flex items-center gap-2 text-sm text-[#374151]"><Star className="h-4 w-4 fill-[#FBBF24] text-[#FBBF24]" /> 4.8 (145 reviews)</p>
+        <button type="button" className="mt-1 h-12 w-full rounded-lg bg-[#0052CC] text-sm font-medium text-white transition hover:bg-[#003f9c]">{provider.buttonLabel}</button>
+      </div>
+    </article>
+  );
+
+  return (
+    <section className="bg-white px-4 py-8 font-['Inter',sans-serif] text-[#1A1A1A] sm:px-6 lg:py-10">
+      <div className="mx-auto w-full max-w-[1280px]">
+        <section className="relative h-[420px] overflow-hidden rounded-2xl">
+          <img
+            src="https://images.pexels.com/photos/3768131/pexels-photo-3768131.jpeg?auto=compress&cs=tinysrgb&w=1920"
+            alt="Book Home Care Services"
+            className="h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/65" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
+            <h1 className="text-[34px] font-bold leading-[1.1] text-white md:text-[48px]">Book @ Home-Care Services</h1>
+            <p className="mt-4 max-w-[680px] text-base text-white md:text-[20px]">
+              Stay connected to trusted home services with a curated selection of skilled professionals available to serve you anytime, anywhere.
+            </p>
           </div>
-        </article>
-      ))}
-    </div>
-  </PageFrame>
+        </section>
+
+        <div className="mt-8 flex items-center justify-between lg:hidden">
+          <h2 className="text-xl font-semibold text-[#1A1A1A]">Filters</h2>
+          <button
+            type="button"
+            onClick={() => setIsFilterDrawerOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-[#E5E7EB] bg-[#E6F0FF] px-4 py-2 text-sm font-medium text-[#0052CC]"
+          >
+            <Menu className="h-4 w-4" />
+            Filter Services
+          </button>
+        </div>
+
+        <div className="mt-8 grid items-start gap-10 lg:grid-cols-[280px_minmax(0,1fr)]">
+          <aside className="hidden min-h-[calc(100vh-220px)] border-r border-[#E5E7EB] lg:block">
+            {FilterPanel}
+          </aside>
+
+          <main>
+            <div className="grid justify-items-center gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {filteredProviders.map((provider) => renderServiceCard(provider))}
+            </div>
+
+            <section className="mt-14">
+              <h2 className="text-[24px] font-bold text-[#1A1A1A]">Trending Services &amp; Trusted Professionals</h2>
+              <div className="mt-6 flex gap-6 overflow-x-auto pb-2">
+                {trendingProviders.map((provider) => (
+                  <div key={`trending-${provider.id}`} className="w-[340px] shrink-0">{renderServiceCard(provider)}</div>
+                ))}
+              </div>
+              <div className="mt-8 flex justify-center">
+                <button type="button" className="h-[52px] rounded-lg bg-[#0052CC] px-12 text-base font-medium text-white transition hover:bg-[#003f9c]">View All</button>
+              </div>
+            </section>
+          </main>
+        </div>
+      </div>
+
+      {isFilterDrawerOpen ? (
+        <div className="fixed inset-0 z-[90] bg-black/45 lg:hidden" role="dialog" aria-modal="true" aria-label="Filter home care services">
+          <div className="absolute inset-y-0 left-0 w-[min(92vw,320px)] overflow-y-auto bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#E5E7EB] px-4 py-3">
+              <h3 className="text-base font-semibold text-[#1A1A1A]">Filters</h3>
+              <button type="button" onClick={() => setIsFilterDrawerOpen(false)} className="rounded-md p-1 text-[#4B5563] transition hover:bg-[#F3F4F6]" aria-label="Close filters">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {FilterPanel}
+          </div>
+        </div>
+      ) : null}
+    </section>
   );
 };
 
