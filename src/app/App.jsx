@@ -1,4 +1,5 @@
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
+import MovieFilter from '../components/market/MovieFilter';
 import {
   Bell,
   CalendarDays,
@@ -103,6 +104,19 @@ const EMPTY_GROCERIES_LISTING_FIELDS = {
   discount: '',
 };
 
+const EMPTY_TICKETS_LISTING_FIELDS = {
+  ticketCategory: '',
+  ticketDate: '',
+  ticketCountry: '',
+  ticketCity: '',
+  ticketLocation: '',
+  ticketProvider: '',
+  ticketMeta: '',
+  ticketGenre: '',
+  ticketLanguage: '',
+  ticketShowtime: '',
+};
+
 const createSellerListingFormState = () => ({
   title: '',
   description: '',
@@ -110,11 +124,13 @@ const createSellerListingFormState = () => ({
   quantity: '',
   marketKey: '',
   ...EMPTY_GROCERIES_LISTING_FIELDS,
+  ...EMPTY_TICKETS_LISTING_FIELDS,
 });
 
 const clearGroceriesListingFields = (formState) => ({
   ...formState,
   ...EMPTY_GROCERIES_LISTING_FIELDS,
+  ...EMPTY_TICKETS_LISTING_FIELDS,
 });
 
 const TRENDING_MARKET_HREFS = [
@@ -218,13 +234,6 @@ const ticketEvents = [
 
 const bookingsPrototypeCategoryTabs = ['All', 'Movies', 'Concerts', 'Sports', 'Travel'];
 
-const bookingsPrototypeDateOptions = [
-  { value: 'all', label: 'Select Date' },
-  { value: '2025-11-25', label: 'Nov 25, 2025' },
-  { value: '2025-11-28', label: 'Nov 28, 2025' },
-  { value: '2025-12-02', label: 'Dec 2, 2025' },
-];
-
 const bookingsPrototypeCountryOptions = [
   { value: 'all', label: 'Select Country' },
   { value: 'South Africa', label: 'South Africa' },
@@ -234,6 +243,11 @@ const bookingsPrototypeCountryOptions = [
   { value: 'Tanzania', label: 'Tanzania' },
   { value: 'United Arab Emirates', label: 'United Arab Emirates' },
 ];
+
+const bookingsSellerCategoryOptions = bookingsPrototypeCategoryTabs.filter((category) => category !== 'All');
+const bookingsSellerCountryOptions = bookingsPrototypeCountryOptions
+  .filter((option) => option.value !== 'all')
+  .map((option) => option.value);
 
 const bookingsPrototypeCategoryCards = [
   {
@@ -1372,6 +1386,371 @@ const homeCareProviders = [
   },
 ];
 
+const homeCareProviderDetailPrototype = {
+  id: 'sarah-johnson-rn',
+  name: 'Sarah Johnson, RN',
+  badge: 'Certified Nursing Care Specialist',
+  ratingLabel: '4.8/5.0',
+  experienceLevel: '5+ Years Experience',
+  serviceType: 'Weekly',
+  location: 'Manhattan, New York',
+  image: 'https://images.pexels.com/photos/7551619/pexels-photo-7551619.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  aboutText: 'Compassionate and dedicated nursing professional with over 6 years of experience providing exceptional in-home care. Specialized in elderly care, post-surgery recovery, and chronic condition management. Committed to improving quality of life through personalized, patient-centered care.',
+  languages: ['English', 'Spanish', 'French'],
+  servicesOffered: ['Nursing Care', 'Post-Surgery Care', 'Medication Management', 'Wound Care', 'Vital Monitoring'],
+};
+
+const homeCareAvailabilityDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+const homeCareAvailabilityTimeSlots = [
+  'Morning (8AM - 12PM)',
+  'Afternoon (12PM - 5PM)',
+  'Evening (5PM - 9PM)',
+];
+
+const homeCareCertifications = [
+  'Registered Nurse (RN) - State of New York',
+  'CPR & First Aid Certified',
+  'Advanced Cardiac Life Support (ACLS)',
+  'Wound Care Certification',
+  'Dementia Care Specialist',
+  '8 Years Experience',
+  '150+ Clients Served',
+];
+
+const homeCarePricingSections = [
+  {
+    id: 'general-nursing-care',
+    title: 'General Nursing Care',
+    options: [
+      { id: 'general-hourly', label: 'Hourly Care', price: 'From 500 / hour', defaultSelected: true },
+      { id: 'general-daily', label: 'Daily Care', price: 'From 3,500 / day', defaultSelected: false },
+    ],
+  },
+  {
+    id: 'medication-management',
+    title: 'Medication Management',
+    options: [
+      { id: 'med-hourly', label: 'Hourly Medication Support', price: 'From 300 / hour', defaultSelected: false },
+      { id: 'med-daily', label: 'Daily Medication Management', price: 'From 1,800 / day', defaultSelected: false },
+      { id: 'med-weekly', label: 'Weekly Medication Plan', price: 'From 10,000 / week', defaultSelected: false },
+    ],
+  },
+  {
+    id: 'post-surgery-recovery',
+    title: 'Post-Surgery Recovery Care',
+    options: [
+      { id: 'recovery-daily', label: 'Daily Recovery Care', price: 'From 4,000 / day', defaultSelected: false },
+      { id: 'recovery-weekly', label: 'Weekly Recovery Care', price: 'From 25,000 / week', defaultSelected: false },
+    ],
+  },
+  {
+    id: 'chronic-condition-management',
+    title: 'Chronic Condition Management',
+    options: [
+      { id: 'chronic-weekly', label: 'Weekly Care Plan', price: 'From 12,000 / week', defaultSelected: false },
+      { id: 'chronic-monthly', label: 'Monthly Care Plan', price: 'From 45,000 / month', defaultSelected: false },
+    ],
+  },
+];
+
+const homeCareRelatedProviders = [
+  {
+    id: 'rel-james-wilson',
+    name: 'James Wilson',
+    category: 'AC Repair & Servicing',
+    location: 'Brooklyn, NY',
+    experience: '5 Years Experience',
+    availability: 'Weekly',
+    image: 'https://images.pexels.com/photos/8486972/pexels-photo-8486972.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'rel-nina-max',
+    name: 'Nina Max',
+    category: 'Baby Care',
+    location: 'Manhattan, NY',
+    experience: '4 Years Experience',
+    availability: 'Daily',
+    image: 'https://images.pexels.com/photos/7551687/pexels-photo-7551687.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'rel-maria-santos',
+    name: 'Maria Santos',
+    category: 'Cleaning Services',
+    location: 'Staten Island, NY',
+    experience: '6 Years Experience',
+    availability: 'Morning',
+    image: 'https://images.pexels.com/photos/4108714/pexels-photo-4108714.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+];
+
+const HomeCareProviderDetailPage = () => {
+  const navigate = useNavigate();
+  const { providerId } = useParams();
+  const carouselRef = useRef(null);
+  const [bookingSelection, setBookingSelection] = useState('');
+  const [selectedOptions, setSelectedOptions] = useState(() => {
+    const defaults = {};
+    homeCarePricingSections.forEach((section) => {
+      section.options.forEach((option) => {
+        defaults[option.id] = Boolean(option.defaultSelected);
+      });
+    });
+    return defaults;
+  });
+
+  const activeProvider = useMemo(() => {
+    const providerFromMainList = homeCareProviders.find((provider) => provider.id === providerId);
+    if (providerFromMainList) {
+      return {
+        name: providerFromMainList.name,
+        badge: `${providerFromMainList.category} Specialist`,
+        ratingLabel: '4.8/5.0',
+        experienceLevel: providerFromMainList.experience,
+        serviceType: providerFromMainList.serviceType,
+        location: providerFromMainList.location,
+        image: providerFromMainList.image,
+        aboutText: `Compassionate and dedicated ${providerFromMainList.category.toLowerCase()} professional with over ${providerFromMainList.experienceYears || 6} years of experience providing exceptional in-home care. Specialized in personalized support and committed to improving quality of life through trusted, client-centered care.`,
+        languages: homeCareProviderDetailPrototype.languages,
+        servicesOffered: [providerFromMainList.category, ...homeCareProviderDetailPrototype.servicesOffered.filter((service) => service !== providerFromMainList.category)],
+      };
+    }
+
+    const providerFromRelatedList = homeCareRelatedProviders.find((provider) => provider.id === providerId);
+    if (providerFromRelatedList) {
+      return {
+        name: providerFromRelatedList.name,
+        badge: `${providerFromRelatedList.category} Specialist`,
+        ratingLabel: '4.8/5.0',
+        experienceLevel: providerFromRelatedList.experience,
+        serviceType: providerFromRelatedList.availability,
+        location: providerFromRelatedList.location,
+        image: providerFromRelatedList.image,
+        aboutText: `Compassionate and dedicated ${providerFromRelatedList.category.toLowerCase()} professional focused on reliable, in-home support services with a client-first approach.`,
+        languages: homeCareProviderDetailPrototype.languages,
+        servicesOffered: [providerFromRelatedList.category, ...homeCareProviderDetailPrototype.servicesOffered.filter((service) => service !== providerFromRelatedList.category)],
+      };
+    }
+
+    return homeCareProviderDetailPrototype;
+  }, [providerId]);
+
+  const toggleOption = (optionId) => {
+    setSelectedOptions((current) => ({
+      ...current,
+      [optionId]: !current[optionId],
+    }));
+  };
+
+  const openBookingModal = (label) => {
+    setBookingSelection(label);
+  };
+
+  const closeBookingModal = () => {
+    setBookingSelection('');
+  };
+
+  const scrollRelatedListings = (direction) => {
+    if (!carouselRef.current) {
+      return;
+    }
+
+    const offset = direction === 'next' ? 360 : -360;
+    carouselRef.current.scrollBy({ left: offset, behavior: 'smooth' });
+  };
+
+  return (
+    <section className="bg-white px-4 py-8 font-['Inter',sans-serif] text-[#1A1A1A] sm:px-6 lg:py-10">
+      <div className="mx-auto w-full max-w-[1280px]">
+        <button
+          type="button"
+          onClick={() => navigate('/home-care')}
+          className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-[#0052CC] transition hover:text-[#003f9c]"
+        >
+          <ChevronLeft className="h-4 w-4" /> Back
+        </button>
+
+        <section className="relative overflow-hidden rounded-2xl bg-[#003366] p-5 sm:h-[320px] sm:p-6">
+          <img
+            src="https://images.pexels.com/photos/3846022/pexels-photo-3846022.jpeg?auto=compress&cs=tinysrgb&w=1920"
+            alt="Home care market"
+            className="absolute inset-0 h-full w-full object-cover"
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/55 to-black/70" aria-hidden="true" />
+          <div className="relative z-10 flex h-full flex-col gap-6 sm:flex-row sm:items-center">
+            <img
+              src={activeProvider.image}
+              alt={activeProvider.name}
+              className="h-[280px] w-[280px] shrink-0 rounded-2xl border border-white/60 object-cover"
+              loading="lazy"
+            />
+            <div className="min-w-0 flex-1 text-white">
+              <h1 className="text-[28px] font-bold leading-tight">{activeProvider.name}</h1>
+              <span className="mt-3 inline-flex rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#0f9fb2]">
+                {activeProvider.badge}
+              </span>
+              <div className="mt-4 flex items-center gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star key={`rating-star-${star}`} className="h-5 w-5 fill-[#FBBF24] text-[#FBBF24]" />
+                ))}
+                <span className="text-[18px] font-semibold">{activeProvider.ratingLabel}</span>
+              </div>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-2 text-sm font-medium"><User className="h-4 w-4" /> {activeProvider.experienceLevel}</span>
+                <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-2 text-sm font-medium"><CalendarDays className="h-4 w-4" /> {activeProvider.serviceType}</span>
+                <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-2 text-sm font-medium"><MapPin className="h-4 w-4" /> {activeProvider.location}</span>
+              </div>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <button type="button" onClick={() => openBookingModal('Book Service')} className="h-12 rounded-lg border border-[#0f9fb2] bg-white px-5 text-sm font-bold text-[#0f9fb2] transition hover:bg-[#f0fdff]">Book Service</button>
+                <button type="button" className="inline-flex h-12 items-center gap-2 rounded-lg border border-[#D1D5DB] bg-white px-5 text-sm font-bold text-[#1F2937] transition hover:bg-[#F8FAFC]"><Heart className="h-4 w-4" /> Add to Wishlist</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-b border-[#E5E7EB] py-8">
+          <h2 className="text-[20px] font-bold text-[#0052CC]">About the Provider</h2>
+          <p className="mt-4 max-w-5xl text-[15px] leading-7 text-[#334155]">{activeProvider.aboutText}</p>
+
+          <div className="mt-6 flex flex-col gap-4">
+            <div>
+              <p className="flex items-center gap-2 text-sm font-semibold text-[#0052CC]"><Bell className="h-4 w-4" /> Language</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {activeProvider.languages.map((language) => (
+                  <span key={`language-${language}`} className="rounded-full bg-[#0f9fb2] px-3 py-1 text-xs font-semibold text-white">{language}</span>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="flex items-center gap-2 text-sm font-semibold text-[#0052CC]"><ShieldCheck className="h-4 w-4" /> Services Offered</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {activeProvider.servicesOffered.map((service) => (
+                  <span key={`service-${service}`} className="rounded-full bg-[#0f9fb2] px-3 py-1 text-xs font-semibold text-white">{service}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-b border-[#E5E7EB] py-8">
+          <h2 className="text-[20px] font-bold text-[#0052CC]">Availability Schedule</h2>
+          <p className="mt-4 flex items-center gap-2 text-sm font-semibold text-[#0052CC]"><CalendarDays className="h-4 w-4" /> Available Days</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {homeCareAvailabilityDays.map((day) => (
+              <span key={`day-${day}`} className="rounded-full bg-[#E6F3FF] px-3 py-1 text-xs font-semibold text-[#0052CC]">{day}</span>
+            ))}
+          </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            {homeCareAvailabilityTimeSlots.map((slot) => (
+              <button key={`slot-${slot}`} type="button" className="h-14 rounded-lg bg-[#0f9fb2] px-4 text-sm font-bold text-white transition hover:bg-[#0d8a9c]">{slot}</button>
+            ))}
+          </div>
+        </section>
+
+        <section className="border-b border-[#E5E7EB] py-8">
+          <h2 className="text-[20px] font-bold text-[#0052CC]">Certifications &amp; Experience</h2>
+          <ul className="mt-4 space-y-2 text-sm text-[#334155]">
+            {homeCareCertifications.map((item) => (
+              <li key={`cert-${item}`} className="flex items-start gap-2">
+                <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#16A34A] text-xs font-bold text-white">✓</span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="border-b border-[#E5E7EB] py-8">
+          <h2 className="text-[20px] font-bold text-[#0052CC]">Services &amp; Pricing</h2>
+          <div className="mt-5 space-y-4">
+            {homeCarePricingSections.map((section) => (
+              <article key={section.id} className="rounded-xl border border-[#E5E7EB] bg-[#F0F9FF] p-4">
+                <h3 className="text-lg font-bold text-[#0f172a]">{section.title}</h3>
+                <div className="mt-4 space-y-3">
+                  {section.options.map((option) => (
+                    <div key={option.id} className="flex flex-col gap-3 rounded-lg bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+                      <label className="flex items-center gap-2 text-sm font-medium text-[#1F2937]">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(selectedOptions[option.id])}
+                          onChange={() => toggleOption(option.id)}
+                          className="h-4 w-4 rounded border-[#D1D5DB] text-[#0052CC] focus:ring-[#0052CC]"
+                        />
+                        <span>{option.label}: {option.price}</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => openBookingModal(option.label)}
+                        className="h-10 rounded-md bg-[#0f9fb2] px-5 text-sm font-semibold text-white transition hover:bg-[#0d8a9c]"
+                      >
+                        Book Now
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="py-10">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="text-[22px] font-bold text-[#0052CC]">You May Also Like</h2>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => scrollRelatedListings('prev')} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#D1D5DB] bg-white text-[#0052CC] transition hover:bg-[#E6F3FF]" aria-label="Scroll related providers left">
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button type="button" onClick={() => scrollRelatedListings('next')} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#D1D5DB] bg-white text-[#0052CC] transition hover:bg-[#E6F3FF]" aria-label="Scroll related providers right">
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          <div ref={carouselRef} className="flex snap-x snap-mandatory gap-6 overflow-x-auto pb-2">
+            {homeCareRelatedProviders.map((provider) => (
+              <article key={provider.id} className="w-full max-w-[340px] shrink-0 snap-start overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_4px_12px_rgba(0,0,0,0.08)]">
+                <div className="relative">
+                  <img src={provider.image} alt={provider.name} className="h-[180px] w-full object-cover" loading="lazy" />
+                  <span className="absolute right-3 top-3 rounded-md bg-black px-2.5 py-1 text-xs font-medium text-white">{provider.category}</span>
+                </div>
+                <div className="space-y-2.5 p-4">
+                  <h3 className="text-[20px] font-bold leading-tight text-[#1A1A1A]">{provider.name}</h3>
+                  <p className="flex items-center gap-2 text-sm text-[#6B7280]"><MapPin className="h-4 w-4" /> {provider.location}</p>
+                  <p className="flex items-center gap-2 text-sm text-[#6B7280]"><User className="h-4 w-4" /> {provider.experience}</p>
+                  <p className="flex items-center gap-2 text-sm text-[#6B7280]"><CalendarDays className="h-4 w-4" /> {provider.availability}</p>
+                  <p className="flex items-center gap-2 text-sm text-[#374151]"><Star className="h-4 w-4 fill-[#FBBF24] text-[#FBBF24]" /> 4.8 (145 reviews)</p>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/home-care/provider/${provider.id}`)}
+                    className="mt-1 h-12 w-full rounded-lg bg-[#0f9fb2] text-sm font-medium text-white transition hover:bg-[#0d8a9c]"
+                  >
+                    View Profile
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      {bookingSelection ? (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/45 p-4" role="dialog" aria-modal="true" aria-label="Booking modal">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
+            <h3 className="text-lg font-bold text-[#0052CC]">Book Service</h3>
+            <p className="mt-2 text-sm text-[#475569]">You selected: {bookingSelection}</p>
+            <p className="mt-2 text-sm text-[#475569]">Booking modal prototype is active. Final booking flow can be connected next.</p>
+            <div className="mt-5 flex justify-end">
+              <button type="button" onClick={closeBookingModal} className="h-10 rounded-md bg-[#0f9fb2] px-4 text-sm font-semibold text-white transition hover:bg-[#0d8a9c]">Close</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+};
+
 const techItems = [
   {
     id: 'x1',
@@ -1874,8 +2253,6 @@ const searchableCatalog = [
   })),
 ];
 
-const getCurrentYear = () => new Date().getFullYear();
-
 const getAuthState = () => {
   if (typeof window === 'undefined') {
     return false;
@@ -2209,7 +2586,6 @@ const getMarketplaceItemSaveErrorMessage = (errorMessage) => {
 const cudyBluePrimaryButtonClassName = 'svs-test-primary-button';
 const cudyBluePrimaryOutlineClassName = 'svs-test-primary-outline';
 const cudyBluePrimaryIconClassName = 'svs-test-primary-icon';
-const languageFeatureSelectClassName = 'w-full appearance-none rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm font-semibold text-[var(--svs-text)] outline-none transition hover:border-[var(--svs-primary)] focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/40';
 
 const formatDate = (value, locale = 'en-US') =>
   new Date(value).toLocaleDateString(locale, {
@@ -2225,21 +2601,77 @@ const formatListingDateLabel = (value) => {
     return '';
   }
 
-  const parsedDate = new Date(`${trimmedValue}T00:00:00`);
+  const isoDateMatch = trimmedValue.match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+  if (isoDateMatch) {
+    return `${isoDateMatch[1]}/${isoDateMatch[2]}/${isoDateMatch[3]}`;
+  }
+
+  const parsedDate = new Date(trimmedValue.includes('T') ? trimmedValue : `${trimmedValue}T00:00:00`);
 
   if (Number.isNaN(parsedDate.getTime())) {
     return trimmedValue;
   }
 
-  return parsedDate.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+  const year = parsedDate.getFullYear();
+  const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
+  const day = String(parsedDate.getDate()).padStart(2, '0');
+
+  return `${year}/${month}/${day}`;
 };
 
 const getGroceriesListingValidationMessage = (formState) => {
   if (formState.marketKey !== 'groceries') {
+    if (formState.marketKey !== 'tickets') {
+      return '';
+    }
+
+    const category = String(formState.ticketCategory || '').trim();
+    const hasCategory = category;
+    const hasCountry = String(formState.ticketCountry || '').trim();
+    const hasLocation = String(formState.ticketLocation || '').trim();
+    const hasDate = String(formState.ticketDate || '').trim();
+    const isMoviesCategory = category === 'Movies';
+    const isConcertsCategory = category === 'Concerts';
+    const isSportsCategory = category === 'Sports';
+    const isTravelCategory = category === 'Travel';
+    const needsDate = isMoviesCategory || isConcertsCategory || isSportsCategory;
+    const needsProvider = isConcertsCategory || isSportsCategory || isTravelCategory;
+    const hasCity = String(formState.ticketCity || '').trim();
+    const hasProvider = String(formState.ticketProvider || '').trim();
+    const hasGenre = String(formState.ticketGenre || '').trim();
+    const hasLanguage = String(formState.ticketLanguage || '').trim();
+    const hasShowtime = String(formState.ticketShowtime || '').trim();
+
+    if (hasCategory
+      && hasCountry
+      && hasLocation
+      && (!needsDate || hasDate)
+      && (!needsProvider || hasProvider)
+      && (!isMoviesCategory || (hasCity && hasGenre && hasLanguage && hasShowtime))) {
+      return '';
+    }
+
+    if (!hasCategory) {
+      return 'Select a bookings category before publishing this listing.';
+    }
+
+    if (!hasCountry || !hasLocation) {
+      return 'For bookings and tickets listings, choose a country and add venue/location before publishing.';
+    }
+
+    if (needsDate && !hasDate) {
+      return `Add an event date for ${category} listings so date filters can match this listing.`;
+    }
+
+    if (needsProvider && !hasProvider) {
+      return `Add a provider/organizer for ${category} listings before publishing.`;
+    }
+
+    if (isMoviesCategory) {
+      return 'For movie listings, add city, genre, language, and showtime so movie sidebar filters can match this listing.';
+    }
+
     return '';
   }
 
@@ -2256,26 +2688,46 @@ const getGroceriesListingValidationMessage = (formState) => {
 };
 
 const buildSellerItemDetailsJson = (formState) => {
-  if (formState.marketKey !== 'groceries') {
-    return {};
+  if (formState.marketKey === 'groceries') {
+    const categoryKey = String(formState.categoryKey || '').trim();
+    const categoryTitle = getGroceriesCategoryTitle(categoryKey);
+
+    return Object.fromEntries(
+      Object.entries({
+        categoryKey,
+        category: categoryTitle,
+        brand: String(formState.brand || '').trim(),
+        volume: String(formState.volume || '').trim(),
+        freshness: String(formState.freshness || '').trim(),
+        storage: String(formState.storage || '').trim(),
+        origin: String(formState.origin || '').trim(),
+        expiryDate: String(formState.expiryDate || '').trim(),
+        discount: String(formState.discount || '').trim(),
+      }).filter(([, value]) => Boolean(String(value || '').trim())),
+    );
   }
 
-  const categoryKey = String(formState.categoryKey || '').trim();
-  const categoryTitle = getGroceriesCategoryTitle(categoryKey);
+  if (formState.marketKey === 'tickets') {
+    const ticketCategory = String(formState.ticketCategory || '').trim();
+    const isMoviesCategory = ticketCategory === 'Movies';
 
-  return Object.fromEntries(
-    Object.entries({
-      categoryKey,
-      category: categoryTitle,
-      brand: String(formState.brand || '').trim(),
-      volume: String(formState.volume || '').trim(),
-      freshness: String(formState.freshness || '').trim(),
-      storage: String(formState.storage || '').trim(),
-      origin: String(formState.origin || '').trim(),
-      expiryDate: String(formState.expiryDate || '').trim(),
-      discount: String(formState.discount || '').trim(),
-    }).filter(([, value]) => Boolean(String(value || '').trim())),
-  );
+    return Object.fromEntries(
+      Object.entries({
+        category: ticketCategory,
+        date: String(formState.ticketDate || '').trim(),
+        country: String(formState.ticketCountry || '').trim(),
+        city: String(formState.ticketCity || '').trim(),
+        location: String(formState.ticketLocation || '').trim(),
+        provider: String(formState.ticketProvider || '').trim(),
+        meta: String(formState.ticketMeta || '').trim(),
+        genre: isMoviesCategory ? String(formState.ticketGenre || '').trim() : '',
+        language: isMoviesCategory ? String(formState.ticketLanguage || '').trim() : '',
+        showtime: isMoviesCategory ? String(formState.ticketShowtime || '').trim() : '',
+      }).filter(([, value]) => Boolean(String(value || '').trim())),
+    );
+  }
+
+  return {};
 };
 
 const getGroceriesListingMetaText = (item = {}) => {
@@ -2989,7 +3441,8 @@ const mapSellerItemRecord = (record) => {
         description: record.description,
       })
       : '');
-  const resolvedCategory = String(rawDetailsJson.category || '').trim() || getGroceriesCategoryTitle(resolvedCategoryKey);
+  const resolvedCategory = String(rawDetailsJson.category || '').trim()
+    || (record.market_key === 'groceries' ? getGroceriesCategoryTitle(resolvedCategoryKey) : '');
 
   return {
     id: `seller-${record.id}`,
@@ -3013,6 +3466,16 @@ const mapSellerItemRecord = (record) => {
     origin: String(rawDetailsJson.origin || '').trim(),
     expiryDate: String(rawDetailsJson.expiryDate || '').trim(),
     discount: String(rawDetailsJson.discount || '').trim(),
+    subtitle: String(rawDetailsJson.subtitle || '').trim(),
+    meta: String(rawDetailsJson.meta || '').trim(),
+    provider: String(rawDetailsJson.provider || '').trim(),
+    location: String(rawDetailsJson.location || '').trim(),
+    country: String(rawDetailsJson.country || '').trim(),
+    date: String(rawDetailsJson.date || '').trim(),
+    city: String(rawDetailsJson.city || '').trim(),
+    genre: String(rawDetailsJson.genre || '').trim(),
+    language: String(rawDetailsJson.language || '').trim(),
+    showtime: String(rawDetailsJson.showtime || '').trim(),
     createdAt: record.created_at,
   };
 };
@@ -4547,6 +5010,7 @@ const GroceriesSellerFields = ({ formData, onFieldChange, prefix = 'seller-groce
             onChange={onFieldChange}
             className={inputClassName}
           />
+          <p className={helperClassName}>Displayed as yyyy/mm/dd on listings.</p>
         </div>
         <div>
           <label htmlFor={`${prefix}-origin`} className={labelClassName}>Origin / source</label>
@@ -4581,6 +5045,195 @@ const GroceriesSellerFields = ({ formData, onFieldChange, prefix = 'seller-groce
             className={inputClassName}
           />
         </div>
+      </div>
+    </div>
+  );
+};
+
+const TicketsSellerFields = ({ formData, onFieldChange, prefix = 'seller-ticket', isCompact = false }) => {
+  const isMoviesCategory = formData.ticketCategory === 'Movies';
+  const isConcertsCategory = formData.ticketCategory === 'Concerts';
+  const isSportsCategory = formData.ticketCategory === 'Sports';
+  const isTravelCategory = formData.ticketCategory === 'Travel';
+  const requiresDate = isMoviesCategory || isConcertsCategory || isSportsCategory;
+  const requiresProvider = isConcertsCategory || isSportsCategory || isTravelCategory;
+  const taglinePlaceholder = isTravelCategory
+    ? 'e.g. Daily departures'
+    : isSportsCategory
+      ? 'e.g. World Cup Qualifier'
+      : isConcertsCategory
+        ? 'e.g. Multi Artist'
+        : isMoviesCategory
+          ? 'e.g. Premiere night'
+          : 'e.g. Daily departures';
+  const taglineHelperText = isTravelCategory
+    ? 'Use this for schedule details like daily departures or flexible dates.'
+    : isSportsCategory
+      ? 'Use this for competition name or tournament stage.'
+      : isConcertsCategory
+        ? 'Use this for lineup or event format details.'
+        : isMoviesCategory
+          ? 'Use this for screening details.'
+          : 'Add a short detail to improve search relevance.';
+  const containerClassName = isCompact
+    ? 'rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3'
+    : 'sm:col-span-2 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4';
+  const labelClassName = isCompact
+    ? 'mb-1 block text-xs font-medium text-[var(--svs-text)]'
+    : 'mb-1 block text-sm font-medium text-[var(--svs-text)]';
+  const inputClassName = isCompact
+    ? 'w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none'
+    : 'w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none';
+  const helperClassName = isCompact
+    ? 'mt-1 text-[10px] text-[var(--svs-muted)]'
+    : 'mt-1 text-xs text-[var(--svs-muted)]';
+
+  return (
+    <div className={containerClassName}>
+      <div className="mb-3">
+        <h3 className={`${isCompact ? 'text-sm' : 'text-base'} font-bold text-[var(--svs-text)]`}>Bookings &amp; Tickets Details</h3>
+        <p className={`${helperClassName} mt-1`}>
+          Fields update by category so your listing can match category, date, country, and movie sidebar filters.
+        </p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label htmlFor={`${prefix}-category`} className={labelClassName}>Category</label>
+          <select
+            id={`${prefix}-category`}
+            name="ticketCategory"
+            value={formData.ticketCategory}
+            onChange={onFieldChange}
+            required
+            className={inputClassName}
+          >
+            <option value="">Select category</option>
+            {bookingsSellerCategoryOptions.map((category) => (
+              <option key={category} value={category}>{category}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor={`${prefix}-country`} className={labelClassName}>Country</label>
+          <select
+            id={`${prefix}-country`}
+            name="ticketCountry"
+            value={formData.ticketCountry}
+            onChange={onFieldChange}
+            required
+            className={inputClassName}
+          >
+            <option value="">Select country</option>
+            {bookingsSellerCountryOptions.map((country) => (
+              <option key={country} value={country}>{country}</option>
+            ))}
+          </select>
+        </div>
+        {isMoviesCategory ? (
+          <div>
+            <label htmlFor={`${prefix}-city`} className={labelClassName}>City</label>
+            <input
+              id={`${prefix}-city`}
+              name="ticketCity"
+              value={formData.ticketCity}
+              onChange={onFieldChange}
+              required
+              placeholder="e.g. Kampala"
+              className={inputClassName}
+            />
+            <p className={helperClassName}>Required for Movies category.</p>
+          </div>
+        ) : null}
+        <div>
+          <label htmlFor={`${prefix}-date`} className={labelClassName}>Date</label>
+          <input
+            id={`${prefix}-date`}
+            name="ticketDate"
+            type="date"
+            value={formData.ticketDate}
+            onChange={onFieldChange}
+            required={requiresDate}
+            className={inputClassName}
+          />
+          <p className={helperClassName}>{requiresDate ? 'Required for Movies, Concerts, and Sports.' : 'Optional for flexible schedules.'}</p>
+        </div>
+        <div>
+          <label htmlFor={`${prefix}-location`} className={labelClassName}>{isTravelCategory ? 'Route / Terminal' : 'Venue / Route'}</label>
+          <input
+            id={`${prefix}-location`}
+            name="ticketLocation"
+            value={formData.ticketLocation}
+            onChange={onFieldChange}
+            required
+            placeholder="e.g. Lugogo Grounds, Kampala"
+            className={inputClassName}
+          />
+        </div>
+        <div>
+          <label htmlFor={`${prefix}-provider`} className={labelClassName}>{isTravelCategory ? 'Transport Provider' : 'Provider / Organizer'}</label>
+          <input
+            id={`${prefix}-provider`}
+            name="ticketProvider"
+            value={formData.ticketProvider}
+            onChange={onFieldChange}
+            required={requiresProvider}
+            placeholder="e.g. Multi Artist, Emirates Airlines"
+            className={inputClassName}
+          />
+          <p className={helperClassName}>{requiresProvider ? 'Required for Concerts, Sports, and Travel.' : 'Optional for this category.'}</p>
+        </div>
+        <div>
+          <label htmlFor={`${prefix}-meta`} className={labelClassName}>Tagline</label>
+          <input
+            id={`${prefix}-meta`}
+            name="ticketMeta"
+            value={formData.ticketMeta}
+            onChange={onFieldChange}
+            placeholder={taglinePlaceholder}
+            className={inputClassName}
+          />
+          <p className={helperClassName}>{taglineHelperText}</p>
+        </div>
+        {isMoviesCategory ? (
+          <>
+            <div>
+              <label htmlFor={`${prefix}-genre`} className={labelClassName}>Movie genre</label>
+              <input
+                id={`${prefix}-genre`}
+                name="ticketGenre"
+                value={formData.ticketGenre}
+                onChange={onFieldChange}
+                required
+                placeholder="e.g. Action"
+                className={inputClassName}
+              />
+            </div>
+            <div>
+              <label htmlFor={`${prefix}-language`} className={labelClassName}>Language</label>
+              <input
+                id={`${prefix}-language`}
+                name="ticketLanguage"
+                value={formData.ticketLanguage}
+                onChange={onFieldChange}
+                required
+                placeholder="e.g. English"
+                className={inputClassName}
+              />
+            </div>
+            <div>
+              <label htmlFor={`${prefix}-showtime`} className={labelClassName}>Showtime</label>
+              <input
+                id={`${prefix}-showtime`}
+                name="ticketShowtime"
+                value={formData.ticketShowtime}
+                onChange={onFieldChange}
+                required
+                placeholder="e.g. Evening"
+                className={inputClassName}
+              />
+            </div>
+          </>
+        ) : null}
       </div>
     </div>
   );
@@ -4640,7 +5293,6 @@ const ECommercePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
 const MovieDetailsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [] }) => {
   const { movieId } = useParams();
   const navigate = useNavigate();
-  const { t } = useTranslation();
   const movie = bookingsPrototypeMovieItems.find((m) => m.id === movieId);
 
   const [galleryIndex, setGalleryIndex] = useState(0);
@@ -4888,7 +5540,7 @@ const MovieDetailsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
 
 const TicketsPage = (props) => <BookingsTicketsPage {...props} />;
 
-const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], onOpenItemDetails }) => {
+const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails }) => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const currentLocale = i18n.resolvedLanguage || i18n.language || 'en-US';
@@ -4909,26 +5561,6 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
   const [sidebarLocationOpen, setSidebarLocationOpen] = useState(false);
   const [sidebarShowtimeOpen, setSidebarShowtimeOpen] = useState(false);
 
-  const movieGenreOptions = ['Action', 'Drama', 'Comedy', 'Thriller', 'Horror', 'Romantic'];
-  const movieShowtimeOptions = ['Morning', 'Afternoon', 'Evening', 'Late Night'];
-
-  const movieLanguageOptions = useMemo(
-    () => [...new Set(bookingsPrototypeMovieItems.map((item) => item.language).filter(Boolean))].sort(),
-    [],
-  );
-
-  const movieCountryOptions = useMemo(
-    () => [...new Set(bookingsPrototypeMovieItems.map((item) => item.country).filter(Boolean))].sort(),
-    [],
-  );
-
-  const movieCityOptions = useMemo(() => {
-    const movies = movieFilterCountry === 'all'
-      ? bookingsPrototypeMovieItems
-      : bookingsPrototypeMovieItems.filter((item) => item.country === movieFilterCountry);
-    return [...new Set(movies.map((item) => item.city).filter(Boolean))].sort();
-  }, [movieFilterCountry]);
-
   const toggleMovieFilter = (setter, value) => {
     setter((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
   };
@@ -4941,15 +5573,91 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
     setMovieSidebarOpen(activeCategory === 'Movies');
   }, [activeCategory]);
 
+  const sellerTicketItems = useMemo(
+    () => getSellerItemsForMarket(sellerItems, 'tickets').map((item) => ({
+      id: item.id,
+      category: bookingsSellerCategoryOptions.includes(item.category) ? item.category : 'Concerts',
+      title: item.title || 'Seller Event',
+      subtitle: item.subtitle || item.description || 'Seller listing',
+      meta: item.meta || 'Seller listing',
+      provider: item.provider || item.sellerName || 'SVS Seller',
+      date: item.date || '',
+      sortDate: item.date || item.createdAt || '',
+      location: item.location || 'Online booking',
+      country: item.country || 'South Africa',
+      city: item.city || '',
+      genre: item.genre || '',
+      language: item.language || '',
+      showtime: item.showtime || '',
+      availableQuantity: normalizeListingQuantity(item.availableQuantity, 0),
+      price: item.price || '0.00',
+      image: item.image || 'https://images.pexels.com/photos/1190297/pexels-photo-1190297.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      images: item.images || (item.image ? [item.image] : []),
+      isSellerListing: true,
+    })),
+    [sellerItems],
+  );
+
   const allBookingPrototypeItems = useMemo(
     () => [
+      ...sellerTicketItems,
       ...bookingsPrototypeMovieItems,
       ...bookingsPrototypeConcertItems,
       ...bookingsPrototypeSportsItems,
       ...bookingsPrototypeTravelItems,
     ],
-    [],
+    [sellerTicketItems],
   );
+
+  const bookingDateOptions = useMemo(() => {
+    const dynamicDates = [...new Set(allBookingPrototypeItems.map((item) => item.date).filter(Boolean))]
+      .sort((leftDate, rightDate) => new Date(leftDate).getTime() - new Date(rightDate).getTime())
+      .map((dateValue) => ({ value: dateValue, label: formatDate(dateValue, currentLocale) }));
+
+    return [{ value: 'all', label: 'Select Date' }, ...dynamicDates];
+  }, [allBookingPrototypeItems, currentLocale]);
+
+  const bookingCountryOptions = useMemo(() => {
+    const dynamicCountries = [...new Set(allBookingPrototypeItems.map((item) => item.country).filter(Boolean))]
+      .sort()
+      .map((countryValue) => ({ value: countryValue, label: countryValue }));
+
+    return [{ value: 'all', label: 'Select Country' }, ...dynamicCountries];
+  }, [allBookingPrototypeItems]);
+
+  const allMovieItems = useMemo(
+    () => allBookingPrototypeItems.filter((item) => item.category === 'Movies'),
+    [allBookingPrototypeItems],
+  );
+
+  const movieGenreOptions = useMemo(() => {
+    const defaults = ['Action', 'Drama', 'Comedy', 'Thriller', 'Horror', 'Romantic'];
+    const fromListings = allMovieItems.map((item) => item.genre).filter(Boolean);
+    return [...new Set([...defaults, ...fromListings])];
+  }, [allMovieItems]);
+
+  const movieShowtimeOptions = useMemo(() => {
+    const defaults = ['Morning', 'Afternoon', 'Evening', 'Late Night'];
+    const fromListings = allMovieItems.map((item) => item.showtime).filter(Boolean);
+    return [...new Set([...defaults, ...fromListings])];
+  }, [allMovieItems]);
+
+  const movieLanguageOptions = useMemo(
+    () => [...new Set(allMovieItems.map((item) => item.language).filter(Boolean))].sort(),
+    [allMovieItems],
+  );
+
+  const movieCountryOptions = useMemo(
+    () => [...new Set(allMovieItems.map((item) => item.country).filter(Boolean))].sort(),
+    [allMovieItems],
+  );
+
+  const movieCityOptions = useMemo(() => {
+    const movies = movieFilterCountry === 'all'
+      ? allMovieItems
+      : allMovieItems.filter((item) => item.country === movieFilterCountry);
+    return [...new Set(movies.map((item) => item.city).filter(Boolean))].sort();
+  }, [allMovieItems, movieFilterCountry]);
 
   const filteredBookingPrototypeItems = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -4989,6 +5697,12 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
   const shouldShowMoviesSection = activeCategory === 'Movies' || ((searchQuery.trim() || selectedDate !== 'all' || selectedCountry !== 'all') && filteredMovies.length > 0);
 
   const openBookingItemDetails = (item) => {
+    const isSellerOutOfStock = item.isSellerListing && normalizeListingQuantity(item.availableQuantity, 0) === 0;
+
+    if (isSellerOutOfStock) {
+      return;
+    }
+
     const details = buildBookingsPrototypeDetails(item, currentLocale);
     const cartItem = createCartItem({
       ...item,
@@ -5096,7 +5810,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
                   onChange={(event) => setSelectedDate(event.target.value)}
                   className="h-9 w-full appearance-none rounded-full border border-[var(--svs-border)] bg-white pl-9 pr-8 text-xs font-semibold text-[var(--svs-text)] outline-none transition hover:border-[var(--svs-primary)] focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30 sm:w-[180px]"
                 >
-                  {bookingsPrototypeDateOptions.map((option) => (
+                  {bookingDateOptions.map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
@@ -5111,7 +5825,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
                   onChange={(event) => setSelectedCountry(event.target.value)}
                   className="h-9 w-full appearance-none rounded-full border border-[var(--svs-border)] bg-white pl-9 pr-8 text-xs font-semibold text-[var(--svs-text)] outline-none transition hover:border-[var(--svs-primary)] focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30 sm:w-[190px]"
                 >
-                  {bookingsPrototypeCountryOptions.map((option) => (
+                  {bookingCountryOptions.map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
@@ -5376,15 +6090,28 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
 
             <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {section.items.slice(0, sectionVisibleCounts[section.id] || 3).map((item) => (
+                (() => {
+                  const isSellerOutOfStock = item.isSellerListing && normalizeListingQuantity(item.availableQuantity, 0) === 0;
+
+                  return (
                 <article
                   key={item.id}
                   role="button"
                   tabIndex={0}
-                  onClick={() => item.category === 'Movies' ? navigate(`/movie/${item.id}`) : openBookingItemDetails(item)}
+                  onClick={() => {
+                    if (isSellerOutOfStock) {
+                      return;
+                    }
+
+                    (!item.isSellerListing && item.category === 'Movies') ? navigate(`/movie/${item.id}`) : openBookingItemDetails(item);
+                  }}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault();
-                      item.category === 'Movies' ? navigate(`/movie/${item.id}`) : openBookingItemDetails(item);
+                      if (isSellerOutOfStock) {
+                        return;
+                      }
+                      (!item.isSellerListing && item.category === 'Movies') ? navigate(`/movie/${item.id}`) : openBookingItemDetails(item);
                     }
                   }}
                   className="flex cursor-pointer flex-col overflow-hidden rounded-xl bg-white shadow-[0_2px_12px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_8px_28px_rgba(15,23,42,0.14)]"
@@ -5414,22 +6141,33 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
                       {item.provider ? (
                         <p className="text-xs text-[var(--svs-muted)]">{item.provider}</p>
                       ) : null}
+                      {item.isSellerListing ? (
+                        <p className={`text-xs font-semibold ${isSellerOutOfStock ? 'text-rose-600' : 'text-emerald-700'}`}>
+                          Quantity in stock: {normalizeListingQuantity(item.availableQuantity, 0)}
+                        </p>
+                      ) : null}
                     </div>
                     <p className="mt-3 text-base font-bold text-[var(--svs-text)]">{item.price}</p>
                     <div className="mt-3">
                       <button
                         type="button"
+                        disabled={isSellerOutOfStock}
                         onClick={(event) => {
                           event.stopPropagation();
-                          item.category === 'Movies' ? navigate(`/movie/${item.id}`) : openBookingItemDetails(item);
+                          if (isSellerOutOfStock) {
+                            return;
+                          }
+                          (!item.isSellerListing && item.category === 'Movies') ? navigate(`/movie/${item.id}`) : openBookingItemDetails(item);
                         }}
-                        className={`${cudyBluePrimaryButtonClassName} rounded-full bg-[#0f9fb2] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#0d8a9c]`}
+                        className={`${cudyBluePrimaryButtonClassName} rounded-full px-4 py-2 text-xs font-semibold text-white transition ${isSellerOutOfStock ? 'cursor-not-allowed bg-slate-400' : 'bg-[#0f9fb2] hover:bg-[#0d8a9c]'}`}
                       >
-                        Book Now
+                        {isSellerOutOfStock ? 'Sold Out' : 'Book Now'}
                       </button>
                     </div>
                   </div>
                 </article>
+                  );
+                })()
               ))}
             </div>
 
@@ -6492,9 +7230,12 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
   );
 };
 
-const HomeCarePage = () => {
+const HomeCarePage = ({ sellerItems = [], onOpenItemDetails }) => {
+  const navigate = useNavigate();
   const providersSectionRef = useRef(null);
+  const relatedListingsSectionRef = useRef(null);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [showAllRelatedListings, setShowAllRelatedListings] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState(['All']);
   const [selectedServiceTypes, setSelectedServiceTypes] = useState(['All']);
   const [selectedProfessionalPreference, setSelectedProfessionalPreference] = useState('Any');
@@ -6513,19 +7254,41 @@ const HomeCarePage = () => {
 
   const visibleCities = selectedCountry ? (citiesByCountry[selectedCountry] || []) : [];
 
+  const sellerHomeCareProviders = useMemo(
+    () => getSellerItemsForMarket(sellerItems, 'homeCare').map((item) => ({
+      id: `seller-home-care-${item.id}`,
+      name: item.title || 'Home-Care Service',
+      image: item.image || 'https://images.pexels.com/photos/3846022/pexels-photo-3846022.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      category: item.category || 'Home Care',
+      location: item.sellerName || 'SVS Seller',
+      experience: item.description || 'Seller listed service',
+      experienceYears: 0,
+      serviceType: 'Flexible',
+      availabilityWindow: 'Any',
+      professionalPreference: 'Any',
+      buttonLabel: 'View Service',
+      isSellerListing: true,
+      sourceItem: item,
+    })),
+    [sellerItems],
+  );
+
+  const providerCatalog = useMemo(
+    () => [...sellerHomeCareProviders, ...homeCareProviders],
+    [sellerHomeCareProviders],
+  );
+
   const handleViewAllProviders = () => {
-    setSelectedCategories(['All']);
-    setSelectedServiceTypes(['All']);
-    setSelectedProfessionalPreference('Any');
-    setSelectedExperienceLevels([]);
-    setSelectedAvailability('Any');
-    setSelectedCountry('');
-    setSelectedCity('');
+    setShowAllRelatedListings(true);
     setIsFilterDrawerOpen(false);
 
     requestAnimationFrame(() => {
-      providersSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      relatedListingsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
+  };
+
+  const handleShowLessRelatedProviders = () => {
+    setShowAllRelatedListings(false);
   };
 
   const matchesExperienceLevel = (years = 0, level = '') => {
@@ -6558,7 +7321,7 @@ const HomeCarePage = () => {
   };
 
   const filteredProviders = useMemo(() => {
-    return homeCareProviders.filter((provider) => {
+    return providerCatalog.filter((provider) => {
       const categoryMatch = selectedCategories.includes('All') || selectedCategories.includes(provider.category);
       const serviceTypeMatch = selectedServiceTypes.includes('All') || selectedServiceTypes.includes(provider.serviceType);
       const professionalPreferenceMatch = selectedProfessionalPreference === 'Any' || provider.professionalPreference === selectedProfessionalPreference;
@@ -6578,6 +7341,7 @@ const HomeCarePage = () => {
         && availabilityMatch;
     });
   }, [
+    providerCatalog,
     selectedAvailability,
     selectedCategories,
     selectedCity,
@@ -6587,7 +7351,28 @@ const HomeCarePage = () => {
     selectedServiceTypes,
   ]);
 
-  const trendingProviders = homeCareProviders.slice(0, 4);
+  const handleOpenProvider = (provider) => {
+    if (provider.isSellerListing) {
+      const sourceItem = provider.sourceItem;
+
+      onOpenItemDetails?.({
+        title: sourceItem?.title || provider.name,
+        image: sourceItem?.image || provider.image,
+        images: sourceItem?.images || (sourceItem?.image ? [sourceItem.image] : []),
+        marketName: 'Book @ Home-Care Services',
+        details: sourceItem?.description || provider.experience || provider.location,
+        priceLabel: sourceItem?.price ? getSalePrices(sourceItem.price).nowPrice : '',
+        cartItem: null,
+        wishlistItem: null,
+      });
+      return;
+    }
+
+    navigate(`/home-care/provider/${provider.id}`);
+  };
+
+  const hasMoreRelatedListings = filteredProviders.length > 4;
+  const trendingProviders = showAllRelatedListings ? filteredProviders : filteredProviders.slice(0, 4);
 
   const FilterPanel = (
     <div className="flex h-full flex-col bg-white font-['Inter',sans-serif]">
@@ -6738,7 +7523,19 @@ const HomeCarePage = () => {
       key={provider.id}
       className="w-full max-w-[340px] overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_4px_12px_rgba(0,0,0,0.08)]"
     >
-      <div className="relative">
+      <div
+        className="relative cursor-pointer"
+        role="button"
+        tabIndex={0}
+        onClick={() => handleOpenProvider(provider)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            handleOpenProvider(provider);
+          }
+        }}
+        aria-label={`View ${provider.name} profile`}
+      >
         <img src={provider.image} alt={provider.name} className="h-[180px] w-full object-cover" loading="lazy" />
         <span className="absolute right-3 top-3 rounded-md bg-black px-2.5 py-1 text-xs font-medium text-white">{provider.category}</span>
       </div>
@@ -6748,7 +7545,13 @@ const HomeCarePage = () => {
         <p className="flex items-center gap-2 text-sm text-[#6B7280]"><User className="h-4 w-4" /> {provider.experience}</p>
         <p className="flex items-center gap-2 text-sm text-[#6B7280]"><CalendarDays className="h-4 w-4" /> {provider.serviceType} • {provider.availabilityWindow}</p>
         <p className="flex items-center gap-2 text-sm text-[#374151]"><Star className="h-4 w-4 fill-[#FBBF24] text-[#FBBF24]" /> 4.8 (145 reviews)</p>
-        <button type="button" className="mt-1 h-12 w-full rounded-lg bg-[#0f9fb2] text-sm font-medium text-white transition hover:bg-[#0d8a9c]">{provider.buttonLabel}</button>
+        <button
+          type="button"
+          onClick={() => handleOpenProvider(provider)}
+          className="mt-1 h-12 w-full rounded-lg bg-[#0f9fb2] text-sm font-medium text-white transition hover:bg-[#0d8a9c]"
+        >
+          {provider.buttonLabel}
+        </button>
       </div>
     </article>
   );
@@ -6793,21 +7596,31 @@ const HomeCarePage = () => {
               {filteredProviders.map((provider) => renderServiceCard(provider))}
             </div>
 
-            <section className="mt-14">
+            <section ref={relatedListingsSectionRef} className="mt-14">
               <h2 className="text-[24px] font-bold text-[var(--svs-text)]">Trending Services &amp; Trusted Professionals</h2>
               <div className="mt-6 flex gap-6 overflow-x-auto pb-2">
                 {trendingProviders.map((provider) => (
                   <div key={`trending-${provider.id}`} className="w-[340px] shrink-0">{renderServiceCard(provider)}</div>
                 ))}
               </div>
-              <div className="mt-8 flex justify-center">
+              <div className="mt-8 flex justify-center gap-3">
                 <button
                   type="button"
                   onClick={handleViewAllProviders}
+                  disabled={!hasMoreRelatedListings || showAllRelatedListings}
                   className="h-[52px] rounded-lg bg-[#0f9fb2] px-12 text-base font-medium text-white transition hover:bg-[#0d8a9c]"
                 >
                   View All
                 </button>
+                {showAllRelatedListings ? (
+                  <button
+                    type="button"
+                    onClick={handleShowLessRelatedProviders}
+                    className="h-[52px] rounded-lg border border-[#0f9fb2] bg-white px-8 text-base font-medium text-[#0f9fb2] transition hover:bg-[#ecfbfe]"
+                  >
+                    Show Less
+                  </button>
+                ) : null}
               </div>
             </section>
           </main>
@@ -7156,11 +7969,21 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
   };
 
   const handleEditMarketChange = (marketKey) => {
-    setEditForm((current) => (
-      marketKey === 'groceries'
-        ? { ...current, marketKey }
-        : clearGroceriesListingFields({ ...current, marketKey })
-    ));
+    setEditForm((current) => {
+      if (marketKey === current.marketKey) {
+        return current;
+      }
+
+      if (marketKey === 'groceries') {
+        return { ...current, marketKey, ...EMPTY_TICKETS_LISTING_FIELDS };
+      }
+
+      if (marketKey === 'tickets') {
+        return { ...current, marketKey, ...EMPTY_GROCERIES_LISTING_FIELDS };
+      }
+
+      return clearGroceriesListingFields({ ...current, marketKey });
+    });
   };
 
   const openEdit = (item) => {
@@ -7186,6 +8009,16 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
       origin: item.origin || '',
       expiryDate: item.expiryDate || '',
       discount: item.discount || '',
+      ticketCategory: item.category || '',
+      ticketDate: item.date || '',
+      ticketCountry: item.country || '',
+      ticketCity: item.city || '',
+      ticketLocation: item.location || '',
+      ticketProvider: item.provider || '',
+      ticketMeta: item.meta || '',
+      ticketGenre: item.genre || '',
+      ticketLanguage: item.language || '',
+      ticketShowtime: item.showtime || '',
     });
     setEditExistingImages(existingImages);
     setEditImageFiles([]);
@@ -7204,7 +8037,19 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
 
   const handleEditChange = (event) => {
     const { name, value } = event.target;
-    setEditForm((current) => ({ ...current, [name]: value }));
+    setEditForm((current) => {
+      if (name === 'ticketCategory' && value !== 'Movies') {
+        return {
+          ...current,
+          [name]: value,
+          ticketGenre: '',
+          ticketLanguage: '',
+          ticketShowtime: '',
+        };
+      }
+
+      return { ...current, [name]: value };
+    });
   };
 
   const handleSaveEdit = async (item) => {
@@ -7614,6 +8459,14 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                               isCompact
                             />
                           ) : null}
+                          {editForm.marketKey === 'tickets' ? (
+                            <TicketsSellerFields
+                              formData={editForm}
+                              onFieldChange={handleEditChange}
+                              prefix={`edit-ticket-${item.dbId}`}
+                              isCompact
+                            />
+                          ) : null}
                           <div>
                             <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Description</label>
                             <textarea name="description" value={editForm.description} onChange={handleEditChange} rows={3} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
@@ -7882,15 +8735,37 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
 
   const handleChange = (event) => {
     const { name, value } = event.target;
-    setFormData((current) => ({ ...current, [name]: value }));
+    setFormData((current) => {
+      if (name === 'ticketCategory' && value !== 'Movies') {
+        return {
+          ...current,
+          [name]: value,
+          ticketGenre: '',
+          ticketLanguage: '',
+          ticketShowtime: '',
+        };
+      }
+
+      return { ...current, [name]: value };
+    });
   };
 
   const handleMarketChange = (marketKey) => {
-    setFormData((current) => (
-      marketKey === 'groceries'
-        ? { ...current, marketKey }
-        : clearGroceriesListingFields({ ...current, marketKey })
-    ));
+    setFormData((current) => {
+      if (marketKey === current.marketKey) {
+        return current;
+      }
+
+      if (marketKey === 'groceries') {
+        return { ...current, marketKey, ...EMPTY_TICKETS_LISTING_FIELDS };
+      }
+
+      if (marketKey === 'tickets') {
+        return { ...current, marketKey, ...EMPTY_GROCERIES_LISTING_FIELDS };
+      }
+
+      return clearGroceriesListingFields({ ...current, marketKey });
+    });
   };
 
   const handleImagePick = (event) => {
@@ -8077,6 +8952,9 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
               </div>
               {formData.marketKey === 'groceries' ? (
                 <GroceriesSellerFields formData={formData} onFieldChange={handleChange} prefix="seller-grocery" />
+              ) : null}
+              {formData.marketKey === 'tickets' ? (
+                <TicketsSellerFields formData={formData} onFieldChange={handleChange} prefix="seller-ticket" />
               ) : null}
               <div className="sm:col-span-2">
                 <label htmlFor="seller-description" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Description</label>
@@ -8367,22 +9245,17 @@ const MarketsPage = () => {
           const isProperty = market.href === '/property-hub';
           const isHerbs = market.href === '/traditional-medicines-herbs';
           const isSecondhand = market.href === '/secondhand-central';
+          const marketDisplayNumber = market.href === '/tickets'
+            ? '09'
+            : String(index + 1).padStart(2, '0');
           const useBookingsPreset = isBookings;
           const overlayClassName = useBookingsPreset
             ? 'absolute inset-0 bg-gradient-to-t from-[#041a26]/90 via-[#0f6f84]/55 to-[#14b8a6]/30'
             : 'absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20';
-          const marketLabelClassName = useBookingsPreset
-            ? 'text-xs font-semibold uppercase tracking-wide text-[#8eeaff] drop-shadow'
-            : 'text-xs font-semibold uppercase tracking-wide text-[var(--svs-primary-strong)] drop-shadow';
-          const marketTitleClassName = useBookingsPreset
-            ? 'mt-1 text-lg font-bold text-white drop-shadow'
-            : 'mt-1 text-lg font-bold text-[var(--svs-text)] drop-shadow';
-          const badgeClassName = useBookingsPreset
-            ? 'svs-berkshire-swash rounded-full border border-white/35 bg-white/15 px-2 py-1 text-sm text-white'
-            : 'svs-berkshire-swash rounded-full bg-[var(--svs-cyan-surface)] px-2 py-1 text-sm text-[var(--svs-primary-strong)]';
-          const openMarketClassName = useBookingsPreset
-            ? 'mt-3 text-sm text-white/90 drop-shadow'
-            : 'mt-3 text-sm text-[var(--svs-muted)] drop-shadow';
+          const marketLabelClassName = 'text-xs font-semibold uppercase tracking-wide text-[#8eeaff] drop-shadow';
+          const marketTitleClassName = 'mt-1 text-lg font-bold text-white drop-shadow';
+          const badgeClassName = 'svs-berkshire-swash rounded-full border border-white/35 bg-white/15 px-2 py-1 text-sm text-white';
+          const openMarketClassName = 'mt-3 text-sm text-white/90 drop-shadow';
           const ctaClassName = useBookingsPreset
             ? `${cudyBluePrimaryButtonClassName} mt-4 inline-flex items-center gap-2 rounded-md bg-[#0f9fb2] px-3 py-2 text-sm font-semibold text-white transition group-hover:bg-[#0d8a9c]`
             : `${cudyBluePrimaryButtonClassName} mt-4 inline-flex items-center gap-2 rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition group-hover:bg-[#33b9f2]`;
@@ -8439,7 +9312,7 @@ const MarketsPage = () => {
               <div className="relative z-10 p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className={marketLabelClassName}>{t('marketsPage.marketLabel', { number: String(index + 1).padStart(2, '0') })}</p>
+                    <p className={marketLabelClassName}>{t('marketsPage.marketLabel', { number: marketDisplayNumber })}</p>
                     <p className={marketTitleClassName}>{t(market.labelKey)}</p>
                   </div>
                   <span className={badgeClassName}>SVS</span>
@@ -8458,7 +9331,7 @@ const MarketsPage = () => {
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-primary-strong)]">{t('marketsPage.marketLabel', { number: String(index + 1).padStart(2, '0') })}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-primary-strong)]">{t('marketsPage.marketLabel', { number: marketDisplayNumber })}</p>
                 <p className="mt-1 text-lg font-bold text-[var(--svs-text)]">{t(market.labelKey)}</p>
               </div>
               <span className="svs-berkshire-swash rounded-full bg-[var(--svs-cyan-surface)] px-2 py-1 text-sm text-[var(--svs-primary-strong)]">SVS</span>
@@ -11019,8 +11892,8 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/search" element={<SearchResultsPage />} />
 
     <Route path="/e-commerce" element={<ECommercePage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
-    <Route path="/tickets" element={<TicketsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} onOpenItemDetails={onOpenItemDetails} />} />
-    <Route path="/bookings-tickets" element={<BookingsTicketsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/tickets" element={<TicketsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/bookings-tickets" element={<BookingsTicketsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/movie/:movieId" element={<MovieDetailsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} />} />
     <Route path="/voting-clients" element={<VotingClientsPage />} />
     <Route path="/voting-providers" element={<VotingProvidersPage />} />
@@ -11036,7 +11909,8 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/secondhand-central" element={<SecondHandPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/secondhand-central/product/:itemId" element={<SecondHandProductDetailPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} />} />
     <Route path="/secondhand-central/:categoryKey" element={<SecondHandPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
-    <Route path="/home-care" element={<HomeCarePage />} />
+    <Route path="/home-care" element={<HomeCarePage sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/home-care/provider/:providerId" element={<HomeCareProviderDetailPage />} />
     <Route path="/hardware-software" element={<HardwareSoftwarePage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/mobility-vehicles" element={<MobilityVehiclesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/natural-resources-minerals" element={<NaturalResourcesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
@@ -12535,7 +13409,24 @@ const App = () => {
   );
 };
 
-export default App;
+// Demo wrapper for MovieFilter
+function DemoMovieFilter() {
+  const handleApply = (filters) => {
+    // For now, just log and alert the filters
+    // eslint-disable-next-line no-console
+    console.log('Applied filters:', filters);
+    alert('Filters applied: ' + JSON.stringify(filters, null, 2));
+  };
+  return <div className="my-8"><MovieFilter onApply={handleApply} /></div>;
+}
+
+export default function AppWrapper(props) {
+  // Render the filter at the top for demo
+  return <>
+    <DemoMovieFilter />
+    <App {...props} />
+  </>;
+}
 
 
 

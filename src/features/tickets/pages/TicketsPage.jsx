@@ -202,10 +202,17 @@ const SalePrice = ({ price }) => {
   );
 };
 
+import React, { useState } from 'react';
+
 const MarketplaceSection = ({ title, subtitle, items }) => {
+  const [expandedId, setExpandedId] = useState(null);
   if (!items.length) {
     return null;
   }
+
+  const handleExpand = (id) => {
+    setExpandedId((prev) => (prev === id ? null : id));
+  };
 
   return (
     <section className="mt-10">
@@ -220,7 +227,8 @@ const MarketplaceSection = ({ title, subtitle, items }) => {
         {items.map((item) => (
           <article
             key={item.id}
-            className="overflow-hidden rounded-2xl border border-slate-700 bg-slate-900/80 shadow-xl shadow-black/20"
+            className="overflow-hidden rounded-2xl border border-slate-700 bg-slate-900/80 shadow-xl shadow-black/20 cursor-pointer transition hover:shadow-cyan-700/30"
+            onClick={() => handleExpand(item.id)}
           >
             <img src={item.image} alt={`${item.type} event visual`} className="h-44 w-full object-cover" />
             <div className="p-4">
@@ -235,11 +243,17 @@ const MarketplaceSection = ({ title, subtitle, items }) => {
                   <span>{item.venue}</span>
                 </p>
               </div>
+              {expandedId === item.id && (
+                <div className="mt-3 text-sm text-slate-200 border-t border-slate-700 pt-3 animate-fade-in">
+                  {item.description || item.overview || 'No description available.'}
+                </div>
+              )}
               <div className="mt-4 flex items-center justify-between">
                 <p className="text-lg text-cyan-300"><SalePrice price={item.price} /></p>
                 <button
                   type="button"
                   className="rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-4 py-2 text-sm font-semibold text-white transition hover:from-blue-500 hover:to-cyan-400"
+                  onClick={(e) => { e.stopPropagation(); /* handle buy logic here */ }}
                 >
                   Buy Now
                 </button>
