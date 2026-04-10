@@ -1,5 +1,4 @@
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
-import MovieFilter from '../components/market/MovieFilter';
 import {
   Bell,
   CalendarDays,
@@ -2734,7 +2733,7 @@ const getGroceriesListingMetaText = (item = {}) => {
   const categoryLabel = item.category || getGroceriesCategoryTitle(item.categoryKey);
   const parts = [categoryLabel, item.brand, item.volume, item.discount || item.freshness].filter(Boolean);
 
-  return parts.join(' • ') || item.description || item.sellerName || 'Seller item';
+  return parts.join(' • ') || item.sellerName || 'Seller item';
 };
 
 const getGroceriesListingDetailsText = (item = {}) => {
@@ -5904,7 +5903,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
               <div className="flex flex-1 flex-col justify-between bg-[#0c2a32] px-5 py-4 text-white">
                 <div>
                   <h2 className="text-[22px] font-bold leading-tight">{card.title}</h2>
-                  <p className="mt-1.5 text-[15px] leading-snug text-slate-300">{card.description}</p>
+                  {/* Description intentionally hidden in main listing. Only show in details modal. */}
                 </div>
                 <div className="mt-4 flex justify-end">
                   <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#8cecf5] transition-all group-hover:gap-2.5">
@@ -6536,7 +6535,7 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
     ...item,
     route: '/secondhand-central',
     marketName: t('markets.secondhand'),
-    details: `${item.condition || 'Pre-owned'} • ${item.description || ''}`,
+    details: `${item.condition || 'Pre-owned'}`,
   });
 
   /* ── category detail view w/ sidebar (from Bookings movies pattern) ── */
@@ -6878,7 +6877,7 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
                     <div className="flex flex-1 flex-col p-4">
                       <h3 className="text-base font-bold text-[var(--svs-text)]">{item.title}</h3>
                       <div className="mt-2 space-y-1 text-xs text-[var(--svs-muted)]">
-                        {item.description ? <p className="line-clamp-2">{item.description}</p> : null}
+                        {/* Description intentionally hidden in main listing. Only show in details modal. */}
                         <p className="flex items-center gap-1.5">
                           <MapPin className="h-3.5 w-3.5 shrink-0 text-[var(--svs-primary)]" />
                           <span>Nairobi (Kenya)</span>
@@ -6948,7 +6947,7 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
     ...item,
     route: '/fast-food',
     marketName: t('markets.fastFood'),
-    details: `${item.category || 'Seller item'} • ${item.prepTime || item.description || 'Ready to order'}`,
+    details: `${item.category || 'Seller item'} • ${item.prepTime || 'Ready to order'}`,
   });
 
   return (
@@ -7052,7 +7051,7 @@ const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
     ...item,
     route: '/wellness',
     marketName: t('markets.wellness'),
-    details: item.description || item.sellerName,
+    details: item.sellerName,
   });
 
   return (
@@ -7099,7 +7098,7 @@ const TraditionalMedicinesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wis
     ...item,
     route: '/traditional-medicines-herbs',
     marketName: t('markets.traditionalMedicines'),
-    details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Traditional herbal listing'}`,
+    details: `${item.category || 'Seller item'} • ${item.sellerName || 'Traditional herbal listing'}`,
   });
 
   return (
@@ -7149,7 +7148,7 @@ const StationeryPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
     ...item,
     route: '/stationery-office',
     marketName: t('markets.stationery'),
-    details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Ready for school and office use'}`,
+    details: `${item.category || 'Seller item'} • ${item.sellerName || 'Ready for school and office use'}`,
   });
 
   return (
@@ -7196,7 +7195,7 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
     ...item,
     route: '/building-construction-tools',
     marketName: t('markets.constructionTools'),
-    details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Construction-ready listing'}`,
+    details: `${item.category || 'Seller item'} • ${item.sellerName || 'Construction-ready listing'}`,
   });
 
   return (
@@ -7360,7 +7359,7 @@ const HomeCarePage = ({ sellerItems = [], onOpenItemDetails }) => {
         image: sourceItem?.image || provider.image,
         images: sourceItem?.images || (sourceItem?.image ? [sourceItem.image] : []),
         marketName: 'Book @ Home-Care Services',
-        details: sourceItem?.description || provider.experience || provider.location,
+        details: provider.experience || provider.location,
         priceLabel: sourceItem?.price ? getSalePrices(sourceItem.price).nowPrice : '',
         cartItem: null,
         wishlistItem: null,
@@ -7657,7 +7656,7 @@ const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
     ...item,
     route: '/hardware-software',
     marketName: t('markets.hardwareSoftware'),
-    details: item.description || item.subtitle || item.sellerName,
+    details: item.subtitle || item.sellerName,
   });
 
   return (
@@ -7704,7 +7703,7 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
     ...item,
     route: '/mobility-vehicles',
     marketName: t('markets.mobilityVehicles'),
-    details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Transport listing'}`,
+    details: `${item.category || 'Seller item'} • ${item.specification || item.sellerName || 'Transport listing'}`,
   });
 
   return (
@@ -7751,7 +7750,7 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
     ...item,
     route: '/fashion-style',
     marketName: t('markets.fashionStyle'),
-    details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Style listing'}`,
+    details: `${item.category || 'Seller item'} • ${item.specification || item.sellerName || 'Style listing'}`,
   });
 
   return (
@@ -7798,7 +7797,7 @@ const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
     ...item,
     route: '/natural-resources-minerals',
     marketName: t('markets.naturalResources'),
-    details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Resource listing'}`,
+    details: `${item.category || 'Seller item'} • ${item.specification || item.sellerName || 'Resource listing'}`,
   });
 
   return (
@@ -8413,7 +8412,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                         {normalizeListingQuantity(item.availableQuantity, 0) === 0 ? ' (Out of stock - buyers can only wishlist this item).' : ''}
                       </p>
                       {item.description ? (
-                        <p className="mt-1.5 line-clamp-2 text-xs text-[var(--svs-muted)]">{item.description}</p>
+                        {/* Description intentionally hidden in main listing. Only show in details modal. */}
                       ) : null}
 
                       {editingId === item.dbId ? (
@@ -11264,7 +11263,7 @@ const SecondHandProductDetailPage = ({ onAddToCart, onBuyNow, onToggleWishlist, 
     price: product.price,
     route: '/secondhand-central',
     marketName: 'Secondhand Central',
-    details: `${product.condition} • ${product.description?.[0] || ''}`,
+    details: `${product.condition}`,
   });
 
   const isWishlisted = wishlistItemIds.includes(getCollectionItemId('/secondhand-central', product.id));
@@ -11699,6 +11698,7 @@ const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer, onPr
             <div className="p-4">
               <h3 className="text-lg font-bold">{itemTitle}</h3>
               <div className="mt-1">{metaRenderer(item)}</div>
+              {/* Description intentionally hidden in main listing. Only show in details modal. */}
               {availableQuantity !== null ? (
                 <p className="mt-1 text-xs text-[var(--svs-muted)]">
                   Quantity: {availableQuantity}
@@ -13409,23 +13409,9 @@ const App = () => {
   );
 };
 
-// Demo wrapper for MovieFilter
-function DemoMovieFilter() {
-  const handleApply = (filters) => {
-    // For now, just log and alert the filters
-    // eslint-disable-next-line no-console
-    console.log('Applied filters:', filters);
-    alert('Filters applied: ' + JSON.stringify(filters, null, 2));
-  };
-  return <div className="my-8"><MovieFilter onApply={handleApply} /></div>;
-}
 
 export default function AppWrapper(props) {
-  // Render the filter at the top for demo
-  return <>
-    <DemoMovieFilter />
-    <App {...props} />
-  </>;
+  return <App {...props} />;
 }
 
 

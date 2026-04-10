@@ -244,9 +244,12 @@ const MarketplaceSection = ({ title, subtitle, items }) => {
                 </p>
               </div>
               {expandedId === item.id && (
+                {/* Description/overview intentionally hidden in main listing. Only show in details/expanded view. */}
+                {/*
                 <div className="mt-3 text-sm text-slate-200 border-t border-slate-700 pt-3 animate-fade-in">
                   {item.description || item.overview || 'No description available.'}
                 </div>
+                */}
               )}
               <div className="mt-4 flex items-center justify-between">
                 <p className="text-lg text-cyan-300"><SalePrice price={item.price} /></p>
