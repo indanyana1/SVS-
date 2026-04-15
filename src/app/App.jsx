@@ -1590,7 +1590,7 @@ const HomeCareProviderDetailPage = () => {
                 {activeProvider.badge}
               </span>
               <div className="mt-4 flex items-center gap-2">
-                {[1, 2, 3, 4, 5].map((star) => (
+                {Array.isArray([1, 2, 3, 4, 5]) && [1, 2, 3, 4, 5].map((star) => (
                   <Star key={`rating-star-${star}`} className="h-5 w-5 fill-[#FBBF24] text-[#FBBF24]" />
                 ))}
                 <span className="text-[18px] font-semibold">{activeProvider.ratingLabel}</span>
@@ -1616,8 +1616,8 @@ const HomeCareProviderDetailPage = () => {
             <div>
               <p className="flex items-center gap-2 text-sm font-semibold text-[#0052CC]"><Bell className="h-4 w-4" /> Language</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                {activeProvider.languages.map((language) => (
-                  <span key={`language-${language}`} className="rounded-full bg-[#0f9fb2] px-3 py-1 text-xs font-semibold text-white">{language}</span>
+                {Array.isArray(activeProvider.languages) && activeProvider.languages.map((language) => (
+                  <span key={`language-${language}`} className="rounded-full bg-[#0f9fb2] px-3 py-1 text-xs font-semibold text-white">{typeof language === 'object' ? JSON.stringify(language) : language}</span>
                 ))}
               </div>
             </div>
@@ -1625,8 +1625,8 @@ const HomeCareProviderDetailPage = () => {
             <div>
               <p className="flex items-center gap-2 text-sm font-semibold text-[#0052CC]"><ShieldCheck className="h-4 w-4" /> Services Offered</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                {activeProvider.servicesOffered.map((service) => (
-                  <span key={`service-${service}`} className="rounded-full bg-[#0f9fb2] px-3 py-1 text-xs font-semibold text-white">{service}</span>
+                {Array.isArray(activeProvider.servicesOffered) && activeProvider.servicesOffered.map((service) => (
+                  <span key={`service-${service}`} className="rounded-full bg-[#0f9fb2] px-3 py-1 text-xs font-semibold text-white">{typeof service === 'object' ? JSON.stringify(service) : service}</span>
                 ))}
               </div>
             </div>
@@ -1637,14 +1637,14 @@ const HomeCareProviderDetailPage = () => {
           <h2 className="text-[20px] font-bold text-[#0052CC]">Availability Schedule</h2>
           <p className="mt-4 flex items-center gap-2 text-sm font-semibold text-[#0052CC]"><CalendarDays className="h-4 w-4" /> Available Days</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            {homeCareAvailabilityDays.map((day) => (
-              <span key={`day-${day}`} className="rounded-full bg-[#E6F3FF] px-3 py-1 text-xs font-semibold text-[#0052CC]">{day}</span>
+            {Array.isArray(homeCareAvailabilityDays) && homeCareAvailabilityDays.map((day) => (
+              <span key={`day-${day}`} className="rounded-full bg-[#E6F3FF] px-3 py-1 text-xs font-semibold text-[#0052CC]">{typeof day === 'object' ? JSON.stringify(day) : day}</span>
             ))}
           </div>
 
           <div className="mt-5 grid gap-3 md:grid-cols-3">
-            {homeCareAvailabilityTimeSlots.map((slot) => (
-              <button key={`slot-${slot}`} type="button" className="h-14 rounded-lg bg-[#0f9fb2] px-4 text-sm font-bold text-white transition hover:bg-[#0d8a9c]">{slot}</button>
+            {Array.isArray(homeCareAvailabilityTimeSlots) && homeCareAvailabilityTimeSlots.map((slot) => (
+              <button key={`slot-${slot}`} type="button" className="h-14 rounded-lg bg-[#0f9fb2] px-4 text-sm font-bold text-white transition hover:bg-[#0d8a9c]">{typeof slot === 'object' ? JSON.stringify(slot) : slot}</button>
             ))}
           </div>
         </section>
@@ -1652,10 +1652,10 @@ const HomeCareProviderDetailPage = () => {
         <section className="border-b border-[#E5E7EB] py-8">
           <h2 className="text-[20px] font-bold text-[#0052CC]">Certifications &amp; Experience</h2>
           <ul className="mt-4 space-y-2 text-sm text-[#334155]">
-            {homeCareCertifications.map((item) => (
+            {Array.isArray(homeCareCertifications) && homeCareCertifications.map((item) => (
               <li key={`cert-${item}`} className="flex items-start gap-2">
                 <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#16A34A] text-xs font-bold text-white">✓</span>
-                <span>{item}</span>
+                <span>{typeof item === 'object' ? JSON.stringify(item) : item}</span>
               </li>
             ))}
           </ul>
@@ -1664,11 +1664,11 @@ const HomeCareProviderDetailPage = () => {
         <section className="border-b border-[#E5E7EB] py-8">
           <h2 className="text-[20px] font-bold text-[#0052CC]">Services &amp; Pricing</h2>
           <div className="mt-5 space-y-4">
-            {homeCarePricingSections.map((section) => (
+            {Array.isArray(homeCarePricingSections) && homeCarePricingSections.map((section) => (
               <article key={section.id} className="rounded-xl border border-[#E5E7EB] bg-[#F0F9FF] p-4">
-                <h3 className="text-lg font-bold text-[#0f172a]">{section.title}</h3>
+                <h3 className="text-lg font-bold text-[#0f172a]">{typeof section.title === 'object' ? JSON.stringify(section.title) : section.title}</h3>
                 <div className="mt-4 space-y-3">
-                  {section.options.map((option) => (
+                  {Array.isArray(section.options) && section.options.map((option) => (
                     <div key={option.id} className="flex flex-col gap-3 rounded-lg bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
                       <label className="flex items-center gap-2 text-sm font-medium text-[#1F2937]">
                         <input
@@ -1677,7 +1677,7 @@ const HomeCareProviderDetailPage = () => {
                           onChange={() => toggleOption(option.id)}
                           className="h-4 w-4 rounded border-[#D1D5DB] text-[#0052CC] focus:ring-[#0052CC]"
                         />
-                        <span>{option.label}: {option.price}</span>
+                        <span>{typeof option.label === 'object' ? JSON.stringify(option.label) : option.label}: {typeof option.price === 'object' ? JSON.stringify(option.price) : option.price}</span>
                       </label>
                       <button
                         type="button"
@@ -8254,10 +8254,10 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
               : 'Track inventory, update product details, and jump into order activity through clearly separated sections.'}
           </p>
           <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <KpiCard label="Listings" value={String(myListings.length)} />
-            <KpiCard label="Markets" value={String(uniqueMarketCount)} />
-            <KpiCard label={isOrdersView ? 'Active Orders' : 'Units in Stock'} value={String(isOrdersView ? activeOrdersCount : totalStockUnits)} />
-            <KpiCard label={isOrdersView ? 'Delivered' : 'Low Stock'} value={String(isOrdersView ? deliveredOrdersCount : lowStockListingsCount)} />
+            <KpiCard label="Listings" value={typeof myListings.length === 'object' ? JSON.stringify(myListings.length) : String(myListings.length)} />
+            <KpiCard label="Markets" value={typeof uniqueMarketCount === 'object' ? JSON.stringify(uniqueMarketCount) : String(uniqueMarketCount)} />
+            <KpiCard label={isOrdersView ? 'Active Orders' : 'Units in Stock'} value={typeof (isOrdersView ? activeOrdersCount : totalStockUnits) === 'object' ? JSON.stringify(isOrdersView ? activeOrdersCount : totalStockUnits) : String(isOrdersView ? activeOrdersCount : totalStockUnits)} />
+            <KpiCard label={isOrdersView ? 'Delivered' : 'Low Stock'} value={typeof (isOrdersView ? deliveredOrdersCount : lowStockListingsCount) === 'object' ? JSON.stringify(isOrdersView ? deliveredOrdersCount : lowStockListingsCount) : String(isOrdersView ? deliveredOrdersCount : lowStockListingsCount)} />
           </div>
         </div>
 
@@ -8405,14 +8405,14 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                     </div>
 
                     <div className="flex h-full flex-col p-4">
-                      <h3 className="text-base font-bold leading-tight text-[var(--svs-text)]">{item.title}</h3>
-                      <p className="mt-0.5 text-sm font-semibold text-[var(--svs-primary-strong)]"><SalePrice price={item.price} /></p>
+                      <h3 className="text-base font-bold leading-tight text-[var(--svs-text)]">{typeof item.title === 'object' ? JSON.stringify(item.title) : item.title}</h3>
+                      <p className="mt-0.5 text-sm font-semibold text-[var(--svs-primary-strong)]"><SalePrice price={typeof item.price === 'object' ? JSON.stringify(item.price) : item.price} /></p>
                       <p className="mt-1 text-xs text-[var(--svs-muted)]">
-                        Quantity in stock: {normalizeListingQuantity(item.availableQuantity, 0)}
+                        Quantity in stock: {typeof normalizeListingQuantity(item.availableQuantity, 0) === 'object' ? JSON.stringify(normalizeListingQuantity(item.availableQuantity, 0)) : normalizeListingQuantity(item.availableQuantity, 0)}
                         {normalizeListingQuantity(item.availableQuantity, 0) === 0 ? ' (Out of stock - buyers can only wishlist this item).' : ''}
                       </p>
                       {item.description ? (
-                        {/* Description intentionally hidden in main listing. Only show in details modal. */}
+                        <span style={{ display: 'none' }}>{typeof item.description === 'object' ? JSON.stringify(item.description) : item.description}</span>
                       ) : null}
 
                       {editingId === item.dbId ? (
@@ -8643,36 +8643,46 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Order</p>
-                    <p className="text-sm font-bold text-[var(--svs-text)]">{order.reference || order.id}</p>
-                    <p className="text-xs text-[var(--svs-muted)]">{new Date(order.createdAt).toLocaleString()}</p>
+                    <p className="text-sm font-bold text-[var(--svs-text)]">{typeof order.reference === 'object' ? JSON.stringify(order.reference) : (typeof order.reference === 'string' ? order.reference : (order.id || ''))}</p>
+                    <p className="text-xs text-[var(--svs-muted)]">{order.createdAt ? (typeof order.createdAt === 'object' ? JSON.stringify(order.createdAt) : new Date(order.createdAt).toLocaleString()) : ''}</p>
                   </div>
                   <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getStatusClasses(order.status)}`}>
-                    {order.status}
+                    {typeof order.status === 'object' ? JSON.stringify(order.status) : (typeof order.status === 'string' ? order.status : '')}
                   </span>
                 </div>
 
                 <div className="mt-3 space-y-1 text-xs text-[var(--svs-muted)]">
-                  <p>Customer: {order.customer?.fullName || order.customer?.email || 'Guest customer'}</p>
-                  {order.customer?.email ? <p>Email: {order.customer.email}</p> : null}
-                  {order.customer?.phone ? <p>Phone: {order.customer.phone}</p> : null}
-                  <p>Items from your store: {order.sellerLineItems.reduce((count, lineItem) => count + (Number(lineItem.quantity) || 1), 0)}</p>
-                  <p>Your subtotal: {formatCheckoutAmount(order.sellerSubtotal)}</p>
+                  <p>Customer: {
+                    typeof order.customer?.fullName === 'object'
+                      ? JSON.stringify(order.customer?.fullName)
+                      : (typeof order.customer?.fullName === 'string' && order.customer?.fullName
+                        ? order.customer.fullName
+                        : (typeof order.customer?.email === 'object'
+                          ? JSON.stringify(order.customer?.email)
+                          : (typeof order.customer?.email === 'string' && order.customer?.email
+                            ? order.customer.email
+                            : 'Guest customer')))
+                  }</p>
+                  {order.customer?.email ? <p>Email: {typeof order.customer.email === 'object' ? JSON.stringify(order.customer.email) : order.customer.email}</p> : null}
+                  {order.customer?.phone ? <p>Phone: {typeof order.customer.phone === 'object' ? JSON.stringify(order.customer.phone) : order.customer.phone}</p> : null}
+                  <p>Items from your store: {Array.isArray(order.sellerLineItems) ? order.sellerLineItems.reduce((count, lineItem) => count + (typeof lineItem.quantity === 'object' ? 1 : (Number(lineItem.quantity) || 1)), 0) : 0}</p>
+                  <p>Your subtotal: {typeof order.sellerSubtotal === 'object' ? JSON.stringify(order.sellerSubtotal) : (typeof order.sellerSubtotal === 'number' ? formatCheckoutAmount(order.sellerSubtotal) : '')}</p>
                 </div>
 
                 <div className="mt-3 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Your items in this order</p>
                   <div className="mt-2 space-y-2">
                     {order.sellerLineItems.map((lineItem, index) => {
-                      const quantity = Math.max(Number(lineItem.quantity) || 1, 1);
-                      const linePrice = (Number(lineItem.unitPrice) || 0) * quantity;
+                      const quantity = Math.max(typeof lineItem.quantity === 'object' ? 1 : (Number(lineItem.quantity) || 1), 1);
+                      const linePrice = (typeof lineItem.unitPrice === 'object' ? 0 : (Number(lineItem.unitPrice) || 0)) * quantity;
 
                       return (
                         <div key={`${order.id}-${lineItem.id || lineItem.sku || index}`} className="flex items-start justify-between gap-3 text-xs text-[var(--svs-text)]">
                           <div>
-                            <p className="font-semibold text-[var(--svs-text)]">{lineItem.title || 'Untitled item'}</p>
+                            <p className="font-semibold text-[var(--svs-text)]">{typeof lineItem.title === 'object' ? JSON.stringify(lineItem.title) : (lineItem.title || 'Untitled item')}</p>
                             <p className="text-[var(--svs-muted)]">Qty: {quantity}</p>
                           </div>
-                          <p className="font-semibold text-[var(--svs-primary-strong)]">{formatCheckoutAmount(linePrice)}</p>
+                          <p className="font-semibold text-[var(--svs-primary-strong)]">{typeof linePrice === 'object' ? JSON.stringify(linePrice) : formatCheckoutAmount(linePrice)}</p>
                         </div>
                       );
                     })}
