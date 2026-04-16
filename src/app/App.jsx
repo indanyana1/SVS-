@@ -85,6 +85,7 @@ const sellerMarketOptions = [
   { key: 'traditionalMedicines', labelKey: 'markets.traditionalMedicines', route: '/traditional-medicines-herbs' },
   { key: 'wellness', labelKey: 'markets.wellness', route: '/wellness' },
   { key: 'stationery', labelKey: 'markets.stationery', route: '/stationery-office' },
+  { key: 'secondhand', labelKey: 'markets.secondhand', route: '/secondhand-central' },
 ];
 
 const sellerMarketConfig = sellerMarketOptions.reduce((accumulator, option) => {

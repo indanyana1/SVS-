@@ -33,6 +33,19 @@ const categoryTiles = [
 ];
 
 const marketItems = [
+    // New market: Secondhand Central
+    {
+      id: 'secondhand-1',
+      type: 'secondhand',
+      title: 'Pre-loved Mountain Bike',
+      venue: 'Secondhand Central',
+      date: '2025-12-25',
+      country: 'South Africa',
+      price: 'R1800',
+      quantity: 5,
+      image:
+        'https://images.pexels.com/photos/276528/pexels-photo-276528.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    },
   {
     id: 'food-1',
     type: 'food',
@@ -41,6 +54,7 @@ const marketItems = [
     date: '2025-11-28',
     country: 'South Africa',
     price: 'R95',
+    quantity: 20,
     image:
       'https://images.pexels.com/photos/12081205/pexels-photo-12081205.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -52,6 +66,7 @@ const marketItems = [
     date: '2025-11-28',
     country: 'South Africa',
     price: 'R149',
+    quantity: 20,
     image:
       'https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -63,6 +78,7 @@ const marketItems = [
     date: '2025-12-02',
     country: 'South Africa',
     price: 'R799',
+    quantity: 20,
     image:
       'https://images.pexels.com/photos/3394662/pexels-photo-3394662.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -74,6 +90,7 @@ const marketItems = [
     date: '2025-11-28',
     country: 'South Africa',
     price: 'R279',
+    quantity: 20,
     image:
       'https://images.pexels.com/photos/4587997/pexels-photo-4587997.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -85,6 +102,7 @@ const marketItems = [
     date: '2025-12-28',
     country: 'Kenya',
     price: 'R67',
+    quantity: 20,
     image:
       'https://images.pexels.com/photos/3683074/pexels-photo-3683074.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -96,6 +114,7 @@ const marketItems = [
     date: '2025-12-02',
     country: 'Uganda',
     price: 'R240',
+    quantity: 20,
     image:
       'https://images.pexels.com/photos/434311/pexels-photo-434311.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -107,6 +126,7 @@ const marketItems = [
     date: '2025-12-06',
     country: 'South Africa',
     price: 'R120',
+    quantity: 20,
     image:
       'https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -118,6 +138,7 @@ const marketItems = [
     date: '2025-12-10',
     country: 'Uganda',
     price: 'R1099',
+    quantity: 20,
     image:
       'https://images.pexels.com/photos/4790268/pexels-photo-4790268.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -129,6 +150,7 @@ const marketItems = [
     date: '2025-12-20',
     country: 'Tanzania',
     price: 'R189',
+    quantity: 20,
     image:
       'https://images.pexels.com/photos/1639557/pexels-photo-1639557.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -140,8 +162,22 @@ const marketItems = [
     date: '2025-12-14',
     country: 'South Africa',
     price: 'R320',
+    quantity: 20,
     image:
       'https://images.pexels.com/photos/4198015/pexels-photo-4198015.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  // New market: Fashion, Clothing and Footwear
+  {
+    id: 'fashion-1',
+    type: 'fashion',
+    title: 'Classic Denim Jacket',
+    venue: 'Trendy Fashion Store',
+    date: '2025-12-22',
+    country: 'South Africa',
+    price: 'R499',
+    quantity: 20,
+    image:
+      'https://images.pexels.com/photos/2983464/pexels-photo-2983464.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
 ];
 
@@ -154,9 +190,11 @@ const typeLabelMap = {
   medicines: 'Medicines',
   liquor: 'Liquor',
   tickets: 'Tickets',
+  fashion: 'Fashion, Clothing and Footwear',
+  secondhand: 'Secondhand Central',
 };
 
-const ticketCategoryOrder = ['all', 'food', 'groceries', 'gadgets', 'animals', 'medicines', 'liquor', 'tickets'];
+const ticketCategoryOrder = ['all', 'food', 'groceries', 'gadgets', 'animals', 'medicines', 'liquor', 'tickets', 'fashion', 'secondhand'];
 
 const formatDate = (isoDate) =>
   new Date(isoDate).toLocaleDateString('en-US', {
@@ -224,46 +262,52 @@ const MarketplaceSection = ({ title, subtitle, items }) => {
       </div>
 
       <div className="mt-5 grid gap-5 md:grid-cols-3">
-        {items.map((item) => (
-          <article
-            key={item.id}
-            className="overflow-hidden rounded-2xl border border-slate-700 bg-slate-900/80 shadow-xl shadow-black/20 cursor-pointer transition hover:shadow-cyan-700/30"
-            onClick={() => handleExpand(item.id)}
-          >
-            <img src={item.image} alt={`${item.type} event visual`} className="h-44 w-full object-cover" />
-            <div className="p-4">
-              <h4 className="text-lg font-semibold text-white">{item.title}</h4>
-              <div className="mt-2 space-y-1.5 text-sm text-slate-300">
-                <p className="flex items-center gap-2">
-                  <CalendarDays className="h-4 w-4 text-cyan-300" />
-                  <span>{formatDate(item.date)}</span>
-                </p>
-                <p className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-cyan-300" />
-                  <span>{item.venue}</span>
-                </p>
-              </div>
-              {expandedId === item.id && (
-                {/* Description/overview intentionally hidden in main listing. Only show in details/expanded view. */}
-                {/*
-                <div className="mt-3 text-sm text-slate-200 border-t border-slate-700 pt-3 animate-fade-in">
-                  {item.description || item.overview || 'No description available.'}
+        {items.map((item) => {
+          const isOutOfStock = typeof item.quantity === 'number' && item.quantity <= 0;
+          return (
+            <article
+              key={item.id}
+              className="overflow-hidden rounded-2xl border border-slate-700 bg-slate-900/80 shadow-xl shadow-black/20 cursor-pointer transition hover:shadow-cyan-700/30"
+              onClick={() => handleExpand(item.id)}
+            >
+              <img src={item.image} alt={`${item.type} event visual`} className="h-44 w-full object-cover" />
+              <div className="p-4">
+                <h4 className="text-lg font-semibold text-white">{item.title}</h4>
+                <div className="mt-2 space-y-1.5 text-sm text-slate-300">
+                  <p className="flex items-center gap-2">
+                    <CalendarDays className="h-4 w-4 text-cyan-300" />
+                    <span>{formatDate(item.date)}</span>
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-cyan-300" />
+                    <span>{item.venue}</span>
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <span className="font-mono text-xs text-slate-400">Qty: {typeof item.quantity === 'number' ? item.quantity : 'N/A'}</span>
+                  </p>
                 </div>
-                */}
-              )}
-              <div className="mt-4 flex items-center justify-between">
-                <p className="text-lg text-cyan-300"><SalePrice price={item.price} /></p>
-                <button
-                  type="button"
-                  className="rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-4 py-2 text-sm font-semibold text-white transition hover:from-blue-500 hover:to-cyan-400"
-                  onClick={(e) => { e.stopPropagation(); /* handle buy logic here */ }}
-                >
-                  Buy Now
-                </button>
+                {expandedId === item.id && (
+                  // Description/overview intentionally hidden in main listing. Only show in details/expanded view.
+                  // <div className="mt-3 text-sm text-slate-200 border-t border-slate-700 pt-3 animate-fade-in">
+                  //   {item.description || item.overview || 'No description available.'}
+                  // </div>
+                  null
+                )}
+                <div className="mt-4 flex items-center justify-between">
+                  <p className="text-lg text-cyan-300"><SalePrice price={item.price} /></p>
+                  <button
+                    type="button"
+                    className={`rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-4 py-2 text-sm font-semibold text-white transition hover:from-blue-500 hover:to-cyan-400 ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    onClick={(e) => { e.stopPropagation(); /* handle buy logic here */ }}
+                    disabled={isOutOfStock}
+                  >
+                    {isOutOfStock ? 'Wishlist Only' : 'Buy Now'}
+                  </button>
+                </div>
               </div>
-            </div>
-          </article>
-        ))}
+            </article>
+          );
+        })}
       </div>
 
       <button
