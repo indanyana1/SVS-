@@ -6986,56 +6986,261 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
 };
 
 const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
-  const { t } = useTranslation();
-  const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'beverages'), ...beveragesLiquorItems], [sellerItems]);
-  const buildCartItem = (item) => createCartItem({
-    ...item,
-    route: '/beverages-liquors',
-    marketName: t('markets.beverages'),
-    details: `${item.category || 'Seller item'} • ${item.volume || item.description || item.sellerName || 'Marketplace listing'}`,
-  });
-  const buildWishlistItem = (item) => createWishlistItem({
-    ...item,
-    route: '/beverages-liquors',
-    marketName: t('markets.beverages'),
-    details: `${item.category || 'Seller item'} • ${item.volume || item.description || item.sellerName || 'Marketplace listing'}`,
-  });
+  // --- BookingsTicketsPage-inspired UI ---
+  // Removed unused t
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState('All');
+  const [sortOrder, setSortOrder] = useState('Newest');
+  const [sectionVisibleCounts, setSectionVisibleCounts] = useState({});
+
+  const beveragesCategoryTabs = [
+    'All',
+    'Wine',
+    'Beer',
+    'Whisky',
+    'Vodka',
+    'Rum',
+    'Gin',
+    'Brandy',
+    'Tequila',
+    'Sake',
+    'Scotch',
+    'Red Wine',
+    'Dark Rum',
+  ];
+
+  // Map category tab to item category keywords for matching
+  const beveragesCategoryMap = {
+    Wine: ['wine', 'red wine', 'white wine', 'sparkling'],
+    Beer: ['beer', 'lager', 'ale', 'stout', 'pilsner'],
+    Whisky: ['whisky', 'whiskey', 'bourbon', 'scotch'],
+    Vodka: ['vodka'],
+    Rum: ['rum', 'dark rum', 'white rum'],
+    Gin: ['gin'],
+    Brandy: ['brandy'],
+    Tequila: ['tequila'],
+    Sake: ['sake'],
+    Scotch: ['scotch'],
+    'Red Wine': ['red wine'],
+    'Dark Rum': ['dark rum'],
+  };
+
+  const allBeverageItems = useMemo(() => [
+    ...getSellerItemsForMarket(sellerItems, 'beverages').map((item) => ({
+      ...item,
+      category: item.category || '',
+      title: item.title || 'Seller Beverage',
+      subtitle: item.subtitle || item.description || 'Seller listing',
+      provider: item.provider || item.sellerName || 'SVS Seller',
+      volume: item.volume || '',
+      availableQuantity: normalizeListingQuantity(item.availableQuantity, 0),
+      price: item.price || '0.00',
+      image: item.image || 'https://images.pexels.com/photos/434311/pexels-photo-434311.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      images: item.images || (item.image ? [item.image] : []),
+      isSellerListing: true,
+    })),
+    ...beveragesLiquorItems.map((item) => ({
+      ...item,
+      category: item.category || '',
+      subtitle: item.description || '',
+      provider: item.sellerName || '',
+      availableQuantity: item.availableQuantity ?? 20,
+      isSellerListing: false,
+    })),
+  ], [sellerItems]);
+
+  const filteredBeverageItems = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    return allBeverageItems.filter((item) => {
+      // Category filter logic
+      let matchesCategory = false;
+      if (activeCategory === 'All') {
+        matchesCategory = true;
+      } else if (beveragesCategoryMap[activeCategory]) {
+        const itemCat = (item.category || '').toLowerCase();
+        const itemTitle = (item.title || '').toLowerCase();
+        matchesCategory = beveragesCategoryMap[activeCategory].some((cat) => itemCat.includes(cat) || itemTitle.includes(cat));
+      } else {
+        matchesCategory = (item.category || '').toLowerCase() === activeCategory.toLowerCase();
+      }
+
+      // Search filter logic
+      const matchesQuery = !normalizedQuery || [item.title, item.subtitle, item.provider, item.category, item.volume]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(normalizedQuery));
+      return matchesCategory && matchesQuery;
+    });
+  }, [allBeverageItems, activeCategory, searchQuery]);
+
+  const openBeverageItemDetails = (item) => {
+    const details = `${item.category || 'Beverage'}${item.volume ? ' • ' + item.volume : ''}${item.subtitle ? ' • ' + item.subtitle : ''}`;
+    const cartItem = createCartItem({
+      ...item,
+      route: '/beverages-liquors',
+      marketName: 'Beverages & Liquors',
+      details,
+    });
+    const wishlistItem = createWishlistItem({
+      ...item,
+      route: '/beverages-liquors',
+      marketName: 'Beverages & Liquors',
+      details,
+    });
+    onOpenItemDetails?.({
+      title: item.title,
+      image: item.image,
+      images: item.images || (item.image ? [item.image] : []),
+      marketName: 'Beverages & Liquors',
+      details,
+      priceLabel: item.price,
+      cartItem,
+      wishlistItem,
+    });
+  };
 
   return (
-  <PageFrame
-    title={t('markets.beverages')}
-    subtitle={t('pageSubtitles.beverages')}
-  >
-    <div className="mb-5 rounded-xl border border-[#f59e0b] bg-[#fffbeb] p-3 text-sm text-[#92400e]">
-      18+ age verification applies to liquor purchases.
-    </div>
+    <PageFrame
+      title="Beverages & Liquors"
+      subtitle="Shop wine, beer, spirits, and more."
+      heroImages={["https://images.pexels.com/photos/434311/pexels-photo-434311.jpeg?auto=compress&cs=tinysrgb&w=1200","https://images.pexels.com/photos/1269025/pexels-photo-1269025.jpeg?auto=compress&cs=tinysrgb&w=1200","https://images.pexels.com/photos/602750/pexels-photo-602750.jpeg?auto=compress&cs=tinysrgb&w=1200"]}
+      heroOverlayClassName="bg-gradient-to-b from-black/70 via-black/55 to-black/70"
+      heroContainerClassName="rounded-none border-x-0 border-t-0 p-0 shadow-none"
+      heroContentClassName="flex min-h-[220px] flex-col items-center justify-center px-6 py-8 text-center sm:min-h-[260px] sm:px-8 sm:py-10"
+      sectionClassName="px-0 pt-0 pb-8 sm:pt-0 sm:pb-10"
+      heroWrapperClassName="w-full max-w-none"
+      contentWrapperClassName="mx-auto w-full max-w-7xl px-4"
+      titleClassName="text-xl text-white sm:text-2xl"
+      subtitleClassName="mt-2 text-xs text-white/90 sm:text-sm"
+    >
+      {/* Search + Filter Bar */}
+      <div className="mt-8 sm:mt-10">
+        <div className="mx-auto max-w-[700px]">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search beverages, brands, or categories"
+              className="h-10 w-full rounded-full border border-[var(--svs-border)] bg-white pl-11 pr-4 text-xs font-medium text-[var(--svs-text)] shadow-sm outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30"
+            />
+          </div>
+        </div>
+        <div className="mt-4 rounded-xl border border-[var(--svs-border)] bg-white/80 px-4 py-3 shadow-[0_2px_8px_rgba(15,23,42,0.06)] backdrop-blur sm:px-5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+              <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0">
+                {beveragesCategoryTabs.map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setActiveCategory(tab)}
+                    className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition ${activeCategory === tab ? 'bg-[#0f9fb2] text-white shadow-[0_4px_14px_rgba(15,159,178,0.30)]' : 'border border-[var(--svs-border)] bg-white text-[var(--svs-text)] hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]'}`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="relative shrink-0">
+              <select
+                value={sortOrder}
+                onChange={(event) => setSortOrder(event.target.value)}
+                className="h-9 w-full appearance-none rounded-full border border-[var(--svs-border)] bg-white px-4 pr-8 text-xs font-semibold text-[var(--svs-text)] outline-none transition hover:border-[var(--svs-primary)] focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30 sm:w-[130px]"
+              >
+                <option value="Newest">Newest</option>
+                <option value="Oldest">Oldest</option>
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
+            </div>
+          </div>
+        </div>
+      </div>
 
-    <CardGrid
-      items={marketItems}
-      buttonLabel={t('common.addToCart')}
-      secondaryButtonLabel={t('common.viewDetails')}
-      reviewSummaryMap={productReviewSummaryMap}
-      getItemReviewKey={(item) => getCollectionItemId('/beverages-liquors', item.id)}
-      onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-      onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
-      onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
-      onOpenItemDetails={(item) => {
-        const wishlistItem = buildWishlistItem(item);
-        onOpenItemDetails?.({
-          title: getTranslatedValue(t, item.titleKey, item.title),
-          image: item.image,
-          images: item.images || (item.image ? [item.image] : []),
-          marketName: t('markets.beverages'),
-          details: `${item.category || 'Seller item'} • ${item.volume || item.description || item.sellerName || 'Marketplace listing'}`,
-          priceLabel: getSalePrices(item.price).nowPrice,
-          cartItem: buildCartItem(item),
-          wishlistItem,
-        });
-      }}
-      isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/beverages-liquors', item.id))}
-      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.volume || item.sellerName || 'Marketplace listing'} • <SalePrice price={item.price} /></p>}
-    />
-  </PageFrame>
+
+      {/* Main content area */}
+      <div className="mt-10 sm:mt-12">
+        <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredBeverageItems.slice(0, sectionVisibleCounts[activeCategory] || 6).map((item) => {
+            const isOutOfStock = item.isSellerListing && item.availableQuantity === 0;
+            return (
+              <article
+                key={item.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => openBeverageItemDetails(item)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    openBeverageItemDetails(item);
+                  }
+                }}
+                className="flex cursor-pointer flex-col overflow-hidden rounded-xl bg-white shadow-[0_2px_12px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_8px_28px_rgba(15,23,42,0.14)]"
+              >
+                <img src={item.image} alt={item.title} className="h-[160px] w-full object-cover sm:h-[180px]" loading="lazy" />
+                <div className="flex flex-1 flex-col p-4">
+                  <h3 className="text-base font-bold text-[var(--svs-text)]">{item.title}</h3>
+                  {item.subtitle ? (
+                    <p className="mt-0.5 text-xs text-[var(--svs-muted)]">{item.subtitle}</p>
+                  ) : null}
+                  <div className="mt-2 space-y-1 text-xs text-[var(--svs-muted)]">
+                    {item.volume ? (
+                      <p>Volume: {item.volume}</p>
+                    ) : null}
+                    {item.provider ? (
+                      <p>Brand: {item.provider}</p>
+                    ) : null}
+                    {item.isSellerListing ? (
+                      <p className={`text-xs font-semibold ${isOutOfStock ? 'text-rose-600' : 'text-emerald-700'}`}>
+                        Quantity in stock: {item.availableQuantity}
+                      </p>
+                    ) : null}
+                  </div>
+                  <p className="mt-3 text-base font-bold text-[var(--svs-text)]">{item.price}</p>
+                  <div className="mt-3">
+                    <button
+                      type="button"
+                      disabled={isOutOfStock}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        if (isOutOfStock) return;
+                        const details = `${item.category || 'Beverage'}${item.volume ? ' • ' + item.volume : ''}${item.subtitle ? ' • ' + item.subtitle : ''}`;
+                        const cartItem = createCartItem({
+                          ...item,
+                          route: '/beverages-liquors',
+                          marketName: 'Beverages & Liquors',
+                          details,
+                        });
+                        onAddToCart(cartItem);
+                      }}
+                      className={`${cudyBluePrimaryButtonClassName} rounded-full px-4 py-2 text-xs font-semibold text-white transition ${isOutOfStock ? 'cursor-not-allowed bg-slate-400' : 'bg-[#0f9fb2] hover:bg-[#0d8a9c]'}`}
+                    >
+                      {isOutOfStock ? 'Sold Out' : '+ Add to Basket'}
+                    </button>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+        {(sectionVisibleCounts[activeCategory] || 6) < filteredBeverageItems.length ? (
+          <div className="mt-6 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setSectionVisibleCounts((prev) => ({ ...prev, [activeCategory]: (prev[activeCategory] || 6) + 6 }))}
+              className="rounded-full bg-[#0f9fb2] px-6 py-2 text-xs font-semibold text-white transition hover:bg-[#0d8a9c]"
+            >
+              View More
+            </button>
+          </div>
+        ) : null}
+        {filteredBeverageItems.length === 0 && (
+          <div className="mt-10 rounded-xl border border-dashed border-[var(--svs-border)] bg-white px-5 py-10 text-center text-xs text-[var(--svs-muted)]">
+            No beverages match your current search and filters. Adjust the category or search to see more options.
+          </div>
+        )}
+      </div>
+    </PageFrame>
   );
 };
 
