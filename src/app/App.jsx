@@ -1165,15 +1165,6 @@ const beveragesLiquorItems = [
       'https://images.pexels.com/photos/602750/pexels-photo-602750.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
   {
-    id: 'bl7',
-    title: 'Classic Tonic Water Case',
-    category: 'Beverages',
-    volume: '12 x 250ml',
-    price: '9.99',
-    image:
-      'https://images.pexels.com/photos/2983101/pexels-photo-2983101.jpeg?auto=compress&cs=tinysrgb&w=1200',
-  },
-  {
     id: 'bl8',
     title: 'Botanical Gin Signature',
     category: 'Liquors',
