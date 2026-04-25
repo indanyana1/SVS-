@@ -1,4 +1,5 @@
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
+import CategoryFilterSidebar from '../components/market/CategoryFilterSidebar';
 import {
   Bell,
   CalendarDays,
@@ -33,6 +34,124 @@ import SellerLandingPage from '../pages/SellerLandingPage';
 import SellerOnboardingPage from '../pages/SellerOnboardingPage';
 import SellerSigninPage from '../pages/SellerSigninPage';
 import SellerSignupPage from '../pages/SellerSignupPage';
+
+// --- Beverages Seller Fields ---
+const EMPTY_BEVERAGES_LISTING_FIELDS = {
+  beverageCategory: '',
+  beverageType: '',
+  brand: '',
+  volume: '',
+  origin: '',
+  description: '',
+};
+
+const BEVERAGE_CATEGORIES = [
+  'Wine', 'Beer', 'Whisky', 'Vodka', 'Rum', 'Gin', 'Brandy', 'Tequila', 'Sake', 'Scotch', 'Red Wine', 'Dark Rum',
+];
+
+const BeveragesSellerFields = ({ formData, onFieldChange, prefix = 'seller-beverage', isCompact = false }) => {
+  const containerClassName = isCompact
+    ? 'rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3'
+    : 'sm:col-span-2 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4';
+  const labelClassName = isCompact
+    ? 'mb-1 block text-xs font-medium text-[var(--svs-text)]'
+    : 'mb-1 block text-sm font-medium text-[var(--svs-text)]';
+  const inputClassName = isCompact
+    ? 'w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none'
+    : 'w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none';
+  const helperClassName = isCompact
+    ? 'mt-1 text-[10px] text-[var(--svs-muted)]'
+    : 'mt-1 text-xs text-[var(--svs-muted)]';
+
+  return (
+    <div className={containerClassName}>
+      <div className="mb-3">
+        <h3 className={`${isCompact ? 'text-sm' : 'text-base'} font-bold text-[var(--svs-text)]`}>Beverages & Liquors Listing Details</h3>
+        <p className={`${helperClassName} mt-1`}>
+          Select the beverage category, type, brand, and volume. Add origin and a short description for best results.
+        </p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label htmlFor={`${prefix}-category`} className={labelClassName}>Beverage Category</label>
+          <select
+            id={`${prefix}-category`}
+            name="beverageCategory"
+            value={formData.beverageCategory}
+            onChange={onFieldChange}
+            required
+            className={inputClassName}
+          >
+            <option value="">Select beverage category</option>
+            {BEVERAGE_CATEGORIES.map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor={`${prefix}-type`} className={labelClassName}>Type / Subtype</label>
+          <input
+            id={`${prefix}-type`}
+            name="beverageType"
+            value={formData.beverageType}
+            onChange={onFieldChange}
+            required
+            placeholder="e.g. Merlot, Lager, Single Malt"
+            className={inputClassName}
+          />
+        </div>
+        <div>
+          <label htmlFor={`${prefix}-brand`} className={labelClassName}>Brand</label>
+          <input
+            id={`${prefix}-brand`}
+            name="brand"
+            value={formData.brand}
+            onChange={onFieldChange}
+            required
+            placeholder="e.g. Moët, Heineken, Jameson"
+            className={inputClassName}
+          />
+        </div>
+        <div>
+          <label htmlFor={`${prefix}-volume`} className={labelClassName}>Volume / Pack Size</label>
+          <input
+            id={`${prefix}-volume`}
+            name="volume"
+            value={formData.volume}
+            onChange={onFieldChange}
+            required
+            placeholder="e.g. 750ml, 6 x 330ml"
+            className={inputClassName}
+          />
+        </div>
+        <div>
+          <label htmlFor={`${prefix}-origin`} className={labelClassName}>Origin</label>
+          <input
+            id={`${prefix}-origin`}
+            name="origin"
+            value={formData.origin}
+            onChange={onFieldChange}
+            placeholder="e.g. South Africa, Scotland"
+            className={inputClassName}
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <label htmlFor={`${prefix}-description`} className={labelClassName}>Short Description</label>
+          <textarea
+            id={`${prefix}-description`}
+            name="description"
+            value={formData.description}
+            onChange={onFieldChange}
+            rows={2}
+            required
+            placeholder="e.g. Full-bodied red wine with notes of cherry and oak."
+            className={inputClassName}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const navItems = [
   { labelKey: 'nav.home', href: '/' },
@@ -80,6 +199,7 @@ const sellerMarketOptions = [
   { key: 'naturalResources', labelKey: 'markets.naturalResources', route: '/natural-resources-minerals' },
   { key: 'fastFood', labelKey: 'markets.fastFood', route: '/fast-food' },
   { key: 'groceries', labelKey: 'markets.groceries', route: '/groceries' },
+  { key: 'homeCare', labelKey: 'markets.homeCare', route: '/home-care' },
   { key: 'ecommerce', labelKey: 'markets.ecommerce', route: '/e-commerce' },
   { key: 'tickets', labelKey: 'markets.tickets', route: '/tickets' },
   { key: 'traditionalMedicines', labelKey: 'markets.traditionalMedicines', route: '/traditional-medicines-herbs' },
@@ -125,12 +245,14 @@ const createSellerListingFormState = () => ({
   marketKey: '',
   ...EMPTY_GROCERIES_LISTING_FIELDS,
   ...EMPTY_TICKETS_LISTING_FIELDS,
+  ...EMPTY_BEVERAGES_LISTING_FIELDS,
 });
 
 const clearGroceriesListingFields = (formState) => ({
   ...formState,
   ...EMPTY_GROCERIES_LISTING_FIELDS,
   ...EMPTY_TICKETS_LISTING_FIELDS,
+  ...EMPTY_BEVERAGES_LISTING_FIELDS,
 });
 
 const TRENDING_MARKET_HREFS = [
@@ -170,7 +292,7 @@ const productCards = [
   {
     id: 'p4',
     title: 'Premium Office Chair',
-    subtitle: 'Home Care',
+    subtitle: 'Book @ Home-Care Services',
     price: '189.00',
     image:
       'https://images.pexels.com/photos/1957478/pexels-photo-1957478.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -592,7 +714,7 @@ const homeHeroSlides = [
     image:
       'https://images.pexels.com/photos/3735149/pexels-photo-3735149.jpeg?auto=compress&cs=tinysrgb&w=1920',
     label: 'Self-Care',
-    title: 'Wellness & Home Care',
+    title: 'Book @ Home-Care Services',
     subtitle: 'Premium wellness products for a healthier lifestyle',
     route: '/wellness',
   },
@@ -626,7 +748,7 @@ const featureSlides = [
   {
     id: 'feat-5',
     image: 'https://images.pexels.com/photos/3735149/pexels-photo-3735149.jpeg?auto=compress&cs=tinysrgb&w=1600',
-    title: 'Wellness & Home Care',
+    title: 'Book @ Home-Care Services',
     subtitle: 'Premium health, beauty, and household essentials for everyday living.',
   },
   {
@@ -704,7 +826,7 @@ const groceriesCategoryCards = [
   {
     key: 'householdEssentials',
     title: 'Household Essentials',
-    subtitle: 'Home care basics',
+    subtitle: 'Everyday cleaning & home basics',
     image:
       'https://images.pexels.com/photos/7492919/pexels-photo-7492919.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -751,6 +873,8 @@ const groceries = [
     price: '4.50',
     discount: '20% Off',
     description: 'Sun-ripened tomatoes for salads, stews, and sauces.',
+    brand: 'Fresh Farms',
+    productType: 'Vegetable',
     image:
       'https://images.pexels.com/photos/533280/pexels-photo-533280.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -761,6 +885,8 @@ const groceries = [
     price: '5.99',
     discount: 'Buy 1 Get 1 Free',
     description: 'Farm-fresh eggs for breakfast, baking, and family meals.',
+    brand: 'Organic Valley',
+    productType: 'Eggs',
     image:
       'https://images.pexels.com/photos/162712/egg-white-food-protein-162712.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -771,6 +897,8 @@ const groceries = [
     price: '7.99',
     discount: 'Weekly Deal',
     description: 'A bright mix of oranges, lemons, and grapefruit.',
+    brand: 'Sunrise Organics',
+    productType: 'Fruit',
     image:
       'https://images.pexels.com/photos/1132047/pexels-photo-1132047.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -781,6 +909,8 @@ const groceries = [
     price: '3.25',
     discount: 'Fresh Pick',
     description: 'Leafy greens for smoothies, sautés, and quick salads.',
+    brand: 'Green Choice',
+    productType: 'Vegetable',
     image:
       'https://images.pexels.com/photos/2329440/pexels-photo-2329440.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -791,6 +921,8 @@ const groceries = [
     price: '3.89',
     discount: 'Family Saver',
     description: 'Creamy full-cream milk for cereal, tea, and cooking.',
+    brand: 'Fresh Origins',
+    productType: 'Milk',
     image:
       'https://images.pexels.com/photos/5946721/pexels-photo-5946721.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -801,6 +933,8 @@ const groceries = [
     price: '6.49',
     discount: 'Best Seller',
     description: 'Rich cheddar cheese for sandwiches, platters, and sauces.',
+    brand: 'Dream Valley',
+    productType: 'Cheese',
     image:
       'https://images.pexels.com/photos/821365/pexels-photo-821365.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -811,6 +945,8 @@ const groceries = [
     price: '8.99',
     discount: 'Protein Pick',
     description: 'Fresh boneless chicken fillets ready for grilling or frying.',
+    brand: 'Daily Right',
+    productType: 'Chicken',
     image:
       'https://images.pexels.com/photos/616354/pexels-photo-616354.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -821,6 +957,8 @@ const groceries = [
     price: '12.99',
     discount: 'Chef Choice',
     description: 'Fresh salmon portions with a clean, buttery finish.',
+    brand: 'Fresh Origins',
+    productType: 'Fish',
     image:
       'https://images.pexels.com/photos/3296275/pexels-photo-3296275.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -1270,6 +1408,84 @@ const homeCareProfessionalPreferences = ['Any', 'Male', 'Female'];
 const homeCareExperienceLevels = ['0-1 Year', '1-3 Years', '4-5 Years', '5+ Years'];
 const homeCareAvailabilityOptions = ['Any', 'Morning', 'Afternoon', 'Evening', 'Full Day'];
 
+const homeCareCountries = ['South Africa', 'Kenya', 'Uganda', 'Nigeria', 'Tanzania', 'United Arab Emirates'];
+const homeCareCitiesByCountry = {
+  'South Africa': ['Cape Town', 'Durban', 'Johannesburg', 'Pretoria', 'Pietermaritzburg', 'Port Elizabeth', 'Bloemfontein', 'East London'],
+  Kenya: ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru'],
+  Uganda: ['Kampala', 'Entebbe', 'Jinja'],
+  Nigeria: ['Lagos', 'Abuja', 'Port Harcourt', 'Ibadan', 'Kano'],
+  Tanzania: ['Dar es Salaam', 'Dodoma', 'Arusha', 'Mwanza'],
+  'United Arab Emirates': ['Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman'],
+};
+
+const fashionGenderOptions = ['All', 'Men', 'Women', 'Unisex', 'Kids'];
+const fashionMainCategories = ['All', 'Clothing', 'Footwear', 'Accessories', 'Outerwear', 'Activewear', 'Underwear & Sleepwear'];
+const fashionSubcategories = [
+  'T-Shirts',
+  'Long Sleeve',
+  'Hoodies & Sweatshirts',
+  'Sweaters & Knitwear',
+  'Shirts',
+  'Polos',
+  'Jackets',
+  'Coats',
+  'Blazers',
+  'Suits',
+  'Jeans',
+  'Pants & Trousers',
+  'Chinos',
+  'Shorts',
+  'Skirts',
+  'Dresses',
+  'Jumpsuits',
+  'Activewear',
+  'Swimwear',
+  'Sleepwear',
+  'Lingerie',
+  'Socks & Hosiery',
+  'Formal Shoes',
+  'Sneakers',
+  'Boots',
+  'Heels',
+  'Sandals',
+  'Slippers',
+  'Bags & Backpacks',
+  'Wallets',
+  'Belts',
+  'Caps & Hats',
+  'Watches',
+  'Sunglasses',
+  'Jewellery',
+  'Scarves',
+];
+const fashionClothingSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
+const fashionShoeSizes = ['UK 3', 'UK 4', 'UK 5', 'UK 6', 'UK 7', 'UK 8', 'UK 9', 'UK 10', 'UK 11', 'UK 12'];
+const fashionColorOptions = [
+  { name: 'Black', hex: '#000000' },
+  { name: 'White', hex: '#FFFFFF' },
+  { name: 'Grey', hex: '#9CA3AF' },
+  { name: 'Beige', hex: '#E8DCC4' },
+  { name: 'Brown', hex: '#7B4B2A' },
+  { name: 'Red', hex: '#DC2626' },
+  { name: 'Pink', hex: '#EC4899' },
+  { name: 'Orange', hex: '#F97316' },
+  { name: 'Yellow', hex: '#FACC15' },
+  { name: 'Green', hex: '#16A34A' },
+  { name: 'Blue', hex: '#2563EB' },
+  { name: 'Navy', hex: '#1E3A8A' },
+  { name: 'Purple', hex: '#7C3AED' },
+  { name: 'Multi', hex: 'linear-gradient(135deg,#f97316,#ec4899,#2563eb)' },
+];
+const fashionPriceRanges = [
+  { label: 'Under R500', min: 0, max: 500 },
+  { label: 'R500 – R1,000', min: 500, max: 1000 },
+  { label: 'R1,000 – R2,000', min: 1000, max: 2000 },
+  { label: 'R2,000 – R5,000', min: 2000, max: 5000 },
+  { label: 'R5,000+', min: 5000, max: Infinity },
+];
+const fashionMaterialOptions = ['All', 'Cotton', 'Linen', 'Denim', 'Leather', 'Wool', 'Polyester', 'Silk', 'Synthetic'];
+const fashionStyleOccasions = ['All', 'Casual', 'Formal', 'Sport', 'Streetwear', 'Evening', 'Business', 'Beach'];
+
 const homeCareProviders = [
   {
     id: 'hc1',
@@ -1564,7 +1780,7 @@ const HomeCareProviderDetailPage = () => {
         <section className="relative overflow-hidden rounded-2xl bg-[#003366] p-5 sm:h-[320px] sm:p-6">
           <img
             src="https://images.pexels.com/photos/3846022/pexels-photo-3846022.jpeg?auto=compress&cs=tinysrgb&w=1920"
-            alt="Home care market"
+            alt="Book @ Home-Care Services"
             className="absolute inset-0 h-full w-full object-cover"
             loading="lazy"
           />
@@ -1937,7 +2153,9 @@ const fashionStyleItems = [
     id: 'fs1',
     title: 'Tailored Linen Two-Piece Set',
     category: 'Clothing',
+    subcategory: 'Formal',
     specification: 'Breathable linen • Neutral palette',
+    sizeOptions: ['S', 'M', 'L', 'XL'],
     price: '1799',
     image:
       'https://images.pexels.com/photos/934070/pexels-photo-934070.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -1946,7 +2164,9 @@ const fashionStyleItems = [
     id: 'fs2',
     title: 'Street Motion Leather Sneakers',
     category: 'Footwear',
+    subcategory: 'Sneakers',
     specification: 'Cushioned sole • Everyday wear',
+    sizeOptions: ['39', '40', '41', '42', '43'],
     price: '1299',
     image:
       'https://images.pexels.com/photos/2529148/pexels-photo-2529148.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -1955,7 +2175,9 @@ const fashionStyleItems = [
     id: 'fs3',
     title: 'Signature Occasion Heels',
     category: 'Shoes',
+    subcategory: 'Heels',
     specification: 'Evening finish • Comfort footbed',
+    sizeOptions: ['36', '37', '38', '39', '40'],
     price: '1599',
     image:
       'https://images.pexels.com/photos/267301/pexels-photo-267301.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -1964,7 +2186,9 @@ const fashionStyleItems = [
     id: 'fs4',
     title: 'Classic Denim Utility Jacket',
     category: 'Outerwear',
+    subcategory: 'Jackets',
     specification: 'Layer-ready • Mid-weight denim',
+    sizeOptions: ['S', 'M', 'L', 'XL'],
     price: '1149',
     image:
       'https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -1973,12 +2197,38 @@ const fashionStyleItems = [
     id: 'fs5',
     title: 'Travel Leather Weekender',
     category: 'Accessories',
+    subcategory: 'Bags',
     specification: 'Full-grain finish • Cabin-friendly',
     price: '2499',
     image:
       'https://images.pexels.com/photos/1152077/pexels-photo-1152077.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
+  {
+    id: 'fs6',
+    title: 'High-Rise Straight Jeans',
+    category: 'Clothing',
+    subcategory: 'Jeans',
+    specification: 'Structured denim • Everyday fit',
+    sizeOptions: ['30', '32', '34', '36'],
+    price: '1399',
+    image:
+      'https://images.pexels.com/photos/1598505/pexels-photo-1598505.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
 ];
+
+const getItemSizeOptions = (item = {}) => {
+  const rawSizes = Array.isArray(item?.sizeOptions)
+    ? item.sizeOptions
+    : Array.isArray(item?.sizes)
+      ? item.sizes
+      : typeof item?.sizes === 'string'
+        ? item.sizes.split(',')
+        : [];
+
+  return rawSizes
+    .map((value) => String(value || '').trim())
+    .filter(Boolean);
+};
 
 const naturalResourcesItems = [
   {
@@ -2611,12 +2861,23 @@ const formatListingDateLabel = (value) => {
   return `${year}/${month}/${day}`;
 };
 
-const getGroceriesListingValidationMessage = (formState) => {
+const getSellerListingValidationMessage = (formState) => {
+  if (formState.marketKey === 'beverages') {
+    const hasCategory = String(formState.beverageCategory || '').trim();
+    const hasType = String(formState.beverageType || '').trim();
+    const hasBrand = String(formState.brand || '').trim();
+    const hasVolume = String(formState.volume || '').trim();
+    const hasDescription = String(formState.description || '').trim();
+    if (hasCategory && hasType && hasBrand && hasVolume && hasDescription) {
+      return '';
+    }
+    return 'For beverage listings, select the beverage category, type, brand, volume, and add a short description before publishing.';
+  }
   if (formState.marketKey !== 'groceries') {
     if (formState.marketKey !== 'tickets') {
       return '';
     }
-
+    // ...existing tickets validation code...
     const category = String(formState.ticketCategory || '').trim();
     const hasCategory = category;
     const hasCountry = String(formState.ticketCountry || '').trim();
@@ -2633,7 +2894,6 @@ const getGroceriesListingValidationMessage = (formState) => {
     const hasGenre = String(formState.ticketGenre || '').trim();
     const hasLanguage = String(formState.ticketLanguage || '').trim();
     const hasShowtime = String(formState.ticketShowtime || '').trim();
-
     if (hasCategory
       && hasCountry
       && hasLocation
@@ -2642,39 +2902,30 @@ const getGroceriesListingValidationMessage = (formState) => {
       && (!isMoviesCategory || (hasCity && hasGenre && hasLanguage && hasShowtime))) {
       return '';
     }
-
     if (!hasCategory) {
       return 'Select a bookings category before publishing this listing.';
     }
-
     if (!hasCountry || !hasLocation) {
       return 'For bookings and tickets listings, choose a country and add venue/location before publishing.';
     }
-
     if (needsDate && !hasDate) {
       return `Add an event date for ${category} listings so date filters can match this listing.`;
     }
-
     if (needsProvider && !hasProvider) {
       return `Add a provider/organizer for ${category} listings before publishing.`;
     }
-
     if (isMoviesCategory) {
       return 'For movie listings, add city, genre, language, and showtime so movie sidebar filters can match this listing.';
     }
-
     return '';
   }
-
   const hasCategory = String(formState.categoryKey || '').trim();
   const hasBrand = String(formState.brand || '').trim();
   const hasVolume = String(formState.volume || '').trim();
   const hasFreshness = String(formState.freshness || '').trim();
-
   if (hasCategory && hasBrand && hasVolume && hasFreshness) {
     return '';
   }
-
   return 'For grocery listings, select the grocery category and add the brand, pack size, and freshness details before publishing.';
 };
 
@@ -2682,7 +2933,6 @@ const buildSellerItemDetailsJson = (formState) => {
   if (formState.marketKey === 'groceries') {
     const categoryKey = String(formState.categoryKey || '').trim();
     const categoryTitle = getGroceriesCategoryTitle(categoryKey);
-
     return Object.fromEntries(
       Object.entries({
         categoryKey,
@@ -2697,11 +2947,21 @@ const buildSellerItemDetailsJson = (formState) => {
       }).filter(([, value]) => Boolean(String(value || '').trim())),
     );
   }
-
+  if (formState.marketKey === 'beverages') {
+    return Object.fromEntries(
+      Object.entries({
+        beverageCategory: String(formState.beverageCategory || '').trim(),
+        beverageType: String(formState.beverageType || '').trim(),
+        brand: String(formState.brand || '').trim(),
+        volume: String(formState.volume || '').trim(),
+        origin: String(formState.origin || '').trim(),
+        description: String(formState.description || '').trim(),
+      }).filter(([, value]) => Boolean(String(value || '').trim())),
+    );
+  }
   if (formState.marketKey === 'tickets') {
     const ticketCategory = String(formState.ticketCategory || '').trim();
     const isMoviesCategory = ticketCategory === 'Movies';
-
     return Object.fromEntries(
       Object.entries({
         category: ticketCategory,
@@ -2717,7 +2977,6 @@ const buildSellerItemDetailsJson = (formState) => {
       }).filter(([, value]) => Boolean(String(value || '').trim())),
     );
   }
-
   return {};
 };
 
@@ -3435,11 +3694,15 @@ const mapSellerItemRecord = (record) => {
   const resolvedCategory = String(rawDetailsJson.category || '').trim()
     || (record.market_key === 'groceries' ? getGroceriesCategoryTitle(resolvedCategoryKey) : '');
 
+  // For beverages
+  const beverageCategory = String(rawDetailsJson.beverageCategory || '');
+  const beverageType = String(rawDetailsJson.beverageType || '');
+
   return {
     id: `seller-${record.id}`,
     dbId: record.id,
     title: record.title,
-    description: record.description || '',
+    description: record.description || rawDetailsJson.description || '',
     availableQuantity: normalizeListingQuantity(record.quantity, 0),
     price: record.price,
     image: primaryImage,
@@ -3450,24 +3713,27 @@ const mapSellerItemRecord = (record) => {
     sellerEmail: record.seller_email || '',
     category: resolvedCategory,
     categoryKey: resolvedCategoryKey,
-    brand: String(rawDetailsJson.brand || '').trim(),
-    volume: String(rawDetailsJson.volume || '').trim(),
-    freshness: String(rawDetailsJson.freshness || '').trim(),
-    storage: String(rawDetailsJson.storage || '').trim(),
-    origin: String(rawDetailsJson.origin || '').trim(),
-    expiryDate: String(rawDetailsJson.expiryDate || '').trim(),
-    discount: String(rawDetailsJson.discount || '').trim(),
-    subtitle: String(rawDetailsJson.subtitle || '').trim(),
-    meta: String(rawDetailsJson.meta || '').trim(),
-    provider: String(rawDetailsJson.provider || '').trim(),
-    location: String(rawDetailsJson.location || '').trim(),
-    country: String(rawDetailsJson.country || '').trim(),
-    date: String(rawDetailsJson.date || '').trim(),
-    city: String(rawDetailsJson.city || '').trim(),
-    genre: String(rawDetailsJson.genre || '').trim(),
-    language: String(rawDetailsJson.language || '').trim(),
-    showtime: String(rawDetailsJson.showtime || '').trim(),
+    brand: String(rawDetailsJson.brand || ''),
+    volume: String(rawDetailsJson.volume || ''),
+    freshness: String(rawDetailsJson.freshness || ''),
+    storage: String(rawDetailsJson.storage || ''),
+    origin: String(rawDetailsJson.origin || ''),
+    expiryDate: String(rawDetailsJson.expiryDate || ''),
+    discount: String(rawDetailsJson.discount || ''),
+    subtitle: String(rawDetailsJson.subtitle || ''),
+    meta: String(rawDetailsJson.meta || ''),
+    provider: String(rawDetailsJson.provider || ''),
+    location: String(rawDetailsJson.location || ''),
+    country: String(rawDetailsJson.country || ''),
+    date: String(rawDetailsJson.date || ''),
+    city: String(rawDetailsJson.city || ''),
+    genre: String(rawDetailsJson.genre || ''),
+    language: String(rawDetailsJson.language || ''),
+    showtime: String(rawDetailsJson.showtime || ''),
     createdAt: record.created_at,
+    // Beverages
+    beverageCategory,
+    beverageType,
   };
 };
 
@@ -4050,6 +4316,8 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [profileName, setProfileName] = useState('SVS User');
   const [theme, setTheme] = useState(getThemePreference);
+  // Add default priceRange state to prevent ReferenceError
+  const [priceRange] = useState([0, 20]);
   const languageCardRefs = useRef([]);
   const desktopLanguageMenuRef = useRef(null);
   const mobileLanguageMenuRef = useRef(null);
@@ -4509,12 +4777,17 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                         <button
                           type="button"
                           onClick={() => { onClearNotifications?.(); setIsNotificationsOpen(false); }}
-                          className="text-xs font-semibold text-rose-500 transition hover:text-rose-700"
                         >
-                          Clear all
+                          Clear All
                         </button>
                       ) : null}
                     </div>
+                  </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-[var(--svs-muted)] text-sm font-medium">Price</span>
+                    <span className="ml-auto text-[var(--svs-muted)] text-xs">{priceRange[0]}</span>
+                    <span className="text-[var(--svs-muted)] text-xs">-</span>
+                    <span className="text-[var(--svs-muted)] text-xs">{priceRange[1]}</span>
                   </div>
                   <div className="max-h-80 overflow-y-auto p-2">
                     {notifications.length ? notifications.map((notification) => (
@@ -4761,6 +5034,15 @@ const HomePage = () => {
 
   const slide = homeHeroSlides[activeSlide];
 
+  // Map slide id or route to a more relevant page if needed
+  const getLearnMoreRoute = (slide) => {
+    // Example: customize for specific slides if needed
+    // Default: use slide.route
+    if (slide.route) return slide.route;
+    // fallback: homepage
+    return '/';
+  };
+
   return (
     <>
       <section
@@ -4785,7 +5067,7 @@ const HomePage = () => {
               <p className="mt-3 text-lg text-slate-100 sm:text-2xl">{slide.subtitle}</p>
               <button
                 type="button"
-                onClick={() => navigate(slide.route)}
+                onClick={() => navigate(getLearnMoreRoute(slide))}
                 className={`${cudyBluePrimaryButtonClassName} mt-6 rounded-full bg-[var(--svs-primary)] px-8 py-3 text-base font-semibold text-white shadow-lg transition hover:scale-105 hover:bg-[#33b9f2]`}
               >
                 {t('common.learnMore')}
@@ -6300,15 +6582,46 @@ const VotingProvidersPage = () => {
 };
 
 const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
+  const [filters, setFilters] = useState({ category: [], brand: [], productType: [], price: [0, 1000], availability: [] });
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { categoryKey = '' } = useParams();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'groceries'), ...groceries], [sellerItems]);
   const activeCategory = groceriesCategoryCards.find((category) => category.key === categoryKey) || null;
-  const filteredMarketItems = useMemo(
+
+  // Compute dynamic filter options based on items in the current category
+  const categoryItems = useMemo(
     () => marketItems.filter((item) => resolveGroceriesCategoryKey(item) === activeCategory?.key),
-    [marketItems, activeCategory],
+    [marketItems, activeCategory]
   );
+  const brandOptions = useMemo(() => {
+    const brands = new Set();
+    categoryItems.forEach((item) => {
+      if (item.brand) brands.add(item.brand);
+    });
+    return Array.from(brands).sort();
+  }, [categoryItems]);
+  const productTypeOptions = useMemo(() => {
+    const types = new Set();
+    categoryItems.forEach((item) => {
+      if (item.productType) types.add(item.productType);
+    });
+    return Array.from(types).sort();
+  }, [categoryItems]);
+  const filteredMarketItems = useMemo(() => {
+    return marketItems.filter((item) => {
+      if (resolveGroceriesCategoryKey(item) !== activeCategory?.key) return false;
+      // Brand filter
+      if (filters.brand.length > 0 && item.brand && !filters.brand.includes(item.brand)) return false;
+      // Product type filter
+      if (filters.productType.length > 0 && item.productType && !filters.productType.includes(item.productType)) return false;
+      // Price filter
+      const price = parseFloat(item.price);
+      if (filters.price && (price < filters.price[0] || price > filters.price[1])) return false;
+      // Availability filter (example: if item.availability exists)
+      if (filters.availability.length > 0 && item.availability && !filters.availability.some((a) => item.availability === a)) return false;
+      return true;
+    });
+  }, [marketItems, activeCategory, filters]);
   const buildCartItem = (item) => createCartItem({
     ...item,
     route: '/groceries',
@@ -6342,55 +6655,108 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
         titleClassName="text-xl text-white sm:text-2xl"
         subtitleClassName="mt-2 text-xs text-white/90 sm:text-sm"
       >
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-4 shadow-[0_4px_8px_rgba(0,0,0,0.06)] sm:px-5">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--svs-primary-strong)]">Groceries category</p>
-            <h2 className="mt-1 text-xl font-bold text-[var(--svs-text)] sm:text-2xl">{activeCategory.title}</h2>
-            <p className="mt-1 text-sm text-[var(--svs-muted)]">{filteredMarketItems.length} products available in this category</p>
+        <div className="flex flex-row gap-8">
+          <div className="w-[280px] shrink-0">
+            <CategoryFilterSidebar
+              filters={filters}
+              setFilters={setFilters}
+              minPrice={0}
+              maxPrice={1000}
+              brandOptions={brandOptions}
+              productTypeOptions={productTypeOptions}
+              categoryTitle={activeCategory?.title || ''}
+            />
           </div>
-          <Link
-            to="/groceries"
-            className="inline-flex items-center gap-2 rounded-full border border-[var(--svs-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
-          >
-            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-            Back to categories
-          </Link>
+          <div className="flex-1">
+            {filteredMarketItems.length ? (
+              <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {filteredMarketItems.map((item) => {
+                  const itemTitle = getTranslatedValue(t, item.titleKey, item.title);
+                  const hasStockValue = item.availableQuantity !== null && item.availableQuantity !== undefined;
+                  const availableQuantity = hasStockValue ? normalizeListingQuantity(item.availableQuantity, 0) : null;
+                  const isOutOfStock = availableQuantity !== null && availableQuantity <= 0;
+                  return (
+                    <article
+                      key={item.id}
+                      className="flex flex-col overflow-hidden rounded-3xl border border-[#e0e7ef] bg-white shadow-lg hover:scale-[1.03] transition group"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => onOpenItemDetails?.(item)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          onOpenItemDetails?.(item);
+                        }
+                      }}
+                    >
+                      <div className="relative">
+                        <img src={item.image} alt={itemTitle} className="h-48 w-full object-cover rounded-t-3xl group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+                        {onToggleWishlist ? (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onToggleWishlist(buildWishlistItem(item));
+                            }}
+                            aria-pressed={wishlistItemIds.includes(getCollectionItemId('/groceries', item.id))}
+                            aria-label={wishlistItemIds.includes(getCollectionItemId('/groceries', item.id)) ? 'Remove from wishlist' : 'Add to wishlist'}
+                            className={`absolute right-4 top-4 rounded-full border p-2 bg-white/90 text-[#e11d48] border-[#e0e7ef] shadow ${wishlistItemIds.includes(getCollectionItemId('/groceries', item.id)) ? 'bg-rose-50' : 'hover:bg-[#e0f7fa]'}`}
+                          >
+                            <Heart className={`h-5 w-5 ${wishlistItemIds.includes(getCollectionItemId('/groceries', item.id)) ? 'fill-current' : ''}`} />
+                          </button>
+                        ) : null}
+                      </div>
+                      <div className="flex flex-1 flex-col p-5">
+                        <h3 className="text-xl font-bold text-[#0f6674] group-hover:text-[#33b9f2] mb-1">{itemTitle}</h3>
+                        <div className="mb-2 text-base text-[#374151] font-medium">{getGroceriesListingMetaText(item)}</div>
+                        <div className="mb-2 text-lg font-bold text-[#0f6674]">{getSalePrices(item.price).nowPrice}</div>
+                        {availableQuantity !== null ? (
+                          <p className="text-xs text-[#0f6674]/70 mb-2">
+                            Quantity: {availableQuantity}
+                            {isOutOfStock ? ' (Out of stock)' : ''}
+                          </p>
+                        ) : null}
+                        <div className="mt-auto flex gap-2">
+                          <button
+                            type="button"
+                            disabled={isOutOfStock}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onAddToCart(buildCartItem(item));
+                            }}
+                            className="rounded-full bg-[#0f6674] px-5 py-2 text-base font-semibold text-white shadow hover:bg-[#33b9f2] disabled:bg-slate-400 disabled:cursor-not-allowed"
+                          >
+                            {isOutOfStock ? 'Out of stock' : t('common.addToBasket')}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isOutOfStock}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onBuyNow?.(buildCartItem(item));
+                            }}
+                            className="rounded-full border border-[#0f6674] px-5 py-2 text-base font-semibold text-[#0f6674] bg-white shadow hover:bg-[#e0f7fa] disabled:bg-slate-400 disabled:cursor-not-allowed"
+                          >
+                            Buy Now
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="rounded-3xl border border-dashed border-[#e0e7ef] bg-[#f8fafc] px-6 py-12 text-lg text-[#0f6674]/70 text-center">
+                No items are available in {activeCategory.title} yet.
+              </div>
+            )}
+          </div>
         </div>
-        {filteredMarketItems.length ? (
-          <CardGrid
-            items={filteredMarketItems}
-            buttonLabel={t('common.addToBasket')}
-            secondaryButtonLabel={t('common.viewDetails')}
-            reviewSummaryMap={productReviewSummaryMap}
-            getItemReviewKey={(item) => getCollectionItemId('/groceries', item.id)}
-            onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-            onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
-            onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
-            onOpenItemDetails={(item) => {
-              const wishlistItem = buildWishlistItem(item);
-              onOpenItemDetails?.({
-                title: getTranslatedValue(t, item.titleKey, item.title),
-                image: item.image,
-                images: item.images || (item.image ? [item.image] : []),
-                marketName: t('markets.groceries'),
-                details: getGroceriesListingDetailsText(item),
-                priceLabel: getSalePrices(item.price).nowPrice,
-                cartItem: buildCartItem(item),
-                wishlistItem,
-              });
-            }}
-            isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/groceries', item.id))}
-            metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} /> • {getGroceriesListingMetaText(item)}</p>}
-          />
-        ) : (
-          <div className="rounded-2xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-8 text-sm text-[var(--svs-muted)]">
-            No items are available in {activeCategory.title} yet.
-          </div>
-        )}
       </PageFrame>
     );
   }
 
+  // Render groceries categories grid on main /groceries page
   return (
     <PageFrame
       title="Groceries Market"
@@ -6406,48 +6772,25 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
       titleClassName="text-xl text-white sm:text-2xl"
       subtitleClassName="mt-2 text-xs text-white/90 sm:text-sm"
     >
-      <div className="mb-5 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-4 shadow-[0_4px_8px_rgba(0,0,0,0.06)] sm:px-5">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <ShoppingCart className="h-8 w-8 shrink-0 text-[var(--svs-primary)] sm:h-10 sm:w-10" aria-hidden="true" />
-          <div>
-            <h2 className="text-base font-bold text-[var(--svs-text)] sm:text-lg">Shop by Category</h2>
-            <p className="mt-1 text-sm text-[var(--svs-muted)]">Browse our wide range of product categories</p>
-          </div>
-        </div>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {groceriesCategoryCards.map((category) => {
-          return (
-            <button
-              key={category.key}
-              type="button"
-              onClick={() => navigate(`/groceries/${category.key}`)}
-              className="group overflow-hidden rounded-2xl border border-[var(--svs-border)] text-left transition duration-200 hover:-translate-y-1 hover:border-[var(--svs-primary)] hover:shadow-[0_18px_36px_rgba(15,23,42,0.14)]"
-            >
-              <div className="relative h-48">
-                <img
-                  src={category.image}
-                  alt={category.title}
-                  className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0f766e]/95 via-[#0f766e]/45 to-transparent" aria-hidden="true" />
-                <div className="absolute left-4 top-4 rounded-full bg-white/92 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#0f766e]">
-                  Category
-                </div>
-                <div className="absolute inset-x-0 bottom-0 p-4 text-white">
-                  <h3 className="text-lg font-bold">{category.title}</h3>
-                  <p className="mt-1 text-sm text-white/90">{category.subtitle}</p>
-                </div>
-              </div>
-            </button>
-          );
-        })}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10 py-12">
+        {groceriesCategoryCards.map((category) => (
+          <Link
+            key={category.key}
+            to={`/groceries/${category.key}`}
+            className="flex flex-col items-center rounded-3xl border-2 border-[#e0e7ef] bg-white p-8 shadow-xl hover:scale-105 hover:shadow-2xl transition-all group min-h-[320px] min-w-[220px] max-w-[320px] mx-auto"
+            style={{ boxSizing: 'border-box' }}
+          >
+            <img src={category.image} alt={category.title} className="w-32 h-32 object-cover rounded-2xl mb-6 group-hover:scale-110 transition-transform duration-300 shadow" />
+            <h3 className="text-2xl font-extrabold text-[#0f6674] mb-2 text-center group-hover:text-[#33b9f2]">{category.title}</h3>
+            <p className="text-base text-[#374151] text-center">{category.subtitle}</p>
+          </Link>
+        ))}
       </div>
     </PageFrame>
   );
-};
+}
 
+// --- Next component ---
 const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -6927,52 +7270,235 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
 };
 
 const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
-  const { t } = useTranslation();
-  const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'fastFood'), ...fastFoodItems], [sellerItems]);
-  const buildCartItem = (item) => createCartItem({
-    ...item,
-    route: '/fast-food',
-    marketName: t('markets.fastFood'),
-    details: `${item.category || 'Seller item'} • ${item.prepTime || item.description || 'Ready to order'}`,
-  });
-  const buildWishlistItem = (item) => createWishlistItem({
-    ...item,
-    route: '/fast-food',
-    marketName: t('markets.fastFood'),
-    details: `${item.category || 'Seller item'} • ${item.prepTime || 'Ready to order'}`,
+    // Helper to create cart/wishlist item
+    const createCartItem = (item) => ({ ...item, quantity: 1 });
+    const createWishlistItem = (item) => ({ ...item });
+
+
+    // Handler: Add to Cart
+    const handleAddToCart = (item) => {
+      if (onAddToCart) onAddToCart(createCartItem(item));
+    };
+
+    // Handler: Buy Now
+    const handleBuyNow = (item) => {
+      if (onBuyNow) onBuyNow(createCartItem(item));
+    };
+
+    // Handler: Wishlist
+    const handleToggleWishlist = (item) => {
+      if (onToggleWishlist) onToggleWishlist(createWishlistItem(item));
+    };
+
+    // Handler: Open Details Modal (use global modal)
+    const handleOpenDetails = (item) => {
+      if (onOpenItemDetails) onOpenItemDetails(item);
+    };
+
+    // Handler: Hero Order Now scrolls to grid
+    const gridRef = useRef(null);
+    const handleHeroOrderNow = () => {
+      if (gridRef.current) gridRef.current.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    // Handler: View All (scroll to grid)
+    const handleViewAll = () => {
+      if (gridRef.current) gridRef.current.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    // Handler: Apply Filters (no-op, filters are live, but could debounce or trigger here)
+    const handleApplyFilters = (e) => {
+      e.preventDefault();
+      // Filters are already applied live
+    };
+  // --- PIXEL-PERFECT FAST FOOD PAGE ---
+  const [search, setSearch] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [selectedAvailability, setSelectedAvailability] = useState([]);
+  const [selectedBrands, setSelectedBrands] = useState([]);
+  const [selectedCuisines, setSelectedCuisines] = useState([]);
+  const [selectedTypes, setSelectedTypes] = useState([]);
+  const [priceRange, setPriceRange] = useState([0, 20]);
+
+  // Unique categories, brands, cuisines, types from fastFoodItems
+  const categories = Array.from(new Set(fastFoodItems.map(i => i.category)));
+  // For demo, cuisines/types/brands are static
+  const cuisines = ["American", "Italian", "Mexican", "Asian", "African"];
+  const types = ["Restaurant", "Takeaway", "Street Vendor"];
+  const brands = ["SVS Burger", "Pizza Palace", "Chicken Hub", "Taco Town"];
+  const availabilities = ["Available Now", "Preorder"];
+
+  // Filter logic
+  const filteredItems = fastFoodItems.filter(item => {
+    const matchCategory = !selectedCategories.length || selectedCategories.includes(item.category);
+    const matchBrand = !selectedBrands.length || brands.some(b => selectedBrands.includes(b) && item.title.includes(b));
+    const matchCuisine = !selectedCuisines.length || cuisines.some(c => selectedCuisines.includes(c) && item.title.includes(c));
+    const matchType = !selectedTypes.length || types.some(t => selectedTypes.includes(t) && item.title.includes(t));
+    const matchAvailability = !selectedAvailability.length || availabilities.some(a => selectedAvailability.includes(a));
+    const matchPrice = Number(item.price) >= priceRange[0] && Number(item.price) <= priceRange[1];
+    const matchSearch = !search || item.title.toLowerCase().includes(search.toLowerCase());
+    return matchCategory && matchBrand && matchCuisine && matchType && matchAvailability && matchPrice && matchSearch;
   });
 
   return (
-  <PageFrame
-    title={t('markets.fastFood')}
-    subtitle={t('pageSubtitles.fastFood')}
-  >
-    <CardGrid
-      items={marketItems}
-      buttonLabel={t('common.orderNow')}
-      secondaryButtonLabel={t('common.viewMeal')}
-      reviewSummaryMap={productReviewSummaryMap}
-      getItemReviewKey={(item) => getCollectionItemId('/fast-food', item.id)}
-      onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-      onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
-      onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
-      onOpenItemDetails={(item) => {
-        const wishlistItem = buildWishlistItem(item);
-        onOpenItemDetails?.({
-          title: getTranslatedValue(t, item.titleKey, item.title),
-          image: item.image,
-          images: item.images || (item.image ? [item.image] : []),
-          marketName: t('markets.fastFood'),
-          details: `${item.category || 'Seller item'} • ${item.prepTime || item.description || 'Ready to order'}`,
-          priceLabel: getSalePrices(item.price).nowPrice,
-          cartItem: buildCartItem(item),
-          wishlistItem,
-        });
-      }}
-      isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/fast-food', item.id))}
-      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.prepTime || 'Ready to order'} • <SalePrice price={item.price} /></p>}
-    />
-  </PageFrame>
+    <div className="bg-[var(--svs-bg)] min-h-screen font-sans">
+      {/* Hero Banner */}
+      <section className="relative w-full h-[340px] md:h-[420px] lg:h-[520px] flex items-center justify-center overflow-hidden">
+        <img src="https://images.pexels.com/photos/2983101/pexels-photo-2983101.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="Fast Food Hero" className="absolute inset-0 w-full h-full object-cover object-center z-0" />
+        <div className="absolute inset-0" style={{background:'linear-gradient(180deg,rgba(0,168,232,0.82) 0%,rgba(245,247,251,0.00) 100%)'}} />
+        <div className="relative z-20 flex flex-col items-center justify-center w-full text-center px-4">
+          <h1 className="text-[var(--svs-text)] font-extrabold" style={{fontSize:'48px',letterSpacing:'-0.03em',lineHeight:'1.1'}}>Fast Food Delivery</h1>
+          <p className="text-[var(--svs-muted)] mt-5" style={{fontWeight:500,fontSize:'20px',lineHeight:'1.4',maxWidth:600}}>Order your favorite meals, snacks, and drinks. Fast, fresh, and delivered to your door.</p>
+          <button className="mt-10 px-12 py-3 rounded-[18px] bg-[var(--svs-primary)] text-white font-bold shadow-lg hover:bg-[var(--svs-primary-strong)] transition" style={{fontSize:'18px',boxShadow:'0 6px 32px 0 rgba(0,168,232,0.18)'}} onClick={handleHeroOrderNow}>Order Now</button>
+        </div>
+      </section>
+
+      {/* Informational Section */}
+      <section className="py-14 bg-[var(--svs-surface)] flex flex-col items-center">
+        <h2 className="font-extrabold text-[28px] text-[var(--svs-text)] mb-6" style={{letterSpacing:'-0.02em'}}>Why Choose SVS Fast Food?</h2>
+        <div className="flex flex-col md:flex-row gap-8 md:gap-16 justify-center">
+          <div className="flex flex-col items-center text-center max-w-xs">
+            <img src="https://img.icons8.com/fluency/96/000000/hamburger.png" alt="Burger" className="mb-3 w-20 h-20" />
+            <span className="font-semibold text-lg text-[var(--svs-text)]">Wide Variety</span>
+            <span className="text-[var(--svs-muted)] text-base mt-2">Burgers, pizza, chicken, sides, and more</span>
+          </div>
+          <div className="flex flex-col items-center text-center max-w-xs">
+            <img src="https://img.icons8.com/fluency/96/000000/fast-food.png" alt="Fast" className="mb-3 w-20 h-20" />
+            <span className="font-semibold text-lg text-[var(--svs-text)]">Super Fast Delivery</span>
+            <span className="text-[var(--svs-muted)] text-base mt-2">Hot and fresh at your doorstep</span>
+          </div>
+          <div className="flex flex-col items-center text-center max-w-xs">
+            <img src="https://img.icons8.com/fluency/96/000000/discount.png" alt="Deals" className="mb-3 w-20 h-20" />
+            <span className="font-semibold text-lg text-[var(--svs-text)]">Best Deals</span>
+            <span className="text-[var(--svs-muted)] text-base mt-2">Exclusive offers and combos</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Main Content: Sidebar + Product Grid */}
+      <div className="flex flex-col lg:flex-row w-full max-w-7xl mx-auto px-2 md:px-8 gap-12">
+        {/* Sidebar Filters */}
+        <aside className="w-full max-w-[340px] mx-auto lg:mx-0 lg:w-[340px] flex-shrink-0 mb-10 lg:mb-0">
+          <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-8 shadow-lg flex flex-col gap-8">
+            {/* Category */}
+            <div>
+              <h3 className="text-lg font-bold mb-3 text-[var(--svs-primary)] tracking-tight">Category</h3>
+              <div className="flex flex-col gap-3">
+                {categories.map(cat => (
+                  <label key={cat} className="flex items-center gap-3 cursor-pointer text-[var(--svs-text)] text-base font-medium">
+                    <input type="checkbox" checked={selectedCategories.includes(cat)} onChange={e => setSelectedCategories(val => e.target.checked ? [...val, cat] : val.filter(c => c !== cat))} className="accent-[var(--svs-primary)] w-5 h-5 rounded-[6px] border-2 border-[var(--svs-border)]" />
+                    {cat}
+                  </label>
+                ))}
+              </div>
+            </div>
+            {/* Cuisine */}
+            <div>
+              <h3 className="text-lg font-bold mb-3 text-[var(--svs-primary)] tracking-tight">Cuisine</h3>
+              <div className="flex flex-col gap-3">
+                {cuisines.map(cuisine => (
+                  <label key={cuisine} className="flex items-center gap-3 cursor-pointer text-[var(--svs-text)] text-base font-medium">
+                    <input type="checkbox" checked={selectedCuisines.includes(cuisine)} onChange={e => setSelectedCuisines(val => e.target.checked ? [...val, cuisine] : val.filter(c => c !== cuisine))} className="accent-[var(--svs-primary)] w-5 h-5 rounded-[6px] border-2 border-[var(--svs-border)]" />
+                    {cuisine}
+                  </label>
+                ))}
+              </div>
+            </div>
+            {/* Restaurant Type */}
+            <div>
+              <h3 className="text-lg font-bold mb-3 text-[var(--svs-primary)] tracking-tight">Type</h3>
+              <div className="flex flex-col gap-3">
+                {types.map(type => (
+                  <label key={type} className="flex items-center gap-3 cursor-pointer text-[var(--svs-text)] text-base font-medium">
+                    <input type="checkbox" checked={selectedTypes.includes(type)} onChange={e => setSelectedTypes(val => e.target.checked ? [...val, type] : val.filter(c => c !== type))} className="accent-[var(--svs-primary)] w-5 h-5 rounded-[6px] border-2 border-[var(--svs-border)]" />
+                    {type}
+                  </label>
+                ))}
+              </div>
+            </div>
+            {/* Brands */}
+            <div>
+              <h3 className="text-lg font-bold mb-3 text-[var(--svs-primary)] tracking-tight">Brands</h3>
+              <div className="flex flex-col gap-3">
+                {brands.map(brand => (
+                  <label key={brand} className="flex items-center gap-3 cursor-pointer text-[var(--svs-text)] text-base font-medium">
+                    <input type="checkbox" checked={selectedBrands.includes(brand)} onChange={e => setSelectedBrands(val => e.target.checked ? [...val, brand] : val.filter(c => c !== brand))} className="accent-[var(--svs-primary)] w-5 h-5 rounded-[6px] border-2 border-[var(--svs-border)]" />
+                    {brand}
+                  </label>
+                ))}
+              </div>
+            </div>
+            {/* Price Range */}
+            <div>
+              <h3 className="text-lg font-bold mb-3 text-[var(--svs-primary)] tracking-tight">Price</h3>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-[var(--svs-muted)]">{priceRange[0]}</span>
+                <input type="range" min={0} max={20} step={1} value={priceRange[0]} onChange={e => setPriceRange([Number(e.target.value), priceRange[1]])} className="accent-[var(--svs-primary)] w-full svs-range-slider" />
+                <input type="range" min={0} max={20} step={1} value={priceRange[1]} onChange={e => setPriceRange([priceRange[0], Number(e.target.value)])} className="accent-[var(--svs-primary)] w-full svs-range-slider" />
+                <span className="text-sm text-[var(--svs-muted)]">{priceRange[1]}</span>
+              </div>
+            </div>
+            {/* Availability */}
+            <div>
+              <h3 className="text-lg font-bold mb-3 text-[var(--svs-primary)] tracking-tight">Availability</h3>
+              <div className="flex flex-col gap-3">
+                {availabilities.map(a => (
+                  <label key={a} className="flex items-center gap-3 cursor-pointer text-[var(--svs-text)] text-base font-medium">
+                    <input type="checkbox" checked={selectedAvailability.includes(a)} onChange={e => setSelectedAvailability(val => e.target.checked ? [...val, a] : val.filter(c => c !== a))} className="accent-[var(--svs-primary)] w-5 h-5 rounded-[6px] border-2 border-[var(--svs-border)]" />
+                    {a}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <button className="w-full mt-6 rounded-[14px] bg-[var(--svs-primary)] text-white font-bold py-3 text-lg shadow hover:bg-[var(--svs-primary-strong)] transition" onClick={handleApplyFilters}>Apply Filters</button>
+          </div>
+        </aside>
+        {/* Product Grid */}
+        <main className="flex-1">
+          {/* Search Bar */}
+          <div className="mb-10">
+            <input
+              type="search"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search for meals, restaurants, or cuisines..."
+              className="h-[54px] w-full rounded-[16px] border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-7 text-lg font-medium text-[var(--svs-text)] shadow outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[var(--svs-primary)]/20"
+            />
+          </div>
+          {/* Product Cards Grid */}
+          <div ref={gridRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
+            {filteredItems.map(item => (
+              <div key={item.id} className="bg-[var(--svs-surface-soft)] rounded-2xl shadow-lg flex flex-col overflow-hidden hover:shadow-2xl transition group border border-[var(--svs-border)]">
+                <div className="relative h-56 w-full overflow-hidden cursor-pointer" onClick={() => handleOpenDetails(item)}>
+                  <img src={item.image} alt={item.title} className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" />
+                  <span className="absolute top-4 left-4 bg-[var(--svs-primary)] text-white text-sm font-bold px-4 py-1.5 rounded-[10px] shadow">{item.category}</span>
+                  {/* Wishlist icon */}
+                  <button
+                    className={`absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 border border-[var(--svs-border)] shadow ${wishlistItemIds.includes(item.id) ? 'text-[var(--svs-primary)]' : 'text-[var(--svs-muted)]'} hover:text-[var(--svs-primary)]`}
+                    style={{zIndex:2}}
+                    onClick={e => { e.stopPropagation(); handleToggleWishlist(item); }}
+                    aria-label="Toggle Wishlist"
+                  >
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path d="M10 17.5l-1.45-1.32C4.4 12.36 2 10.28 2 7.5 2 5.5 3.5 4 5.5 4c1.04 0 2.09.54 2.7 1.44C8.41 5.54 9.46 5 10.5 5 12.5 5 14 6.5 14 8.5c0 2.78-2.4 4.86-6.55 8.68L10 17.5z"/></svg>
+                  </button>
+                </div>
+                <div className="flex flex-col flex-1 p-6">
+                  <h3 className="font-extrabold text-xl text-[var(--svs-text)] mb-2 truncate">{item.title}</h3>
+                  <span className="text-[var(--svs-muted)] text-base mb-3 font-medium">{item.prepTime}</span>
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="font-extrabold text-2xl text-[var(--svs-primary)]">{item.price}</span>
+                    <button className="ml-auto px-3 py-1 rounded bg-[var(--svs-primary)] text-white text-xs font-bold shadow hover:bg-[var(--svs-primary-strong)] transition" onClick={() => handleBuyNow(item)}>Buy Now</button>
+                  </div>
+                  <button className="mt-auto w-full rounded-[12px] bg-[var(--svs-primary)] text-white font-bold py-3 text-lg shadow hover:bg-[var(--svs-primary-strong)] transition" onClick={() => handleAddToCart(item)}>Add to Cart</button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <button className="w-full mt-8 rounded-lg bg-[var(--svs-primary)] text-white font-bold py-2 text-base shadow hover:bg-[var(--svs-primary-strong)] transition" onClick={handleViewAll}>View All</button>
+
+        </main>
+      </div>
+    </div>
   );
 };
 
@@ -7061,6 +7587,7 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
         .some((value) => String(value).toLowerCase().includes(normalizedQuery));
       return matchesCategory && matchesQuery;
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allBeverageItems, activeCategory, searchQuery]);
 
   const openBeverageItemDetails = (item) => {
@@ -7427,35 +7954,27 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
 };
 
 const HomeCarePage = ({ sellerItems = [], onOpenItemDetails }) => {
+  const [selectedCountry, setSelectedCountry] = useState('');
+  const [selectedCity, setSelectedCity] = useState('');
+  const [selectedAvailability, setSelectedAvailability] = useState('Any');
+  const [selectedCategories, setSelectedCategories] = useState(['All']);
+  const [selectedServiceTypes, setSelectedServiceTypes] = useState(['All']);
+  const [selectedProfessionalPreference, setSelectedProfessionalPreference] = useState('Any');
+  const [selectedExperienceLevels, setSelectedExperienceLevels] = useState([]);
   const navigate = useNavigate();
   const providersSectionRef = useRef(null);
   const relatedListingsSectionRef = useRef(null);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [showAllRelatedListings, setShowAllRelatedListings] = useState(false);
-  const [selectedCategories, setSelectedCategories] = useState(['All']);
-  const [selectedServiceTypes, setSelectedServiceTypes] = useState(['All']);
-  const [selectedProfessionalPreference, setSelectedProfessionalPreference] = useState('Any');
-  const [selectedExperienceLevels, setSelectedExperienceLevels] = useState([]);
-  const [selectedAvailability, setSelectedAvailability] = useState('Any');
-  const [selectedCountry, setSelectedCountry] = useState('');
-  const [selectedCity, setSelectedCity] = useState('');
 
-  const countries = ['South Africa', 'Kenya', 'Nigeria', 'Uganda'];
-  const citiesByCountry = {
-    'South Africa': ['Cape Town', 'Durban', 'Johannesburg', 'Pretoria', 'Pietermaritzburg'],
-    Kenya: ['Nairobi', 'Mombasa', 'Kisumu'],
-    Nigeria: ['Lagos', 'Abuja', 'Ibadan'],
-    Uganda: ['Kampala', 'Entebbe'],
-  };
-
-  const visibleCities = selectedCountry ? (citiesByCountry[selectedCountry] || []) : [];
+  const visibleCities = selectedCountry ? (homeCareCitiesByCountry[selectedCountry] || []) : [];
 
   const sellerHomeCareProviders = useMemo(
     () => getSellerItemsForMarket(sellerItems, 'homeCare').map((item) => ({
       id: `seller-home-care-${item.id}`,
       name: item.title || 'Home-Care Service',
       image: item.image || 'https://images.pexels.com/photos/3846022/pexels-photo-3846022.jpeg?auto=compress&cs=tinysrgb&w=1200',
-      category: item.category || 'Home Care',
+      category: item.category || 'Book @ Home-Care Services',
       location: item.sellerName || 'SVS Seller',
       experience: item.description || 'Seller listed service',
       experienceYears: 0,
@@ -7661,7 +8180,7 @@ const HomeCarePage = ({ sellerItems = [], onOpenItemDetails }) => {
                 className="h-11 w-full appearance-none rounded-lg border border-[#E5E7EB] bg-white px-3 pr-10 text-sm text-[#1A1A1A] outline-none focus:border-[#0f9fb2]"
               >
                 <option value="">Select Country</option>
-                {countries.map((country) => (
+                {homeCareCountries.map((country) => (
                   <option key={country} value={country}>{country}</option>
                 ))}
               </select>
@@ -7936,48 +8455,502 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
 
 const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
+  const [selectedGender, setSelectedGender] = useState('All');
+  const [selectedCategories, setSelectedCategories] = useState(['All']);
+  const [selectedSubcategories, setSelectedSubcategories] = useState([]);
+  const [selectedSizes, setSelectedSizes] = useState([]);
+  const [selectedColors, setSelectedColors] = useState([]);
+  const [selectedPriceRanges, setSelectedPriceRanges] = useState([]);
+  const [selectedMaterial, setSelectedMaterial] = useState('All');
+  const [selectedOccasion, setSelectedOccasion] = useState('All');
+  const [showOnSaleOnly, setShowOnSaleOnly] = useState(false);
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [showAllRelated, setShowAllRelated] = useState(false);
+  const productsSectionRef = useRef(null);
+  const relatedSectionRef = useRef(null);
+
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'fashionStyle'), ...fashionStyleItems], [sellerItems]);
-  const buildCartItem = (item) => createCartItem({
+
+  const parsePriceNumber = (price) => {
+    const text = String(price ?? '').replace(/[^\d.]/g, '');
+    const num = Number(text);
+    return Number.isFinite(num) ? num : 0;
+  };
+
+  const matchesField = (itemValue, selectedValues) => {
+    if (!selectedValues.length) return true;
+    if (!itemValue) return true; // permissive: items missing the field still appear
+    const value = String(itemValue).toLowerCase();
+    return selectedValues.some((selected) => value.includes(String(selected).toLowerCase()));
+  };
+
+  const filteredItems = useMemo(() => marketItems.filter((item) => {
+    const categoryActive = selectedCategories.filter((value) => value !== 'All');
+    const categoryMatch = !categoryActive.length || categoryActive.some((cat) => (item.category || '').toLowerCase().includes(cat.toLowerCase()));
+
+    const subcategoryMatch = !selectedSubcategories.length
+      || selectedSubcategories.some((sub) => {
+        const itemSub = (item.subcategory || '').toLowerCase();
+        const itemTitle = (item.title || '').toLowerCase();
+        const subLower = sub.toLowerCase();
+        return itemSub.includes(subLower) || itemTitle.includes(subLower);
+      });
+
+    const itemSizes = getItemSizeOptions(item).map((size) => String(size).toLowerCase());
+    const sizeMatch = !selectedSizes.length
+      || (itemSizes.length === 0)
+      || selectedSizes.some((size) => itemSizes.includes(String(size).toLowerCase().replace(/^uk\s*/, '').trim()) || itemSizes.includes(String(size).toLowerCase()));
+
+    const colorMatch = matchesField(item.color, selectedColors);
+    const genderMatch = selectedGender === 'All' || matchesField(item.gender, [selectedGender]);
+    const materialMatch = selectedMaterial === 'All' || matchesField(item.material || item.specification, [selectedMaterial]);
+    const occasionMatch = selectedOccasion === 'All' || matchesField(item.occasion || item.subcategory || item.specification, [selectedOccasion]);
+
+    const priceValue = parsePriceNumber(item.price);
+    const priceMatch = !selectedPriceRanges.length
+      || selectedPriceRanges.some((index) => {
+        const range = fashionPriceRanges[index];
+        return range && priceValue >= range.min && priceValue < range.max;
+      });
+
+    const saleMatch = !showOnSaleOnly || true; // all items currently surfaced through getSalePrices have a discounted now-price
+
+    return categoryMatch && subcategoryMatch && sizeMatch && colorMatch && genderMatch && materialMatch && occasionMatch && priceMatch && saleMatch;
+  }), [marketItems, selectedCategories, selectedSubcategories, selectedSizes, selectedColors, selectedGender, selectedMaterial, selectedOccasion, selectedPriceRanges, showOnSaleOnly]);
+
+  const toggleMulti = (value, list, setter, exclusiveValue) => {
+    if (exclusiveValue && value === exclusiveValue) {
+      setter([exclusiveValue]);
+      return;
+    }
+    const withoutExclusive = list.filter((entry) => entry !== exclusiveValue);
+    const exists = withoutExclusive.includes(value);
+    const next = exists ? withoutExclusive.filter((entry) => entry !== value) : [...withoutExclusive, value];
+    setter(next.length ? next : (exclusiveValue ? [exclusiveValue] : []));
+  };
+
+  const togglePriceRange = (index) => {
+    setSelectedPriceRanges((current) => (
+      current.includes(index) ? current.filter((entry) => entry !== index) : [...current, index]
+    ));
+  };
+
+  const clearAllFilters = () => {
+    setSelectedGender('All');
+    setSelectedCategories(['All']);
+    setSelectedSubcategories([]);
+    setSelectedSizes([]);
+    setSelectedColors([]);
+    setSelectedPriceRanges([]);
+    setSelectedMaterial('All');
+    setSelectedOccasion('All');
+    setShowOnSaleOnly(false);
+  };
+
+  const activeFilterCount = (
+    (selectedGender !== 'All' ? 1 : 0)
+    + selectedCategories.filter((value) => value !== 'All').length
+    + selectedSubcategories.length
+    + selectedSizes.length
+    + selectedColors.length
+    + selectedPriceRanges.length
+    + (selectedMaterial !== 'All' ? 1 : 0)
+    + (selectedOccasion !== 'All' ? 1 : 0)
+    + (showOnSaleOnly ? 1 : 0)
+  );
+
+  const buildDetailsText = (item, selectedSize = item.selectedSize || '') => (
+    [
+      item.category || 'Seller item',
+      item.subcategory || item.specification || item.description || item.sellerName || 'Style listing',
+      item.specification,
+      selectedSize ? `Size ${selectedSize}` : '',
+    ].filter(Boolean).join(' • ')
+  );
+  const buildBaseCartItem = (item) => createCartItem({
     ...item,
+    id: String(item.id || '').replace(/::size-[a-z0-9-]+$/i, ''),
     route: '/fashion-style',
     marketName: t('markets.fashionStyle'),
-    details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Style listing'}`,
+    details: buildDetailsText({ ...item, selectedSize: '' }),
+  });
+  const buildCartItem = (item) => createCartItem({
+    ...item,
+    id: item.selectedSize
+      ? `${String(item.id || '').replace(/::size-[a-z0-9-]+$/i, '')}::size-${sanitizeStorageSegment(item.selectedSize)}`
+      : String(item.id || '').replace(/::size-[a-z0-9-]+$/i, ''),
+    route: '/fashion-style',
+    marketName: t('markets.fashionStyle'),
+    details: buildDetailsText(item),
   });
   const buildWishlistItem = (item) => createWishlistItem({
     ...item,
     route: '/fashion-style',
     marketName: t('markets.fashionStyle'),
-    details: `${item.category || 'Seller item'} • ${item.specification || item.sellerName || 'Style listing'}`,
+    details: buildDetailsText({ ...item, selectedSize: '' }),
+  });
+
+  const handleViewAllRelated = () => {
+    setShowAllRelated(true);
+    setIsFilterDrawerOpen(false);
+    requestAnimationFrame(() => {
+      relatedSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
+  const trendingItems = showAllRelated ? filteredItems : filteredItems.slice(0, 8);
+  const hasMoreRelated = filteredItems.length > 8;
+
+  const FilterPanel = (
+    <div className="flex h-full flex-col bg-white font-['Inter',sans-serif]">
+      <div className="space-y-7 px-6 py-8">
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-semibold text-[#1A1A1A]">Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}</h3>
+          {activeFilterCount ? (
+            <button type="button" onClick={clearAllFilters} className="text-xs font-medium text-[#0f9fb2] hover:underline">
+              Clear all
+            </button>
+          ) : null}
+        </div>
+
+        <div>
+          <h4 className="text-sm font-medium text-[#1A1A1A]">Gender</h4>
+          <div className="mt-3 space-y-2">
+            {fashionGenderOptions.map((option) => (
+              <label key={option} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input
+                  type="radio"
+                  name="fashion-gender"
+                  checked={selectedGender === option}
+                  onChange={() => setSelectedGender(option)}
+                  className="h-4 w-4 border-[#D1D5DB] text-[#0f9fb2] focus:ring-[#0f9fb2]"
+                />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-sm font-medium text-[#1A1A1A]">Main Category</h4>
+          <div className="mt-3 space-y-2">
+            {fashionMainCategories.map((option) => (
+              <label key={option} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input
+                  type="checkbox"
+                  checked={selectedCategories.includes(option)}
+                  onChange={() => toggleMulti(option, selectedCategories, setSelectedCategories, 'All')}
+                  className="h-4 w-4 rounded border-[#D1D5DB] text-[#0f9fb2] focus:ring-[#0f9fb2]"
+                />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-sm font-medium text-[#1A1A1A]">Subcategory</h4>
+          <div className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
+            {fashionSubcategories.map((option) => (
+              <label key={option} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input
+                  type="checkbox"
+                  checked={selectedSubcategories.includes(option)}
+                  onChange={() => toggleMulti(option, selectedSubcategories, setSelectedSubcategories)}
+                  className="h-4 w-4 rounded border-[#D1D5DB] text-[#0f9fb2] focus:ring-[#0f9fb2]"
+                />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-sm font-medium text-[#1A1A1A]">Clothing Size</h4>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {fashionClothingSizes.map((size) => {
+              const isActive = selectedSizes.includes(size);
+              return (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => toggleMulti(size, selectedSizes, setSelectedSizes)}
+                  aria-pressed={isActive}
+                  className={`min-w-[44px] rounded-md border px-3 py-1.5 text-xs font-medium transition ${isActive ? 'border-[#0f9fb2] bg-[#0f9fb2] text-white' : 'border-[#E5E7EB] bg-white text-[#1A1A1A] hover:border-[#0f9fb2]'}`}
+                >
+                  {size}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-sm font-medium text-[#1A1A1A]">Shoe Size</h4>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {fashionShoeSizes.map((size) => {
+              const isActive = selectedSizes.includes(size);
+              return (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => toggleMulti(size, selectedSizes, setSelectedSizes)}
+                  aria-pressed={isActive}
+                  className={`min-w-[52px] rounded-md border px-2.5 py-1.5 text-xs font-medium transition ${isActive ? 'border-[#0f9fb2] bg-[#0f9fb2] text-white' : 'border-[#E5E7EB] bg-white text-[#1A1A1A] hover:border-[#0f9fb2]'}`}
+                >
+                  {size}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-sm font-medium text-[#1A1A1A]">Color</h4>
+          <div className="mt-3 grid grid-cols-7 gap-2">
+            {fashionColorOptions.map((color) => {
+              const isActive = selectedColors.includes(color.name);
+              return (
+                <button
+                  key={color.name}
+                  type="button"
+                  onClick={() => toggleMulti(color.name, selectedColors, setSelectedColors)}
+                  aria-pressed={isActive}
+                  aria-label={color.name}
+                  title={color.name}
+                  className={`relative h-7 w-7 rounded-full border ${isActive ? 'border-[#0f9fb2] ring-2 ring-[#0f9fb2]/40' : 'border-[#E5E7EB]'}`}
+                  style={color.hex.startsWith('linear') ? { backgroundImage: color.hex } : { backgroundColor: color.hex }}
+                />
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-sm font-medium text-[#1A1A1A]">Price</h4>
+          <div className="mt-3 space-y-2">
+            {fashionPriceRanges.map((range, index) => (
+              <label key={range.label} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input
+                  type="checkbox"
+                  checked={selectedPriceRanges.includes(index)}
+                  onChange={() => togglePriceRange(index)}
+                  className="h-4 w-4 rounded border-[#D1D5DB] text-[#0f9fb2] focus:ring-[#0f9fb2]"
+                />
+                <span>{range.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-sm font-medium text-[#1A1A1A]">Material</h4>
+          <div className="mt-3 space-y-2">
+            {fashionMaterialOptions.map((option) => (
+              <label key={option} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input
+                  type="radio"
+                  name="fashion-material"
+                  checked={selectedMaterial === option}
+                  onChange={() => setSelectedMaterial(option)}
+                  className="h-4 w-4 border-[#D1D5DB] text-[#0f9fb2] focus:ring-[#0f9fb2]"
+                />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-sm font-medium text-[#1A1A1A]">Occasion / Style</h4>
+          <div className="mt-3 space-y-2">
+            {fashionStyleOccasions.map((option) => (
+              <label key={option} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input
+                  type="radio"
+                  name="fashion-occasion"
+                  checked={selectedOccasion === option}
+                  onChange={() => setSelectedOccasion(option)}
+                  className="h-4 w-4 border-[#D1D5DB] text-[#0f9fb2] focus:ring-[#0f9fb2]"
+                />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="flex items-center gap-2.5 text-sm font-medium text-[#1A1A1A]">
+            <input
+              type="checkbox"
+              checked={showOnSaleOnly}
+              onChange={(event) => setShowOnSaleOnly(event.target.checked)}
+              className="h-4 w-4 rounded border-[#D1D5DB] text-[#0f9fb2] focus:ring-[#0f9fb2]"
+            />
+            <span>On Sale only</span>
+          </label>
+        </div>
+      </div>
+
+      <div className="mt-auto border-t border-[#E5E7EB] p-6">
+        <button
+          type="button"
+          onClick={() => setIsFilterDrawerOpen(false)}
+          className="h-[52px] w-full rounded-lg bg-[#0f9fb2] text-base font-medium text-white transition hover:bg-[#0d8a9c]"
+        >
+          Apply Filters
+        </button>
+      </div>
+    </div>
+  );
+
+  const cardGridProps = (items) => ({
+    items,
+    buttonLabel: t('common.addToCart'),
+    secondaryButtonLabel: t('common.viewDetails'),
+    reviewSummaryMap: productReviewSummaryMap,
+    getItemReviewKey: (item) => getCollectionItemId('/fashion-style', item.id),
+    onPrimaryAction: (item) => onAddToCart(buildCartItem(item)),
+    onBuyNowAction: (item) => onBuyNow?.(buildCartItem(item)),
+    onToggleWishlist: (item) => onToggleWishlist(buildWishlistItem(item)),
+    onOpenItemDetails: (item) => {
+      const wishlistItem = buildWishlistItem(item);
+      onOpenItemDetails?.({
+        title: getTranslatedValue(t, item.titleKey, item.title),
+        image: item.image,
+        images: item.images || (item.image ? [item.image] : []),
+        marketName: t('markets.fashionStyle'),
+        details: buildDetailsText(item),
+        priceLabel: getSalePrices(item.price).nowPrice,
+        sizeOptions: getItemSizeOptions(item),
+        defaultSelectedSize: item.selectedSize || getItemSizeOptions(item)[0] || '',
+        detailsTable: {
+          Category: item.category || 'Fashion',
+          Subcategory: item.subcategory || 'General',
+          Specification: item.specification || 'Style listing',
+          Sizes: getItemSizeOptions(item).join(', ') || 'One size',
+        },
+        cartItemBase: buildBaseCartItem(item),
+        cartItem: buildCartItem(item),
+        wishlistItem,
+      });
+    },
+    isItemWishlisted: (item) => wishlistItemIds.includes(getCollectionItemId('/fashion-style', item.id)),
+    metaRenderer: (item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.subcategory || 'General'} • {item.specification || item.sellerName || 'Style listing'} • <SalePrice price={item.price} /></p>,
   });
 
   return (
-  <PageFrame title={t('markets.fashionStyle')} subtitle={t('pageSubtitles.fashionStyle')}>
-    <CardGrid
-      items={marketItems}
-      buttonLabel={t('common.addToCart')}
-      secondaryButtonLabel={t('common.viewDetails')}
-      reviewSummaryMap={productReviewSummaryMap}
-      getItemReviewKey={(item) => getCollectionItemId('/fashion-style', item.id)}
-      onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-      onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
-      onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
-      onOpenItemDetails={(item) => {
-        const wishlistItem = buildWishlistItem(item);
-        onOpenItemDetails?.({
-          title: getTranslatedValue(t, item.titleKey, item.title),
-          image: item.image,
-          images: item.images || (item.image ? [item.image] : []),
-          marketName: t('markets.fashionStyle'),
-          details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Style listing'}`,
-          priceLabel: getSalePrices(item.price).nowPrice,
-          cartItem: buildCartItem(item),
-          wishlistItem,
-        });
-      }}
-      isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/fashion-style', item.id))}
-      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.specification || item.sellerName || 'Style listing'} • <SalePrice price={item.price} /></p>}
-    />
-  </PageFrame>
+    <section className="bg-[var(--svs-bg)] px-4 py-8 font-['Inter',sans-serif] text-[#1A1A1A] sm:px-6 lg:py-10">
+      <div className="mx-auto w-full max-w-[1280px]">
+        <section className="relative h-[220px] overflow-hidden rounded-2xl sm:h-[260px]">
+          <img
+            src="https://images.pexels.com/photos/996329/pexels-photo-996329.jpeg?auto=compress&cs=tinysrgb&w=1920"
+            alt={t('markets.fashionStyle')}
+            className="h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/55 to-black/70" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
+            <h1 className="text-xl font-bold text-white sm:text-2xl">{t('markets.fashionStyle')}</h1>
+            <p className="mt-2 max-w-[680px] text-xs text-white/90 sm:text-sm">
+              {t('pageSubtitles.fashionStyle')}
+            </p>
+          </div>
+        </section>
+
+        <div className="mt-8 flex items-center justify-between lg:hidden">
+          <h2 className="text-xl font-semibold text-[var(--svs-text)]">Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}</h2>
+          <button
+            type="button"
+            onClick={() => setIsFilterDrawerOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-4 py-2 text-sm font-medium text-[#0f9fb2]"
+          >
+            <Menu className="h-4 w-4" />
+            Filter Products
+          </button>
+        </div>
+
+        <div className="mt-8 grid items-start gap-10 lg:grid-cols-[280px_minmax(0,1fr)]">
+          <aside className="hidden min-h-[calc(100vh-220px)] border-r border-[#E5E7EB] lg:block">
+            {FilterPanel}
+          </aside>
+
+          <main ref={productsSectionRef}>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-[var(--svs-muted)]">
+                Showing <span className="font-semibold text-[var(--svs-text)]">{filteredItems.length}</span> {filteredItems.length === 1 ? 'item' : 'items'}
+              </p>
+              {activeFilterCount ? (
+                <button
+                  type="button"
+                  onClick={clearAllFilters}
+                  className="rounded-full border border-[var(--svs-border)] bg-white px-4 py-2 text-xs font-semibold text-[var(--svs-text)] transition hover:border-[#0f9fb2] hover:text-[#0f9fb2]"
+                >
+                  Clear filters
+                </button>
+              ) : null}
+            </div>
+
+            {filteredItems.length ? (
+              <CardGrid {...cardGridProps(filteredItems)} />
+            ) : (
+              <div className="rounded-2xl border border-dashed border-[var(--svs-border)] bg-white p-12 text-center">
+                <h3 className="text-lg font-semibold text-[var(--svs-text)]">No items match your filters</h3>
+                <p className="mt-2 text-sm text-[var(--svs-muted)]">Try clearing some filters to see more products.</p>
+                <button
+                  type="button"
+                  onClick={clearAllFilters}
+                  className="mt-4 inline-flex h-11 items-center rounded-lg bg-[#0f9fb2] px-6 text-sm font-medium text-white transition hover:bg-[#0d8a9c]"
+                >
+                  Clear all filters
+                </button>
+              </div>
+            )}
+
+            <section ref={relatedSectionRef} className="mt-14">
+              <h2 className="text-[24px] font-bold text-[var(--svs-text)]">Trending Styles &amp; Featured Picks</h2>
+              <div className="mt-6">
+                <CardGrid {...cardGridProps(trendingItems)} />
+              </div>
+              {hasMoreRelated ? (
+                <div className="mt-8 flex justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleViewAllRelated}
+                    disabled={showAllRelated}
+                    className="h-[52px] rounded-lg bg-[#0f9fb2] px-12 text-base font-medium text-white transition hover:bg-[#0d8a9c] disabled:opacity-60"
+                  >
+                    View All
+                  </button>
+                  {showAllRelated ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllRelated(false)}
+                      className="h-[52px] rounded-lg border border-[#0f9fb2] bg-white px-8 text-base font-medium text-[#0f9fb2] transition hover:bg-[#ecfbfe]"
+                    >
+                      Show Less
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+            </section>
+          </main>
+        </div>
+      </div>
+
+      {isFilterDrawerOpen ? (
+        <div className="fixed inset-0 z-[90] bg-black/45 lg:hidden" role="dialog" aria-modal="true" aria-label="Filter fashion products">
+          <div className="absolute inset-y-0 left-0 w-[min(92vw,320px)] overflow-y-auto bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#E5E7EB] px-4 py-3">
+              <h3 className="text-base font-semibold text-[#1A1A1A]">Filters</h3>
+              <button type="button" onClick={() => setIsFilterDrawerOpen(false)} className="rounded-md p-1 text-[#4B5563] transition hover:bg-[#F3F4F6]" aria-label="Close filters">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {FilterPanel}
+          </div>
+        </div>
+      ) : null}
+    </section>
   );
 };
 
@@ -8264,10 +9237,10 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
       return;
     }
 
-    const groceriesValidationMessage = getGroceriesListingValidationMessage(editForm);
+    const validationMessage = getSellerListingValidationMessage(editForm);
 
-    if (groceriesValidationMessage) {
-      setEditMessage(groceriesValidationMessage);
+    if (validationMessage) {
+      setEditMessage(validationMessage);
       setEditMessageType('error');
       setIsSaving(false);
       return;
@@ -8655,6 +9628,14 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                               isCompact
                             />
                           ) : null}
+                          {editForm.marketKey === 'beverages' ? (
+                            <BeveragesSellerFields
+                              formData={editForm}
+                              onFieldChange={handleEditChange}
+                              prefix={`edit-beverage-${item.dbId}`}
+                              isCompact
+                            />
+                          ) : null}
                           {editForm.marketKey === 'tickets' ? (
                             <TicketsSellerFields
                               formData={editForm}
@@ -9014,10 +9995,10 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
       return;
     }
 
-    const groceriesValidationMessage = getGroceriesListingValidationMessage(formData);
+    const validationMessage = getSellerListingValidationMessage(formData);
 
-    if (groceriesValidationMessage) {
-      setMessage(groceriesValidationMessage);
+    if (validationMessage) {
+      setMessage(validationMessage);
       setMessageType('error');
       return;
     }
@@ -9158,6 +10139,9 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
               </div>
               {formData.marketKey === 'groceries' ? (
                 <GroceriesSellerFields formData={formData} onFieldChange={handleChange} prefix="seller-grocery" />
+              ) : null}
+              {formData.marketKey === 'beverages' ? (
+                <BeveragesSellerFields formData={formData} onFieldChange={handleChange} prefix="seller-beverage" />
               ) : null}
               {formData.marketKey === 'tickets' ? (
                 <TicketsSellerFields formData={formData} onFieldChange={handleChange} prefix="seller-ticket" />
@@ -10941,22 +11925,20 @@ const ItemDetailsModal = ({
     return item?.image ? [item.image] : [];
   }, [item]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isReviewSectionOpen, setIsReviewSectionOpen] = useState(false);
+  const [, setIsReviewSectionOpen] = useState(false);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [reviewerName, setReviewerName] = useState(currentReviewerName);
   const [reviewError, setReviewError] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const sizeOptions = useMemo(() => getItemSizeOptions(item), [item]);
+  const [selectedSize, setSelectedSize] = useState('');
   const touchStartXRef = useRef(null);
   const itemReviewKey = useMemo(() => getProductReviewItemKey(item), [item]);
   const isAuthenticatedReviewer = Boolean(normalizeEmail(currentReviewerEmail));
   const averageRating = reviews.length
     ? (reviews.reduce((total, review) => total + review.rating, 0) / reviews.length).toFixed(1)
     : null;
-  const stockSource = item?.availableQuantity ?? item?.cartItem?.availableQuantity;
-  const hasStockValue = stockSource !== null && stockSource !== undefined;
-  const availableQuantity = hasStockValue ? normalizeListingQuantity(stockSource, 0) : null;
-  const isOutOfStock = availableQuantity !== null && availableQuantity <= 0;
 
   useEffect(() => {
     setCurrentImageIndex(0);
@@ -10965,6 +11947,7 @@ const ItemDetailsModal = ({
     setComment('');
     setReviewError('');
     setReviewerName(currentReviewerName);
+    setSelectedSize(item?.defaultSelectedSize || getItemSizeOptions(item)[0] || '');
   }, [item, currentReviewerName]);
 
   if (!item) {
@@ -10973,6 +11956,29 @@ const ItemDetailsModal = ({
 
   const currentImage = itemImages[currentImageIndex] || '';
   const hasMultipleImages = itemImages.length > 1;
+  const actionCartItem = (() => {
+    const baseCartItem = item.cartItemBase || item.cartItem || item;
+
+    if (!baseCartItem || !sizeOptions.length || !selectedSize) {
+      return baseCartItem;
+    }
+
+    const normalizedSize = sanitizeStorageSegment(selectedSize);
+    const baseId = String(baseCartItem.id || '').replace(/::size-[a-z0-9-]+$/i, '');
+    const existingDetails = String(baseCartItem.details || '').trim();
+    const selectedSizeDetail = `Size ${selectedSize}`;
+    const details = existingDetails.toLowerCase().includes(selectedSizeDetail.toLowerCase())
+      ? existingDetails
+      : [existingDetails, selectedSizeDetail].filter(Boolean).join(' • ');
+
+    return {
+      ...baseCartItem,
+      id: `${baseId}::size-${normalizedSize}`,
+      details,
+      selectedSize,
+    };
+  })();
+  const actionWishlistItem = item.wishlistItem || item;
 
   const showPreviousImage = () => {
     if (!itemImages.length) {
@@ -11063,6 +12069,7 @@ const ItemDetailsModal = ({
     }
   };
 
+  // --- PROTOTYPE 6 PRODUCT DETAIL MODAL ---
   return (
     <div
       className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/70 p-4"
@@ -11075,6 +12082,7 @@ const ItemDetailsModal = ({
         className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
+        {/* Top Bar */}
         <div className="flex items-center justify-between border-b border-[var(--svs-border)] px-5 py-4">
           <h2 className="text-xl font-bold text-[var(--svs-text)]">{item.title}</h2>
           <button
@@ -11086,14 +12094,16 @@ const ItemDetailsModal = ({
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="grid gap-5 p-5 md:grid-cols-[1.15fr_0.85fr]">
-          <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-2">
-            <div className="relative" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+        {/* Main Content Grid */}
+        <div className="grid gap-8 p-6 md:grid-cols-[1.1fr_0.9fr]">
+          {/* Gallery Section */}
+          <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-2 flex flex-col items-center">
+            <div className="relative w-full" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
               {currentImage ? (
                 <img
                   src={currentImage}
                   alt={`${item.title} ${currentImageIndex + 1}`}
-                  className="h-auto max-h-[70vh] w-full rounded-lg object-contain"
+                  className="h-[320px] w-full rounded-lg object-contain bg-white"
                   loading="eager"
                 />
               ) : (
@@ -11101,7 +12111,6 @@ const ItemDetailsModal = ({
                   No image available
                 </div>
               )}
-
               {hasMultipleImages ? (
                 <>
                   <button
@@ -11123,7 +12132,6 @@ const ItemDetailsModal = ({
                 </>
               ) : null}
             </div>
-
             {hasMultipleImages ? (
               <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
                 {itemImages.map((imageUrl, index) => (
@@ -11138,180 +12146,205 @@ const ItemDetailsModal = ({
               </div>
             ) : null}
           </div>
-          <div>
-            <p className="text-sm font-semibold text-[var(--svs-primary-strong)]">{item.marketName}</p>
-            {item.priceLabel ? (
-              <p className="mt-2 text-base font-semibold text-[var(--svs-primary-strong)]">{item.priceLabel}</p>
-            ) : null}
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[var(--svs-muted)]">
-              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--svs-surface-soft)] px-3 py-1 font-semibold text-[var(--svs-text)]">
-                <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                {averageRating || 'New'}
-              </span>
-              <span>{reviews.length ? `${reviews.length} public review${reviews.length === 1 ? '' : 's'}` : 'No public reviews yet'}</span>
-            </div>
-            {item.details ? (
-              <p className="mt-3 text-sm leading-6 text-[var(--svs-muted)]">{item.details}</p>
-            ) : (
-              <p className="mt-3 text-sm leading-6 text-[var(--svs-muted)]">No additional details available for this item yet.</p>
-            )}
-            {availableQuantity !== null ? (
-              <p className="mt-2 text-sm text-[var(--svs-muted)]">
-                Quantity available: <span className="font-semibold text-[var(--svs-text)]">{availableQuantity}</span>
-                {isOutOfStock ? ' (Out of stock - wishlist only)' : ''}
-              </p>
-            ) : null}
-            <div className="mt-5 flex flex-wrap gap-2">
-              {item.cartItem ? (
-                <>
-                  <button
-                    type="button"
-                    disabled={isOutOfStock}
-                    onClick={() => onAddToCart(item.cartItem)}
-                    className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-400`}
-                  >
-                    {isOutOfStock ? 'Out of stock' : 'Add to cart'}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={isOutOfStock}
-                    onClick={() => onBuyNow?.(item.cartItem)}
-                    className="rounded-md bg-[#111111] px-4 py-2 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-slate-400"
-                  >
-                    {isOutOfStock ? 'Out of stock' : 'Buy it now'}
-                  </button>
-                </>
+          {/* Details Section */}
+          <div className="flex flex-col gap-4">
+            <div>
+              <p className="text-sm font-semibold text-[var(--svs-primary-strong)]">{item.marketName}</p>
+              {item.priceLabel ? (
+                <p className="mt-2 text-2xl font-bold text-[var(--svs-primary-strong)]">{item.priceLabel}</p>
               ) : null}
-              {item.wishlistItem ? (
-                <button
-                  type="button"
-                  onClick={() => onToggleWishlist(item.wishlistItem)}
-                  className={`inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-semibold ${isWishlisted ? 'border-rose-200 bg-rose-50 text-rose-600' : 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)] text-[var(--svs-text)]'}`}
-                >
-                  <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-current' : ''}`} />
-                  {isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-                </button>
-              ) : null}
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[var(--svs-muted)]">
+                <span className="inline-flex items-center gap-1 rounded-full bg-[var(--svs-surface-soft)] px-3 py-1 font-semibold text-[var(--svs-text)]">
+                  <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                  {averageRating || 'New'}
+                </span>
+                <span>{reviews.length ? `${reviews.length} public review${reviews.length === 1 ? '' : 's'}` : 'No public reviews yet'}</span>
+              </div>
             </div>
-
-            <section className="mt-6 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4">
+            {/* Highlights */}
+            {item.highlights?.length ? (
+              <div>
+                <h3 className="text-lg font-bold text-[var(--svs-text)] mt-4">Highlights</h3>
+                <ul className="mt-2 space-y-2">
+                  {item.highlights.map((hl, i) => (
+                    <li key={i} className="flex items-start gap-2 text-[15px] text-slate-600">
+                      <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#e0f2f1] text-[#0f766e]">
+                        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                      </span>
+                      {hl}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {/* Nutrition Info */}
+            {item.nutrition ? (
+              <div>
+                <h3 className="text-lg font-bold text-[var(--svs-text)] mt-4">Nutrition</h3>
+                <div className="mt-2 text-[15px] text-slate-600 whitespace-pre-line bg-[#f8fafc] rounded-lg p-3 border border-[#e0e7ef]">
+                  {item.nutrition}
+                </div>
+              </div>
+            ) : null}
+            {/* Storage Instructions */}
+            {item.storage ? (
+              <div>
+                <h3 className="text-lg font-bold text-[var(--svs-text)] mt-4">Storage</h3>
+                <div className="mt-2 text-[15px] text-slate-600 whitespace-pre-line bg-[#f8fafc] rounded-lg p-3 border border-[#e0e7ef]">
+                  {item.storage}
+                </div>
+              </div>
+            ) : null}
+            {/* Details Table */}
+            {item.detailsTable ? (
+              <div>
+                <h3 className="text-lg font-bold text-[var(--svs-text)] mt-4">Details</h3>
+                <table className="mt-2 w-full text-[15px] text-slate-600 border border-[#e0e7ef] rounded-lg overflow-hidden">
+                  <tbody>
+                    {Object.entries(item.detailsTable).map(([key, value]) => (
+                      <tr key={key}>
+                        <td className="font-semibold bg-[#f8fafc] px-3 py-2 border-b border-[#e0e7ef] w-1/3">{key}</td>
+                        <td className="px-3 py-2 border-b border-[#e0e7ef]">{value}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+            {sizeOptions.length ? (
+              <div>
+                <h3 className="mt-4 text-lg font-bold text-[var(--svs-text)]">Select size</h3>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {sizeOptions.map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => setSelectedSize(size)}
+                      className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition ${selectedSize === size ? 'border-[var(--svs-primary)] bg-[var(--svs-primary-faint)] text-[var(--svs-primary-strong)]' : 'border-[var(--svs-border)] bg-white text-[var(--svs-text)] hover:border-[var(--svs-primary)]'}`}
+                      aria-pressed={selectedSize === size}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {/* Add to Cart / Buy Now Buttons */}
+            <div className="mt-6 flex gap-3">
               <button
                 type="button"
-                onClick={() => setIsReviewSectionOpen((prev) => !prev)}
-                className="flex w-full items-center justify-between gap-3 text-left"
-                aria-expanded={isReviewSectionOpen}
+                className="rounded-lg bg-[var(--svs-primary)] px-6 py-3 text-base font-semibold text-white shadow hover:bg-[var(--svs-primary-strong)]"
+                onClick={() => onAddToCart?.(actionCartItem)}
               >
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1 text-amber-400">
-                    {[1,2,3,4,5].map((s) => (
-                      <Star key={s} className={`h-4 w-4 ${averageRating && s <= Math.round(Number(averageRating)) ? 'fill-current' : ''}`} />
-                    ))}
-                  </div>
-                  <span className="text-sm font-semibold text-[var(--svs-text)]">
-                    {averageRating ? `${averageRating} · ` : ''}
-                    {reviews.length ? `${reviews.length} review${reviews.length === 1 ? '' : 's'}` : 'No reviews yet'}
-                  </span>
-                </div>
-                <span className="shrink-0 text-xs font-semibold text-[var(--svs-primary)] underline underline-offset-2">
-                  {isReviewSectionOpen ? 'Hide' : 'Write a review'}
-                </span>
+                Add to Basket
               </button>
-
-              {isReviewSectionOpen ? (
-              <>
-              <form className="mt-4 space-y-3" onSubmit={handleSubmitReview}>
-                {!isAuthenticatedReviewer ? (
-                  <label className="block text-sm font-medium text-[var(--svs-text)]">
-                    Your name
-                    <input
-                      type="text"
-                      value={reviewerName}
-                      onChange={(event) => setReviewerName(event.target.value)}
-                      className="mt-1 w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/40"
-                      maxLength={50}
-                      placeholder="Public display name"
-                    />
-                  </label>
-                ) : (
-                  <p className="text-sm text-[var(--svs-muted)]">Posting as <span className="font-semibold text-[var(--svs-text)]">{normalizeReviewerName(currentReviewerName, currentReviewerEmail)}</span></p>
-                )}
-
-                <div>
-                  <p className="text-sm font-medium text-[var(--svs-text)]">Your rating</p>
-                  <div className="mt-2 flex items-center gap-1">
-                    {[1, 2, 3, 4, 5].map((starValue) => (
-                      <button
-                        key={starValue}
-                        type="button"
-                        onClick={() => setRating(starValue)}
-                        className="rounded-full p-1 text-amber-400 transition hover:scale-110"
-                        aria-label={`Rate ${starValue} star${starValue === 1 ? '' : 's'}`}
-                      >
-                        <Star className={`h-5 w-5 ${starValue <= rating ? 'fill-current' : ''}`} />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <label className="block text-sm font-medium text-[var(--svs-text)]">
-                  Your review
-                  <textarea
-                    value={comment}
-                    onChange={(event) => setComment(event.target.value)}
-                    className="mt-1 min-h-28 w-full rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/40"
-                    maxLength={400}
-                    placeholder="Tell other shoppers what you liked, how it arrived, or how it performs."
-                  />
-                </label>
-
-                {reviewError ? (
-                  <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{reviewError}</p>
-                ) : null}
-                {reviewNotice ? (
-                  <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{reviewNotice}</p>
-                ) : null}
-
-                <button
-                  type="submit"
-                  disabled={isSubmittingReview}
-                  className={`${cudyBluePrimaryButtonClassName} rounded-xl bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60`}
-                >
-                  {isSubmittingReview ? 'Publishing review...' : 'Publish review'}
-                </button>
-              </form>
-
-              <div className="mt-5 space-y-3">
-                {isLoadingReviews ? (
-                  <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-4 text-sm text-[var(--svs-muted)]">Loading reviews...</div>
-                ) : reviews.length ? (
-                  reviews.map((review) => (
-                    <article key={review.id} className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div>
-                          <p className="font-semibold text-[var(--svs-text)]">{review.reviewerName}</p>
-                          <div className="mt-1 flex items-center gap-1 text-amber-400">
-                            {[1, 2, 3, 4, 5].map((starValue) => (
-                              <Star key={starValue} className={`h-4 w-4 ${starValue <= review.rating ? 'fill-current' : ''}`} />
-                            ))}
-                          </div>
-                        </div>
-                        <p className="text-xs text-[var(--svs-muted)]">{formatDate(review.createdAt)}</p>
-                      </div>
-                      <p className="mt-3 text-sm leading-6 text-[var(--svs-muted)]">{review.comment}</p>
-                    </article>
-                  ))
-                ) : (
-                  <div className="rounded-xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-4 text-sm text-[var(--svs-muted)]">Be the first to share a review for this product.</div>
-                )}
-              </div>
-              </>
-              ) : null}
-            </section>
+              <button
+                type="button"
+                className="rounded-lg border border-[var(--svs-primary)] px-6 py-3 text-base font-semibold text-[var(--svs-primary)] hover:bg-[var(--svs-primary-faint)]"
+                onClick={() => onBuyNow?.(actionCartItem)}
+              >
+                Buy Now
+              </button>
+              <button
+                type="button"
+                className={`rounded-lg border px-6 py-3 text-base font-semibold ${isWishlisted ? 'border-rose-400 text-rose-600 bg-rose-50' : 'border-[var(--svs-primary)] text-[var(--svs-primary)] hover:bg-[var(--svs-primary-faint)]'}`}
+                onClick={() => onToggleWishlist?.(actionWishlistItem)}
+              >
+                {isWishlisted ? 'Wishlisted' : 'Add to Wishlist'}
+              </button>
+            </div>
           </div>
         </div>
+        {/* Reviews Section */}
+        <div className="border-t border-[var(--svs-border)] px-6 py-6">
+          <h3 className="text-lg font-bold text-[var(--svs-text)] mb-2">Ratings & Reviews</h3>
+          {/* Reviews List */}
+          <div className="mb-4">
+            {isLoadingReviews ? (
+              <div className="text-sm text-[var(--svs-muted)]">Loading reviews…</div>
+            ) : reviews.length ? (
+              <ul className="space-y-3">
+                {reviews.map((review, idx) => (
+                  <li key={idx} className="rounded-lg border border-[#e0e7ef] bg-white p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-semibold text-[var(--svs-primary-strong)]">{review.reviewerName}</span>
+                      <span className="text-xs text-slate-400">{new Date(review.createdAt).toLocaleDateString()}</span>
+                      <span className="flex items-center gap-1 ml-2 text-amber-500">
+                        <Star className="h-4 w-4 fill-amber-400" /> {review.rating}
+                      </span>
+                    </div>
+                    <div className="text-[15px] text-slate-700">{review.comment}</div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-sm text-[var(--svs-muted)]">No reviews yet. Be the first to review this product!</div>
+            )}
+          </div>
+          {/* Review Form */}
+          <form className="mt-4 space-y-3" onSubmit={handleSubmitReview}>
+            <div className="flex items-center gap-2">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  className={`h-7 w-7 rounded-full border ${rating >= star ? 'bg-amber-400 border-amber-400' : 'bg-white border-slate-300'} flex items-center justify-center`}
+                  onClick={() => setRating(star)}
+                  aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
+                >
+                  <Star className={`h-5 w-5 ${rating >= star ? 'fill-white' : 'fill-slate-300'}`} />
+                </button>
+              ))}
+              <span className="ml-2 text-sm text-[var(--svs-muted)]">{rating ? `${rating} star${rating > 1 ? 's' : ''}` : 'Tap to rate'}</span>
+            </div>
+            {!isAuthenticatedReviewer && (
+              <input
+                type="text"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                placeholder="Your name"
+                value={reviewerName}
+                onChange={(e) => setReviewerName(e.target.value)}
+                required
+              />
+            )}
+            <textarea
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              placeholder="Write your review (min 6 chars)"
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              minLength={6}
+              required
+            />
+            {reviewError && <div className="text-sm text-rose-600">{reviewError}</div>}
+            <button
+              type="submit"
+              className="rounded-lg bg-[var(--svs-primary)] px-6 py-2 text-base font-semibold text-white shadow hover:bg-[var(--svs-primary-strong)]"
+              disabled={isSubmittingReview}
+            >
+              {isSubmittingReview ? 'Submitting…' : 'Submit Review'}
+            </button>
+            {reviewNotice && <div className="text-xs text-slate-500 mt-2">{reviewNotice}</div>}
+          </form>
+        </div>
+        {/* Similar Products Section (optional, if available) */}
+        {item.similarProducts?.length ? (
+          <div className="border-t border-[var(--svs-border)] px-6 py-6">
+            <h3 className="text-lg font-bold text-[var(--svs-text)] mb-2">Similar Products</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {item.similarProducts.map((sim, idx) => (
+                <div key={idx} className="rounded-lg border border-[#e0e7ef] bg-white p-3 flex flex-col items-center">
+                  <img src={sim.image} alt={sim.title} className="h-24 w-24 object-cover rounded mb-2" />
+                  <div className="font-semibold text-[var(--svs-text)]">{sim.title}</div>
+                  <div className="text-sm text-[var(--svs-muted)]">{sim.price}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );
+// ...existing code...
 };
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -11819,6 +12852,7 @@ const SecondHandProductDetailPage = ({ onAddToCart, onBuyNow, onToggleWishlist, 
 
 const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer, onPrimaryAction, onBuyNowAction, onToggleWishlist, isItemWishlisted, onOpenItemDetails, reviewSummaryMap = {}, getItemReviewKey }) => {
   const { t } = useTranslation();
+  const [selectedSizesByItem, setSelectedSizesByItem] = useState({});
   const {
     filteredItems,
     hasActivePriceFilter,
@@ -11866,6 +12900,9 @@ const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer, onPr
         const hasStockValue = item.availableQuantity !== null && item.availableQuantity !== undefined;
         const availableQuantity = hasStockValue ? normalizeListingQuantity(item.availableQuantity, 0) : null;
         const isOutOfStock = availableQuantity !== null && availableQuantity <= 0;
+        const itemSizeOptions = getItemSizeOptions(item);
+        const selectedSize = selectedSizesByItem[item.id] || item.selectedSize || itemSizeOptions[0] || '';
+        const actionItem = selectedSize ? { ...item, selectedSize } : item;
         const itemReviewKey = getItemReviewKey?.(item);
         const reviewSummary = getProductReviewSummary(reviewSummaryMap, itemReviewKey);
         const averageRatingLabel = reviewSummary.reviewCount ? reviewSummary.averageRating.toFixed(1) : '0.0';
@@ -11912,13 +12949,36 @@ const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer, onPr
                   {isOutOfStock ? ' (Out of stock - wishlist only)' : ' available for checkout'}
                 </p>
               ) : null}
+              {itemSizeOptions.length ? (
+                <div className="mt-3">
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-[var(--svs-muted)]">
+                    Size
+                  </label>
+                  <select
+                    value={selectedSize}
+                    onClick={(event) => event.stopPropagation()}
+                    onChange={(event) => {
+                      event.stopPropagation();
+                      setSelectedSizesByItem((currentValue) => ({
+                        ...currentValue,
+                        [item.id]: event.target.value,
+                      }));
+                    }}
+                    className="w-full rounded-md border border-[var(--svs-border)] bg-white px-3 py-2 text-sm text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)]"
+                  >
+                    {itemSizeOptions.map((sizeOption) => (
+                      <option key={sizeOption} value={sizeOption}>{sizeOption}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   type="button"
                   disabled={isOutOfStock}
                   onClick={(event) => {
                     event.stopPropagation();
-                    onPrimaryAction?.(item);
+                    onPrimaryAction?.(actionItem);
                   }}
                   className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)] disabled:cursor-not-allowed disabled:bg-slate-400 disabled:hover:bg-slate-400`}
                 >
@@ -11930,7 +12990,7 @@ const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer, onPr
                     disabled={isOutOfStock}
                     onClick={(event) => {
                       event.stopPropagation();
-                      onBuyNowAction(item);
+                      onBuyNowAction(actionItem);
                     }}
                     className="rounded-md bg-[#111111] px-3 py-2 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-slate-400 disabled:hover:bg-slate-400"
                   >
@@ -11941,7 +13001,7 @@ const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer, onPr
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
-                    onOpenItemDetails?.(item);
+                    onOpenItemDetails?.(actionItem);
                   }}
                   className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--svs-text)]"
                 >

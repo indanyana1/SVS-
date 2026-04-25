@@ -12,7 +12,13 @@ create table if not exists public.marketplace_items (
   market_key text not null,
   image_url text not null,
   image_urls jsonb not null default '[]'::jsonb,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  beverage_category text,
+  beverage_type text,
+  brand text,
+  volume text,
+  origin text,
+  short_description text
 );
 
 alter table public.marketplace_items
