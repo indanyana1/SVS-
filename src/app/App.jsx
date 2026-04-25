@@ -1476,13 +1476,6 @@ const fashionColorOptions = [
   { name: 'Purple', hex: '#7C3AED' },
   { name: 'Multi', hex: 'linear-gradient(135deg,#f97316,#ec4899,#2563eb)' },
 ];
-const fashionPriceRanges = [
-  { label: 'Under R500', min: 0, max: 500 },
-  { label: 'R500 – R1,000', min: 500, max: 1000 },
-  { label: 'R1,000 – R2,000', min: 1000, max: 2000 },
-  { label: 'R2,000 – R5,000', min: 2000, max: 5000 },
-  { label: 'R5,000+', min: 5000, max: Infinity },
-];
 const fashionMaterialOptions = ['All', 'Cotton', 'Linen', 'Denim', 'Leather', 'Wool', 'Polyester', 'Silk', 'Synthetic'];
 const fashionStyleOccasions = ['All', 'Casual', 'Formal', 'Sport', 'Streetwear', 'Evening', 'Business', 'Beach'];
 
@@ -3069,14 +3062,15 @@ const getPriceFilterStep = (minPrice, maxPrice) => {
   return 50;
 };
 
-const useMarketplacePriceFilter = (items = []) => {
+const useMarketplacePriceFilter = (items = [], boundsItems = null) => {
   const [isPriceFilterOpen, setIsPriceFilterOpen] = useState(false);
   const [minPriceInput, setMinPriceInput] = useState('');
   const [maxPriceInput, setMaxPriceInput] = useState('');
 
-  const availablePrices = useMemo(() => items
+  const sourceForBounds = Array.isArray(boundsItems) && boundsItems.length ? boundsItems : items;
+  const availablePrices = useMemo(() => sourceForBounds
     .map((item) => getNumericPriceValue(item?.price))
-    .filter((price) => Number.isFinite(price) && price >= 0), [items]);
+    .filter((price) => Number.isFinite(price) && price >= 0), [sourceForBounds]);
   const minimumAvailablePrice = availablePrices.length ? Math.min(...availablePrices) : 0;
   const maximumAvailablePrice = availablePrices.length ? Math.max(...availablePrices) : 0;
   const sliderStep = useMemo(
@@ -8460,7 +8454,6 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
   const [selectedSubcategories, setSelectedSubcategories] = useState([]);
   const [selectedSizes, setSelectedSizes] = useState([]);
   const [selectedColors, setSelectedColors] = useState([]);
-  const [selectedPriceRanges, setSelectedPriceRanges] = useState([]);
   const [selectedMaterial, setSelectedMaterial] = useState('All');
   const [selectedOccasion, setSelectedOccasion] = useState('All');
   const [showOnSaleOnly, setShowOnSaleOnly] = useState(false);
@@ -8470,12 +8463,6 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
   const relatedSectionRef = useRef(null);
 
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'fashionStyle'), ...fashionStyleItems], [sellerItems]);
-
-  const parsePriceNumber = (price) => {
-    const text = String(price ?? '').replace(/[^\d.]/g, '');
-    const num = Number(text);
-    return Number.isFinite(num) ? num : 0;
-  };
 
   const matchesField = (itemValue, selectedValues) => {
     if (!selectedValues.length) return true;
@@ -8506,17 +8493,10 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
     const materialMatch = selectedMaterial === 'All' || matchesField(item.material || item.specification, [selectedMaterial]);
     const occasionMatch = selectedOccasion === 'All' || matchesField(item.occasion || item.subcategory || item.specification, [selectedOccasion]);
 
-    const priceValue = parsePriceNumber(item.price);
-    const priceMatch = !selectedPriceRanges.length
-      || selectedPriceRanges.some((index) => {
-        const range = fashionPriceRanges[index];
-        return range && priceValue >= range.min && priceValue < range.max;
-      });
-
     const saleMatch = !showOnSaleOnly || true; // all items currently surfaced through getSalePrices have a discounted now-price
 
-    return categoryMatch && subcategoryMatch && sizeMatch && colorMatch && genderMatch && materialMatch && occasionMatch && priceMatch && saleMatch;
-  }), [marketItems, selectedCategories, selectedSubcategories, selectedSizes, selectedColors, selectedGender, selectedMaterial, selectedOccasion, selectedPriceRanges, showOnSaleOnly]);
+    return categoryMatch && subcategoryMatch && sizeMatch && colorMatch && genderMatch && materialMatch && occasionMatch && saleMatch;
+  }), [marketItems, selectedCategories, selectedSubcategories, selectedSizes, selectedColors, selectedGender, selectedMaterial, selectedOccasion, showOnSaleOnly]);
 
   const toggleMulti = (value, list, setter, exclusiveValue) => {
     if (exclusiveValue && value === exclusiveValue) {
@@ -8529,19 +8509,12 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
     setter(next.length ? next : (exclusiveValue ? [exclusiveValue] : []));
   };
 
-  const togglePriceRange = (index) => {
-    setSelectedPriceRanges((current) => (
-      current.includes(index) ? current.filter((entry) => entry !== index) : [...current, index]
-    ));
-  };
-
   const clearAllFilters = () => {
     setSelectedGender('All');
     setSelectedCategories(['All']);
     setSelectedSubcategories([]);
     setSelectedSizes([]);
     setSelectedColors([]);
-    setSelectedPriceRanges([]);
     setSelectedMaterial('All');
     setSelectedOccasion('All');
     setShowOnSaleOnly(false);
@@ -8553,7 +8526,6 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
     + selectedSubcategories.length
     + selectedSizes.length
     + selectedColors.length
-    + selectedPriceRanges.length
     + (selectedMaterial !== 'All' ? 1 : 0)
     + (selectedOccasion !== 'All' ? 1 : 0)
     + (showOnSaleOnly ? 1 : 0)
@@ -8727,23 +8699,6 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
         </div>
 
         <div>
-          <h4 className="text-sm font-medium text-[#1A1A1A]">Price</h4>
-          <div className="mt-3 space-y-2">
-            {fashionPriceRanges.map((range, index) => (
-              <label key={range.label} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
-                <input
-                  type="checkbox"
-                  checked={selectedPriceRanges.includes(index)}
-                  onChange={() => togglePriceRange(index)}
-                  className="h-4 w-4 rounded border-[#D1D5DB] text-[#0f9fb2] focus:ring-[#0f9fb2]"
-                />
-                <span>{range.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <div>
           <h4 className="text-sm font-medium text-[#1A1A1A]">Material</h4>
           <div className="mt-3 space-y-2">
             {fashionMaterialOptions.map((option) => (
@@ -8806,6 +8761,7 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
 
   const cardGridProps = (items) => ({
     items,
+    boundsItems: marketItems,
     buttonLabel: t('common.addToCart'),
     secondaryButtonLabel: t('common.viewDetails'),
     reviewSummaryMap: productReviewSummaryMap,
@@ -12850,7 +12806,7 @@ const SecondHandProductDetailPage = ({ onAddToCart, onBuyNow, onToggleWishlist, 
   );
 };
 
-const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer, onPrimaryAction, onBuyNowAction, onToggleWishlist, isItemWishlisted, onOpenItemDetails, reviewSummaryMap = {}, getItemReviewKey }) => {
+const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaRenderer, onPrimaryAction, onBuyNowAction, onToggleWishlist, isItemWishlisted, onOpenItemDetails, reviewSummaryMap = {}, getItemReviewKey }) => {
   const { t } = useTranslation();
   const [selectedSizesByItem, setSelectedSizesByItem] = useState({});
   const {
@@ -12870,7 +12826,7 @@ const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer, onPr
     handleClearPriceFilter,
     handleSliderMinimumChange,
     handleSliderMaximumChange,
-  } = useMarketplacePriceFilter(items);
+  } = useMarketplacePriceFilter(items, boundsItems);
 
   return (
     <>
@@ -12972,42 +12928,44 @@ const CardGrid = ({ items, buttonLabel, secondaryButtonLabel, metaRenderer, onPr
                   </select>
                 </div>
               ) : null}
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={isOutOfStock}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onPrimaryAction?.(actionItem);
-                  }}
-                  className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)] disabled:cursor-not-allowed disabled:bg-slate-400 disabled:hover:bg-slate-400`}
-                >
-                  {isOutOfStock ? 'Out of stock' : buttonLabel}
-                </button>
-                {onBuyNowAction ? (
+              <div className="mt-4 space-y-2">
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     disabled={isOutOfStock}
                     onClick={(event) => {
                       event.stopPropagation();
-                      onBuyNowAction(actionItem);
+                      onPrimaryAction?.(actionItem);
                     }}
-                    className="rounded-md bg-[#111111] px-3 py-2 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-slate-400 disabled:hover:bg-slate-400"
+                    className={`${cudyBluePrimaryButtonClassName} h-11 w-full rounded-lg bg-[var(--svs-primary)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)] disabled:cursor-not-allowed disabled:bg-slate-400 disabled:hover:bg-slate-400`}
                   >
-                    {isOutOfStock ? 'Out of stock' : 'Buy it now'}
+                    {isOutOfStock ? 'Out of stock' : buttonLabel}
                   </button>
-                ) : null}
+                  {onBuyNowAction ? (
+                    <button
+                      type="button"
+                      disabled={isOutOfStock}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onBuyNowAction(actionItem);
+                      }}
+                      className="h-11 w-full rounded-lg bg-[#111111] px-3 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-slate-400 disabled:hover:bg-slate-400"
+                    >
+                      {isOutOfStock ? 'Out of stock' : 'Buy it now'}
+                    </button>
+                  ) : null}
+                </div>
                 <button
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
                     onOpenItemDetails?.(actionItem);
                   }}
-                  className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--svs-text)]"
+                  className="h-11 w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
                 >
                   {secondaryButtonLabel}
                 </button>
-                <div className="inline-flex items-center gap-1 rounded-md border border-[var(--svs-border)] bg-white px-3 py-2 text-sm text-[var(--svs-muted)]">
+                <div className="flex items-center justify-center gap-1.5 rounded-lg border border-[var(--svs-border)] bg-white px-3 py-2 text-sm text-[var(--svs-muted)]">
                   <Star className={`h-4 w-4 text-amber-500 ${reviewSummary.reviewCount ? 'fill-current' : ''}`} />
                   <span className="font-semibold text-[var(--svs-text)]">{averageRatingLabel}</span>
                   <span>{reviewCountLabel}</span>
