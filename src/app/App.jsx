@@ -10342,8 +10342,42 @@ const SafetyPage = () => {
   );
 };
 
+const MARKETS_HERO_SLIDES = [
+  'https://images.pexels.com/photos/2983101/pexels-photo-2983101.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  'https://images.pexels.com/photos/2529148/pexels-photo-2529148.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  'https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  'https://images.pexels.com/photos/1283219/pexels-photo-1283219.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  'https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  'https://images.pexels.com/photos/120049/pexels-photo-120049.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  'https://images.pexels.com/photos/1444416/pexels-photo-1444416.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  'https://images.pexels.com/photos/393047/pexels-photo-393047.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  'https://images.pexels.com/photos/6664248/pexels-photo-6664248.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  'https://images.pexels.com/photos/1249611/pexels-photo-1249611.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  'https://images.pexels.com/photos/422218/pexels-photo-422218.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  'https://images.pexels.com/photos/3846022/pexels-photo-3846022.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  'https://images.pexels.com/photos/2101137/pexels-photo-2101137.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  'https://images.pexels.com/photos/159211/headache-pain-pills-medication-159211.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  'https://images.pexels.com/photos/906150/pexels-photo-906150.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  'https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=1600',
+];
+
 const MarketsPage = () => {
   const { t } = useTranslation();
+  const [activeHeroSlide, setActiveHeroSlide] = useState(0);
+
+  useEffect(() => {
+    if (MARKETS_HERO_SLIDES.length <= 1) {
+      return undefined;
+    }
+
+    const intervalId = setInterval(() => {
+      setActiveHeroSlide((previous) => (previous + 1) % MARKETS_HERO_SLIDES.length);
+    }, 3000);
+
+    return () => clearInterval(intervalId);
+  }, []);
+
   const orderedMarketLinks = useMemo(
     () => {
       const trendingMarkets = TRENDING_MARKET_HREFS
@@ -10361,13 +10395,40 @@ const MarketsPage = () => {
   return (
     <section className="bg-[var(--svs-bg)] px-4 py-10">
     <div className="mx-auto w-full max-w-7xl">
-      <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 shadow-[0_4px_8px_rgba(0,0,0,0.1)] sm:p-8">
-        <h1 className="text-3xl font-bold text-[var(--svs-text)] sm:text-4xl">{t('marketsPage.title')}</h1>
-        <p className="mt-2 max-w-2xl text-sm text-[var(--svs-muted)] sm:text-base">{t('marketsPage.subtitle')}</p>
-        <div className="mt-5 flex flex-wrap gap-2">
-          <span className="rounded-full bg-[var(--svs-cyan-surface)] px-3 py-1 text-xs font-semibold text-[var(--svs-primary-strong)]">{t('marketsPage.tags.superShopping')}</span>
-          <span className="rounded-full bg-[var(--svs-cyan-surface)] px-3 py-1 text-xs font-semibold text-[var(--svs-primary-strong)]">{t('marketsPage.tags.superService')}</span>
-          <span className="rounded-full bg-[var(--svs-cyan-surface)] px-3 py-1 text-xs font-semibold text-[var(--svs-primary-strong)]">{t('marketsPage.tags.intelligentPlatform')}</span>
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--svs-border)] p-6 shadow-[0_4px_8px_rgba(0,0,0,0.1)] sm:p-8">
+        {MARKETS_HERO_SLIDES.map((slideUrl, slideIndex) => (
+          <div
+            key={slideUrl}
+            className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out"
+            style={{
+              backgroundImage: `url('${slideUrl}')`,
+              opacity: slideIndex === activeHeroSlide ? 1 : 0,
+            }}
+            aria-hidden="true"
+          />
+        ))}
+        <div
+          className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/55 to-black/30"
+          aria-hidden="true"
+        />
+        <div className="relative z-10">
+          <h1 className="text-3xl font-bold text-white drop-shadow sm:text-4xl">{t('marketsPage.title')}</h1>
+          <p className="mt-2 max-w-2xl text-sm text-white/90 drop-shadow sm:text-base">{t('marketsPage.subtitle')}</p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <span className="rounded-full border border-white/30 bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">{t('marketsPage.tags.superShopping')}</span>
+            <span className="rounded-full border border-white/30 bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">{t('marketsPage.tags.superService')}</span>
+            <span className="rounded-full border border-white/30 bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">{t('marketsPage.tags.intelligentPlatform')}</span>
+          </div>
+          <div className="mt-5 flex gap-1.5" aria-hidden="true">
+            {MARKETS_HERO_SLIDES.map((slideUrl, slideIndex) => (
+              <span
+                key={`indicator-${slideUrl}`}
+                className={`h-1.5 rounded-full transition-all duration-500 ${
+                  slideIndex === activeHeroSlide ? 'w-6 bg-white' : 'w-1.5 bg-white/50'
+                }`}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
