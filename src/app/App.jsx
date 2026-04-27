@@ -6,19 +6,30 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  ClipboardList,
   Flag,
   Heart,
+  HelpCircle,
+  LayoutDashboard,
   MapPin,
   Menu,
   Moon,
+  Package,
   Plus,
   Search,
   ShieldCheck,
   ShoppingCart,
   Star,
+  Store,
   User,
   Sun,
   X,
+  AlertTriangle,
+  DollarSign,
+  Filter,
+  ArrowUpRight,
+  Clock,
+  Truck,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -1108,6 +1119,11 @@ const constructionToolsItems = [
     id: 'ct1',
     title: 'Heavy-Duty Claw Hammer',
     category: 'Hand Tools',
+    subcategory: 'Hammers',
+    brand: 'Stanley',
+    powerSource: 'Manual',
+    material: 'Steel',
+    projectType: 'DIY / Home',
     description: 'Forged steel hammer for framing, finishing, and general site work.',
     price: '18.99',
     image:
@@ -1117,6 +1133,11 @@ const constructionToolsItems = [
     id: 'ct2',
     title: 'Cordless Impact Drill Kit',
     category: 'Power Tools',
+    subcategory: 'Drills',
+    brand: 'Bosch',
+    powerSource: 'Cordless Battery',
+    material: 'Composite',
+    projectType: 'Residential',
     description: '2-battery drill set for concrete anchors, woodwork, and steel fixtures.',
     price: '129.00',
     image:
@@ -1126,6 +1147,11 @@ const constructionToolsItems = [
     id: 'ct3',
     title: 'Masonry Trowel and Float Set',
     category: 'Masonry',
+    subcategory: 'Trowels & Floats',
+    brand: 'Generic',
+    powerSource: 'Manual',
+    material: 'Stainless Steel',
+    projectType: 'Residential',
     description: 'Trowel combo for plastering, leveling mortar, and smooth finishing.',
     price: '24.50',
     image:
@@ -1135,10 +1161,211 @@ const constructionToolsItems = [
     id: 'ct4',
     title: 'Laser Level with Tripod',
     category: 'Measuring Tools',
+    subcategory: 'Laser Levels',
+    brand: 'DeWalt',
+    powerSource: 'Cordless Battery',
+    material: 'Aluminium',
+    projectType: 'Commercial',
     description: 'Precision leveling for tiles, ceilings, partitions, and layout lines.',
     price: '67.40',
     image:
       'https://images.pexels.com/photos/159358/construction-site-build-construction-work-159358.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ct5',
+    title: '9" Angle Grinder 2200 W',
+    category: 'Power Tools',
+    subcategory: 'Angle Grinders',
+    brand: 'Makita',
+    powerSource: 'Corded Electric',
+    material: 'Composite',
+    projectType: 'Industrial',
+    description: 'Heavy-duty grinder for cutting steel, rebar, and stone.',
+    price: '149.99',
+    image:
+      'https://images.pexels.com/photos/1216544/pexels-photo-1216544.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ct6',
+    title: 'Site Safety Helmet (Hard Hat)',
+    category: 'Safety Gear',
+    subcategory: 'Helmets & Hard Hats',
+    brand: 'Generic',
+    powerSource: 'Manual',
+    material: 'Plastic',
+    projectType: 'Commercial',
+    description: 'EN 397 certified hard hat with adjustable harness and chin strap.',
+    price: '12.50',
+    image:
+      'https://images.pexels.com/photos/8961065/pexels-photo-8961065.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ct7',
+    title: 'Steel-Toe Safety Boots',
+    category: 'Safety Gear',
+    subcategory: 'Safety Boots',
+    brand: 'Caterpillar',
+    powerSource: 'Manual',
+    material: 'Rubber',
+    projectType: 'Industrial',
+    description: 'Steel toe-cap boots with slip-resistant sole and waterproof upper.',
+    price: '79.00',
+    image:
+      'https://images.pexels.com/photos/1108101/pexels-photo-1108101.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ct8',
+    title: 'PPC Cement 50 kg Bag',
+    category: 'Building Materials',
+    subcategory: 'Cement & Concrete',
+    brand: 'Generic',
+    powerSource: 'Manual',
+    material: 'Concrete',
+    projectType: 'Residential',
+    description: 'General-purpose Portland cement for concrete, mortar, and screed.',
+    price: '8.95',
+    image:
+      'https://images.pexels.com/photos/2469122/pexels-photo-2469122.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ct9',
+    title: 'Standard Clay Bricks (Pack of 100)',
+    category: 'Building Materials',
+    subcategory: 'Bricks & Blocks',
+    brand: 'Generic',
+    powerSource: 'Manual',
+    material: 'Concrete',
+    projectType: 'Residential',
+    description: 'Burnt clay face bricks for boundary walls, paving, and structural work.',
+    price: '54.00',
+    image:
+      'https://images.pexels.com/photos/2092078/pexels-photo-2092078.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ct10',
+    title: '20 mm Steel Rebar (6 m Length)',
+    category: 'Building Materials',
+    subcategory: 'Steel & Rebar',
+    brand: 'Generic',
+    powerSource: 'Manual',
+    material: 'Steel',
+    projectType: 'Commercial',
+    description: 'High-tensile deformed reinforcement bar for concrete works.',
+    price: '14.30',
+    image:
+      'https://images.pexels.com/photos/256381/pexels-photo-256381.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ct11',
+    title: '7-1/4" Circular Saw',
+    category: 'Power Tools',
+    subcategory: 'Circular Saws',
+    brand: 'Milwaukee',
+    powerSource: 'Cordless Battery',
+    material: 'Composite',
+    projectType: 'Commercial',
+    description: 'M18 brushless circular saw for fast straight cuts in timber and ply.',
+    price: '189.00',
+    image:
+      'https://images.pexels.com/photos/175039/pexels-photo-175039.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ct12',
+    title: 'Adjustable Wrench Set (3 pcs)',
+    category: 'Hand Tools',
+    subcategory: 'Wrenches & Spanners',
+    brand: 'Stanley',
+    powerSource: 'Manual',
+    material: 'Stainless Steel',
+    projectType: 'DIY / Home',
+    description: '6", 8" and 10" chrome-vanadium adjustable wrenches.',
+    price: '32.99',
+    image:
+      'https://images.pexels.com/photos/1409215/pexels-photo-1409215.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ct13',
+    title: 'PVC Pipe & Fittings Bundle',
+    category: 'Plumbing',
+    subcategory: 'Pipes & Fittings',
+    brand: 'Generic',
+    powerSource: 'Manual',
+    material: 'Plastic',
+    projectType: 'Residential',
+    description: '110 mm waste pipe with elbows, tees, and couplers for drainage.',
+    price: '42.00',
+    image:
+      'https://images.pexels.com/photos/8482799/pexels-photo-8482799.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ct14',
+    title: '2.5 mm² Twin-and-Earth Cable (100 m)',
+    category: 'Electrical',
+    subcategory: 'Cables & Wiring',
+    brand: 'Generic',
+    powerSource: 'Manual',
+    material: 'Plastic',
+    projectType: 'Residential',
+    description: 'House wiring cable rated for ring mains and lighting circuits.',
+    price: '89.00',
+    image:
+      'https://images.pexels.com/photos/257736/pexels-photo-257736.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ct15',
+    title: 'Aluminium Extension Ladder 6 m',
+    category: 'Engineering Tools',
+    subcategory: 'Ladders & Scaffolds',
+    brand: 'Generic',
+    powerSource: 'Manual',
+    material: 'Aluminium',
+    projectType: 'Commercial',
+    description: 'Two-section extension ladder with anti-slip rungs and rubber feet.',
+    price: '139.00',
+    image:
+      'https://images.pexels.com/photos/834892/pexels-photo-834892.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ct16',
+    title: 'Interior Wall Paint 20 L (White)',
+    category: 'Painting & Decorating',
+    subcategory: 'Paint & Primers',
+    brand: 'Generic',
+    powerSource: 'Manual',
+    material: 'Plastic',
+    projectType: 'Residential',
+    description: 'Premium acrylic emulsion with high coverage and washable finish.',
+    price: '54.50',
+    image:
+      'https://images.pexels.com/photos/3637837/pexels-photo-3637837.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ct17',
+    title: '5 kVA Petrol Generator',
+    category: 'Heavy Equipment',
+    subcategory: 'Generators',
+    brand: 'Ryobi',
+    powerSource: 'Petrol / Diesel',
+    material: 'Steel',
+    projectType: 'Industrial',
+    description: 'Portable 5 kVA generator with electric start and AVR for site power.',
+    price: '649.00',
+    image:
+      'https://images.pexels.com/photos/3855960/pexels-photo-3855960.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ct18',
+    title: 'Box of Wood Screws (Assorted, 500 pcs)',
+    category: 'Hardware & Fasteners',
+    subcategory: 'Nails & Screws',
+    brand: 'Generic',
+    powerSource: 'Manual',
+    material: 'Steel',
+    projectType: 'DIY / Home',
+    description: 'Mixed lengths from 25 mm to 75 mm for general carpentry use.',
+    price: '15.75',
+    image:
+      'https://images.pexels.com/photos/1029243/pexels-photo-1029243.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
 ];
 
@@ -1478,6 +1705,85 @@ const fashionColorOptions = [
 ];
 const fashionMaterialOptions = ['All', 'Cotton', 'Linen', 'Denim', 'Leather', 'Wool', 'Polyester', 'Silk', 'Synthetic'];
 const fashionStyleOccasions = ['All', 'Casual', 'Formal', 'Sport', 'Streetwear', 'Evening', 'Business', 'Beach'];
+
+const constructionMainCategories = [
+  'All',
+  'Hand Tools',
+  'Power Tools',
+  'Building Materials',
+  'Measuring Tools',
+  'Safety Gear',
+  'Plumbing',
+  'Electrical',
+  'Masonry',
+  'Painting & Decorating',
+  'Hardware & Fasteners',
+  'Engineering Tools',
+  'Heavy Equipment',
+];
+const constructionSubcategories = [
+  'Hammers',
+  'Screwdrivers',
+  'Wrenches & Spanners',
+  'Pliers',
+  'Tape Measures',
+  'Drills',
+  'Impact Drivers',
+  'Angle Grinders',
+  'Circular Saws',
+  'Jigsaws',
+  'Sanders',
+  'Welding Machines',
+  'Generators',
+  'Compressors',
+  'Cement & Concrete',
+  'Bricks & Blocks',
+  'Sand & Aggregate',
+  'Steel & Rebar',
+  'Timber & Boards',
+  'Roofing Sheets',
+  'Tiles & Adhesives',
+  'Paint & Primers',
+  'Brushes & Rollers',
+  'Pipes & Fittings',
+  'Taps & Mixers',
+  'Cables & Wiring',
+  'Switches & Sockets',
+  'Light Fittings',
+  'Helmets & Hard Hats',
+  'Safety Boots',
+  'Gloves',
+  'Goggles & Face Shields',
+  'Masks & Respirators',
+  'High-Vis Clothing',
+  'Trowels & Floats',
+  'Levels',
+  'Laser Levels',
+  'Spirit Levels',
+  'Ladders & Scaffolds',
+  'Wheelbarrows',
+  'Nails & Screws',
+  'Bolts & Nuts',
+  'Anchors',
+  'Hinges & Locks',
+];
+const constructionBrandOptions = [
+  'All',
+  'Bosch',
+  'DeWalt',
+  'Makita',
+  'Stanley',
+  'Milwaukee',
+  'Black & Decker',
+  'Hilti',
+  'Ryobi',
+  'Karcher',
+  'Caterpillar',
+  'Generic',
+];
+const constructionPowerSourceOptions = ['All', 'Manual', 'Corded Electric', 'Cordless Battery', 'Pneumatic', 'Petrol / Diesel'];
+const constructionMaterialOptions = ['All', 'Steel', 'Stainless Steel', 'Aluminium', 'Wood', 'Plastic', 'Composite', 'Concrete', 'Rubber'];
+const constructionProjectTypes = ['All', 'DIY / Home', 'Residential', 'Commercial', 'Industrial', 'Infrastructure'];
 
 const homeCareProviders = [
   {
@@ -7902,48 +8208,401 @@ const StationeryPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
 
 const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
+  const [selectedCategories, setSelectedCategories] = useState(['All']);
+  const [selectedSubcategories, setSelectedSubcategories] = useState([]);
+  const [selectedBrand, setSelectedBrand] = useState('All');
+  const [selectedPowerSource, setSelectedPowerSource] = useState('All');
+  const [selectedMaterial, setSelectedMaterial] = useState('All');
+  const [selectedProjectType, setSelectedProjectType] = useState('All');
+  const [showOnSaleOnly, setShowOnSaleOnly] = useState(false);
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [showAllRelated, setShowAllRelated] = useState(false);
+  const productsSectionRef = useRef(null);
+  const relatedSectionRef = useRef(null);
+
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'constructionTools'), ...constructionToolsItems], [sellerItems]);
+
+  const matchesField = (itemValue, selectedValues) => {
+    if (!selectedValues.length) return true;
+    if (!itemValue) return true;
+    const value = String(itemValue).toLowerCase();
+    return selectedValues.some((selected) => value.includes(String(selected).toLowerCase()));
+  };
+
+  const filteredItems = useMemo(() => marketItems.filter((item) => {
+    const categoryActive = selectedCategories.filter((value) => value !== 'All');
+    const categoryMatch = !categoryActive.length || categoryActive.some((cat) => (item.category || '').toLowerCase().includes(cat.toLowerCase()));
+
+    const subcategoryMatch = !selectedSubcategories.length
+      || selectedSubcategories.some((sub) => {
+        const itemSub = (item.subcategory || '').toLowerCase();
+        const itemTitle = (item.title || '').toLowerCase();
+        const subLower = sub.toLowerCase();
+        return itemSub.includes(subLower) || itemTitle.includes(subLower);
+      });
+
+    const brandMatch = selectedBrand === 'All' || matchesField(item.brand, [selectedBrand]);
+    const powerSourceMatch = selectedPowerSource === 'All' || matchesField(item.powerSource, [selectedPowerSource]);
+    const materialMatch = selectedMaterial === 'All' || matchesField(item.material || item.specification, [selectedMaterial]);
+    const projectTypeMatch = selectedProjectType === 'All' || matchesField(item.projectType, [selectedProjectType]);
+    const saleMatch = !showOnSaleOnly || true;
+
+    return categoryMatch && subcategoryMatch && brandMatch && powerSourceMatch && materialMatch && projectTypeMatch && saleMatch;
+  }), [marketItems, selectedCategories, selectedSubcategories, selectedBrand, selectedPowerSource, selectedMaterial, selectedProjectType, showOnSaleOnly]);
+
+  const toggleMulti = (value, list, setter, exclusiveValue) => {
+    if (exclusiveValue && value === exclusiveValue) {
+      setter([exclusiveValue]);
+      return;
+    }
+    const withoutExclusive = list.filter((entry) => entry !== exclusiveValue);
+    const exists = withoutExclusive.includes(value);
+    const next = exists ? withoutExclusive.filter((entry) => entry !== value) : [...withoutExclusive, value];
+    setter(next.length ? next : (exclusiveValue ? [exclusiveValue] : []));
+  };
+
+  const clearAllFilters = () => {
+    setSelectedCategories(['All']);
+    setSelectedSubcategories([]);
+    setSelectedBrand('All');
+    setSelectedPowerSource('All');
+    setSelectedMaterial('All');
+    setSelectedProjectType('All');
+    setShowOnSaleOnly(false);
+  };
+
+  const activeFilterCount = (
+    selectedCategories.filter((value) => value !== 'All').length
+    + selectedSubcategories.length
+    + (selectedBrand !== 'All' ? 1 : 0)
+    + (selectedPowerSource !== 'All' ? 1 : 0)
+    + (selectedMaterial !== 'All' ? 1 : 0)
+    + (selectedProjectType !== 'All' ? 1 : 0)
+    + (showOnSaleOnly ? 1 : 0)
+  );
+
+  const buildDetailsText = (item) => (
+    [
+      item.category || 'Seller item',
+      item.subcategory || item.specification || '',
+      item.brand && item.brand !== 'Generic' ? item.brand : '',
+      item.description || item.sellerName || 'Construction-ready listing',
+    ].filter(Boolean).join(' • ')
+  );
   const buildCartItem = (item) => createCartItem({
     ...item,
     route: '/building-construction-tools',
     marketName: t('markets.constructionTools'),
-    details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Construction-ready listing'}`,
+    details: buildDetailsText(item),
   });
   const buildWishlistItem = (item) => createWishlistItem({
     ...item,
     route: '/building-construction-tools',
     marketName: t('markets.constructionTools'),
-    details: `${item.category || 'Seller item'} • ${item.sellerName || 'Construction-ready listing'}`,
+    details: buildDetailsText(item),
+  });
+
+  const handleViewAllRelated = () => {
+    setShowAllRelated(true);
+    setIsFilterDrawerOpen(false);
+    requestAnimationFrame(() => {
+      relatedSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
+  const trendingItems = showAllRelated ? filteredItems : filteredItems.slice(0, 8);
+  const hasMoreRelated = filteredItems.length > 8;
+
+  const FilterPanel = (
+    <div className="flex h-full flex-col bg-white font-['Inter',sans-serif]">
+      <div className="space-y-7 px-6 py-8">
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-semibold text-[#1A1A1A]">Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}</h3>
+          {activeFilterCount ? (
+            <button type="button" onClick={clearAllFilters} className="text-xs font-medium text-[#0f9fb2] hover:underline">
+              Clear all
+            </button>
+          ) : null}
+        </div>
+
+        <div>
+          <h4 className="text-sm font-medium text-[#1A1A1A]">Main Category</h4>
+          <div className="mt-3 space-y-2">
+            {constructionMainCategories.map((option) => (
+              <label key={option} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input
+                  type="checkbox"
+                  checked={selectedCategories.includes(option)}
+                  onChange={() => toggleMulti(option, selectedCategories, setSelectedCategories, 'All')}
+                  className="h-4 w-4 rounded border-[#D1D5DB] text-[#0f9fb2] focus:ring-[#0f9fb2]"
+                />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-sm font-medium text-[#1A1A1A]">Subcategory</h4>
+          <div className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
+            {constructionSubcategories.map((option) => (
+              <label key={option} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input
+                  type="checkbox"
+                  checked={selectedSubcategories.includes(option)}
+                  onChange={() => toggleMulti(option, selectedSubcategories, setSelectedSubcategories)}
+                  className="h-4 w-4 rounded border-[#D1D5DB] text-[#0f9fb2] focus:ring-[#0f9fb2]"
+                />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-sm font-medium text-[#1A1A1A]">Brand</h4>
+          <div className="mt-3 space-y-2">
+            {constructionBrandOptions.map((option) => (
+              <label key={option} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input
+                  type="radio"
+                  name="construction-brand"
+                  checked={selectedBrand === option}
+                  onChange={() => setSelectedBrand(option)}
+                  className="h-4 w-4 border-[#D1D5DB] text-[#0f9fb2] focus:ring-[#0f9fb2]"
+                />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-sm font-medium text-[#1A1A1A]">Power Source</h4>
+          <div className="mt-3 space-y-2">
+            {constructionPowerSourceOptions.map((option) => (
+              <label key={option} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input
+                  type="radio"
+                  name="construction-power-source"
+                  checked={selectedPowerSource === option}
+                  onChange={() => setSelectedPowerSource(option)}
+                  className="h-4 w-4 border-[#D1D5DB] text-[#0f9fb2] focus:ring-[#0f9fb2]"
+                />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-sm font-medium text-[#1A1A1A]">Material</h4>
+          <div className="mt-3 space-y-2">
+            {constructionMaterialOptions.map((option) => (
+              <label key={option} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input
+                  type="radio"
+                  name="construction-material"
+                  checked={selectedMaterial === option}
+                  onChange={() => setSelectedMaterial(option)}
+                  className="h-4 w-4 border-[#D1D5DB] text-[#0f9fb2] focus:ring-[#0f9fb2]"
+                />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-sm font-medium text-[#1A1A1A]">Project Type</h4>
+          <div className="mt-3 space-y-2">
+            {constructionProjectTypes.map((option) => (
+              <label key={option} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input
+                  type="radio"
+                  name="construction-project-type"
+                  checked={selectedProjectType === option}
+                  onChange={() => setSelectedProjectType(option)}
+                  className="h-4 w-4 border-[#D1D5DB] text-[#0f9fb2] focus:ring-[#0f9fb2]"
+                />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="flex items-center gap-2.5 text-sm font-medium text-[#1A1A1A]">
+            <input
+              type="checkbox"
+              checked={showOnSaleOnly}
+              onChange={(event) => setShowOnSaleOnly(event.target.checked)}
+              className="h-4 w-4 rounded border-[#D1D5DB] text-[#0f9fb2] focus:ring-[#0f9fb2]"
+            />
+            <span>On Sale only</span>
+          </label>
+        </div>
+      </div>
+
+      <div className="mt-auto border-t border-[#E5E7EB] p-6">
+        <button
+          type="button"
+          onClick={() => setIsFilterDrawerOpen(false)}
+          className="h-[52px] w-full rounded-lg bg-[#0f9fb2] text-base font-medium text-white transition hover:bg-[#0d8a9c]"
+        >
+          Apply Filters
+        </button>
+      </div>
+    </div>
+  );
+
+  const cardGridProps = (items) => ({
+    items,
+    boundsItems: marketItems,
+    buttonLabel: t('common.addToCart'),
+    secondaryButtonLabel: t('common.viewDetails'),
+    reviewSummaryMap: productReviewSummaryMap,
+    getItemReviewKey: (item) => getCollectionItemId('/building-construction-tools', item.id),
+    onPrimaryAction: (item) => onAddToCart(buildCartItem(item)),
+    onBuyNowAction: (item) => onBuyNow?.(buildCartItem(item)),
+    onToggleWishlist: (item) => onToggleWishlist(buildWishlistItem(item)),
+    onOpenItemDetails: (item) => {
+      const wishlistItem = buildWishlistItem(item);
+      onOpenItemDetails?.({
+        title: getTranslatedValue(t, item.titleKey, item.title),
+        image: item.image,
+        images: item.images || (item.image ? [item.image] : []),
+        marketName: t('markets.constructionTools'),
+        details: buildDetailsText(item),
+        priceLabel: getSalePrices(item.price).nowPrice,
+        detailsTable: {
+          Category: item.category || 'Construction',
+          Subcategory: item.subcategory || 'General',
+          Brand: item.brand || 'Generic',
+          'Power Source': item.powerSource || 'Manual',
+          Material: item.material || 'Mixed',
+          'Project Type': item.projectType || 'General',
+        },
+        cartItem: buildCartItem(item),
+        wishlistItem,
+      });
+    },
+    isItemWishlisted: (item) => wishlistItemIds.includes(getCollectionItemId('/building-construction-tools', item.id)),
+    metaRenderer: (item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.subcategory || 'General'} • {item.brand || 'Generic'} • <SalePrice price={item.price} /></p>,
   });
 
   return (
-  <PageFrame title={t('markets.constructionTools')} subtitle={t('pageSubtitles.constructionTools')}>
-    <CardGrid
-      items={marketItems}
-      buttonLabel={t('common.addToCart')}
-      secondaryButtonLabel={t('common.viewDetails')}
-      reviewSummaryMap={productReviewSummaryMap}
-      getItemReviewKey={(item) => getCollectionItemId('/building-construction-tools', item.id)}
-      onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-      onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
-      onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
-      onOpenItemDetails={(item) => {
-        const wishlistItem = buildWishlistItem(item);
-        onOpenItemDetails?.({
-          title: getTranslatedValue(t, item.titleKey, item.title),
-          image: item.image,
-          images: item.images || (item.image ? [item.image] : []),
-          marketName: t('markets.constructionTools'),
-          details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Construction-ready listing'}`,
-          priceLabel: getSalePrices(item.price).nowPrice,
-          cartItem: buildCartItem(item),
-          wishlistItem,
-        });
-      }}
-      isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/building-construction-tools', item.id))}
-      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • <SalePrice price={item.price} /></p>}
-    />
-  </PageFrame>
+    <section className="bg-[var(--svs-bg)] px-4 py-8 font-['Inter',sans-serif] text-[#1A1A1A] sm:px-6 lg:py-10">
+      <div className="mx-auto w-full max-w-[1280px]">
+        <section className="relative h-[220px] overflow-hidden rounded-2xl sm:h-[260px]">
+          <img
+            src="https://images.pexels.com/photos/1249611/pexels-photo-1249611.jpeg?auto=compress&cs=tinysrgb&w=1920"
+            alt={t('markets.constructionTools')}
+            className="h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/55 to-black/70" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
+            <h1 className="text-xl font-bold text-white sm:text-2xl">{t('markets.constructionTools')}</h1>
+            <p className="mt-2 max-w-[680px] text-xs text-white/90 sm:text-sm">
+              {t('pageSubtitles.constructionTools')}
+            </p>
+          </div>
+        </section>
+
+        <div className="mt-8 flex items-center justify-between lg:hidden">
+          <h2 className="text-xl font-semibold text-[var(--svs-text)]">Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}</h2>
+          <button
+            type="button"
+            onClick={() => setIsFilterDrawerOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-4 py-2 text-sm font-medium text-[#0f9fb2]"
+          >
+            <Menu className="h-4 w-4" />
+            Filter Products
+          </button>
+        </div>
+
+        <div className="mt-8 grid items-start gap-10 lg:grid-cols-[280px_minmax(0,1fr)]">
+          <aside className="hidden min-h-[calc(100vh-220px)] border-r border-[#E5E7EB] lg:block">
+            {FilterPanel}
+          </aside>
+
+          <main ref={productsSectionRef}>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-[var(--svs-muted)]">
+                Showing <span className="font-semibold text-[var(--svs-text)]">{filteredItems.length}</span> {filteredItems.length === 1 ? 'item' : 'items'}
+              </p>
+              {activeFilterCount ? (
+                <button
+                  type="button"
+                  onClick={clearAllFilters}
+                  className="rounded-full border border-[var(--svs-border)] bg-white px-4 py-2 text-xs font-semibold text-[var(--svs-text)] transition hover:border-[#0f9fb2] hover:text-[#0f9fb2]"
+                >
+                  Clear filters
+                </button>
+              ) : null}
+            </div>
+
+            {filteredItems.length ? (
+              <CardGrid {...cardGridProps(filteredItems)} />
+            ) : (
+              <div className="rounded-2xl border border-dashed border-[var(--svs-border)] bg-white p-12 text-center">
+                <h3 className="text-lg font-semibold text-[var(--svs-text)]">No items match your filters</h3>
+                <p className="mt-2 text-sm text-[var(--svs-muted)]">Try clearing some filters to see more products.</p>
+                <button
+                  type="button"
+                  onClick={clearAllFilters}
+                  className="mt-4 inline-flex h-11 items-center rounded-lg bg-[#0f9fb2] px-6 text-sm font-medium text-white transition hover:bg-[#0d8a9c]"
+                >
+                  Clear all filters
+                </button>
+              </div>
+            )}
+
+            <section ref={relatedSectionRef} className="mt-14">
+              <h2 className="text-[24px] font-bold text-[var(--svs-text)]">Featured Tools &amp; Site Essentials</h2>
+              <div className="mt-6">
+                <CardGrid {...cardGridProps(trendingItems)} />
+              </div>
+              {hasMoreRelated ? (
+                <div className="mt-8 flex justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleViewAllRelated}
+                    disabled={showAllRelated}
+                    className="h-[52px] rounded-lg bg-[#0f9fb2] px-12 text-base font-medium text-white transition hover:bg-[#0d8a9c] disabled:opacity-60"
+                  >
+                    View All
+                  </button>
+                  {showAllRelated ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllRelated(false)}
+                      className="h-[52px] rounded-lg border border-[#0f9fb2] bg-white px-8 text-base font-medium text-[#0f9fb2] transition hover:bg-[#ecfbfe]"
+                    >
+                      Show Less
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+            </section>
+          </main>
+        </div>
+      </div>
+
+      {isFilterDrawerOpen ? (
+        <div className="fixed inset-0 z-[90] bg-black/45 lg:hidden" role="dialog" aria-modal="true" aria-label="Filter construction products">
+          <div className="absolute inset-y-0 left-0 w-[min(92vw,320px)] overflow-y-auto bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#E5E7EB] px-4 py-3">
+              <h3 className="text-base font-semibold text-[#1A1A1A]">Filters</h3>
+              <button type="button" onClick={() => setIsFilterDrawerOpen(false)} className="rounded-md p-1 text-[#4B5563] transition hover:bg-[#F3F4F6]" aria-label="Close filters">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {FilterPanel}
+          </div>
+        </div>
+      ) : null}
+    </section>
   );
 };
 
@@ -8999,6 +9658,12 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
   const [orderLoadError, setOrderLoadError] = useState('');
   const [updatingOrderId, setUpdatingOrderId] = useState('');
   const [orderUpdateError, setOrderUpdateError] = useState('');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [listingSearch, setListingSearch] = useState('');
+  const [listingMarketFilter, setListingMarketFilter] = useState('all');
+  const [listingStockFilter, setListingStockFilter] = useState('all');
+  const [listingSort, setListingSort] = useState('newest');
+  const [orderStatusFilter, setOrderStatusFilter] = useState('all');
 
   useEffect(() => {
     if (!isAuthenticated || !hasSupabaseEnv || !supabase) return;
@@ -9311,6 +9976,85 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
     [visibleOrders],
   );
 
+  const outOfStockListingsCount = useMemo(
+    () => myListings.filter((listing) => normalizeListingQuantity(listing.availableQuantity, 0) === 0).length,
+    [myListings],
+  );
+
+  const totalRevenue = useMemo(
+    () => visibleOrders
+      .filter((order) => order.status === 'Delivered')
+      .reduce((sum, order) => sum + (Number(order.sellerSubtotal) || 0), 0),
+    [visibleOrders],
+  );
+
+  const pendingRevenue = useMemo(
+    () => visibleOrders
+      .filter((order) => !['Delivered', 'Cancelled by Buyer', 'Refund Made'].includes(order.status))
+      .reduce((sum, order) => sum + (Number(order.sellerSubtotal) || 0), 0),
+    [visibleOrders],
+  );
+
+  const recentOrders = useMemo(() => visibleOrders.slice(0, 3), [visibleOrders]);
+
+  const sellerMarketOptions = useMemo(() => {
+    const seen = new Set();
+    const options = [];
+    myListings.forEach((listing) => {
+      if (listing.marketKey && !seen.has(listing.marketKey)) {
+        seen.add(listing.marketKey);
+        options.push({
+          value: listing.marketKey,
+          label: t(sellerMarketConfig[listing.marketKey]?.labelKey || '') || listing.marketKey,
+        });
+      }
+    });
+    return options;
+  }, [myListings, t]);
+
+  const filteredListings = useMemo(() => {
+    const search = listingSearch.trim().toLowerCase();
+    let result = myListings.filter((listing) => {
+      if (listingMarketFilter !== 'all' && listing.marketKey !== listingMarketFilter) return false;
+      const qty = normalizeListingQuantity(listing.availableQuantity, 0);
+      if (listingStockFilter === 'in' && qty <= 3) return false;
+      if (listingStockFilter === 'low' && (qty === 0 || qty > 3)) return false;
+      if (listingStockFilter === 'out' && qty !== 0) return false;
+      if (search) {
+        const haystack = `${listing.title || ''} ${listing.description || ''}`.toLowerCase();
+        if (!haystack.includes(search)) return false;
+      }
+      return true;
+    });
+
+    if (listingSort === 'priceAsc') {
+      result = [...result].sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
+    } else if (listingSort === 'priceDesc') {
+      result = [...result].sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0));
+    } else if (listingSort === 'stockAsc') {
+      result = [...result].sort((a, b) => normalizeListingQuantity(a.availableQuantity, 0) - normalizeListingQuantity(b.availableQuantity, 0));
+    } else if (listingSort === 'titleAsc') {
+      result = [...result].sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')));
+    }
+    return result;
+  }, [myListings, listingSearch, listingMarketFilter, listingStockFilter, listingSort]);
+
+  const filteredOrders = useMemo(() => {
+    if (orderStatusFilter === 'all') return visibleOrders;
+    if (orderStatusFilter === 'active') {
+      return visibleOrders.filter((order) => !['Delivered', 'Cancelled by Buyer', 'Refund Made'].includes(order.status));
+    }
+    return visibleOrders.filter((order) => order.status === orderStatusFilter);
+  }, [visibleOrders, orderStatusFilter]);
+
+  const orderStatusCounts = useMemo(() => {
+    const counts = { all: visibleOrders.length, active: activeOrdersCount };
+    ORDER_STATUS_FLOW.forEach((status) => {
+      counts[status] = visibleOrders.filter((order) => order.status === status).length;
+    });
+    return counts;
+  }, [visibleOrders, activeOrdersCount]);
+
   const handleOrderStatusUpdate = async (orderId, nextStatus) => {
     if (!onUpdateOrderStatus) {
       return;
@@ -9355,496 +10099,703 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
     : myListings.length === 0
       ? 'No listings yet. Add your first product to get started.'
       : `${myListings.length} listing${myListings.length !== 1 ? 's' : ''} across ${uniqueMarketCount} market${uniqueMarketCount !== 1 ? 's' : ''}`;
-  const inventorySummary = myListings.length === 0
-    ? 'Your inventory summary will appear here after your first upload.'
-    : lowStockListingsCount > 0
-      ? `${lowStockListingsCount} listing${lowStockListingsCount !== 1 ? 's are' : ' is'} running low on stock.`
-      : 'All current listings have healthy stock levels.';
+
+  const editingItem = editingId ? myListings.find((listing) => listing.dbId === editingId) : null;
+  const itemToDelete = confirmDeleteId ? myListings.find((listing) => listing.dbId === confirmDeleteId) : null;
+  const sellerEmail = getCurrentUserEmail();
+
+  const sidebarNav = (
+    <>
+      <div className="border-b border-[var(--svs-border)] pb-4">
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--svs-muted)]">Account</p>
+        <p className="mt-1 truncate text-sm font-semibold text-[var(--svs-text)]">{sellerEmail || 'Seller'}</p>
+        <p className="text-xs text-[var(--svs-muted)]">{myListings.length} listing{myListings.length === 1 ? '' : 's'} • {uniqueMarketCount} market{uniqueMarketCount === 1 ? '' : 's'}</p>
+      </div>
+
+      <p className="mt-5 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--svs-muted)]">Manage</p>
+      <nav className="mt-2 space-y-1">
+        <Link
+          to="/seller/dashboard"
+          className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition ${!isOrdersView ? 'bg-[var(--svs-primary)] text-white shadow-sm' : 'text-[var(--svs-text)] hover:bg-[var(--svs-surface-soft)]'}`}
+        >
+          <Package className="h-4 w-4" />
+          <span>My Listings</span>
+          <span className="ml-auto text-xs opacity-75">{myListings.length}</span>
+        </Link>
+        <Link
+          to="/seller/orders"
+          className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition ${isOrdersView ? 'bg-[var(--svs-primary)] text-white shadow-sm' : 'text-[var(--svs-text)] hover:bg-[var(--svs-surface-soft)]'}`}
+        >
+          <ClipboardList className="h-4 w-4" />
+          <span>Orders</span>
+          {activeOrdersCount > 0 ? (
+            <span className={`ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-bold ${isOrdersView ? 'bg-white/25 text-white' : 'bg-rose-500 text-white'}`}>{activeOrdersCount}</span>
+          ) : null}
+        </Link>
+        <Link
+          to="/seller/upload"
+          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)]"
+        >
+          <Plus className="h-4 w-4" />
+          <span>Add Listing</span>
+        </Link>
+      </nav>
+
+      <p className="mt-6 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--svs-muted)]">Other</p>
+      <div className="mt-2 space-y-1">
+        <Link
+          to="/markets"
+          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[var(--svs-muted)] transition hover:bg-[var(--svs-surface-soft)] hover:text-[var(--svs-text)]"
+        >
+          <Store className="h-4 w-4" />
+          <span>Buyer View</span>
+        </Link>
+        <Link
+          to="/sell"
+          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[var(--svs-muted)] transition hover:bg-[var(--svs-surface-soft)] hover:text-[var(--svs-text)]"
+        >
+          <HelpCircle className="h-4 w-4" />
+          <span>Seller Help</span>
+        </Link>
+      </div>
+    </>
+  );
 
   return (
     <PageFrame
-      title={isOrdersView ? 'Seller Orders' : 'My Store'}
-      subtitle={isOrdersView ? 'Track orders containing your listings and update fulfillment status.' : 'View, edit, and remove your product listings across all markets.'}
+      title={isOrdersView ? 'Seller Orders' : 'Seller Dashboard'}
+      subtitle={isOrdersView ? 'Track orders containing your listings and update fulfillment status.' : 'Manage your store, listings, and customer orders in one place.'}
     >
-      <section className="mb-6 grid gap-4 xl:grid-cols-[minmax(0,1.8fr)_320px]">
-        <div className="rounded-3xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] md:p-6">
-          <span className="inline-flex rounded-full bg-[var(--svs-cyan-surface)] px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-[var(--svs-primary-strong)]">
-            {isOrdersView ? 'Seller Orders' : 'Store Dashboard'}
-          </span>
-          <h2 className="mt-3 text-2xl font-bold text-[var(--svs-text)]">
-            {isOrdersView ? 'Keep fulfillment moving.' : 'Everything in your store, in one place.'}
-          </h2>
-          <p className="mt-2 max-w-3xl text-sm text-[var(--svs-muted)] sm:text-base">
-            {isOrdersView
-              ? 'Review order volume, update statuses, and monitor buyer activity without digging through listing cards.'
-              : 'Track inventory, update product details, and jump into order activity through clearly separated sections.'}
-          </p>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <KpiCard label="Listings" value={typeof myListings.length === 'object' ? JSON.stringify(myListings.length) : String(myListings.length)} />
-            <KpiCard label="Markets" value={typeof uniqueMarketCount === 'object' ? JSON.stringify(uniqueMarketCount) : String(uniqueMarketCount)} />
-            <KpiCard label={isOrdersView ? 'Active Orders' : 'Units in Stock'} value={typeof (isOrdersView ? activeOrdersCount : totalStockUnits) === 'object' ? JSON.stringify(isOrdersView ? activeOrdersCount : totalStockUnits) : String(isOrdersView ? activeOrdersCount : totalStockUnits)} />
-            <KpiCard label={isOrdersView ? 'Delivered' : 'Low Stock'} value={typeof (isOrdersView ? deliveredOrdersCount : lowStockListingsCount) === 'object' ? JSON.stringify(isOrdersView ? deliveredOrdersCount : lowStockListingsCount) : String(isOrdersView ? deliveredOrdersCount : lowStockListingsCount)} />
-          </div>
-        </div>
-
-        <aside className="rounded-3xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-          <h3 className="text-base font-bold text-[var(--svs-text)]">Quick Actions</h3>
-          <p className="mt-1 text-sm text-[var(--svs-muted)]">
-            {isOrdersView ? 'Move between order operations and store maintenance.' : 'Open the next task without scrolling through the page.'}
-          </p>
-          <div className="mt-4 space-y-2.5">
-            {!isOrdersView ? (
-              <Link
-                to="/seller/upload"
-                className={`${cudyBluePrimaryButtonClassName} inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--svs-primary)] px-4 py-3 text-sm font-semibold text-white`}
-              >
-                <Plus className="h-4 w-4" /> Add New Listing
-              </Link>
-            ) : null}
-            <Link
-              to={isOrdersView ? '/seller/dashboard' : '/seller/orders'}
-              className="inline-flex w-full items-center justify-center rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
-            >
-              {isOrdersView ? 'Back to Listings' : 'Open Orders View'}
-            </Link>
-            <Link
-              to="/markets"
-              className="inline-flex w-full items-center justify-center rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
-            >
-              Switch to Buyer View
-            </Link>
-          </div>
+      <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+        {/* Desktop sidebar */}
+        <aside className="hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] lg:block lg:sticky lg:top-24 lg:self-start">
+          {sidebarNav}
         </aside>
-      </section>
 
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-1 text-sm font-semibold">
-          <Link
-            to="/seller/dashboard"
-            className={`rounded-lg px-4 py-2 transition ${!isOrdersView ? 'bg-[var(--svs-primary)] text-white' : 'text-[var(--svs-text)] hover:text-[var(--svs-primary)]'}`}
-          >
-            Listings
-          </Link>
-          <Link
-            to="/seller/orders"
-            className={`rounded-lg px-4 py-2 transition ${isOrdersView ? 'bg-[var(--svs-primary)] text-white' : 'text-[var(--svs-text)] hover:text-[var(--svs-primary)]'}`}
-          >
-            Orders
-          </Link>
-        </div>
-        <p className="text-sm text-[var(--svs-muted)]">
-          {isOrdersView
-            ? `${visibleOrders.length} order${visibleOrders.length !== 1 ? 's' : ''} containing your listings`
-            : listingsSummary}
-        </p>
-      </div>
-
-      {!isOrdersView ? (
-        <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
-          <aside className="space-y-4">
-            <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-              <h2 className="text-lg font-bold text-[var(--svs-text)]">Store Snapshot</h2>
-              <p className="mt-1 text-sm text-[var(--svs-muted)]">A quick inventory check before you edit listings.</p>
-              <div className="mt-4 space-y-3 text-sm text-[var(--svs-text)]">
-                <div className="rounded-xl bg-[var(--svs-surface-soft)] px-4 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Inventory Health</p>
-                  <p className="mt-1 font-semibold text-[var(--svs-text)]">{inventorySummary}</p>
-                </div>
-                <div className="rounded-xl bg-[var(--svs-surface-soft)] px-4 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Orders Waiting</p>
-                  <p className="mt-1 font-semibold text-[var(--svs-text)]">
-                    {activeOrdersCount > 0
-                      ? `${activeOrdersCount} active order${activeOrdersCount !== 1 ? 's' : ''} need attention.`
-                      : 'No active seller orders right now.'}
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-              <h2 className="text-lg font-bold text-[var(--svs-text)]">Next Best Step</h2>
-              <p className="mt-1 text-sm text-[var(--svs-muted)]">
-                {myListings.length === 0
-                  ? 'Publish your first listing so it can appear in the marketplace.'
-                  : lowStockListingsCount > 0
-                    ? 'Restock low inventory items or adjust quantities before they run out.'
-                    : 'Review product details and pricing to keep your store current.'}
-              </p>
-            </section>
-          </aside>
-
-          <section className="rounded-3xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        {/* Main content area */}
+        <main className="space-y-6">
+          {/* Topbar */}
+          <header className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <button
+                type="button"
+                onClick={() => setIsMobileSidebarOpen(true)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] text-[var(--svs-text)] lg:hidden"
+                aria-label="Open seller menu"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
               <div>
-                <h2 className="text-lg font-bold text-[var(--svs-text)]">Listings</h2>
-                <p className="text-sm text-[var(--svs-muted)]">Manage every published item from one ordered workspace.</p>
+                <h1 className="text-2xl font-bold text-[var(--svs-text)]">
+                  {isOrdersView ? 'Order Management' : 'My Listings'}
+                </h1>
+                <p className="mt-1 text-sm text-[var(--svs-muted)]">
+                  {isOrdersView
+                    ? `${visibleOrders.length} order${visibleOrders.length !== 1 ? 's' : ''} containing your listings`
+                    : listingsSummary}
+                </p>
               </div>
+            </div>
+            {!isOrdersView ? (
               <Link
                 to="/seller/upload"
                 className={`${cudyBluePrimaryButtonClassName} inline-flex items-center gap-2 rounded-lg bg-[var(--svs-primary)] px-4 py-2.5 text-sm font-semibold text-white`}
               >
-                <Plus className="h-4 w-4" /> Add New Listing
+                <Plus className="h-4 w-4" /> Add Listing
               </Link>
-            </div>
-
-            {listActionMessage ? (
-              <div className={`mb-5 rounded-xl px-4 py-3 text-sm ${listActionMessageType === 'error' ? 'border border-rose-200 bg-rose-50 text-rose-700' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
-                {listActionMessage}
-              </div>
             ) : null}
+          </header>
 
-            {loadError ? (
-              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{loadError}</div>
-            ) : isLoading ? (
-              <div className="grid gap-5 sm:grid-cols-2 2xl:grid-cols-3">
-                {[1, 2, 3].map((n) => (
-                  <div key={n} className="h-72 animate-pulse rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)]" />
-                ))}
+          {/* KPI strip */}
+          <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+              <div className="flex items-start justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Revenue</p>
+                <span className="rounded-lg bg-emerald-50 p-1.5 text-emerald-600"><DollarSign className="h-4 w-4" /></span>
               </div>
-            ) : myListings.length === 0 ? (
-              <div className="rounded-2xl border-2 border-dashed border-[var(--svs-border)] bg-[var(--svs-surface-soft)] py-16 text-center">
-                <p className="text-base font-semibold text-[var(--svs-text)]">Your store is empty</p>
-                <p className="mt-1 text-sm text-[var(--svs-muted)]">Start by adding your first product listing.</p>
-                <Link
-                  to="/seller/upload"
-                  className={`${cudyBluePrimaryButtonClassName} mt-5 inline-flex items-center gap-2 rounded-lg bg-[var(--svs-primary)] px-5 py-3 text-sm font-semibold text-white`}
-                >
-                  <Plus className="h-4 w-4" /> Add New Listing
-                </Link>
+              <p className="mt-2 text-2xl font-bold text-[var(--svs-text)]">{formatCheckoutAmount(totalRevenue)}</p>
+              <p className="mt-1 text-xs text-[var(--svs-muted)]">{deliveredOrdersCount} delivered order{deliveredOrdersCount === 1 ? '' : 's'}</p>
+            </div>
+            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+              <div className="flex items-start justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Pending</p>
+                <span className="rounded-lg bg-amber-50 p-1.5 text-amber-600"><Clock className="h-4 w-4" /></span>
               </div>
-            ) : (
-              <div className="grid gap-5 sm:grid-cols-2 2xl:grid-cols-3">
-                {myListings.map((item) => (
-                  <article key={item.dbId} className="overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-                    <div className="relative h-48 overflow-hidden bg-[var(--svs-surface-soft)]">
-                      <img src={item.image} alt={item.title} className="h-full w-full object-cover" loading="lazy" />
-                      <span className={`absolute left-3 top-3 rounded-full px-2.5 py-0.5 text-xs font-semibold ${MARKET_BADGE_COLORS[item.marketKey] || 'bg-slate-100 text-slate-700'}`}>
-                        {t(sellerMarketConfig[item.marketKey]?.labelKey || '')}
-                      </span>
+              <p className="mt-2 text-2xl font-bold text-[var(--svs-text)]">{formatCheckoutAmount(pendingRevenue)}</p>
+              <p className="mt-1 text-xs text-[var(--svs-muted)]">{activeOrdersCount} active order{activeOrdersCount === 1 ? '' : 's'}</p>
+            </div>
+            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+              <div className="flex items-start justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Listings</p>
+                <span className="rounded-lg bg-cyan-50 p-1.5 text-[var(--svs-primary-strong)]"><Package className="h-4 w-4" /></span>
+              </div>
+              <p className="mt-2 text-2xl font-bold text-[var(--svs-text)]">{myListings.length}</p>
+              <p className="mt-1 text-xs text-[var(--svs-muted)]">{totalStockUnits} unit{totalStockUnits === 1 ? '' : 's'} in stock • {uniqueMarketCount} market{uniqueMarketCount === 1 ? '' : 's'}</p>
+            </div>
+            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+              <div className="flex items-start justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Stock Alerts</p>
+                <span className={`rounded-lg p-1.5 ${(lowStockListingsCount + outOfStockListingsCount) > 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                  <AlertTriangle className="h-4 w-4" />
+                </span>
+              </div>
+              <p className="mt-2 text-2xl font-bold text-[var(--svs-text)]">{lowStockListingsCount + outOfStockListingsCount}</p>
+              <p className="mt-1 text-xs text-[var(--svs-muted)]">{outOfStockListingsCount} out of stock • {lowStockListingsCount} low</p>
+            </div>
+          </section>
+
+          {/* Pending fulfillment alert (listings view only) */}
+          {!isOrdersView && activeOrdersCount > 0 ? (
+            <Link
+              to="/seller/orders"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 transition hover:border-amber-300"
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="rounded-lg bg-white/70 p-1.5 text-amber-700"><Truck className="h-4 w-4" /></span>
+                <div>
+                  <p className="font-bold">{activeOrdersCount} order{activeOrdersCount === 1 ? '' : 's'} need{activeOrdersCount === 1 ? 's' : ''} fulfillment</p>
+                  <p className="text-xs text-amber-800">Update statuses and keep buyers informed.</p>
+                </div>
+              </div>
+              <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wide">
+                Manage <ArrowUpRight className="h-3.5 w-3.5" />
+              </span>
+            </Link>
+          ) : null}
+
+          {/* Out-of-stock alert (listings view only) */}
+          {!isOrdersView && outOfStockListingsCount > 0 ? (
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+              <span className="rounded-lg bg-white/70 p-1.5 text-rose-700"><AlertTriangle className="h-4 w-4" /></span>
+              <div className="flex-1 min-w-[200px]">
+                <p className="font-bold">{outOfStockListingsCount} listing{outOfStockListingsCount === 1 ? ' is' : 's are'} out of stock</p>
+                <p className="text-xs text-rose-800">Buyers can only wishlist these. Restock to start selling again.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setListingStockFilter('out')}
+                className="rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-bold text-rose-700 transition hover:bg-rose-100"
+              >
+                View
+              </button>
+            </div>
+          ) : null}
+
+          {/* LISTINGS VIEW */}
+          {!isOrdersView ? (
+            <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+              {listActionMessage ? (
+                <div className={`mb-5 rounded-xl px-4 py-3 text-sm ${listActionMessageType === 'error' ? 'border border-rose-200 bg-rose-50 text-rose-700' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+                  {listActionMessage}
+                </div>
+              ) : null}
+
+              {/* Filter / search toolbar */}
+              {myListings.length > 0 && !isLoading && !loadError ? (
+                <div className="mb-5 flex flex-wrap items-center gap-2.5 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3">
+                  <div className="relative min-w-[200px] flex-1">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--svs-muted)]" />
+                    <input
+                      type="search"
+                      value={listingSearch}
+                      onChange={(event) => setListingSearch(event.target.value)}
+                      placeholder="Search your listings..."
+                      className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] py-2 pl-9 pr-3 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                    />
+                  </div>
+                  <select
+                    value={listingMarketFilter}
+                    onChange={(event) => setListingMarketFilter(event.target.value)}
+                    className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm font-semibold text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                  >
+                    <option value="all">All markets</option>
+                    {sellerMarketOptions.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={listingStockFilter}
+                    onChange={(event) => setListingStockFilter(event.target.value)}
+                    className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm font-semibold text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                  >
+                    <option value="all">All stock</option>
+                    <option value="in">In stock</option>
+                    <option value="low">Low stock</option>
+                    <option value="out">Out of stock</option>
+                  </select>
+                  <select
+                    value={listingSort}
+                    onChange={(event) => setListingSort(event.target.value)}
+                    className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm font-semibold text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                  >
+                    <option value="newest">Newest first</option>
+                    <option value="titleAsc">Name (A–Z)</option>
+                    <option value="priceAsc">Price (low → high)</option>
+                    <option value="priceDesc">Price (high → low)</option>
+                    <option value="stockAsc">Stock (low → high)</option>
+                  </select>
+                  {(listingSearch || listingMarketFilter !== 'all' || listingStockFilter !== 'all' || listingSort !== 'newest') ? (
+                    <button
+                      type="button"
+                      onClick={() => { setListingSearch(''); setListingMarketFilter('all'); setListingStockFilter('all'); setListingSort('newest'); }}
+                      className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-xs font-semibold text-[var(--svs-muted)] transition hover:text-[var(--svs-text)]"
+                    >
+                      Clear
+                    </button>
+                  ) : null}
+                  <span className="ml-auto text-xs font-semibold text-[var(--svs-muted)]">
+                    {filteredListings.length} of {myListings.length}
+                  </span>
+                </div>
+              ) : null}
+
+              {loadError ? (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{loadError}</div>
+              ) : isLoading ? (
+                <div className="grid gap-5 sm:grid-cols-2 2xl:grid-cols-3">
+                  {[1, 2, 3].map((n) => (
+                    <div key={n} className="h-72 animate-pulse rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)]" />
+                  ))}
+                </div>
+              ) : myListings.length === 0 ? (
+                <div className="rounded-2xl border-2 border-dashed border-[var(--svs-border)] bg-[var(--svs-surface-soft)] py-16 text-center">
+                  <Package className="mx-auto h-10 w-10 text-[var(--svs-muted)]" />
+                  <p className="mt-3 text-base font-semibold text-[var(--svs-text)]">Your store is empty</p>
+                  <p className="mt-1 text-sm text-[var(--svs-muted)]">Start by adding your first product listing.</p>
+                  <Link
+                    to="/seller/upload"
+                    className={`${cudyBluePrimaryButtonClassName} mt-5 inline-flex items-center gap-2 rounded-lg bg-[var(--svs-primary)] px-5 py-3 text-sm font-semibold text-white`}
+                  >
+                    <Plus className="h-4 w-4" /> Add New Listing
+                  </Link>
+                </div>
+              ) : (
+                <div className="grid gap-5 sm:grid-cols-2 2xl:grid-cols-3">
+                  {filteredListings.length === 0 ? (
+                    <div className="col-span-full rounded-2xl border-2 border-dashed border-[var(--svs-border)] bg-[var(--svs-surface-soft)] py-12 text-center">
+                      <Filter className="mx-auto h-8 w-8 text-[var(--svs-muted)]" />
+                      <p className="mt-3 text-base font-semibold text-[var(--svs-text)]">No listings match your filters</p>
+                      <p className="mt-1 text-sm text-[var(--svs-muted)]">Try clearing the search or adjusting filters.</p>
                       <button
                         type="button"
-                        onClick={() => (editingId === item.dbId ? cancelEdit() : openEdit(item))}
-                        className="absolute right-3 top-3 rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold text-[var(--svs-primary-strong)] shadow-sm transition hover:bg-white"
+                        onClick={() => { setListingSearch(''); setListingMarketFilter('all'); setListingStockFilter('all'); setListingSort('newest'); }}
+                        className="mt-4 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-2 text-sm font-semibold text-[var(--svs-text)]"
                       >
-                        {editingId === item.dbId ? 'Close' : 'Edit'}
+                        Clear filters
                       </button>
                     </div>
+                  ) : null}
+                  {filteredListings.map((item) => {
+                    const stockQty = normalizeListingQuantity(item.availableQuantity, 0);
+                    const stockClass = stockQty === 0
+                      ? 'bg-rose-50 text-rose-700'
+                      : stockQty <= 3
+                        ? 'bg-amber-50 text-amber-700'
+                        : 'bg-emerald-50 text-emerald-700';
+                    const stockLabel = stockQty === 0
+                      ? 'Out of stock'
+                      : stockQty <= 3
+                        ? `Low stock: ${stockQty}`
+                        : `In stock: ${stockQty}`;
 
-                    <div className="flex h-full flex-col p-4">
-                      <h3 className="text-base font-bold leading-tight text-[var(--svs-text)]">{typeof item.title === 'object' ? JSON.stringify(item.title) : item.title}</h3>
-                      <p className="mt-0.5 text-sm font-semibold text-[var(--svs-primary-strong)]"><SalePrice price={typeof item.price === 'object' ? JSON.stringify(item.price) : item.price} /></p>
-                      <p className="mt-1 text-xs text-[var(--svs-muted)]">
-                        Quantity in stock: {typeof normalizeListingQuantity(item.availableQuantity, 0) === 'object' ? JSON.stringify(normalizeListingQuantity(item.availableQuantity, 0)) : normalizeListingQuantity(item.availableQuantity, 0)}
-                        {normalizeListingQuantity(item.availableQuantity, 0) === 0 ? ' (Out of stock - buyers can only wishlist this item).' : ''}
-                      </p>
-                      {item.description ? (
-                        <span style={{ display: 'none' }}>{typeof item.description === 'object' ? JSON.stringify(item.description) : item.description}</span>
-                      ) : null}
-
-                      {editingId === item.dbId ? (
-                        <div className="mt-4 space-y-3 border-t border-[var(--svs-border)] pt-4">
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Product Name</label>
-                            <input name="title" value={editForm.title} onChange={handleEditChange} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Price</label>
-                              <input name="price" value={editForm.price} onChange={handleEditChange} placeholder="e.g. 29.99" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
-                            </div>
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Quantity</label>
-                              <input
-                                name="quantity"
-                                type="number"
-                                min="0"
-                                step="1"
-                                value={editForm.quantity}
-                                onChange={handleEditChange}
-                                placeholder="e.g. 25"
-                                className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
-                              />
-                              <p className="mt-1 text-[10px] text-[var(--svs-muted)]">This is how many units are available for checkout.</p>
-                            </div>
-                            <div className="col-span-2">
-                              <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Market</label>
-                              <MarketSelectorField
-                                id={`edit-market-${item.dbId}`}
-                                value={editForm.marketKey}
-                                onChange={handleEditMarketChange}
-                                ariaLabel="Edit listing market"
-                              />
-                            </div>
-                          </div>
-                          {editForm.marketKey === 'groceries' ? (
-                            <GroceriesSellerFields
-                              formData={editForm}
-                              onFieldChange={handleEditChange}
-                              prefix={`edit-grocery-${item.dbId}`}
-                              isCompact
-                            />
-                          ) : null}
-                          {editForm.marketKey === 'beverages' ? (
-                            <BeveragesSellerFields
-                              formData={editForm}
-                              onFieldChange={handleEditChange}
-                              prefix={`edit-beverage-${item.dbId}`}
-                              isCompact
-                            />
-                          ) : null}
-                          {editForm.marketKey === 'tickets' ? (
-                            <TicketsSellerFields
-                              formData={editForm}
-                              onFieldChange={handleEditChange}
-                              prefix={`edit-ticket-${item.dbId}`}
-                              isCompact
-                            />
-                          ) : null}
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Description</label>
-                            <textarea name="description" value={editForm.description} onChange={handleEditChange} rows={3} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
-                          </div>
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Listing Images</label>
-                            {editExistingImages.length ? (
-                              <div className="mb-3 grid grid-cols-2 gap-2">
-                                {editExistingImages.map((imageUrl, index) => (
-                                  <div key={`${imageUrl}-${index}`} className="relative overflow-hidden rounded-md border border-[var(--svs-border)] bg-white">
-                                    <img
-                                      src={imageUrl}
-                                      alt={`${item.title} ${index + 1}`}
-                                      className="h-24 w-full object-cover"
-                                      loading="lazy"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => handleRemoveExistingEditImage(imageUrl)}
-                                      className="absolute right-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700"
-                                    >
-                                      Remove
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="mb-2 text-xs text-[var(--svs-muted)]">No current images will be kept unless you add new ones below.</p>
-                            )}
-                            <input
-                              type="file"
-                              accept="image/*"
-                              multiple
-                              onChange={handleEditImagePick}
-                              className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-xs text-[var(--svs-text)] outline-none"
-                            />
-                            <p className="mt-1 text-xs text-[var(--svs-muted)]">Add more images here. You can remove current images above or remove pending uploads before saving.</p>
-                            {editImageFiles.length ? (
-                              <div className="mt-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-2 text-xs text-[var(--svs-muted)]">
-                                <p className="font-semibold text-[var(--svs-text)]">{editImageFiles.length} new image{editImageFiles.length === 1 ? '' : 's'} selected</p>
-                                <ul className="mt-1 max-h-20 space-y-0.5 overflow-y-auto pr-1">
-                                  {editImageFiles.map((file, index) => (
-                                    <li key={`${file.name}-${file.size}-${index}`} className="flex items-center justify-between gap-2">
-                                      <span className="truncate">{file.name}</span>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleRemoveEditImage(index)}
-                                        className="rounded border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700"
-                                      >
-                                        Remove
-                                      </button>
-                                    </li>
-                                  ))}
-                                </ul>
-                                {editImagePreviewUrls.length ? (
-                                  <div className="mt-2 grid grid-cols-2 gap-2">
-                                    {editImagePreviewUrls.map((previewUrl, index) => (
-                                      <div key={`${previewUrl}-${index}`} className="relative overflow-hidden rounded-md border border-[var(--svs-border)] bg-white">
-                                        <img
-                                          src={previewUrl}
-                                          alt={`Selected preview ${index + 1}`}
-                                          className="h-24 w-full object-cover"
-                                          loading="lazy"
-                                        />
-                                        <button
-                                          type="button"
-                                          onClick={() => handleRemoveEditImage(index)}
-                                          className="absolute right-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700"
-                                        >
-                                          x
-                                        </button>
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : null}
-                              </div>
-                            ) : null}
-                          </div>
-                          {editMessage ? (
-                            <div className={`rounded-lg px-3 py-2 text-xs ${editMessageType === 'error' ? 'border border-rose-200 bg-rose-50 text-rose-700' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
-                              {editMessage}
-                            </div>
-                          ) : null}
-                          <div className="flex gap-2">
-                            <button type="button" onClick={() => handleSaveEdit(item)} disabled={isSaving} className={`${cudyBluePrimaryButtonClassName} flex-1 rounded-lg bg-[var(--svs-primary)] px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-60`}>
-                              {isSaving ? 'Saving\u2026' : 'Save Changes'}
-                            </button>
-                            <button type="button" onClick={cancelEdit} disabled={isSaving} className="rounded-lg border border-[var(--svs-border)] px-3 py-2.5 text-sm font-semibold text-[var(--svs-text)]">
-                              Cancel
-                            </button>
-                          </div>
+                    return (
+                      <article key={item.dbId} className="group flex flex-col overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition hover:shadow-[0_6px_16px_rgba(0,0,0,0.08)]">
+                        <div className="relative h-40 overflow-hidden bg-[var(--svs-surface-soft)]">
+                          <img src={item.image} alt={item.title} className="h-full w-full object-cover transition group-hover:scale-[1.02]" loading="lazy" />
+                          <span className={`absolute left-3 top-3 rounded-full px-2.5 py-0.5 text-xs font-semibold ${MARKET_BADGE_COLORS[item.marketKey] || 'bg-slate-100 text-slate-700'}`}>
+                            {t(sellerMarketConfig[item.marketKey]?.labelKey || '')}
+                          </span>
                         </div>
-                      ) : (
-                        <div className="mt-auto flex gap-2 pt-4">
-                          {confirmDeleteId === item.dbId ? (
-                            <>
-                              <span className="flex-1 self-center text-xs text-[var(--svs-muted)]">Remove this listing?</span>
-                              <button
-                                type="button"
-                                onClick={() => handleDelete(item)}
-                                disabled={deletingId === item.dbId}
-                                className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-60"
-                              >
-                                {deletingId === item.dbId ? 'Removing\u2026' : 'Yes, Remove'}
-                              </button>
-                              <button type="button" onClick={() => setConfirmDeleteId(null)} className="rounded-lg border border-[var(--svs-border)] px-3 py-2 text-xs font-semibold text-[var(--svs-text)]">
-                                Cancel
-                              </button>
-                            </>
-                          ) : (
+                        <div className="flex flex-1 flex-col p-4">
+                          <h3 className="line-clamp-2 text-sm font-bold leading-snug text-[var(--svs-text)]">{item.title}</h3>
+                          <p className="mt-1 text-sm font-semibold text-[var(--svs-primary-strong)]"><SalePrice price={item.price} /></p>
+                          <span className={`mt-2 inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-semibold ${stockClass}`}>{stockLabel}</span>
+                          <div className="mt-auto flex gap-2 pt-4">
+                            <button
+                              type="button"
+                              onClick={() => openEdit(item)}
+                              className="flex-1 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
+                            >
+                              Edit
+                            </button>
                             <button
                               type="button"
                               onClick={() => setConfirmDeleteId(item.dbId)}
-                              className="ml-auto rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
+                              className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
                             >
                               Remove
                             </button>
-                          )}
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          ) : null}
+
+          {/* Recent orders preview (listings view only) */}
+          {!isOrdersView && recentOrders.length > 0 ? (
+            <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+              <header className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h2 className="text-base font-bold text-[var(--svs-text)]">Recent Orders</h2>
+                  <p className="text-xs text-[var(--svs-muted)]">Most recent activity from your store.</p>
+                </div>
+                <Link to="/seller/orders" className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--svs-primary)] hover:underline">
+                  View all <ArrowUpRight className="h-3.5 w-3.5" />
+                </Link>
+              </header>
+              <ul className="divide-y divide-[var(--svs-border)]">
+                {recentOrders.map((order) => {
+                  const itemCount = Array.isArray(order.sellerLineItems)
+                    ? order.sellerLineItems.reduce((count, lineItem) => count + (Number(lineItem.quantity) || 1), 0)
+                    : 0;
+                  return (
+                    <li key={order.id} className="flex flex-wrap items-center gap-3 py-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-bold text-[var(--svs-text)]">{order.reference || order.id}</p>
+                        <p className="text-xs text-[var(--svs-muted)]">
+                          {order.customer?.fullName || order.customer?.email || 'Guest customer'} • {itemCount} item{itemCount === 1 ? '' : 's'}
+                        </p>
+                      </div>
+                      <p className="text-sm font-semibold text-[var(--svs-primary-strong)]">{formatCheckoutAmount(Number(order.sellerSubtotal) || 0)}</p>
+                      <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${getStatusClasses(order.status)}`}>
+                        {order.status}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ) : null}
+
+          {isOrdersView ? (
+            /* ORDERS VIEW */
+            <section className="space-y-4 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+              {orderUpdateError ? (
+                <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{orderUpdateError}</div>
+              ) : null}
+
+              {visibleOrders.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { value: 'all', label: 'All' },
+                    { value: 'active', label: 'Active' },
+                    ...ORDER_STATUS_FLOW.map((status) => ({ value: status, label: status })),
+                  ].map((chip) => {
+                    const count = orderStatusCounts[chip.value] || 0;
+                    const isActive = orderStatusFilter === chip.value;
+                    return (
+                      <button
+                        key={chip.value}
+                        type="button"
+                        onClick={() => setOrderStatusFilter(chip.value)}
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${isActive ? 'border-[var(--svs-primary)] bg-[var(--svs-primary)] text-white' : 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)] text-[var(--svs-text)] hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]'}`}
+                      >
+                        {chip.label}
+                        <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${isActive ? 'bg-white/25 text-white' : 'bg-[var(--svs-surface)] text-[var(--svs-muted)]'}`}>{count}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+
+              {orderLoadError ? (
+                <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{orderLoadError}</div>
+              ) : isLoadingOrders ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[1, 2].map((placeholder) => (
+                    <div key={placeholder} className="h-36 animate-pulse rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)]" />
+                  ))}
+                </div>
+              ) : visibleOrders.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface-soft)] py-12 text-center text-sm text-[var(--svs-muted)]">
+                  <ClipboardList className="mx-auto h-10 w-10 opacity-50" />
+                  <p className="mt-3 font-semibold text-[var(--svs-text)]">No orders yet</p>
+                  <p className="mt-1">Orders containing your listings will show up here.</p>
+                </div>
+              ) : filteredOrders.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface-soft)] py-10 text-center text-sm text-[var(--svs-muted)]">
+                  <Filter className="mx-auto h-8 w-8 opacity-50" />
+                  <p className="mt-2 font-semibold text-[var(--svs-text)]">No orders in this status</p>
+                  <button type="button" onClick={() => setOrderStatusFilter('all')} className="mt-3 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--svs-text)]">Show all orders</button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {filteredOrders.map((order) => (
+                    <article key={order.id} className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Order</p>
+                          <p className="text-sm font-bold text-[var(--svs-text)]">{typeof order.reference === 'string' ? order.reference : (order.id || '')}</p>
+                          <p className="text-xs text-[var(--svs-muted)]">{order.createdAt ? new Date(order.createdAt).toLocaleString() : ''}</p>
+                        </div>
+                        <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getStatusClasses(order.status)}`}>
+                          {typeof order.status === 'string' ? order.status : ''}
+                        </span>
+                      </div>
+
+                      <div className="mt-3 grid gap-1 text-xs text-[var(--svs-muted)] sm:grid-cols-2">
+                        <p>Customer: {order.customer?.fullName || order.customer?.email || 'Guest customer'}</p>
+                        {order.customer?.email ? <p>Email: {order.customer.email}</p> : null}
+                        {order.customer?.phone ? <p>Phone: {order.customer.phone}</p> : null}
+                        <p>Items from your store: {Array.isArray(order.sellerLineItems) ? order.sellerLineItems.reduce((count, lineItem) => count + (Number(lineItem.quantity) || 1), 0) : 0}</p>
+                        <p className="font-semibold text-[var(--svs-text)]">Your subtotal: {typeof order.sellerSubtotal === 'number' ? formatCheckoutAmount(order.sellerSubtotal) : ''}</p>
+                      </div>
+
+                      <div className="mt-3 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Your items in this order</p>
+                        <div className="mt-2 space-y-2">
+                          {order.sellerLineItems.map((lineItem, index) => {
+                            const quantity = Math.max(Number(lineItem.quantity) || 1, 1);
+                            const linePrice = (Number(lineItem.unitPrice) || 0) * quantity;
+                            return (
+                              <div key={`${order.id}-${lineItem.id || lineItem.sku || index}`} className="flex items-start justify-between gap-3 text-xs text-[var(--svs-text)]">
+                                <div>
+                                  <p className="font-semibold text-[var(--svs-text)]">{lineItem.title || 'Untitled item'}</p>
+                                  <p className="text-[var(--svs-muted)]">Qty: {quantity}</p>
+                                </div>
+                                <p className="font-semibold text-[var(--svs-primary-strong)]">{formatCheckoutAmount(linePrice)}</p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <label htmlFor={`order-status-${order.id}`} className="text-xs font-semibold text-[var(--svs-text)]">Update status</label>
+                        <select
+                          id={`order-status-${order.id}`}
+                          value={order.status || ORDER_STATUS_FLOW[0]}
+                          onChange={(event) => handleOrderStatusUpdate(order.id, event.target.value)}
+                          disabled={updatingOrderId === order.id}
+                          className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--svs-text)]"
+                        >
+                          {getSellerStatusOptions(order.status).map((status) => (
+                            <option key={`${order.id}-${status}`} value={status}>{status}</option>
+                          ))}
+                        </select>
+                        {updatingOrderId === order.id ? (
+                          <span className="text-xs text-[var(--svs-muted)]">Updating…</span>
+                        ) : null}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+          ) : null}
+        </main>
+      </div>
+
+      {/* Mobile sidebar drawer */}
+      {isMobileSidebarOpen ? (
+        <div className="fixed inset-0 z-[90] bg-black/45 lg:hidden" role="dialog" aria-modal="true" aria-label="Seller navigation">
+          <button type="button" aria-label="Close menu" onClick={() => setIsMobileSidebarOpen(false)} className="absolute inset-0 cursor-default" />
+          <div className="absolute inset-y-0 left-0 w-[min(82vw,300px)] overflow-y-auto bg-[var(--svs-surface)] p-4 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <span className="inline-flex items-center gap-2 text-sm font-bold text-[var(--svs-text)]">
+                <LayoutDashboard className="h-4 w-4 text-[var(--svs-primary)]" /> Seller
+              </span>
+              <button type="button" onClick={() => setIsMobileSidebarOpen(false)} className="rounded-md p-1.5 text-[var(--svs-muted)] hover:bg-[var(--svs-surface-soft)]" aria-label="Close">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {sidebarNav}
+          </div>
         </div>
       ) : null}
 
-      <section className={`${isOrdersView ? 'mt-0' : 'mt-6'} space-y-4 rounded-3xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]`}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-bold text-[var(--svs-text)]">Order Management</h2>
-            <p className="text-sm text-[var(--svs-muted)]">
-              {isOrdersView
-                ? 'Review every order containing your products and keep fulfillment statuses current.'
-                : 'Track orders containing your listings and update fulfillment, shipping, and refund status.'}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-1 text-xs font-semibold text-[var(--svs-text)]">
-              {visibleOrders.length} order{visibleOrders.length === 1 ? '' : 's'}
-            </span>
-            {!isOrdersView ? (
-              <Link
-                to="/seller/orders"
-                className="rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-1 text-xs font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
+      {/* Edit Listing slide-over drawer */}
+      {editingItem ? (
+        <div className="fixed inset-0 z-[95] bg-black/45" role="dialog" aria-modal="true" aria-label="Edit listing">
+          <button type="button" aria-label="Close edit drawer" onClick={cancelEdit} className="absolute inset-0 cursor-default" />
+          <div className="absolute inset-y-0 right-0 flex w-full max-w-xl flex-col bg-[var(--svs-surface)] shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[var(--svs-border)] px-6 py-4">
+              <div>
+                <h3 className="text-lg font-bold text-[var(--svs-text)]">Edit Listing</h3>
+                <p className="mt-0.5 line-clamp-1 text-xs text-[var(--svs-muted)]">{editingItem.title}</p>
+              </div>
+              <button type="button" onClick={cancelEdit} className="rounded-md p-1.5 text-[var(--svs-muted)] hover:bg-[var(--svs-surface-soft)]" aria-label="Close">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex-1 space-y-4 overflow-y-auto p-6">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Product Name</label>
+                <input name="title" value={editForm.title} onChange={handleEditChange} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Price</label>
+                  <input name="price" value={editForm.price} onChange={handleEditChange} placeholder="e.g. 29.99" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Quantity</label>
+                  <input
+                    name="quantity"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={editForm.quantity}
+                    onChange={handleEditChange}
+                    placeholder="e.g. 25"
+                    className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
+                  />
+                  <p className="mt-1 text-[10px] text-[var(--svs-muted)]">How many units are available for checkout.</p>
+                </div>
+                <div className="col-span-2">
+                  <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Market</label>
+                  <MarketSelectorField
+                    id={`edit-market-${editingItem.dbId}`}
+                    value={editForm.marketKey}
+                    onChange={handleEditMarketChange}
+                    ariaLabel="Edit listing market"
+                  />
+                </div>
+              </div>
+              {editForm.marketKey === 'groceries' ? (
+                <GroceriesSellerFields
+                  formData={editForm}
+                  onFieldChange={handleEditChange}
+                  prefix={`edit-grocery-${editingItem.dbId}`}
+                  isCompact
+                />
+              ) : null}
+              {editForm.marketKey === 'beverages' ? (
+                <BeveragesSellerFields
+                  formData={editForm}
+                  onFieldChange={handleEditChange}
+                  prefix={`edit-beverage-${editingItem.dbId}`}
+                  isCompact
+                />
+              ) : null}
+              {editForm.marketKey === 'tickets' ? (
+                <TicketsSellerFields
+                  formData={editForm}
+                  onFieldChange={handleEditChange}
+                  prefix={`edit-ticket-${editingItem.dbId}`}
+                  isCompact
+                />
+              ) : null}
+              <div>
+                <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Description</label>
+                <textarea name="description" value={editForm.description} onChange={handleEditChange} rows={3} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Listing Images</label>
+                {editExistingImages.length ? (
+                  <div className="mb-3 grid grid-cols-3 gap-2">
+                    {editExistingImages.map((imageUrl, index) => (
+                      <div key={`${imageUrl}-${index}`} className="relative overflow-hidden rounded-md border border-[var(--svs-border)] bg-white">
+                        <img
+                          src={imageUrl}
+                          alt={`${editingItem.title} ${index + 1}`}
+                          className="h-20 w-full object-cover"
+                          loading="lazy"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveExistingEditImage(imageUrl)}
+                          className="absolute right-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mb-2 text-xs text-[var(--svs-muted)]">No current images will be kept unless you add new ones below.</p>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleEditImagePick}
+                  className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-xs text-[var(--svs-text)] outline-none"
+                />
+                <p className="mt-1 text-xs text-[var(--svs-muted)]">Add more images. You can remove current images above or remove pending uploads before saving.</p>
+                {editImageFiles.length ? (
+                  <div className="mt-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-2 text-xs text-[var(--svs-muted)]">
+                    <p className="font-semibold text-[var(--svs-text)]">{editImageFiles.length} new image{editImageFiles.length === 1 ? '' : 's'} selected</p>
+                    {editImagePreviewUrls.length ? (
+                      <div className="mt-2 grid grid-cols-3 gap-2">
+                        {editImagePreviewUrls.map((previewUrl, index) => (
+                          <div key={`${previewUrl}-${index}`} className="relative overflow-hidden rounded-md border border-[var(--svs-border)] bg-white">
+                            <img
+                              src={previewUrl}
+                              alt={`Selected preview ${index + 1}`}
+                              className="h-20 w-full object-cover"
+                              loading="lazy"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveEditImage(index)}
+                              className="absolute right-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700"
+                            >
+                              x
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+              {editMessage ? (
+                <div className={`rounded-lg px-3 py-2 text-xs ${editMessageType === 'error' ? 'border border-rose-200 bg-rose-50 text-rose-700' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+                  {editMessage}
+                </div>
+              ) : null}
+            </div>
+            <div className="flex gap-2 border-t border-[var(--svs-border)] p-4">
+              <button type="button" onClick={cancelEdit} disabled={isSaving} className="rounded-lg border border-[var(--svs-border)] px-4 py-2.5 text-sm font-semibold text-[var(--svs-text)]">
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSaveEdit(editingItem)}
+                disabled={isSaving}
+                className={`${cudyBluePrimaryButtonClassName} flex-1 rounded-lg bg-[var(--svs-primary)] px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-60`}
               >
-                View Full Orders Page
-              </Link>
-            ) : null}
+                {isSaving ? 'Saving…' : 'Save Changes'}
+              </button>
+            </div>
           </div>
         </div>
+      ) : null}
 
-        {orderUpdateError ? (
-          <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{orderUpdateError}</div>
-        ) : null}
-
-        {orderLoadError ? (
-          <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{orderLoadError}</div>
-        ) : isLoadingOrders ? (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {[1, 2].map((placeholder) => (
-              <div key={placeholder} className="h-36 animate-pulse rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)]" />
-            ))}
+      {/* Confirm Delete dialog */}
+      {itemToDelete ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-4" role="dialog" aria-modal="true" aria-label="Confirm deletion">
+          <div className="w-full max-w-sm rounded-2xl bg-[var(--svs-surface)] p-6 shadow-2xl">
+            <h4 className="text-lg font-bold text-[var(--svs-text)]">Remove this listing?</h4>
+            <p className="mt-2 text-sm text-[var(--svs-muted)]">
+              <span className="font-semibold text-[var(--svs-text)]">{itemToDelete.title}</span> will be permanently removed from your store, including its images.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteId(null)}
+                disabled={!!deletingId}
+                className="rounded-lg border border-[var(--svs-border)] px-4 py-2 text-sm font-semibold text-[var(--svs-text)]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDelete(itemToDelete)}
+                disabled={!!deletingId}
+                className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:opacity-60"
+              >
+                {deletingId ? 'Removing…' : 'Yes, Remove'}
+              </button>
+            </div>
           </div>
-        ) : visibleOrders.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-8 text-center text-sm text-[var(--svs-muted)]">
-            Orders with your listings will show here.
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {visibleOrders.map((order) => (
-              <article key={order.id} className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Order</p>
-                    <p className="text-sm font-bold text-[var(--svs-text)]">{typeof order.reference === 'object' ? JSON.stringify(order.reference) : (typeof order.reference === 'string' ? order.reference : (order.id || ''))}</p>
-                    <p className="text-xs text-[var(--svs-muted)]">{order.createdAt ? (typeof order.createdAt === 'object' ? JSON.stringify(order.createdAt) : new Date(order.createdAt).toLocaleString()) : ''}</p>
-                  </div>
-                  <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getStatusClasses(order.status)}`}>
-                    {typeof order.status === 'object' ? JSON.stringify(order.status) : (typeof order.status === 'string' ? order.status : '')}
-                  </span>
-                </div>
-
-                <div className="mt-3 space-y-1 text-xs text-[var(--svs-muted)]">
-                  <p>Customer: {
-                    typeof order.customer?.fullName === 'object'
-                      ? JSON.stringify(order.customer?.fullName)
-                      : (typeof order.customer?.fullName === 'string' && order.customer?.fullName
-                        ? order.customer.fullName
-                        : (typeof order.customer?.email === 'object'
-                          ? JSON.stringify(order.customer?.email)
-                          : (typeof order.customer?.email === 'string' && order.customer?.email
-                            ? order.customer.email
-                            : 'Guest customer')))
-                  }</p>
-                  {order.customer?.email ? <p>Email: {typeof order.customer.email === 'object' ? JSON.stringify(order.customer.email) : order.customer.email}</p> : null}
-                  {order.customer?.phone ? <p>Phone: {typeof order.customer.phone === 'object' ? JSON.stringify(order.customer.phone) : order.customer.phone}</p> : null}
-                  <p>Items from your store: {Array.isArray(order.sellerLineItems) ? order.sellerLineItems.reduce((count, lineItem) => count + (typeof lineItem.quantity === 'object' ? 1 : (Number(lineItem.quantity) || 1)), 0) : 0}</p>
-                  <p>Your subtotal: {typeof order.sellerSubtotal === 'object' ? JSON.stringify(order.sellerSubtotal) : (typeof order.sellerSubtotal === 'number' ? formatCheckoutAmount(order.sellerSubtotal) : '')}</p>
-                </div>
-
-                <div className="mt-3 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Your items in this order</p>
-                  <div className="mt-2 space-y-2">
-                    {order.sellerLineItems.map((lineItem, index) => {
-                      const quantity = Math.max(typeof lineItem.quantity === 'object' ? 1 : (Number(lineItem.quantity) || 1), 1);
-                      const linePrice = (typeof lineItem.unitPrice === 'object' ? 0 : (Number(lineItem.unitPrice) || 0)) * quantity;
-
-                      return (
-                        <div key={`${order.id}-${lineItem.id || lineItem.sku || index}`} className="flex items-start justify-between gap-3 text-xs text-[var(--svs-text)]">
-                          <div>
-                            <p className="font-semibold text-[var(--svs-text)]">{typeof lineItem.title === 'object' ? JSON.stringify(lineItem.title) : (lineItem.title || 'Untitled item')}</p>
-                            <p className="text-[var(--svs-muted)]">Qty: {quantity}</p>
-                          </div>
-                          <p className="font-semibold text-[var(--svs-primary-strong)]">{typeof linePrice === 'object' ? JSON.stringify(linePrice) : formatCheckoutAmount(linePrice)}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <label htmlFor={`order-status-${order.id}`} className="text-xs font-semibold text-[var(--svs-text)]">Status</label>
-                  <select
-                    id={`order-status-${order.id}`}
-                    value={order.status || ORDER_STATUS_FLOW[0]}
-                    onChange={(event) => handleOrderStatusUpdate(order.id, event.target.value)}
-                    disabled={updatingOrderId === order.id}
-                    className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--svs-text)]"
-                  >
-                    {getSellerStatusOptions(order.status).map((status) => (
-                      <option key={`${order.id}-${status}`} value={status}>{status}</option>
-                    ))}
-                  </select>
-                  {updatingOrderId === order.id ? (
-                    <span className="text-xs text-[var(--svs-muted)]">Updating...</span>
-                  ) : null}
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+        </div>
+      ) : null}
     </PageFrame>
   );
 };
