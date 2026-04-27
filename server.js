@@ -7,7 +7,28 @@ const app = express();
 const PORT = process.env.SERVER_PORT || 5000;
 const NOMINATIM_USER_AGENT = 'SVS E-Commerce/1.0 (local development address lookup)';
 
-app.use(cors({ origin: ['http://localhost:3000', 'http://localhost:3001'] }));
+// CORS: allow local dev plus any deployed origins listed in CORS_ALLOWED_ORIGINS
+// (comma-separated). Also allows any *.vercel.app preview by default.
+const staticAllowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  ...(process.env.CORS_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true); // server-to-server / curl
+      if (staticAllowedOrigins.includes(origin)) return callback(null, true);
+      if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)) return callback(null, true);
+      return callback(new Error(`Origin ${origin} not allowed by CORS`));
+    },
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 const fetchAddressJson = async (url, options = {}) => {
