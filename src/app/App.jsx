@@ -252,6 +252,7 @@ const createSellerListingFormState = () => ({
   title: '',
   description: '',
   price: '',
+  currency: 'USD',
   quantity: '',
   marketKey: '',
   ...EMPTY_GROCERIES_LISTING_FIELDS,
@@ -3229,11 +3230,15 @@ const getSellerListingValidationMessage = (formState) => {
 };
 
 const buildSellerItemDetailsJson = (formState) => {
+  const sharedFields = {
+    currency: SUPPORTED_CURRENCIES.some((entry) => entry.code === formState.currency) ? formState.currency : 'USD',
+  };
   if (formState.marketKey === 'groceries') {
     const categoryKey = String(formState.categoryKey || '').trim();
     const categoryTitle = getGroceriesCategoryTitle(categoryKey);
     return Object.fromEntries(
       Object.entries({
+        ...sharedFields,
         categoryKey,
         category: categoryTitle,
         brand: String(formState.brand || '').trim(),
@@ -3249,6 +3254,7 @@ const buildSellerItemDetailsJson = (formState) => {
   if (formState.marketKey === 'beverages') {
     return Object.fromEntries(
       Object.entries({
+        ...sharedFields,
         beverageCategory: String(formState.beverageCategory || '').trim(),
         beverageType: String(formState.beverageType || '').trim(),
         brand: String(formState.brand || '').trim(),
@@ -3263,6 +3269,7 @@ const buildSellerItemDetailsJson = (formState) => {
     const isMoviesCategory = ticketCategory === 'Movies';
     return Object.fromEntries(
       Object.entries({
+        ...sharedFields,
         category: ticketCategory,
         date: String(formState.ticketDate || '').trim(),
         country: String(formState.ticketCountry || '').trim(),
@@ -3276,7 +3283,7 @@ const buildSellerItemDetailsJson = (formState) => {
       }).filter(([, value]) => Boolean(String(value || '').trim())),
     );
   }
-  return {};
+  return sharedFields;
 };
 
 const getGroceriesListingMetaText = (item = {}) => {
@@ -3310,9 +3317,169 @@ const formatSaleAmount = (amount, decimals) => new Intl.NumberFormat('en-US', {
   maximumFractionDigits: decimals,
 }).format(amount);
 
-const formatCheckoutAmount = (amount) => `R ${formatSaleAmount(amount, 2)}`;
+// ---------------------------------------------------------------------------
+// Currency: live FX conversion for buyers; sellers always paid in their
+// listed currency. Rates are loaded from open.er-api.com (USD base) with a
+// localStorage cache and a hardcoded fallback table.
+// ---------------------------------------------------------------------------
+const SUPPORTED_CURRENCIES = [
+  { code: 'USD', symbol: '$', name: 'US Dollar', flag: '🇺🇸' },
+  { code: 'EUR', symbol: '€', name: 'Euro', flag: '🇪🇺' },
+  { code: 'GBP', symbol: '£', name: 'British Pound', flag: '🇬🇧' },
+  { code: 'ZAR', symbol: 'R', name: 'South African Rand', flag: '🇿🇦' },
+  { code: 'NGN', symbol: '₦', name: 'Nigerian Naira', flag: '🇳🇬' },
+  { code: 'KES', symbol: 'KSh', name: 'Kenyan Shilling', flag: '🇰🇪' },
+  { code: 'GHS', symbol: 'GH₵', name: 'Ghanaian Cedi', flag: '🇬🇭' },
+  { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar', flag: '🇨🇦' },
+  { code: 'AUD', symbol: 'A$', name: 'Australian Dollar', flag: '🇦🇺' },
+  { code: 'INR', symbol: '₹', name: 'Indian Rupee', flag: '🇮🇳' },
+  { code: 'JPY', symbol: '¥', name: 'Japanese Yen', flag: '🇯🇵' },
+  { code: 'CNY', symbol: '¥', name: 'Chinese Yuan', flag: '🇨🇳' },
+  { code: 'BRL', symbol: 'R$', name: 'Brazilian Real', flag: '🇧🇷' },
+  { code: 'AED', symbol: 'AED', name: 'UAE Dirham', flag: '🇦🇪' },
+];
 
-const getNumericPriceValue = (price, discountRate = SALE_DISCOUNT_RATE) => {
+// Approximate fallback rates per 1 USD (used until live rates load)
+const FALLBACK_FX_RATES_USD = {
+  USD: 1, EUR: 0.92, GBP: 0.79, ZAR: 18.85, NGN: 1500,
+  KES: 129, GHS: 14.5, CAD: 1.36, AUD: 1.51, INR: 83.4,
+  JPY: 154, CNY: 7.24, BRL: 5.05, AED: 3.67,
+};
+
+const SYMBOL_TO_CURRENCY = {
+  'R$': 'BRL', 'C$': 'CAD', 'A$': 'AUD', 'GH₵': 'GHS', 'KSh': 'KES', 'AED': 'AED',
+  $: 'USD', '€': 'EUR', '£': 'GBP', '₦': 'NGN', '₹': 'INR', '¥': 'JPY', R: 'ZAR',
+};
+
+const FX_CACHE_KEY = 'svs-fx-rates';
+const FX_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+const BUYER_CURRENCY_STORAGE_KEY = 'svs-buyer-currency';
+
+const readInitialBuyerCurrency = () => {
+  if (typeof window === 'undefined') return 'USD';
+  const stored = window.localStorage.getItem(BUYER_CURRENCY_STORAGE_KEY);
+  if (stored && SUPPORTED_CURRENCIES.some((entry) => entry.code === stored)) return stored;
+  return 'USD';
+};
+
+const readCachedFxRates = () => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(FX_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || !parsed.rates) return null;
+    return parsed;
+  } catch (error) { return null; }
+};
+
+const _fxState = (() => {
+  const cached = readCachedFxRates();
+  return {
+    rates: { ...FALLBACK_FX_RATES_USD, ...(cached?.rates || {}) },
+    fetchedAt: cached?.fetchedAt || 0,
+    buyerCurrency: readInitialBuyerCurrency(),
+    inflightFetch: null,
+  };
+})();
+
+const _fxSubscribers = new Set();
+const notifyCurrencyChange = () => {
+  _fxSubscribers.forEach((cb) => { try { cb(); } catch (error) { /* ignore */ } });
+};
+
+const setBuyerCurrency = (code) => {
+  if (!SUPPORTED_CURRENCIES.some((entry) => entry.code === code)) return;
+  if (_fxState.buyerCurrency === code) return;
+  _fxState.buyerCurrency = code;
+  if (typeof window !== 'undefined') {
+    try { window.localStorage.setItem(BUYER_CURRENCY_STORAGE_KEY, code); } catch (error) { /* ignore */ }
+  }
+  notifyCurrencyChange();
+};
+
+const getCurrencyDefinition = (code) => SUPPORTED_CURRENCIES.find((entry) => entry.code === code) || SUPPORTED_CURRENCIES[0];
+
+const refreshFxRates = async () => {
+  if (typeof window === 'undefined') return;
+  if (Date.now() - _fxState.fetchedAt < FX_TTL_MS && _fxState.fetchedAt > 0) return;
+  if (_fxState.inflightFetch) return _fxState.inflightFetch;
+
+  _fxState.inflightFetch = (async () => {
+    try {
+      const res = await fetch('https://open.er-api.com/v6/latest/USD');
+      if (!res.ok) throw new Error('fx fetch failed');
+      const data = await res.json();
+      if (data && data.rates) {
+        _fxState.rates = { ...FALLBACK_FX_RATES_USD, ...data.rates };
+        _fxState.fetchedAt = Date.now();
+        try {
+          window.localStorage.setItem(FX_CACHE_KEY, JSON.stringify({ rates: _fxState.rates, fetchedAt: _fxState.fetchedAt }));
+        } catch (error) { /* ignore */ }
+        notifyCurrencyChange();
+      }
+    } catch (error) { /* keep fallback */ }
+    finally { _fxState.inflightFetch = null; }
+  })();
+
+  return _fxState.inflightFetch;
+};
+
+const convertAmount = (amount, fromCode = 'USD', toCode = _fxState.buyerCurrency) => {
+  const numericAmount = Number(amount) || 0;
+  const fromRate = _fxState.rates[fromCode] || 1;
+  const toRate = _fxState.rates[toCode] || 1;
+  const usdValue = numericAmount / fromRate;
+  return usdValue * toRate;
+};
+
+const formatAmountInCurrency = (amount, code = _fxState.buyerCurrency, decimals) => {
+  const def = getCurrencyDefinition(code);
+  const fixedDecimals = decimals != null ? decimals : (code === 'JPY' ? 0 : 2);
+  const numericAmount = Number(amount) || 0;
+  const symbol = def.symbol.length > 1 ? `${def.symbol} ` : def.symbol;
+  return `${symbol}${formatSaleAmount(numericAmount, fixedDecimals)}`;
+};
+
+const detectCurrencyFromPriceString = (price) => {
+  const text = String(price ?? '').trim();
+  if (!text) return null;
+  for (const sym of ['R$', 'C$', 'A$', 'GH₵', 'KSh', 'AED']) {
+    if (text.startsWith(sym)) return SYMBOL_TO_CURRENCY[sym];
+  }
+  for (const sym of ['$', '€', '£', '₦', '₹', '¥']) {
+    if (text.startsWith(sym)) return SYMBOL_TO_CURRENCY[sym];
+  }
+  if (/^R\s*\d/.test(text)) return 'ZAR';
+  return null;
+};
+
+const useBuyerCurrency = () => {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const cb = () => setTick((n) => n + 1);
+    _fxSubscribers.add(cb);
+    refreshFxRates();
+    return () => { _fxSubscribers.delete(cb); };
+  }, []);
+  return {
+    code: _fxState.buyerCurrency,
+    setCode: setBuyerCurrency,
+    rates: _fxState.rates,
+    fetchedAt: _fxState.fetchedAt,
+  };
+};
+
+const formatCheckoutAmount = (amount, fromCurrency = 'USD') => {
+  const buyerCode = _fxState.buyerCurrency;
+  const converted = convertAmount(amount, fromCurrency, buyerCode);
+  return formatAmountInCurrency(converted, buyerCode, buyerCode === 'JPY' ? 0 : 2);
+};
+
+const formatSellerAmount = (amount, sellerCurrency = 'USD', decimals) => formatAmountInCurrency(amount, sellerCurrency, decimals);
+
+
+const getNumericPriceValue = (price, discountRate = SALE_DISCOUNT_RATE, sourceCurrency = null) => {
   const text = String(price ?? '').trim();
   const match = text.match(/^([^\d-]*)(\d[\d,]*(?:\.\d+)?)(.*)$/);
 
@@ -3326,7 +3493,11 @@ const getNumericPriceValue = (price, discountRate = SALE_DISCOUNT_RATE) => {
     return 0;
   }
 
-  return Math.max(amount * (1 - discountRate), 0);
+  const fromCurrency = sourceCurrency || detectCurrencyFromPriceString(text) || 'USD';
+  const buyerCurrency = _fxState.buyerCurrency;
+  const convertedAmount = convertAmount(amount, fromCurrency, buyerCurrency);
+
+  return Math.max(convertedAmount * (1 - discountRate), 0);
 };
 
 const normalizePriceFilterInput = (value) => String(value || '')
@@ -3344,10 +3515,11 @@ const parsePriceFilterInput = (value) => {
   return Number.isFinite(parsedValue) ? parsedValue : null;
 };
 
-const formatPriceFilterAmount = (amount) => {
+const formatPriceFilterAmount = (amount, currencyCode = null) => {
   const safeAmount = Number(amount) || 0;
-  const decimals = Number.isInteger(safeAmount) ? 0 : 2;
-  return formatSaleAmount(safeAmount, decimals);
+  const code = currencyCode || _fxState.buyerCurrency;
+  const decimals = code === 'JPY' ? 0 : (Number.isInteger(safeAmount) ? 0 : 2);
+  return formatAmountInCurrency(safeAmount, code, decimals);
 };
 
 const getPriceFilterStep = (minPrice, maxPrice) => {
@@ -3369,14 +3541,16 @@ const getPriceFilterStep = (minPrice, maxPrice) => {
 };
 
 const useMarketplacePriceFilter = (items = [], boundsItems = null) => {
+  const { code: buyerCurrencyCode } = useBuyerCurrency();
   const [isPriceFilterOpen, setIsPriceFilterOpen] = useState(false);
   const [minPriceInput, setMinPriceInput] = useState('');
   const [maxPriceInput, setMaxPriceInput] = useState('');
 
   const sourceForBounds = Array.isArray(boundsItems) && boundsItems.length ? boundsItems : items;
   const availablePrices = useMemo(() => sourceForBounds
-    .map((item) => getNumericPriceValue(item?.price))
-    .filter((price) => Number.isFinite(price) && price >= 0), [sourceForBounds]);
+    .map((item) => getNumericPriceValue(item?.price, SALE_DISCOUNT_RATE, item?.currency || null))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    .filter((price) => Number.isFinite(price) && price >= 0), [sourceForBounds, buyerCurrencyCode]);
   const minimumAvailablePrice = availablePrices.length ? Math.min(...availablePrices) : 0;
   const maximumAvailablePrice = availablePrices.length ? Math.max(...availablePrices) : 0;
   const sliderStep = useMemo(
@@ -3396,7 +3570,7 @@ const useMarketplacePriceFilter = (items = [], boundsItems = null) => {
   }, [maxPriceInput, minPriceInput]);
 
   const filteredItems = useMemo(() => items.filter((item) => {
-    const numericPrice = getNumericPriceValue(item?.price);
+    const numericPrice = getNumericPriceValue(item?.price, SALE_DISCOUNT_RATE, item?.currency || null);
 
     if (normalizedBounds.minimumPrice !== null && numericPrice < normalizedBounds.minimumPrice) {
       return false;
@@ -3407,7 +3581,14 @@ const useMarketplacePriceFilter = (items = [], boundsItems = null) => {
     }
 
     return true;
-  }), [items, normalizedBounds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [items, normalizedBounds, buyerCurrencyCode]);
+
+  useEffect(() => {
+    // When buyer currency changes, clear the manual min/max so bounds re-derive in the new currency.
+    setMinPriceInput('');
+    setMaxPriceInput('');
+  }, [buyerCurrencyCode]);
 
   useEffect(() => {
     if (!availablePrices.length) {
@@ -3620,6 +3801,7 @@ const MinimalCheckoutShell = ({ title, badge = null, children }) => {
     document.documentElement.setAttribute('lang', nextLanguage.code);
     document.documentElement.setAttribute('dir', isRtlLanguage(nextLanguage.code) ? 'rtl' : 'ltr');
     setIsLanguageModalOpen(false);
+    if (typeof window !== 'undefined') window.location.reload();
   }, [i18n]);
 
   useEffect(() => {
@@ -3998,6 +4180,12 @@ const mapSellerItemRecord = (record) => {
   const beverageCategory = String(rawDetailsJson.beverageCategory || '');
   const beverageType = String(rawDetailsJson.beverageType || '');
 
+  const sellerCurrency = (() => {
+    const stored = String(rawDetailsJson.currency || '').toUpperCase();
+    if (SUPPORTED_CURRENCIES.some((entry) => entry.code === stored)) return stored;
+    return detectCurrencyFromPriceString(record.price) || 'USD';
+  })();
+
   return {
     id: `seller-${record.id}`,
     dbId: record.id,
@@ -4005,6 +4193,7 @@ const mapSellerItemRecord = (record) => {
     description: record.description || rawDetailsJson.description || '',
     availableQuantity: normalizeListingQuantity(record.quantity, 0),
     price: record.price,
+    currency: sellerCurrency,
     image: primaryImage,
     images: imageList.length ? imageList : (primaryImage ? [primaryImage] : []),
     marketKey: record.market_key,
@@ -4058,7 +4247,7 @@ const doesLineItemBelongToSeller = (lineItem, sellerEmail, ownedListingIds) => {
 
 const getSellerItemsForMarket = (items, marketKey) => items.filter((item) => item.marketKey === marketKey);
 
-const getSalePrices = (price, discountRate = SALE_DISCOUNT_RATE) => {
+const getSalePrices = (price, discountRate = SALE_DISCOUNT_RATE, sourceCurrency = null) => {
   const text = String(price ?? '').trim();
   const match = text.match(/^([^\d-]*)(\d[\d,]*(?:\.\d+)?)(.*)$/);
 
@@ -4074,18 +4263,35 @@ const getSalePrices = (price, discountRate = SALE_DISCOUNT_RATE) => {
     return { wasPrice: text, nowPrice: text };
   }
 
-  const decimals = normalizedAmountText.includes('.') ? normalizedAmountText.split('.')[1].length : 0;
-  const discountedAmount = Math.max(amount * (1 - discountRate), 0);
+  const detectedCurrency = sourceCurrency || detectCurrencyFromPriceString(text) || 'USD';
+  const buyerCurrency = _fxState.buyerCurrency;
+  const buyerDef = getCurrencyDefinition(buyerCurrency);
 
-  return {
-    wasPrice: `${prefix}${formatSaleAmount(amount, decimals)}${suffix}`,
-    nowPrice: `${prefix}${formatSaleAmount(discountedAmount, decimals)}${suffix}`,
-  };
+  const wasInBuyer = convertAmount(amount, detectedCurrency, buyerCurrency);
+  const discountedInBuyer = Math.max(wasInBuyer * (1 - discountRate), 0);
+
+  const decimals = buyerCurrency === 'JPY'
+    ? 0
+    : (normalizedAmountText.includes('.') ? Math.max(2, normalizedAmountText.split('.')[1].length) : 2);
+
+  const symbol = buyerDef.symbol.length > 1 ? `${buyerDef.symbol} ` : buyerDef.symbol;
+
+  // If buyer kept original currency, preserve original prefix/suffix; otherwise replace with new symbol.
+  const useOriginalFormatting = detectedCurrency === buyerCurrency && (prefix || suffix);
+  const formattedWas = useOriginalFormatting
+    ? `${prefix}${formatSaleAmount(amount, decimals)}${suffix}`
+    : `${symbol}${formatSaleAmount(wasInBuyer, decimals)}`;
+  const formattedNow = useOriginalFormatting
+    ? `${prefix}${formatSaleAmount(amount * (1 - discountRate), decimals)}${suffix}`
+    : `${symbol}${formatSaleAmount(discountedInBuyer, decimals)}`;
+
+  return { wasPrice: formattedWas, nowPrice: formattedNow };
 };
 
-const SalePrice = ({ price, className = '', wasClassName = '', nowClassName = '' }) => {
+const SalePrice = ({ price, currency = null, className = '', wasClassName = '', nowClassName = '' }) => {
   const { t } = useTranslation();
-  const { wasPrice, nowPrice } = getSalePrices(price);
+  useBuyerCurrency();
+  const { wasPrice, nowPrice } = getSalePrices(price, SALE_DISCOUNT_RATE, currency);
 
   return (
     <span className={`inline-flex items-center gap-2 ${className}`.trim()}>
@@ -4206,6 +4412,99 @@ const PriceFilterPanel = ({
         </div>
       ) : null}
     </section>
+  );
+};
+
+const CurrencySelectorButton = ({ compact = false, className = '' }) => {
+  const { code, setCode } = useBuyerCurrency();
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const wrapperRef = useRef(null);
+  const activeDef = getCurrencyDefinition(code);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const handlePointerDown = (event) => {
+      if (!wrapperRef.current?.contains(event.target)) setIsOpen(false);
+    };
+    window.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('touchstart', handlePointerDown);
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('touchstart', handlePointerDown);
+    };
+  }, [isOpen]);
+
+  const normalizedSearch = search.trim().toLowerCase();
+  const filtered = normalizedSearch
+    ? SUPPORTED_CURRENCIES.filter((entry) => (
+      entry.code.toLowerCase().includes(normalizedSearch)
+      || entry.name.toLowerCase().includes(normalizedSearch)
+    ))
+    : SUPPORTED_CURRENCIES;
+
+  return (
+    <div ref={wrapperRef} className={`relative ${className}`.trim()}>
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className={`inline-flex items-center gap-2 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 ${compact ? 'py-1.5' : 'py-2'} text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)]`}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        aria-label="Display currency"
+      >
+        <span aria-hidden="true">{activeDef.flag}</span>
+        <span>{activeDef.code}</span>
+        <ChevronDown className={`h-4 w-4 transition ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      {isOpen ? (
+        <div className="absolute right-0 top-[calc(100%+8px)] z-[80] w-72 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-2 shadow-2xl">
+          <div className="flex items-center gap-2 border-b border-[var(--svs-border)] px-2 pb-2">
+            <Search className="h-4 w-4 text-[var(--svs-muted)]" />
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search currencies..."
+              className="w-full bg-transparent text-sm text-[var(--svs-text)] outline-none"
+              aria-label="Search currencies"
+            />
+          </div>
+          <ul className="max-h-72 overflow-y-auto py-1" role="menu">
+            {filtered.map((entry) => {
+              const isActive = entry.code === code;
+              return (
+                <li key={entry.code}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCode(entry.code);
+                      setIsOpen(false);
+                      setSearch('');
+                      if (typeof window !== 'undefined') window.location.reload();
+                    }}
+                    className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition ${isActive ? 'bg-[var(--svs-primary)] text-white' : 'text-[var(--svs-text)] hover:bg-[var(--svs-surface-soft)]'}`}
+                    role="menuitemradio"
+                    aria-checked={isActive}
+                  >
+                    <span className="text-base" aria-hidden="true">{entry.flag}</span>
+                    <span className="font-bold">{entry.code}</span>
+                    <span className={`flex-1 text-xs ${isActive ? 'text-white/85' : 'text-[var(--svs-muted)]'}`}>{entry.name}</span>
+                    <span className={`text-xs font-semibold ${isActive ? 'text-white' : 'text-[var(--svs-muted)]'}`}>{entry.symbol}</span>
+                  </button>
+                </li>
+              );
+            })}
+            {filtered.length === 0 ? (
+              <li className="px-3 py-2 text-xs text-[var(--svs-muted)]">No currencies match.</li>
+            ) : null}
+          </ul>
+          <p className="mt-1 border-t border-[var(--svs-border)] px-3 pt-2 text-[10px] text-[var(--svs-muted)]">
+            Live rates • Sellers always paid in their listed currency.
+          </p>
+        </div>
+      ) : null}
+    </div>
   );
 };
 
@@ -4666,6 +4965,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
     }
 
     setIsLanguageModalOpen(false);
+    if (typeof window !== 'undefined') window.location.reload();
   }, [i18n, isAuthenticated]);
 
   useEffect(() => {
@@ -5015,6 +5315,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                   cardRefs={languageCardRefs}
                 />
               </div>
+              {!isSellerConsoleRoute ? <CurrencySelectorButton compact /> : null}
               <button
                 type="button"
                 onClick={toggleTheme}
@@ -5206,6 +5507,11 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                 cardRefs={languageCardRefs}
               />
             </div>
+            {!isSellerConsoleRoute ? (
+              <div className="mb-3">
+                <CurrencySelectorButton className="block" />
+              </div>
+            ) : null}
             <div className="space-y-2 text-sm font-semibold">
               {isSellerConsoleRoute ? sellerConsoleNavItems.map((item) => (
                 <Link
@@ -5857,7 +6163,7 @@ const ECommercePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
           });
         }}
         isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/e-commerce', item.id))}
-        metaRenderer={(item) => <p className="text-sm text-slate-500">{item.subtitle || item.sellerName || 'Seller item'} • <SalePrice price={item.price} /></p>}
+        metaRenderer={(item) => <p className="text-sm text-slate-500">{item.subtitle || item.sellerName || 'Seller item'} • <SalePrice price={item.price} currency={item.currency} /></p>}
       />
     </PageFrame>
   );
@@ -7321,7 +7627,7 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
                 isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/secondhand-central', item.id))}
                 metaRenderer={(item) => (
                   <p className="text-sm text-slate-600">
-                    <SalePrice price={item.price} /> • {item.condition}
+                    <SalePrice price={item.price} currency={item.currency} /> • {item.condition}
                   </p>
                 )}
               />
@@ -7518,7 +7824,7 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
                           <span>Nairobi (Kenya)</span>
                         </p>
                       </div>
-                      <p className="mt-3 text-base font-bold text-[var(--svs-text)]"><SalePrice price={item.price} /></p>
+                      <p className="mt-3 text-base font-bold text-[var(--svs-text)]"><SalePrice price={item.price} currency={item.currency} /></p>
                       <div className="mt-3 flex gap-2">
                         <button
                           type="button"
@@ -8103,7 +8409,7 @@ const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
         });
       }}
       isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/wellness', item.id))}
-      metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} />{item.sellerName ? ` • ${item.sellerName}` : ''}</p>}
+      metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} currency={item.currency} />{item.sellerName ? ` • ${item.sellerName}` : ''}</p>}
     />
   </PageFrame>
   );
@@ -8153,7 +8459,7 @@ const TraditionalMedicinesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wis
         });
       }}
       isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/traditional-medicines-herbs', item.id))}
-      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • <SalePrice price={item.price} /></p>}
+      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • <SalePrice price={item.price} currency={item.currency} /></p>}
     />
   </PageFrame>
   );
@@ -8200,7 +8506,7 @@ const StationeryPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
         });
       }}
       isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/stationery-office', item.id))}
-      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • <SalePrice price={item.price} /></p>}
+      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • <SalePrice price={item.price} currency={item.currency} /></p>}
     />
   </PageFrame>
   );
@@ -8488,7 +8794,7 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
       });
     },
     isItemWishlisted: (item) => wishlistItemIds.includes(getCollectionItemId('/building-construction-tools', item.id)),
-    metaRenderer: (item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.subcategory || 'General'} • {item.brand || 'Generic'} • <SalePrice price={item.price} /></p>,
+    metaRenderer: (item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.subcategory || 'General'} • {item.brand || 'Generic'} • <SalePrice price={item.price} currency={item.currency} /></p>,
   });
 
   return (
@@ -9053,7 +9359,7 @@ const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
         });
       }}
       isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/hardware-software', item.id))}
-      metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} />{item.sellerName ? ` • ${item.sellerName}` : ''}</p>}
+      metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} currency={item.currency} />{item.sellerName ? ` • ${item.sellerName}` : ''}</p>}
     />
   </PageFrame>
   );
@@ -9100,7 +9406,7 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
         });
       }}
       isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/mobility-vehicles', item.id))}
-      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.specification || item.sellerName || 'Transport listing'} • <SalePrice price={item.price} /></p>}
+      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.specification || item.sellerName || 'Transport listing'} • <SalePrice price={item.price} currency={item.currency} /></p>}
     />
   </PageFrame>
   );
@@ -9451,7 +9757,7 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
       });
     },
     isItemWishlisted: (item) => wishlistItemIds.includes(getCollectionItemId('/fashion-style', item.id)),
-    metaRenderer: (item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.subcategory || 'General'} • {item.specification || item.sellerName || 'Style listing'} • <SalePrice price={item.price} /></p>,
+    metaRenderer: (item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.subcategory || 'General'} • {item.specification || item.sellerName || 'Style listing'} • <SalePrice price={item.price} currency={item.currency} /></p>,
   });
 
   return (
@@ -9610,7 +9916,7 @@ const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
         });
       }}
       isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/natural-resources-minerals', item.id))}
-      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.specification || item.sellerName || 'Resource listing'} • <SalePrice price={item.price} /></p>}
+      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.specification || item.sellerName || 'Resource listing'} • <SalePrice price={item.price} currency={item.currency} /></p>}
     />
   </PageFrame>
   );
@@ -9633,6 +9939,8 @@ const MARKET_BADGE_COLORS = {
 
 const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerItem, onUpdateOrderStatus, initialView = 'listings' }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const location = useLocation();
   const isAuthenticated = getAuthState();
   const userEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
   const isOrdersView = initialView === 'orders';
@@ -9664,6 +9972,28 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
   const [listingStockFilter, setListingStockFilter] = useState('all');
   const [listingSort, setListingSort] = useState('newest');
   const [orderStatusFilter, setOrderStatusFilter] = useState('all');
+
+  // Apply filters carried over from KPI card clicks (via navigate state).
+  useEffect(() => {
+    const navState = location.state;
+    if (!navState || typeof navState !== 'object') return;
+    if (navState.stockFilter) {
+      setListingStockFilter(navState.stockFilter);
+      setListingSearch('');
+      setListingMarketFilter('all');
+    }
+    if (navState.statusFilter) {
+      setOrderStatusFilter(navState.statusFilter);
+    }
+    if (navState.clearListingFilters) {
+      setListingSearch('');
+      setListingMarketFilter('all');
+      setListingStockFilter('all');
+      setListingSort('newest');
+    }
+    // Clear the state so refresh/back doesn't re-apply.
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.state, location.pathname, navigate]);
 
   useEffect(() => {
     if (!isAuthenticated || !hasSupabaseEnv || !supabase) return;
@@ -9789,6 +10119,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
       title: item.title,
       description: item.description,
       price: item.price,
+      currency: item.currency || 'USD',
       quantity: String(normalizeListingQuantity(item.availableQuantity, 0)),
       marketKey: item.marketKey,
       categoryKey: item.categoryKey || '',
@@ -9997,6 +10328,20 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
 
   const recentOrders = useMemo(() => visibleOrders.slice(0, 3), [visibleOrders]);
 
+  const sellerPrimaryCurrency = useMemo(() => {
+    const tally = new Map();
+    myListings.forEach((listing) => {
+      const code = String(listing.currency || 'USD').toUpperCase();
+      tally.set(code, (tally.get(code) || 0) + 1);
+    });
+    let best = 'USD';
+    let bestCount = -1;
+    tally.forEach((count, code) => {
+      if (count > bestCount) { best = code; bestCount = count; }
+    });
+    return best;
+  }, [myListings]);
+
   const sellerMarketOptions = useMemo(() => {
     const seen = new Set();
     const options = [];
@@ -10020,6 +10365,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
       if (listingStockFilter === 'in' && qty <= 3) return false;
       if (listingStockFilter === 'low' && (qty === 0 || qty > 3)) return false;
       if (listingStockFilter === 'out' && qty !== 0) return false;
+      if (listingStockFilter === 'alerts' && qty > 3) return false;
       if (search) {
         const haystack = `${listing.title || ''} ${listing.description || ''}`.toLowerCase();
         if (!haystack.includes(search)) return false;
@@ -10208,31 +10554,63 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
 
           {/* KPI strip */}
           <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+            <button
+              type="button"
+              onClick={() => {
+                if (isOrdersView) setOrderStatusFilter('Delivered');
+                else navigate('/seller/orders', { state: { statusFilter: 'Delivered' } });
+              }}
+              className={`text-left rounded-xl border bg-[var(--svs-surface)] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition hover:border-[var(--svs-primary)] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--svs-primary)] ${isOrdersView && orderStatusFilter === 'Delivered' ? 'border-[var(--svs-primary)] ring-1 ring-[var(--svs-primary)]' : 'border-[var(--svs-border)]'}`}
+              aria-pressed={isOrdersView && orderStatusFilter === 'Delivered'}
+            >
               <div className="flex items-start justify-between">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Revenue</p>
                 <span className="rounded-lg bg-emerald-50 p-1.5 text-emerald-600"><DollarSign className="h-4 w-4" /></span>
               </div>
-              <p className="mt-2 text-2xl font-bold text-[var(--svs-text)]">{formatCheckoutAmount(totalRevenue)}</p>
+              <p className="mt-2 text-2xl font-bold text-[var(--svs-text)]">{formatSellerAmount(totalRevenue, sellerPrimaryCurrency)}</p>
               <p className="mt-1 text-xs text-[var(--svs-muted)]">{deliveredOrdersCount} delivered order{deliveredOrdersCount === 1 ? '' : 's'}</p>
-            </div>
-            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (isOrdersView) setOrderStatusFilter('active');
+                else navigate('/seller/orders', { state: { statusFilter: 'active' } });
+              }}
+              className={`text-left rounded-xl border bg-[var(--svs-surface)] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition hover:border-[var(--svs-primary)] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--svs-primary)] ${isOrdersView && orderStatusFilter === 'active' ? 'border-[var(--svs-primary)] ring-1 ring-[var(--svs-primary)]' : 'border-[var(--svs-border)]'}`}
+              aria-pressed={isOrdersView && orderStatusFilter === 'active'}
+            >
               <div className="flex items-start justify-between">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Pending</p>
                 <span className="rounded-lg bg-amber-50 p-1.5 text-amber-600"><Clock className="h-4 w-4" /></span>
               </div>
-              <p className="mt-2 text-2xl font-bold text-[var(--svs-text)]">{formatCheckoutAmount(pendingRevenue)}</p>
+              <p className="mt-2 text-2xl font-bold text-[var(--svs-text)]">{formatSellerAmount(pendingRevenue, sellerPrimaryCurrency)}</p>
               <p className="mt-1 text-xs text-[var(--svs-muted)]">{activeOrdersCount} active order{activeOrdersCount === 1 ? '' : 's'}</p>
-            </div>
-            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (isOrdersView) navigate('/seller/dashboard', { state: { clearListingFilters: true } });
+                else { setListingSearch(''); setListingMarketFilter('all'); setListingStockFilter('all'); setListingSort('newest'); }
+              }}
+              className={`text-left rounded-xl border bg-[var(--svs-surface)] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition hover:border-[var(--svs-primary)] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--svs-primary)] ${!isOrdersView && listingStockFilter === 'all' && listingMarketFilter === 'all' && !listingSearch ? 'border-[var(--svs-primary)] ring-1 ring-[var(--svs-primary)]' : 'border-[var(--svs-border)]'}`}
+              aria-pressed={!isOrdersView && listingStockFilter === 'all' && listingMarketFilter === 'all' && !listingSearch}
+            >
               <div className="flex items-start justify-between">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Listings</p>
                 <span className="rounded-lg bg-cyan-50 p-1.5 text-[var(--svs-primary-strong)]"><Package className="h-4 w-4" /></span>
               </div>
               <p className="mt-2 text-2xl font-bold text-[var(--svs-text)]">{myListings.length}</p>
               <p className="mt-1 text-xs text-[var(--svs-muted)]">{totalStockUnits} unit{totalStockUnits === 1 ? '' : 's'} in stock • {uniqueMarketCount} market{uniqueMarketCount === 1 ? '' : 's'}</p>
-            </div>
-            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (isOrdersView) navigate('/seller/dashboard', { state: { stockFilter: 'alerts' } });
+                else { setListingStockFilter('alerts'); setListingSearch(''); setListingMarketFilter('all'); }
+              }}
+              className={`text-left rounded-xl border bg-[var(--svs-surface)] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition hover:border-[var(--svs-primary)] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--svs-primary)] ${!isOrdersView && listingStockFilter === 'alerts' ? 'border-[var(--svs-primary)] ring-1 ring-[var(--svs-primary)]' : 'border-[var(--svs-border)]'}`}
+              aria-pressed={!isOrdersView && listingStockFilter === 'alerts'}
+            >
               <div className="flex items-start justify-between">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Stock Alerts</p>
                 <span className={`rounded-lg p-1.5 ${(lowStockListingsCount + outOfStockListingsCount) > 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`}>
@@ -10241,7 +10619,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
               </div>
               <p className="mt-2 text-2xl font-bold text-[var(--svs-text)]">{lowStockListingsCount + outOfStockListingsCount}</p>
               <p className="mt-1 text-xs text-[var(--svs-muted)]">{outOfStockListingsCount} out of stock • {lowStockListingsCount} low</p>
-            </div>
+            </button>
           </section>
 
           {/* Pending fulfillment alert (listings view only) */}
@@ -10322,6 +10700,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                     <option value="in">In stock</option>
                     <option value="low">Low stock</option>
                     <option value="out">Out of stock</option>
+                    <option value="alerts">Stock alerts (low + out)</option>
                   </select>
                   <select
                     value={listingSort}
@@ -10408,7 +10787,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                         </div>
                         <div className="flex flex-1 flex-col p-4">
                           <h3 className="line-clamp-2 text-sm font-bold leading-snug text-[var(--svs-text)]">{item.title}</h3>
-                          <p className="mt-1 text-sm font-semibold text-[var(--svs-primary-strong)]"><SalePrice price={item.price} /></p>
+                          <p className="mt-1 text-sm font-semibold text-[var(--svs-primary-strong)]"><SalePrice price={item.price} currency={item.currency} /></p>
                           <span className={`mt-2 inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-semibold ${stockClass}`}>{stockLabel}</span>
                           <div className="mt-auto flex gap-2 pt-4">
                             <button
@@ -10630,7 +11009,20 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Price</label>
-                  <input name="price" value={editForm.price} onChange={handleEditChange} placeholder="e.g. 29.99" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
+                  <div className="flex gap-2">
+                    <select
+                      name="currency"
+                      value={editForm.currency || 'USD'}
+                      onChange={handleEditChange}
+                      className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-2 text-sm text-[var(--svs-text)] outline-none"
+                      aria-label="Listing currency"
+                    >
+                      {SUPPORTED_CURRENCIES.map((entry) => (
+                        <option key={entry.code} value={entry.code}>{entry.code}</option>
+                      ))}
+                    </select>
+                    <input name="price" value={editForm.price} onChange={handleEditChange} placeholder="e.g. 29.99" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
+                  </div>
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Quantity</label>
@@ -11016,7 +11408,22 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
               </div>
               <div>
                 <label htmlFor="seller-price" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Price</label>
-                <input id="seller-price" name="price" value={formData.price} onChange={handleChange} required placeholder="129.99" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+                <div className="flex gap-2">
+                  <select
+                    id="seller-currency"
+                    name="currency"
+                    value={formData.currency || 'USD'}
+                    onChange={handleChange}
+                    className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-2.5 text-sm text-[var(--svs-text)] outline-none"
+                    aria-label="Listing currency"
+                  >
+                    {SUPPORTED_CURRENCIES.map((entry) => (
+                      <option key={entry.code} value={entry.code}>{entry.code}</option>
+                    ))}
+                  </select>
+                  <input id="seller-price" name="price" value={formData.price} onChange={handleChange} required placeholder="129.99" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+                </div>
+                <p className="mt-1 text-[11px] text-[var(--svs-muted)]">You will always be paid in your listing currency. Buyers see prices auto-converted to their selected currency.</p>
               </div>
               <div>
                 <label htmlFor="seller-quantity" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Quantity</label>
@@ -11156,7 +11563,7 @@ const PropertyHubPage = () => {
             <h3 className="text-lg font-bold">{getTranslatedValue(t, listing.titleKey, listing.title)}</h3>
             <p className="mt-1 text-sm text-slate-600">{getTranslatedValue(t, listing.typeKey, listing.type)}</p>
             <p className="mt-2 flex items-center gap-2 text-sm text-slate-600"><MapPin className="h-4 w-4" /> {getTranslatedValue(t, listing.locationKey, listing.location)}</p>
-            <p className="mt-3 text-sm text-[var(--svs-primary-strong)]"><SalePrice price={listing.price} /></p>
+            <p className="mt-3 text-sm text-[var(--svs-primary-strong)]"><SalePrice price={listing.price} currency={listing.currency} /></p>
             <button type="button" className={`${cudyBluePrimaryButtonClassName} mt-4 rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
               {t('common.viewDetails')}
             </button>
@@ -11189,7 +11596,7 @@ const BettingLotteryGamesPage = () => {
                 <p className="mt-1 text-sm text-slate-600">{t('internationalLotteryHub.drawDayLabel')}: {getTranslatedValue(t, game.drawDayKey, game.drawDay)}</p>
                 <div className="mt-3 text-sm text-[var(--svs-primary-strong)]">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('internationalLotteryHub.jackpotLabel')}</p>
-                  <SalePrice price={game.jackpot} />
+                  <SalePrice price={game.jackpot} currency={game.currency} />
                 </div>
                 <button type="button" className={`${cudyBluePrimaryButtonClassName} mt-4 rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
                   {t('common.playNow')}
@@ -11230,7 +11637,7 @@ const BettingLotteryGamesPage = () => {
           <ul className="mt-3 space-y-2 text-sm">
             {ticketEvents.filter((event) => event.type === 'Travel').map((event) => (
               <li key={`travel-${event.id}`} className="rounded-md bg-[#f8fdff] px-3 py-2">
-                {event.title} • <SalePrice price={event.price} />
+                {event.title} • <SalePrice price={event.price} currency={event.currency} />
               </li>
             ))}
           </ul>
@@ -11266,7 +11673,7 @@ const LivestockHubPage = () => {
             <h3 className="text-lg font-bold">{getTranslatedValue(t, item.titleKey, item.title)}</h3>
             <p className="mt-2 flex items-center gap-2 text-sm text-slate-600"><MapPin className="h-4 w-4" /> {getTranslatedValue(t, item.locationKey, item.location)}</p>
             <p className="mt-2 text-sm text-slate-600">{getTranslatedValue(t, item.summaryKey, item.summary)}</p>
-            <p className="mt-3 text-sm text-[var(--svs-primary-strong)]"><SalePrice price={item.price} /></p>
+            <p className="mt-3 text-sm text-[var(--svs-primary-strong)]"><SalePrice price={item.price} currency={item.currency} /></p>
             <button type="button" className={`${cudyBluePrimaryButtonClassName} mt-4 rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
               {t('common.viewDetails')}
             </button>
@@ -11552,7 +11959,7 @@ const SearchResultsPage = () => {
                 ) : null}
                 <h3 className="text-lg font-bold">{itemTitle}</h3>
                 <p className="mt-1 text-sm text-slate-600">{itemSection}</p>
-                {'price' in item ? <p className="mt-1 text-sm text-[var(--svs-primary-strong)]"><SalePrice price={item.price} /></p> : null}
+                {'price' in item ? <p className="mt-1 text-sm text-[var(--svs-primary-strong)]"><SalePrice price={item.price} currency={item.currency} /></p> : null}
                 <Link to={item.route} className={`${cudyBluePrimaryButtonClassName} mt-3 inline-flex rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white`}>
                   {t('common.openMarket')}
                 </Link>
