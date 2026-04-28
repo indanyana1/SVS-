@@ -5,32 +5,142 @@
 @import './styles/globals.css';
 
 /* ============================================================
-   DESKTOP-DOWN-SCALING SYSTEM
-   The app renders at a fixed 1280px desktop width inside #root,
-   then a CSS transform shrinks it to fit the device width.
-   The wrapper height is computed in JS (see src/app/main) so the
-   page does NOT leave a giant blank space below the scaled content.
+   MOBILE-FIRST GLOBAL BASELINE
+   Patterns drawn from Facebook/Instagram/Twitter/Airbnb mobile web.
+   These rules ensure every page contracts cleanly on phones
+   without per-page rewrites.
    ============================================================ */
+
+/* Box-sizing already covered by Tailwind preflight, but lock it
+   for any third-party widgets that might escape. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 html {
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;          /* never show horizontal scrollbar */
-  overflow-y: auto;            /* single vertical scrollbar lives on <html> */
-  scrollbar-gutter: stable;    /* reserve scrollbar space so icons aren't covered */
-  background: #f8fafc;
+  /* Single, stable scrollbar gutter so layout width never jumps. */
+  scrollbar-gutter: stable;
+  /* Crisp text on iOS / Android — prevents auto-resize on rotate. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Smooth in-page anchor scrolling. */
+  scroll-behavior: smooth;
+  /* Account for sticky / fixed headers when jumping to anchors. */
+  scroll-padding-top: 80px;
 }
 
 body {
   margin: 0;
   padding: 0;
-  /* IMPORTANT: do NOT set overflow on body — that creates a 2nd scrollbar. */
+  overflow-x: hidden;            /* never show horizontal scrollbar */
+  background: #f8fafc;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Prevent iOS double-tap zoom while still allowing pinch-zoom. */
+  touch-action: manipulation;
+  /* Native feel on iOS — disables tap highlight rectangle. */
+  -webkit-tap-highlight-color: transparent;
 }
 
-#root {
-  width: 1280px;               /* fixed virtual desktop width */
-  transform-origin: top left;  /* scale from the top-left corner */
-  /* --app-scale is set dynamically by JS, defaults to 1 for desktop */
-  transform: scale(var(--app-scale, 1));
-  overflow: hidden;            /* suppress the inner 1280px scrollbar */
+/* Images & media should always be fluid on mobile. */
+img,
+video,
+canvas,
+svg,
+picture {
+  max-width: 100%;
+  height: auto;
+  display: block;
 }
+/* But allow explicit Tailwind sizing classes to win. */
+img.h-full,
+img.h-screen,
+img[class*="h-["],
+img[class*="aspect-"] {
+  height: auto;
+}
+
+/* Inputs / buttons inherit font and reset iOS appearance. */
+input,
+select,
+textarea,
+button {
+  font: inherit;
+  color: inherit;
+}
+input,
+textarea,
+select {
+  /* iOS auto-zooms into inputs whose font-size < 16px. */
+  font-size: 16px;
+}
+@media (min-width: 640px) {
+  input,
+  textarea,
+  select {
+    font-size: inherit;
+  }
+}
+
+/* Tap targets — Apple HIG recommends >= 44px, Material >= 48px. */
+button,
+a[role="button"],
+[role="button"] {
+  min-height: 36px;
+}
+
+/* ============================================================
+   MOBILE TYPOGRAPHY DAMPER
+   The codebase has many hard-coded large desktop sizes
+   (text-4xl, text-5xl, text-6xl, text-[46px], etc.).
+   On phones these blow out the layout. We cap them here so
+   every heading shrinks gracefully without per-page edits.
+   ============================================================ */
+@media (max-width: 639px) {
+  /* Cap explosive headings at readable sizes. */
+  .text-6xl  { font-size: 2.25rem  !important; line-height: 1.15 !important; }
+  .text-5xl  { font-size: 2rem     !important; line-height: 1.15 !important; }
+  .text-4xl  { font-size: 1.75rem  !important; line-height: 1.2  !important; }
+  .text-3xl  { font-size: 1.5rem   !important; line-height: 1.25 !important; }
+
+  /* Pixel-locked large headings — match by attribute selector. */
+  [class*="text-[46px]"],
+  [class*="text-[48px]"],
+  [class*="text-[42px]"] { font-size: 1.875rem !important; line-height: 1.15 !important; }
+  [class*="text-[36px]"],
+  [class*="text-[32px]"] { font-size: 1.625rem !important; line-height: 1.2  !important; }
+  [class*="text-[28px]"],
+  [class*="text-[24px]"] { font-size: 1.25rem  !important; line-height: 1.3  !important; }
+
+  /* Tame oversized vertical padding sections. */
+  .py-24 { padding-top: 2.5rem !important; padding-bottom: 2.5rem !important; }
+  .py-20 { padding-top: 2.25rem !important; padding-bottom: 2.25rem !important; }
+  .py-16 { padding-top: 2rem !important; padding-bottom: 2rem !important; }
+
+  /* Hero images — keep proportions sensible on phones. */
+  .h-\[520px\],
+  .h-\[480px\],
+  .h-\[460px\],
+  .h-\[420px\] { height: 280px !important; }
+  .h-\[400px\],
+  .h-\[380px\] { height: 240px !important; }
+}
+
+/* Anything that would force horizontal overflow gets clamped. */
+.container,
+main,
+section,
+article,
+header,
+footer {
+  max-width: 100%;
+}
+
+/* Utility helpers consumed by JSX where needed. */
+.svs-hide-scrollbar::-webkit-scrollbar { display: none; }
+.svs-hide-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+
+
 

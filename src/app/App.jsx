@@ -5200,13 +5200,13 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
           <button
             type="button"
             onClick={() => setMobileOpen((prev) => !prev)}
-            className="hidden"
+            className="shrink-0 rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] p-2 text-[var(--svs-nav-text)] lg:hidden"
             aria-label="Toggle menu"
           >
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
 
-          <nav className="flex items-center gap-6 text-sm font-semibold text-[var(--svs-nav-text)]">
+          <nav className="hidden items-center gap-6 text-sm font-semibold text-[var(--svs-nav-text)] lg:flex">
             {isSellerConsoleRoute ? sellerConsoleNavItems.map((item) => (
               <Link key={item.href} to={item.href} className="transition hover:text-[var(--svs-primary)]">
                 {item.label}
@@ -5290,7 +5290,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
           </form>
 
           <div className="ml-auto flex items-center gap-1.5 text-[var(--svs-nav-text)] sm:gap-3">
-            <div className="flex items-center gap-3">
+            <div className="hidden items-center gap-3 lg:flex">
               <div className="relative" ref={desktopLanguageMenuRef}>
                 <button
                   type="button"
@@ -5640,29 +5640,29 @@ const HomePage = () => {
   return (
     <>
       <section
-        className="relative overflow-hidden bg-[#000000] px-4 py-16 text-white sm:py-24"
+        className="relative overflow-hidden bg-[#000000] px-3 py-8 text-white sm:px-4 sm:py-16 lg:py-24"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
         <div className="absolute inset-0 bg-gradient-to-br from-black via-[#141424] to-[#0a2030]" aria-hidden="true" />
         <div className="mx-auto w-full max-w-7xl">
-          <div className="relative overflow-hidden rounded-3xl border border-white/10">
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 sm:rounded-3xl">
             <img
               src={slide.image}
               alt={slide.title}
-              className="h-[420px] w-full object-cover md:h-[520px]"
+              className="h-[260px] w-full object-cover sm:h-[420px] md:h-[520px]"
               loading="eager"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/20" />
 
-            <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
-              <p className="rounded-full bg-[var(--svs-primary)] px-4 py-1 text-sm font-semibold text-white">{slide.label}</p>
-              <h1 className="mt-4 text-4xl font-bold leading-tight text-white sm:text-5xl md:text-6xl">{slide.title}</h1>
-              <p className="mt-3 text-lg text-slate-100 sm:text-2xl">{slide.subtitle}</p>
+            <div className="absolute inset-0 flex flex-col items-center justify-center px-3 text-center sm:px-4">
+              <p className="rounded-full bg-[var(--svs-primary)] px-3 py-1 text-xs font-semibold text-white sm:px-4 sm:text-sm">{slide.label}</p>
+              <h1 className="mt-3 text-2xl font-bold leading-tight text-white sm:mt-4 sm:text-4xl md:text-5xl lg:text-6xl">{slide.title}</h1>
+              <p className="mt-2 text-sm text-slate-100 sm:mt-3 sm:text-lg md:text-2xl">{slide.subtitle}</p>
               <button
                 type="button"
                 onClick={() => navigate(getLearnMoreRoute(slide))}
-                className={`${cudyBluePrimaryButtonClassName} mt-6 rounded-full bg-[var(--svs-primary)] px-8 py-3 text-base font-semibold text-white shadow-lg transition hover:scale-105 hover:bg-[#33b9f2]`}
+                className={`${cudyBluePrimaryButtonClassName} mt-4 rounded-full bg-[var(--svs-primary)] px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:scale-105 hover:bg-[#33b9f2] sm:mt-6 sm:px-8 sm:py-3 sm:text-base`}
               >
                 {t('common.learnMore')}
               </button>
@@ -7177,6 +7177,8 @@ const VotingProvidersPage = () => {
 
 const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const [filters, setFilters] = useState({ category: [], brand: [], productType: [], price: [0, 1000], availability: [] });
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false); // mobile drawer
+  const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(true);
   const { t } = useTranslation();
   const { categoryKey = '' } = useParams();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'groceries'), ...groceries], [sellerItems]);
@@ -7249,8 +7251,28 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
         titleClassName="text-xl text-white sm:text-2xl"
         subtitleClassName="mt-2 text-xs text-white/90 sm:text-sm"
       >
-        <div className="flex flex-row gap-8">
-          <div className="w-[280px] shrink-0">
+        <div className="flex flex-col gap-4 lg:flex-row lg:gap-8">
+          {/* Mobile drawer overlay */}
+          {isFiltersOpen ? (
+            <div
+              className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+              onClick={() => setIsFiltersOpen(false)}
+              role="presentation"
+            />
+          ) : null}
+
+          {/* Sidebar — hidden on mobile by default; toggleable on desktop */}
+          <div
+            className={`${isFiltersOpen ? 'fixed left-0 top-0 z-50 flex h-full w-[320px] max-w-[85vw] flex-col overflow-y-auto bg-white p-4 shadow-2xl sm:w-[340px]' : 'hidden'} ${isDesktopFiltersHidden ? 'lg:hidden' : 'lg:block lg:w-[280px] lg:shrink-0 lg:static lg:h-auto lg:p-0 lg:shadow-none'}`}
+          >
+            <button
+              type="button"
+              onClick={() => setIsFiltersOpen(false)}
+              className="mb-3 self-end rounded-full p-1.5 text-[var(--svs-muted)] transition hover:bg-slate-100 hover:text-[var(--svs-text)] lg:hidden"
+              aria-label="Close filters"
+            >
+              <X className="h-5 w-5" />
+            </button>
             <CategoryFilterSidebar
               filters={filters}
               setFilters={setFilters}
@@ -7261,7 +7283,25 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
               categoryTitle={activeCategory?.title || ''}
             />
           </div>
-          <div className="flex-1">
+
+          <div className="min-w-0 flex-1">
+            {/* Filter toggle bar */}
+            <div className="mb-4 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsFiltersOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--svs-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)] lg:hidden"
+              >
+                <Search className="h-3.5 w-3.5" /> Filter Products
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsDesktopFiltersHidden((prev) => !prev)}
+                className="hidden items-center gap-1.5 rounded-full border border-[var(--svs-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)] lg:inline-flex"
+              >
+                <Search className="h-3.5 w-3.5" /> {isDesktopFiltersHidden ? 'Show Filters' : 'Hide Filters'}
+              </button>
+            </div>
             {filteredMarketItems.length ? (
               <div className="grid grid-cols-3 gap-3 sm:gap-8 lg:grid-cols-3 xl:grid-cols-4">
                 {filteredMarketItems.map((item) => {
@@ -7300,17 +7340,17 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
                           </button>
                         ) : null}
                       </div>
-                      <div className="flex flex-1 flex-col p-5">
-                        <h3 className="text-xl font-bold text-[#0f6674] group-hover:text-[#33b9f2] mb-1">{itemTitle}</h3>
-                        <div className="mb-2 text-base text-[#374151] font-medium">{getGroceriesListingMetaText(item)}</div>
-                        <div className="mb-2 text-lg font-bold text-[#0f6674]">{getSalePrices(item.price).nowPrice}</div>
+                      <div className="flex flex-1 flex-col p-3 sm:p-5">
+                        <h3 className="mb-1 text-sm font-bold leading-tight text-[#0f6674] group-hover:text-[#33b9f2] sm:text-xl">{itemTitle}</h3>
+                        <div className="mb-2 hidden text-base font-medium text-[#374151] sm:block">{getGroceriesListingMetaText(item)}</div>
+                        <div className="mb-2 text-base font-bold text-[#0f6674] sm:text-lg">{getSalePrices(item.price).nowPrice}</div>
                         {availableQuantity !== null ? (
-                          <p className="text-xs text-[#0f6674]/70 mb-2">
+                          <p className="mb-2 hidden text-xs text-[#0f6674]/70 sm:block">
                             Quantity: {availableQuantity}
                             {isOutOfStock ? ' (Out of stock)' : ''}
                           </p>
                         ) : null}
-                        <div className="mt-auto flex gap-2">
+                        <div className="mt-auto flex flex-col gap-2 sm:flex-row">
                           <button
                             type="button"
                             disabled={isOutOfStock}
@@ -7318,7 +7358,7 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
                               event.stopPropagation();
                               onAddToCart(buildCartItem(item));
                             }}
-                            className="rounded-full bg-[#0f6674] px-5 py-2 text-base font-semibold text-white shadow hover:bg-[#33b9f2] disabled:bg-slate-400 disabled:cursor-not-allowed"
+                            className="rounded-full bg-[#0f6674] px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-[#33b9f2] disabled:bg-slate-400 disabled:cursor-not-allowed sm:px-5 sm:py-2 sm:text-base"
                           >
                             {isOutOfStock ? 'Out of stock' : t('common.addToBasket')}
                           </button>
@@ -7329,7 +7369,7 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
                               event.stopPropagation();
                               onBuyNow?.(buildCartItem(item));
                             }}
-                            className="rounded-full border border-[#0f6674] px-5 py-2 text-base font-semibold text-[#0f6674] bg-white shadow hover:bg-[#e0f7fa] disabled:bg-slate-400 disabled:cursor-not-allowed"
+                            className="rounded-full border border-[#0f6674] bg-white px-3 py-1.5 text-xs font-semibold text-[#0f6674] shadow hover:bg-[#e0f7fa] disabled:bg-slate-400 disabled:cursor-not-allowed sm:px-5 sm:py-2 sm:text-base"
                           >
                             Buy Now
                           </button>
@@ -7397,7 +7437,7 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
   const [selectedCondition, setSelectedCondition] = useState('all');
   const [sectionVisibleCounts, setSectionVisibleCounts] = useState({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(false);
+  const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(true);
   const [sidebarConditionOpen, setSidebarConditionOpen] = useState(false);
   const [sidebarPriceOpen, setSidebarPriceOpen] = useState(false);
   const [sidebarConditionFilters, setSidebarConditionFilters] = useState([]);
@@ -7922,7 +7962,7 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
   const [selectedCuisines, setSelectedCuisines] = useState([]);
   const [selectedTypes, setSelectedTypes] = useState([]);
   const [priceRange, setPriceRange] = useState([0, 20]);
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
 
   // Unique categories, brands, cuisines, types from fastFoodItems
   const categories = Array.from(new Set(fastFoodItems.map(i => i.category)));
@@ -8318,9 +8358,9 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
                 <div className="flex flex-1 flex-col p-4">
                   <h3 className="text-base font-bold text-[var(--svs-text)]">{item.title}</h3>
                   {item.subtitle ? (
-                    <p className="mt-0.5 text-xs text-[var(--svs-muted)]">{item.subtitle}</p>
+                    <p className="mt-0.5 hidden text-xs text-[var(--svs-muted)] sm:block">{item.subtitle}</p>
                   ) : null}
-                  <div className="mt-2 space-y-1 text-xs text-[var(--svs-muted)]">
+                  <div className="mt-2 hidden space-y-1 text-xs text-[var(--svs-muted)] sm:block">
                     {item.volume ? (
                       <p>Volume: {item.volume}</p>
                     ) : null}
@@ -8535,7 +8575,7 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
   const [selectedProjectType, setSelectedProjectType] = useState('All');
   const [showOnSaleOnly, setShowOnSaleOnly] = useState(false);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-  const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(false);
+  const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(true);
   const [showAllRelated, setShowAllRelated] = useState(false);
   const productsSectionRef = useRef(null);
   const relatedSectionRef = useRef(null);
@@ -8947,7 +8987,7 @@ const HomeCarePage = ({ sellerItems = [], onOpenItemDetails }) => {
   const providersSectionRef = useRef(null);
   const relatedListingsSectionRef = useRef(null);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-  const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(false);
+  const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(true);
   const [showAllRelatedListings, setShowAllRelatedListings] = useState(false);
 
   const visibleCities = selectedCountry ? (homeCareCitiesByCountry[selectedCountry] || []) : [];
@@ -9456,7 +9496,7 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
   const [selectedOccasion, setSelectedOccasion] = useState('All');
   const [showOnSaleOnly, setShowOnSaleOnly] = useState(false);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-  const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(false);
+  const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(true);
   const [showAllRelated, setShowAllRelated] = useState(false);
   const productsSectionRef = useRef(null);
   const relatedSectionRef = useRef(null);
@@ -14329,7 +14369,7 @@ const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaR
         return (
           <article
             key={item.id}
-            className="overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-card-bg)] shadow-[0_4px_8px_rgba(0,0,0,0.1)] transition hover:scale-[1.03]"
+            className="flex flex-col overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-card-bg)] shadow-[0_2px_12px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(15,23,42,0.14)]"
             role="button"
             tabIndex={0}
             onClick={() => onOpenItemDetails?.(item)}
@@ -14341,7 +14381,7 @@ const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaR
             }}
           >
             <div className="relative">
-              <img src={item.image} alt={itemTitle} className="h-24 w-full object-cover sm:h-40" loading="lazy" />
+              <img src={item.image} alt={itemTitle} className="aspect-[4/3] w-full object-cover sm:h-40 sm:aspect-auto" loading="lazy" />
               {onToggleWishlist ? (
                 <button
                   type="button"
@@ -14351,25 +14391,26 @@ const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaR
                   }}
                   aria-pressed={isItemWishlisted?.(item) || false}
                   aria-label={isItemWishlisted?.(item) ? 'Remove from wishlist' : 'Add to wishlist'}
-                  className={`absolute right-3 top-3 rounded-full border p-2 transition ${isItemWishlisted?.(item) ? 'border-rose-200 bg-rose-50 text-rose-600' : 'border-white/70 bg-white/90 text-slate-700 hover:bg-white'}`}
+                  className={`absolute right-2 top-2 rounded-full border p-1.5 transition sm:right-3 sm:top-3 sm:p-2 ${isItemWishlisted?.(item) ? 'border-rose-200 bg-rose-50 text-rose-600' : 'border-white/70 bg-white/90 text-slate-700 hover:bg-white'}`}
                 >
-                  <Heart className={`h-4 w-4 ${isItemWishlisted?.(item) ? 'fill-current' : ''}`} />
+                  <Heart className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isItemWishlisted?.(item) ? 'fill-current' : ''}`} />
                 </button>
               ) : null}
             </div>
-            <div className="p-2 sm:p-4">
-              <h3 className="text-sm font-bold sm:text-lg">{itemTitle}</h3>
-              <div className="mt-1">{metaRenderer(item)}</div>
+            <div className="flex flex-1 flex-col p-3 sm:p-4">
+              <h3 className="text-sm font-bold leading-tight text-[var(--svs-text)] sm:text-lg">{itemTitle}</h3>
+              {/* Meta (volume, brand, etc.) — hidden on mobile to keep cards compact. */}
+              <div className="mt-1 hidden text-xs text-[var(--svs-muted)] sm:block sm:text-sm">{metaRenderer(item)}</div>
               {/* Description intentionally hidden in main listing. Only show in details modal. */}
               {availableQuantity !== null ? (
-                <p className="mt-1 text-xs text-[var(--svs-muted)]">
-                  Quantity: {availableQuantity}
-                  {isOutOfStock ? ' (Out of stock - wishlist only)' : ' available for checkout'}
+                <p className="mt-1 hidden text-[11px] text-[var(--svs-muted)] sm:block sm:text-xs">
+                  Qty: {availableQuantity}
+                  {isOutOfStock ? ' (Out of stock)' : ''}
                 </p>
               ) : null}
               {itemSizeOptions.length ? (
-                <div className="mt-3">
-                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-[var(--svs-muted)]">
+                <div className="mt-3 hidden sm:block">
+                  <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--svs-muted)] sm:text-xs">
                     Size
                   </label>
                   <select
@@ -14382,7 +14423,7 @@ const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaR
                         [item.id]: event.target.value,
                       }));
                     }}
-                    className="w-full rounded-md border border-[var(--svs-border)] bg-white px-3 py-2 text-sm text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)]"
+                    className="w-full rounded-md border border-[var(--svs-border)] bg-white px-2 py-1.5 text-xs text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)] sm:px-3 sm:py-2 sm:text-sm"
                   >
                     {itemSizeOptions.map((sizeOption) => (
                       <option key={sizeOption} value={sizeOption}>{sizeOption}</option>
@@ -14390,7 +14431,7 @@ const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaR
                   </select>
                 </div>
               ) : null}
-              <div className="mt-4 space-y-2">
+              <div className="mt-auto pt-3 space-y-2">
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <button
                     type="button"
