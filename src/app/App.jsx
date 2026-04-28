@@ -5200,13 +5200,13 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
           <button
             type="button"
             onClick={() => setMobileOpen((prev) => !prev)}
-            className="shrink-0 rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] p-2 text-[var(--svs-nav-text)] lg:hidden"
+            className="hidden"
             aria-label="Toggle menu"
           >
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
 
-          <nav className="hidden items-center gap-6 text-sm font-semibold text-[var(--svs-nav-text)] lg:flex">
+          <nav className="flex items-center gap-6 text-sm font-semibold text-[var(--svs-nav-text)]">
             {isSellerConsoleRoute ? sellerConsoleNavItems.map((item) => (
               <Link key={item.href} to={item.href} className="transition hover:text-[var(--svs-primary)]">
                 {item.label}
@@ -5290,7 +5290,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
           </form>
 
           <div className="ml-auto flex items-center gap-1.5 text-[var(--svs-nav-text)] sm:gap-3">
-            <div className="hidden items-center gap-3 lg:flex">
+            <div className="flex items-center gap-3">
               <div className="relative" ref={desktopLanguageMenuRef}>
                 <button
                   type="button"
@@ -6375,7 +6375,7 @@ const MovieDetailsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
       {similarMovies.length > 0 ? (
         <section className="mx-auto max-w-7xl px-4 pt-10 pb-16 sm:px-6 sm:pt-14 sm:pb-20 lg:pt-[70px]">
           <h2 className="text-[22px] font-bold text-[var(--svs-text)] sm:text-[24px]">Similar Movies</h2>
-          <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
             {similarMovies.map((m) => (
               <article key={m.id} className="flex flex-col overflow-hidden rounded-xl bg-white shadow-[0_2px_12px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_8px_28px_rgba(15,23,42,0.14)]">
                 <img src={m.image} alt={m.title} className="h-[180px] w-full object-cover sm:h-[200px]" loading="lazy" />
@@ -6955,7 +6955,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
             </div>
             )}
 
-            <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mx-auto grid max-w-[1280px] grid-cols-3 gap-3 sm:gap-5 lg:grid-cols-3">
               {section.items.slice(0, sectionVisibleCounts[section.id] || 3).map((item) => (
                 (() => {
                   const isSellerOutOfStock = item.isSellerListing && normalizeListingQuantity(item.availableQuantity, 0) === 0;
@@ -7263,7 +7263,7 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
           </div>
           <div className="flex-1">
             {filteredMarketItems.length ? (
-              <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <div className="grid grid-cols-3 gap-3 sm:gap-8 lg:grid-cols-3 xl:grid-cols-4">
                 {filteredMarketItems.map((item) => {
                   const itemTitle = getTranslatedValue(t, item.titleKey, item.title);
                   const hasStockValue = item.availableQuantity !== null && item.availableQuantity !== undefined;
@@ -7397,6 +7397,7 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
   const [selectedCondition, setSelectedCondition] = useState('all');
   const [sectionVisibleCounts, setSectionVisibleCounts] = useState({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(false);
   const [sidebarConditionOpen, setSidebarConditionOpen] = useState(false);
   const [sidebarPriceOpen, setSidebarPriceOpen] = useState(false);
   const [sidebarConditionFilters, setSidebarConditionFilters] = useState([]);
@@ -7504,6 +7505,14 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
             >
               <Search className="h-3.5 w-3.5" /> Filters
             </button>
+            {/* Desktop filter toggle */}
+            <button
+              type="button"
+              onClick={() => setIsDesktopFiltersHidden((prev) => !prev)}
+              className="hidden items-center gap-1.5 rounded-full border border-[var(--svs-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)] lg:inline-flex"
+            >
+              <Search className="h-3.5 w-3.5" /> {isDesktopFiltersHidden ? 'Show Filters' : 'Hide Filters'}
+            </button>
             <Link
               to="/secondhand-central"
               className="inline-flex items-center gap-2 rounded-full border border-[var(--svs-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
@@ -7527,7 +7536,7 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
             />
           ) : null}
 
-          <aside className={`${sidebarOpen ? 'fixed left-0 top-0 z-50 flex h-full w-[320px] sm:w-[340px]' : 'hidden lg:flex lg:w-[280px]'} flex-col overflow-y-auto border-r border-[var(--svs-border)] bg-white px-5 pb-6 pt-6 shadow-lg lg:sticky lg:top-4 lg:z-auto lg:h-auto lg:max-h-[calc(100vh-2rem)] lg:shrink-0 lg:rounded-xl lg:border lg:shadow-[0_2px_12px_rgba(15,23,42,0.08)]`}>
+          <aside className={`${sidebarOpen ? 'fixed left-0 top-0 z-50 flex h-full w-[320px] sm:w-[340px]' : isDesktopFiltersHidden ? 'hidden' : 'hidden lg:flex lg:w-[280px]'} flex-col overflow-y-auto border-r border-[var(--svs-border)] bg-white px-5 pb-6 pt-6 shadow-lg lg:sticky lg:top-4 lg:z-auto lg:h-auto lg:max-h-[calc(100vh-2rem)] lg:shrink-0 lg:rounded-xl lg:border lg:shadow-[0_2px_12px_rgba(15,23,42,0.08)]`}>
             {/* Close (mobile only) */}
             <button
               type="button"
@@ -7774,7 +7783,7 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
               <p className="mt-1.5 text-xs text-[var(--svs-muted)] sm:text-sm">{section.subtitle}</p>
             </div>
 
-            <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="mx-auto grid max-w-[1280px] grid-cols-3 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
               {section.items.slice(0, sectionVisibleCounts[section.id] || 4).map((item) => {
                 const isWishlisted = wishlistItemIds.includes(getCollectionItemId('/secondhand-central', item.id));
                 return (
@@ -7913,6 +7922,7 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
   const [selectedCuisines, setSelectedCuisines] = useState([]);
   const [selectedTypes, setSelectedTypes] = useState([]);
   const [priceRange, setPriceRange] = useState([0, 20]);
+  const [showFilters, setShowFilters] = useState(true);
 
   // Unique categories, brands, cuisines, types from fastFoodItems
   const categories = Array.from(new Set(fastFoodItems.map(i => i.category)));
@@ -7970,8 +7980,22 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
       </section>
 
       {/* Main Content: Sidebar + Product Grid */}
+      <div className="w-full max-w-7xl mx-auto px-2 md:px-8">
+        <div className="mt-8 mb-4 flex items-center justify-between rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-2.5">
+          <h2 className="text-base font-semibold text-[var(--svs-text)]">Filters</h2>
+          <button
+            type="button"
+            onClick={() => setShowFilters((prev) => !prev)}
+            className="inline-flex items-center gap-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-4 py-2 text-sm font-medium text-[#0f9fb2]"
+          >
+            <Menu className="h-4 w-4" />
+            {showFilters ? 'Hide Filters' : 'Show Filters'}
+          </button>
+        </div>
+      </div>
       <div className="flex flex-col lg:flex-row w-full max-w-7xl mx-auto px-2 md:px-8 gap-12">
         {/* Sidebar Filters */}
+        {showFilters ? (
         <aside className="w-full max-w-[340px] mx-auto lg:mx-0 lg:w-[340px] flex-shrink-0 mb-10 lg:mb-0">
           <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-8 shadow-lg flex flex-col gap-8">
             {/* Category */}
@@ -8047,6 +8071,7 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
             <button className="w-full mt-6 rounded-[14px] bg-[var(--svs-primary)] text-white font-bold py-3 text-lg shadow hover:bg-[var(--svs-primary-strong)] transition" onClick={handleApplyFilters}>Apply Filters</button>
           </div>
         </aside>
+        ) : null}
         {/* Product Grid */}
         <main className="flex-1">
           {/* Search Bar */}
@@ -8060,7 +8085,7 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
             />
           </div>
           {/* Product Cards Grid */}
-          <div ref={gridRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
+          <div ref={gridRef} className="grid grid-cols-3 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-10">
             {filteredItems.map(item => (
               <div key={item.id} className="bg-[var(--svs-surface-soft)] rounded-2xl shadow-lg flex flex-col overflow-hidden hover:shadow-2xl transition group border border-[var(--svs-border)]">
                 <div className="relative h-56 w-full overflow-hidden cursor-pointer" onClick={() => handleOpenDetails(item)}>
@@ -8272,7 +8297,7 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
 
       {/* Main content area */}
       <div className="mt-10 sm:mt-12">
-        <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mx-auto grid max-w-[1280px] grid-cols-3 gap-3 sm:gap-5 lg:grid-cols-3">
           {filteredBeverageItems.slice(0, sectionVisibleCounts[activeCategory] || 6).map((item) => {
             const isOutOfStock = item.isSellerListing && item.availableQuantity === 0;
             return (
@@ -8510,6 +8535,7 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
   const [selectedProjectType, setSelectedProjectType] = useState('All');
   const [showOnSaleOnly, setShowOnSaleOnly] = useState(false);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(false);
   const [showAllRelated, setShowAllRelated] = useState(false);
   const productsSectionRef = useRef(null);
   const relatedSectionRef = useRef(null);
@@ -8803,22 +8829,31 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
           </div>
         </section>
 
-        <div className="mt-8 flex items-center justify-between lg:hidden">
+        <div className="mt-8 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-[var(--svs-text)]">Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}</h2>
           <button
             type="button"
-            onClick={() => setIsFilterDrawerOpen(true)}
+            onClick={() => {
+              if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+                setIsDesktopFiltersHidden((prev) => !prev);
+              } else {
+                setIsFilterDrawerOpen(true);
+              }
+            }}
             className="inline-flex items-center gap-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-4 py-2 text-sm font-medium text-[#0f9fb2]"
           >
             <Menu className="h-4 w-4" />
-            Filter Products
+            <span className="lg:hidden">Filter Products</span>
+            <span className="hidden lg:inline">{isDesktopFiltersHidden ? 'Show Filters' : 'Hide Filters'}</span>
           </button>
         </div>
 
-        <div className="mt-8 grid items-start gap-10 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <div className={`mt-8 grid items-start gap-10 ${isDesktopFiltersHidden ? '' : 'lg:grid-cols-[280px_minmax(0,1fr)]'}`}>
+          {!isDesktopFiltersHidden ? (
           <aside className="hidden min-h-[calc(100vh-220px)] border-r border-[#E5E7EB] lg:block">
             {FilterPanel}
           </aside>
+          ) : null}
 
           <main ref={productsSectionRef}>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -8912,6 +8947,7 @@ const HomeCarePage = ({ sellerItems = [], onOpenItemDetails }) => {
   const providersSectionRef = useRef(null);
   const relatedListingsSectionRef = useRef(null);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(false);
   const [showAllRelatedListings, setShowAllRelatedListings] = useState(false);
 
   const visibleCities = selectedCountry ? (homeCareCitiesByCountry[selectedCountry] || []) : [];
@@ -9236,22 +9272,31 @@ const HomeCarePage = ({ sellerItems = [], onOpenItemDetails }) => {
           </div>
         </section>
 
-        <div className="mt-8 flex items-center justify-between lg:hidden">
+        <div className="mt-8 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-[var(--svs-text)]">Filters</h2>
           <button
             type="button"
-            onClick={() => setIsFilterDrawerOpen(true)}
+            onClick={() => {
+              if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+                setIsDesktopFiltersHidden((prev) => !prev);
+              } else {
+                setIsFilterDrawerOpen(true);
+              }
+            }}
             className="inline-flex items-center gap-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-4 py-2 text-sm font-medium text-[#0f9fb2]"
           >
             <Menu className="h-4 w-4" />
-            Filter Services
+            <span className="lg:hidden">Filter Services</span>
+            <span className="hidden lg:inline">{isDesktopFiltersHidden ? 'Show Filters' : 'Hide Filters'}</span>
           </button>
         </div>
 
-        <div className="mt-8 grid items-start gap-10 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <div className={`mt-8 grid items-start gap-10 ${isDesktopFiltersHidden ? '' : 'lg:grid-cols-[280px_minmax(0,1fr)]'}`}>
+          {!isDesktopFiltersHidden ? (
           <aside className="hidden min-h-[calc(100vh-220px)] border-r border-[#E5E7EB] lg:block">
             {FilterPanel}
           </aside>
+          ) : null}
 
           <main ref={providersSectionRef}>
             <div className="grid justify-items-center gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -9411,6 +9456,7 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
   const [selectedOccasion, setSelectedOccasion] = useState('All');
   const [showOnSaleOnly, setShowOnSaleOnly] = useState(false);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(false);
   const [showAllRelated, setShowAllRelated] = useState(false);
   const productsSectionRef = useRef(null);
   const relatedSectionRef = useRef(null);
@@ -9766,22 +9812,31 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
           </div>
         </section>
 
-        <div className="mt-8 flex items-center justify-between lg:hidden">
+        <div className="mt-8 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-[var(--svs-text)]">Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}</h2>
           <button
             type="button"
-            onClick={() => setIsFilterDrawerOpen(true)}
+            onClick={() => {
+              if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+                setIsDesktopFiltersHidden((prev) => !prev);
+              } else {
+                setIsFilterDrawerOpen(true);
+              }
+            }}
             className="inline-flex items-center gap-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-4 py-2 text-sm font-medium text-[#0f9fb2]"
           >
             <Menu className="h-4 w-4" />
-            Filter Products
+            <span className="lg:hidden">Filter Products</span>
+            <span className="hidden lg:inline">{isDesktopFiltersHidden ? 'Show Filters' : 'Hide Filters'}</span>
           </button>
         </div>
 
-        <div className="mt-8 grid items-start gap-10 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <div className={`mt-8 grid items-start gap-10 ${isDesktopFiltersHidden ? '' : 'lg:grid-cols-[280px_minmax(0,1fr)]'}`}>
+          {!isDesktopFiltersHidden ? (
           <aside className="hidden min-h-[calc(100vh-220px)] border-r border-[#E5E7EB] lg:block">
             {FilterPanel}
           </aside>
+          ) : null}
 
           <main ref={productsSectionRef}>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -14181,7 +14236,7 @@ const SecondHandProductDetailPage = ({ onAddToCart, onBuyNow, onToggleWishlist, 
       {similarProducts.length > 0 ? (
         <section className="mx-auto max-w-7xl px-4 pt-10 pb-16 sm:px-6 sm:pt-14 sm:pb-20 lg:pt-[70px]">
           <h2 className="text-[22px] font-bold text-[var(--svs-text)] sm:text-[24px]">Similar Products</h2>
-          <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
             {similarProducts.map((sim) => (
               <article key={sim.id} className="flex flex-col overflow-hidden rounded-xl bg-white shadow-[0_2px_12px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_8px_28px_rgba(15,23,42,0.14)]">
                 <img src={sim.image} alt={sim.title} className="h-[180px] w-full object-cover sm:h-[200px]" loading="lazy" />

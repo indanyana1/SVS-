@@ -3,3 +3,34 @@
 @tailwind utilities;
 
 @import './styles/globals.css';
+
+/* ============================================================
+   DESKTOP-DOWN-SCALING SYSTEM
+   The app renders at a fixed 1280px desktop width inside #root,
+   then a CSS transform shrinks it to fit the device width.
+   The wrapper height is computed in JS (see src/app/main) so the
+   page does NOT leave a giant blank space below the scaled content.
+   ============================================================ */
+html {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;          /* never show horizontal scrollbar */
+  overflow-y: auto;            /* single vertical scrollbar lives on <html> */
+  scrollbar-gutter: stable;    /* reserve scrollbar space so icons aren't covered */
+  background: #f8fafc;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  /* IMPORTANT: do NOT set overflow on body — that creates a 2nd scrollbar. */
+}
+
+#root {
+  width: 1280px;               /* fixed virtual desktop width */
+  transform-origin: top left;  /* scale from the top-left corner */
+  /* --app-scale is set dynamically by JS, defaults to 1 for desktop */
+  transform: scale(var(--app-scale, 1));
+  overflow: hidden;            /* suppress the inner 1280px scrollbar */
+}
+
