@@ -5192,10 +5192,19 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
   return (
     <div className={`min-h-screen bg-[var(--svs-bg)] text-[var(--svs-text)] ${isDarkMode ? 'theme-dark' : 'theme-light'}`.trim()}>
       <header className="fixed top-0 z-50 w-full border-b border-[var(--svs-border)] bg-[var(--svs-nav-bg)]/95 text-[var(--svs-nav-text)] backdrop-blur-md">
-        <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-3">
+        <div className="mx-auto flex w-full max-w-7xl items-center gap-2 px-3 py-3 sm:gap-3 sm:px-4">
           <Link to="/" className="shrink-0">
             <img src={logo} alt="SVS E-Commerce" className="h-10 w-auto" />
           </Link>
+
+          <button
+            type="button"
+            onClick={() => setMobileOpen((prev) => !prev)}
+            className="shrink-0 rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] p-2 text-[var(--svs-nav-text)] lg:hidden"
+            aria-label="Toggle menu"
+          >
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
 
           <nav className="hidden items-center gap-6 text-sm font-semibold text-[var(--svs-nav-text)] lg:flex">
             {isSellerConsoleRoute ? sellerConsoleNavItems.map((item) => (
@@ -5231,7 +5240,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
             )}
           </nav>
 
-          <form className={`relative max-w-xl flex-1 ${isSellerConsoleRoute ? 'hidden' : 'hidden lg:block'}`} onSubmit={handleSearchSubmit}>
+          <form className={`relative max-w-xl flex-1 ${isSellerConsoleRoute ? 'hidden' : ''}`} onSubmit={handleSearchSubmit}>
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               type="search"
@@ -5280,7 +5289,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
             ) : null}
           </form>
 
-          <div className="ml-auto hidden items-center gap-3 text-[var(--svs-nav-text)] sm:flex">
+          <div className="ml-auto flex items-center gap-1.5 text-[var(--svs-nav-text)] sm:gap-3">
             <div className="hidden items-center gap-3 lg:flex">
               <div className="relative" ref={desktopLanguageMenuRef}>
                 <button
@@ -5441,31 +5450,10 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
               ) : null}
             </div>
           </div>
-
-          <button
-            type="button"
-            onClick={() => setMobileOpen((prev) => !prev)}
-            className="ml-auto rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] p-2 text-[var(--svs-nav-text)] lg:hidden"
-            aria-label="Toggle menu"
-          >
-            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
         </div>
 
         {mobileOpen ? (
           <div className="border-t border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-3 lg:hidden">
-            {!isSellerConsoleRoute ? (
-              <form onSubmit={handleSearchSubmit}>
-                <input
-                  type="search"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder={t('search.placeholder')}
-                  className="mb-3 w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
-                  aria-label={t('search.mobileAria')}
-                />
-              </form>
-            ) : null}
             <button
               type="button"
               onClick={toggleTheme}
@@ -11790,7 +11778,7 @@ const MarketsPage = () => {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-3">
         {orderedMarketLinks.map((market, index) => {
           const isFastFood = market.href === '/fast-food';
           const isFashion = market.href === '/fashion-style';
@@ -11942,7 +11930,7 @@ const SearchResultsPage = () => {
       )}
 
       {results.length ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
           {results.map((item) => {
             const itemTitle = getTranslatedValue(t, item.titleKey, item.title);
             const itemSection = getTranslatedValue(t, item.sectionKey, item.section);
@@ -14269,7 +14257,7 @@ const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaR
         onSliderMaximumChange={handleSliderMaximumChange}
       />
       {filteredItems.length ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-3 gap-3 sm:gap-4 lg:grid-cols-4">
           {filteredItems.map((item) => {
         const itemTitle = getTranslatedValue(t, item.titleKey, item.title);
         const hasStockValue = item.availableQuantity !== null && item.availableQuantity !== undefined;
@@ -14298,7 +14286,7 @@ const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaR
             }}
           >
             <div className="relative">
-              <img src={item.image} alt={itemTitle} className="h-40 w-full object-cover" loading="lazy" />
+              <img src={item.image} alt={itemTitle} className="h-24 w-full object-cover sm:h-40" loading="lazy" />
               {onToggleWishlist ? (
                 <button
                   type="button"
@@ -14314,8 +14302,8 @@ const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaR
                 </button>
               ) : null}
             </div>
-            <div className="p-4">
-              <h3 className="text-lg font-bold">{itemTitle}</h3>
+            <div className="p-2 sm:p-4">
+              <h3 className="text-sm font-bold sm:text-lg">{itemTitle}</h3>
               <div className="mt-1">{metaRenderer(item)}</div>
               {/* Description intentionally hidden in main listing. Only show in details modal. */}
               {availableQuantity !== null ? (
@@ -14348,7 +14336,7 @@ const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaR
                 </div>
               ) : null}
               <div className="mt-4 space-y-2">
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <button
                     type="button"
                     disabled={isOutOfStock}
