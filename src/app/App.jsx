@@ -11998,13 +11998,6 @@ const MarketsPage = () => {
                     </p>
                   ) : null}
                 </div>
-                {/* Bottom: open market + CTA */}
-                <div className="flex items-center justify-between gap-2 sm:block">
-                  <p className={openMarketClassName}>{t('marketsPage.openMarket')}</p>
-                  <div className={ctaClassName}>
-                    {t('marketsPage.enterMarket')} <span aria-hidden="true">-&gt;</span>
-                  </div>
-                </div>
               </div>
             </Link>
           ) : (
@@ -12024,10 +12017,6 @@ const MarketsPage = () => {
                 ) : null}
               </div>
               <span className="svs-berkshire-swash rounded-full bg-[var(--svs-cyan-surface)] px-1.5 py-0.5 text-[10px] text-[var(--svs-primary-strong)] sm:px-2 sm:py-1 sm:text-sm">SVS</span>
-            </div>
-            <p className="mt-2 text-[11px] text-[var(--svs-muted)] sm:mt-3 sm:text-sm">{t('marketsPage.openMarket')}</p>
-            <div className={`${cudyBluePrimaryButtonClassName} mt-2 inline-flex items-center gap-1 rounded-md bg-[var(--svs-primary)] px-2 py-1 text-[11px] font-semibold text-white transition group-hover:bg-[#33b9f2] sm:mt-4 sm:gap-2 sm:px-3 sm:py-2 sm:text-sm`}>
-              {t('marketsPage.enterMarket')} <span aria-hidden="true">-&gt;</span>
             </div>
           </Link>
           );
