@@ -8152,29 +8152,41 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
           {/* Product Cards Grid */}
           <div ref={gridRef} className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-10">
             {filteredItems.map(item => (
-              <div key={item.id} className="bg-[var(--svs-surface-soft)] rounded-xl shadow-md sm:rounded-2xl sm:shadow-lg flex flex-col overflow-hidden hover:shadow-2xl transition group border border-[var(--svs-border)]">
-                <div className="relative aspect-[4/3] sm:aspect-auto sm:h-56 w-full overflow-hidden cursor-pointer" onClick={() => handleOpenDetails(item)}>
+              <div key={item.id} className="bg-white rounded-3xl shadow-lg flex flex-col overflow-hidden hover:scale-[1.02] transition group border border-[#e0e7ef]">
+                <div className="relative aspect-[4/3] sm:aspect-auto sm:h-48 w-full overflow-hidden cursor-pointer rounded-t-3xl" onClick={() => handleOpenDetails(item)}>
                   <img src={item.image} alt={item.title} className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" />
-                  <span className="absolute top-2 left-2 sm:top-4 sm:left-4 bg-[var(--svs-primary)] text-white text-[10px] sm:text-sm font-bold px-2 py-0.5 sm:px-4 sm:py-1.5 rounded-md sm:rounded-[10px] shadow">{item.category}</span>
+                  <span className="absolute top-2 left-2 sm:top-4 sm:left-4 bg-[#0f6674] text-white text-[10px] sm:text-sm font-bold px-2 py-0.5 sm:px-4 sm:py-1.5 rounded-full shadow">{item.category}</span>
                   {/* Wishlist icon */}
                   <button
-                    className={`absolute top-2 right-2 sm:top-4 sm:right-4 w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center rounded-full bg-white/90 border border-[var(--svs-border)] shadow ${wishlistItemIds.includes(item.id) ? 'text-[var(--svs-primary)]' : 'text-[var(--svs-muted)]'} hover:text-[var(--svs-primary)]`}
+                    className={`absolute top-2 right-2 sm:top-4 sm:right-4 w-7 h-7 sm:w-9 sm:h-9 flex items-center justify-center rounded-full bg-white/90 border border-[#e0e7ef] shadow text-[#e11d48] ${wishlistItemIds.includes(item.id) ? 'bg-rose-50' : 'hover:bg-[#e0f7fa]'}`}
                     style={{zIndex:2}}
                     onClick={e => { e.stopPropagation(); handleToggleWishlist(item); }}
                     aria-label="Toggle Wishlist"
                   >
-                    <svg width="16" height="16" className="sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 17.5l-1.45-1.32C4.4 12.36 2 10.28 2 7.5 2 5.5 3.5 4 5.5 4c1.04 0 2.09.54 2.7 1.44C8.41 5.54 9.46 5 10.5 5 12.5 5 14 6.5 14 8.5c0 2.78-2.4 4.86-6.55 8.68L10 17.5z"/></svg>
+                    <Heart className={`h-3.5 w-3.5 sm:h-5 sm:w-5 ${wishlistItemIds.includes(item.id) ? 'fill-current' : ''}`} />
                   </button>
                 </div>
-                <div className="flex flex-col flex-1 p-2.5 sm:p-6">
-                  <h3 className="font-extrabold text-sm sm:text-xl text-[var(--svs-text)] mb-1 sm:mb-2 truncate">{item.title}</h3>
-                  <span className="hidden sm:inline-block text-[var(--svs-muted)] text-base mb-3 font-medium">{item.prepTime}</span>
-                  <span className="sm:hidden text-[var(--svs-muted)] text-xs mb-2 font-medium">{item.prepTime}</span>
-                  <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-4">
-                    <span className="font-extrabold text-base sm:text-2xl text-[var(--svs-primary)]">{item.price}</span>
-                    <button className="ml-auto px-2 py-1 sm:px-3 rounded bg-[var(--svs-primary)] text-white text-[10px] sm:text-xs font-bold shadow hover:bg-[var(--svs-primary-strong)] transition" onClick={() => handleBuyNow(item)}>Buy Now</button>
+                <div className="flex flex-col flex-1 p-3 sm:p-5">
+                  <h3 className="mb-1 text-sm font-bold leading-tight text-[#0f6674] group-hover:text-[#33b9f2] sm:text-xl truncate">{item.title}</h3>
+                  <span className="hidden sm:inline-block text-base font-medium text-[#374151] mb-2">{item.prepTime}</span>
+                  <span className="sm:hidden text-[#374151] text-xs mb-1 font-medium">{item.prepTime}</span>
+                  <div className="mb-2 text-base sm:text-lg font-bold text-[#0f6674]">{item.price}</div>
+                  <div className="mt-auto flex flex-col gap-2 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={() => handleAddToCart(item)}
+                      className="rounded-full bg-[#0f6674] px-3 py-1.5 text-xs font-semibold text-white shadow transition hover:bg-[#33b9f2] sm:px-5 sm:py-2 sm:text-base"
+                    >
+                      Add to Cart
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleBuyNow(item)}
+                      className="rounded-full border border-[#0f6674] bg-white px-3 py-1.5 text-xs font-semibold text-[#0f6674] shadow transition hover:bg-[#e0f7fa] sm:px-5 sm:py-2 sm:text-base"
+                    >
+                      Buy Now
+                    </button>
                   </div>
-                  <button className="mt-auto w-full rounded-md sm:rounded-[12px] bg-[var(--svs-primary)] text-white font-bold py-2 sm:py-3 text-xs sm:text-lg shadow hover:bg-[var(--svs-primary-strong)] transition" onClick={() => handleAddToCart(item)}>Add to Cart</button>
                 </div>
               </div>
             ))}
@@ -14399,7 +14411,7 @@ const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaR
         return (
           <article
             key={item.id}
-            className="flex flex-col overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-card-bg)] shadow-[0_2px_12px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(15,23,42,0.14)]"
+            className="flex flex-col overflow-hidden rounded-3xl border border-[#e0e7ef] bg-white shadow-lg transition hover:scale-[1.02] group"
             role="button"
             tabIndex={0}
             onClick={() => onOpenItemDetails?.(item)}
@@ -14411,7 +14423,7 @@ const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaR
             }}
           >
             <div className="relative">
-              <img src={item.image} alt={itemTitle} className="aspect-[4/3] w-full object-cover sm:h-40 sm:aspect-auto" loading="lazy" />
+              <img src={item.image} alt={itemTitle} className="aspect-[4/3] w-full object-cover rounded-t-3xl group-hover:scale-105 transition-transform duration-300 sm:h-48 sm:aspect-auto" loading="lazy" />
               {onToggleWishlist ? (
                 <button
                   type="button"
@@ -14421,26 +14433,26 @@ const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaR
                   }}
                   aria-pressed={isItemWishlisted?.(item) || false}
                   aria-label={isItemWishlisted?.(item) ? 'Remove from wishlist' : 'Add to wishlist'}
-                  className={`absolute right-2 top-2 rounded-full border p-1.5 transition sm:right-3 sm:top-3 sm:p-2 ${isItemWishlisted?.(item) ? 'border-rose-200 bg-rose-50 text-rose-600' : 'border-white/70 bg-white/90 text-slate-700 hover:bg-white'}`}
+                  className={`absolute right-2 top-2 rounded-full border border-[#e0e7ef] bg-white/90 p-1.5 text-[#e11d48] shadow transition sm:right-4 sm:top-4 sm:p-2 ${isItemWishlisted?.(item) ? 'bg-rose-50' : 'hover:bg-[#e0f7fa]'}`}
                 >
-                  <Heart className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isItemWishlisted?.(item) ? 'fill-current' : ''}`} />
+                  <Heart className={`h-3.5 w-3.5 sm:h-5 sm:w-5 ${isItemWishlisted?.(item) ? 'fill-current' : ''}`} />
                 </button>
               ) : null}
             </div>
-            <div className="flex flex-1 flex-col p-3 sm:p-4">
-              <h3 className="text-sm font-bold leading-tight text-[var(--svs-text)] sm:text-lg">{itemTitle}</h3>
+            <div className="flex flex-1 flex-col p-3 sm:p-5">
+              <h3 className="mb-1 text-sm font-bold leading-tight text-[#0f6674] group-hover:text-[#33b9f2] sm:text-xl">{itemTitle}</h3>
               {/* Meta (volume, brand, etc.) — hidden on mobile to keep cards compact. */}
-              <div className="mt-1 hidden text-xs text-[var(--svs-muted)] sm:block sm:text-sm">{metaRenderer(item)}</div>
+              <div className="mb-2 hidden text-base font-medium text-[#374151] sm:block">{metaRenderer(item)}</div>
               {/* Description intentionally hidden in main listing. Only show in details modal. */}
               {availableQuantity !== null ? (
-                <p className="mt-1 hidden text-[11px] text-[var(--svs-muted)] sm:block sm:text-xs">
-                  Qty: {availableQuantity}
+                <p className="mb-2 hidden text-xs text-[#0f6674]/70 sm:block">
+                  Quantity: {availableQuantity}
                   {isOutOfStock ? ' (Out of stock)' : ''}
                 </p>
               ) : null}
               {itemSizeOptions.length ? (
-                <div className="mt-3 hidden sm:block">
-                  <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--svs-muted)] sm:text-xs">
+                <div className="mb-3 hidden sm:block">
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-[#0f6674]/70">
                     Size
                   </label>
                   <select
@@ -14453,7 +14465,7 @@ const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaR
                         [item.id]: event.target.value,
                       }));
                     }}
-                    className="w-full rounded-md border border-[var(--svs-border)] bg-white px-2 py-1.5 text-xs text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)] sm:px-3 sm:py-2 sm:text-sm"
+                    className="w-full rounded-full border border-[#e0e7ef] bg-white px-3 py-2 text-sm text-[#0f6674] outline-none transition focus:border-[#0f6674]"
                   >
                     {itemSizeOptions.map((sizeOption) => (
                       <option key={sizeOption} value={sizeOption}>{sizeOption}</option>
@@ -14461,8 +14473,8 @@ const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaR
                   </select>
                 </div>
               ) : null}
-              <div className="mt-auto pt-3 space-y-2">
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className="mt-auto space-y-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <button
                     type="button"
                     disabled={isOutOfStock}
@@ -14470,7 +14482,7 @@ const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaR
                       event.stopPropagation();
                       onPrimaryAction?.(actionItem);
                     }}
-                    className={`${cudyBluePrimaryButtonClassName} h-11 w-full rounded-lg bg-[var(--svs-primary)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)] disabled:cursor-not-allowed disabled:bg-slate-400 disabled:hover:bg-slate-400`}
+                    className="rounded-full bg-[#0f6674] px-3 py-1.5 text-xs font-semibold text-white shadow transition hover:bg-[#33b9f2] disabled:cursor-not-allowed disabled:bg-slate-400 sm:px-5 sm:py-2 sm:text-base"
                   >
                     {isOutOfStock ? 'Out of stock' : buttonLabel}
                   </button>
@@ -14482,9 +14494,9 @@ const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaR
                         event.stopPropagation();
                         onBuyNowAction(actionItem);
                       }}
-                      className="h-11 w-full rounded-lg bg-[#111111] px-3 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-slate-400 disabled:hover:bg-slate-400"
+                      className="rounded-full border border-[#0f6674] bg-white px-3 py-1.5 text-xs font-semibold text-[#0f6674] shadow transition hover:bg-[#e0f7fa] disabled:cursor-not-allowed disabled:bg-slate-400 sm:px-5 sm:py-2 sm:text-base"
                     >
-                      {isOutOfStock ? 'Out of stock' : 'Buy it now'}
+                      {isOutOfStock ? 'Out of stock' : 'Buy Now'}
                     </button>
                   ) : null}
                 </div>
@@ -14494,13 +14506,13 @@ const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaR
                     event.stopPropagation();
                     onOpenItemDetails?.(actionItem);
                   }}
-                  className="h-11 w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
+                  className="hidden w-full rounded-full border border-[#e0e7ef] bg-white px-3 py-2 text-sm font-semibold text-[#0f6674] transition hover:border-[#0f6674] hover:bg-[#e0f7fa] sm:block"
                 >
                   {secondaryButtonLabel}
                 </button>
-                <div className="flex items-center justify-center gap-1.5 rounded-lg border border-[var(--svs-border)] bg-white px-3 py-2 text-sm text-[var(--svs-muted)]">
+                <div className="hidden items-center justify-center gap-1.5 rounded-full border border-[#e0e7ef] bg-white px-3 py-1.5 text-xs text-[#0f6674]/80 sm:flex">
                   <Star className={`h-4 w-4 text-amber-500 ${reviewSummary.reviewCount ? 'fill-current' : ''}`} />
-                  <span className="font-semibold text-[var(--svs-text)]">{averageRatingLabel}</span>
+                  <span className="font-semibold text-[#0f6674]">{averageRatingLabel}</span>
                   <span>{reviewCountLabel}</span>
                 </div>
               </div>
@@ -14510,7 +14522,7 @@ const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaR
         })}
         </div>
       ) : (
-        <div className="rounded-2xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-8 text-sm text-[var(--svs-muted)]">
+        <div className="rounded-3xl border border-dashed border-[#e0e7ef] bg-[#f8fafc] px-6 py-12 text-center text-lg text-[#0f6674]/70">
           No items match that price range yet. Adjust the minimum or maximum price to see more results.
         </div>
       )}
