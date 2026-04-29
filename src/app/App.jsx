@@ -12016,19 +12016,21 @@ const MarketsPage = () => {
           <Link
             key={`all-${market.href}`}
             to={market.href}
-            className="group rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-2.5 shadow-[0_4px_8px_rgba(0,0,0,0.1)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_12px_22px_rgba(0,168,232,0.2)] sm:rounded-2xl sm:p-5"
+            className="group relative flex aspect-[4/5] flex-col rounded-xl border border-[var(--svs-border)] bg-gradient-to-br from-[#0c2a32] via-[#0f6674] to-[#33b9f2] p-3 shadow-[0_4px_8px_rgba(0,0,0,0.1)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_12px_22px_rgba(0,168,232,0.2)] sm:aspect-auto sm:rounded-2xl sm:p-5"
           >
+            {/* Top: label + SVS badge */}
             <div className="flex items-start justify-between gap-2 sm:gap-3">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--svs-primary-strong)] sm:text-xs">{t('marketsPage.marketLabel', { number: marketDisplayNumber })}</p>
-                <p className="mt-0.5 text-sm font-bold leading-tight text-[var(--svs-text)] line-clamp-2 sm:mt-1 sm:text-lg sm:line-clamp-none">{t(market.labelKey)}</p>
-                {marketShortDescriptions[market.href] ? (
-                  <p className="mt-1 text-[11px] leading-snug text-[var(--svs-muted)] line-clamp-2 sm:text-xs">
-                    {marketShortDescriptions[market.href]}
-                  </p>
-                ) : null}
-              </div>
-              <span className="svs-berkshire-swash rounded-full bg-[var(--svs-cyan-surface)] px-1.5 py-0.5 text-[10px] text-[var(--svs-primary-strong)] sm:px-2 sm:py-1 sm:text-sm">SVS</span>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#8eeaff] drop-shadow">{t('marketsPage.marketLabel', { number: marketDisplayNumber })}</p>
+              <span className="svs-berkshire-swash rounded-full border border-white/35 bg-white/15 px-2 py-0.5 text-xs text-white sm:px-2 sm:py-1 sm:text-sm">SVS</span>
+            </div>
+            {/* Center: title + tagline */}
+            <div className="flex flex-1 flex-col items-center justify-center px-1 text-center sm:items-start sm:px-0 sm:text-left">
+              <p className="text-base font-bold leading-tight text-white drop-shadow line-clamp-3 sm:text-lg sm:line-clamp-none">{t(market.labelKey)}</p>
+              {marketShortDescriptions[market.href] ? (
+                <p className="mt-1.5 text-[11px] leading-snug text-white/85 drop-shadow line-clamp-2 sm:mt-2 sm:text-xs">
+                  {marketShortDescriptions[market.href]}
+                </p>
+              ) : null}
             </div>
           </Link>
           );
