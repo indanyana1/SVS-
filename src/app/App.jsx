@@ -6980,7 +6980,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
             </div>
             )}
 
-            <div className="mx-auto grid max-w-[1280px] grid-cols-3 gap-3 sm:gap-5 lg:grid-cols-3">
+            <div className="mx-auto grid max-w-[1280px] grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-3">
               {section.items.slice(0, sectionVisibleCounts[section.id] || 3).map((item) => (
                 (() => {
                   const isSellerOutOfStock = item.isSellerListing && normalizeListingQuantity(item.availableQuantity, 0) === 0;
@@ -7006,41 +7006,41 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
                       (!item.isSellerListing && item.category === 'Movies') ? navigate(`/movie/${item.id}`) : openBookingItemDetails(item);
                     }
                   }}
-                  className="flex cursor-pointer flex-col overflow-hidden rounded-xl bg-white shadow-[0_2px_12px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_8px_28px_rgba(15,23,42,0.14)]"
+                  className="flex cursor-pointer flex-col overflow-hidden rounded-3xl border border-[#e0e7ef] bg-white shadow-lg transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_8px_28px_rgba(15,23,42,0.14)] sm:rounded-xl sm:border-0 sm:shadow-[0_2px_12px_rgba(15,23,42,0.08)]"
                 >
-                  <img src={item.image} alt={item.title} className="h-[160px] w-full object-cover sm:h-[180px]" loading="lazy" />
-                  <div className="flex flex-1 flex-col p-4">
-                    <h3 className="text-base font-bold text-[var(--svs-text)]">{item.title}</h3>
+                  <img src={item.image} alt={item.title} className="aspect-[4/3] w-full bg-[#f3f4f6] object-cover text-transparent sm:aspect-auto sm:h-[180px]" loading="lazy" />
+                  <div className="flex flex-1 flex-col p-2.5 sm:p-4">
+                    <h3 className="line-clamp-2 text-sm font-bold leading-tight text-[#0f6674] sm:text-base sm:text-[var(--svs-text)]">{item.title}</h3>
                     {item.subtitle ? (
-                      <p className="mt-0.5 text-xs text-[var(--svs-muted)]">{item.subtitle}</p>
+                      <p className="mt-0.5 hidden text-xs text-[var(--svs-muted)] sm:block">{item.subtitle}</p>
                     ) : null}
-                    <div className="mt-2 space-y-1 text-xs text-[var(--svs-muted)]">
+                    <div className="mt-1.5 space-y-1 text-[11px] text-[var(--svs-muted)] sm:mt-2 sm:text-xs">
                       {item.date ? (
                         <p className="flex items-center gap-1.5">
-                          <CalendarDays className="h-3.5 w-3.5 shrink-0 text-[var(--svs-primary)]" />
-                          <span>{formatDate(item.date, currentLocale)}</span>
+                          <CalendarDays className="h-3 w-3 shrink-0 text-[var(--svs-primary)] sm:h-3.5 sm:w-3.5" />
+                          <span className="truncate">{formatDate(item.date, currentLocale)}</span>
                         </p>
                       ) : null}
                       {item.meta ? (
-                        <p className="text-xs text-[var(--svs-muted)]">{item.meta}</p>
+                        <p className="hidden text-xs text-[var(--svs-muted)] sm:block">{item.meta}</p>
                       ) : null}
                       {item.location ? (
-                        <p className="flex items-center gap-1.5">
+                        <p className="hidden items-center gap-1.5 sm:flex">
                           <MapPin className="h-3.5 w-3.5 shrink-0 text-[var(--svs-primary)]" />
                           <span>{item.location}</span>
                         </p>
                       ) : null}
                       {item.provider ? (
-                        <p className="text-xs text-[var(--svs-muted)]">{item.provider}</p>
+                        <p className="hidden text-xs text-[var(--svs-muted)] sm:block">{item.provider}</p>
                       ) : null}
                       {item.isSellerListing ? (
-                        <p className={`text-xs font-semibold ${isSellerOutOfStock ? 'text-rose-600' : 'text-emerald-700'}`}>
+                        <p className={`hidden text-xs font-semibold sm:block ${isSellerOutOfStock ? 'text-rose-600' : 'text-emerald-700'}`}>
                           Quantity in stock: {normalizeListingQuantity(item.availableQuantity, 0)}
                         </p>
                       ) : null}
                     </div>
-                    <p className="mt-3 text-base font-bold text-[var(--svs-text)]">{item.price}</p>
-                    <div className="mt-3">
+                    <p className="mt-2 text-sm font-bold text-[var(--svs-text)] sm:mt-3 sm:text-base">{item.price}</p>
+                    <div className="mt-2 sm:mt-3">
                       <button
                         type="button"
                         disabled={isSellerOutOfStock}
@@ -7051,7 +7051,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
                           }
                           (!item.isSellerListing && item.category === 'Movies') ? navigate(`/movie/${item.id}`) : openBookingItemDetails(item);
                         }}
-                        className={`${cudyBluePrimaryButtonClassName} rounded-full px-4 py-2 text-xs font-semibold text-white transition ${isSellerOutOfStock ? 'cursor-not-allowed bg-slate-400' : 'bg-[#0f9fb2] hover:bg-[#0d8a9c]'}`}
+                        className={`${cudyBluePrimaryButtonClassName} w-full rounded-full px-3 py-1.5 text-xs font-semibold text-white transition sm:w-auto sm:px-4 sm:py-2 ${isSellerOutOfStock ? 'cursor-not-allowed bg-slate-400' : 'bg-[#0f6674] hover:bg-[#0d8a9c] sm:bg-[#0f9fb2]'}`}
                       >
                         {isSellerOutOfStock ? 'Sold Out' : 'Book Now'}
                       </button>
@@ -7800,8 +7800,8 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
       </div>
 
       {/* ── 4 Category Cards (Bookings-style with dark panel) ── */}
-      <div className="mt-[50px] sm:mt-[60px]">
-        <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-[40px] sm:mt-[60px]">
+        <div className="mx-auto grid max-w-[1280px] grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
           {secondhandCategoryCards.map((card) => (
             <article
               key={card.key}
@@ -7816,21 +7816,21 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
               }}
               className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl shadow-[0_4px_16px_rgba(15,23,42,0.10)] transition-all duration-200 hover:-translate-y-1 hover:scale-[1.03] hover:shadow-[0_12px_32px_rgba(15,23,42,0.18)]"
             >
-              <div className="relative h-[180px] w-full sm:h-[200px] lg:h-[210px]">
+              <div className="relative h-[140px] w-full sm:h-[200px] lg:h-[210px]">
                 <img src={card.image} alt={card.title} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy" />
-                <div className="absolute left-4 top-4 rounded-full bg-white/92 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#0f766e]">
+                <div className="absolute left-2 top-2 rounded-full bg-white/92 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em] text-[#0f766e] sm:left-4 sm:top-4 sm:px-2.5 sm:py-1 sm:text-[11px]">
                   Pre-owned
                 </div>
               </div>
-              <div className="flex flex-1 flex-col justify-between bg-[#0c2a32] px-5 py-4 text-white">
+              <div className="flex flex-1 flex-col justify-between bg-[#0c2a32] px-3 py-2.5 text-white sm:px-5 sm:py-4">
                 <div>
-                  <h2 className="text-[22px] font-bold leading-tight">{card.title}</h2>
-                  <p className="mt-1.5 text-[15px] leading-snug text-slate-300">{card.subtitle}</p>
+                  <h2 className="text-base font-bold leading-tight sm:text-[22px]">{card.title}</h2>
+                  <p className="mt-1 hidden text-[15px] leading-snug text-slate-300 sm:block sm:mt-1.5">{card.subtitle}</p>
                 </div>
-                <div className="mt-4 flex justify-end">
-                  <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#8cecf5] transition-all group-hover:gap-2.5">
+                <div className="mt-2 flex justify-end sm:mt-4">
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#8cecf5] transition-all group-hover:gap-2.5 sm:gap-1.5 sm:text-sm">
                     Explore
-                    <ChevronRight className="h-4 w-4" />
+                    <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </span>
                 </div>
               </div>
@@ -7848,7 +7848,7 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
               <p className="mt-1.5 text-xs text-[var(--svs-muted)] sm:text-sm">{section.subtitle}</p>
             </div>
 
-            <div className="mx-auto grid max-w-[1280px] grid-cols-3 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="mx-auto grid max-w-[1280px] grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
               {section.items.slice(0, sectionVisibleCounts[section.id] || 4).map((item) => {
                 const isWishlisted = wishlistItemIds.includes(getCollectionItemId('/secondhand-central', item.id));
                 return (
@@ -7863,38 +7863,38 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
                         navigate(`/secondhand-central/product/${item.id}`);
                       }
                     }}
-                    className="flex cursor-pointer flex-col overflow-hidden rounded-xl bg-white shadow-[0_2px_12px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_8px_28px_rgba(15,23,42,0.14)]"
+                    className="flex cursor-pointer flex-col overflow-hidden rounded-3xl border border-[#e0e7ef] bg-white shadow-lg transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_8px_28px_rgba(15,23,42,0.14)] sm:rounded-xl sm:border-0 sm:shadow-[0_2px_12px_rgba(15,23,42,0.08)]"
                   >
                     <div className="relative">
-                      <img src={item.image} alt={item.title} className="h-[160px] w-full object-cover sm:h-[180px]" loading="lazy" />
-                      <span className="absolute left-3 top-3 rounded-full bg-[#0f766e]/90 px-2.5 py-1 text-[10px] font-bold text-white">{item.condition}</span>
+                      <img src={item.image} alt={item.title} className="aspect-[4/3] w-full bg-[#f3f4f6] object-cover text-transparent sm:aspect-auto sm:h-[180px]" loading="lazy" />
+                      <span className="absolute left-2 top-2 rounded-full bg-[#0f766e]/90 px-1.5 py-0.5 text-[9px] font-bold text-white sm:left-3 sm:top-3 sm:px-2.5 sm:py-1 sm:text-[10px]">{item.condition}</span>
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); onToggleWishlist(buildWishlistItem(item)); }}
-                        className={`absolute right-3 top-3 rounded-full border p-2 transition ${isWishlisted ? 'border-rose-200 bg-rose-50 text-rose-600' : 'border-white/70 bg-white/90 text-slate-700 hover:bg-white'}`}
+                        className={`absolute right-2 top-2 rounded-full border p-1.5 transition sm:right-3 sm:top-3 sm:p-2 ${isWishlisted ? 'border-rose-200 bg-rose-50 text-rose-600' : 'border-white/70 bg-white/90 text-slate-700 hover:bg-white'}`}
                         aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
                       >
-                        <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-current' : ''}`} />
+                        <Heart className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isWishlisted ? 'fill-current' : ''}`} />
                       </button>
                     </div>
-                    <div className="flex flex-1 flex-col p-4">
-                      <h3 className="text-base font-bold text-[var(--svs-text)]">{item.title}</h3>
-                      <div className="mt-2 space-y-1 text-xs text-[var(--svs-muted)]">
+                    <div className="flex flex-1 flex-col p-2.5 sm:p-4">
+                      <h3 className="line-clamp-2 text-sm font-bold leading-tight text-[#0f6674] sm:text-base sm:text-[var(--svs-text)]">{item.title}</h3>
+                      <div className="mt-1.5 space-y-1 text-[11px] text-[var(--svs-muted)] sm:mt-2 sm:text-xs">
                         {/* Description intentionally hidden in main listing. Only show in details modal. */}
-                        <p className="flex items-center gap-1.5">
+                        <p className="hidden items-center gap-1.5 sm:flex">
                           <MapPin className="h-3.5 w-3.5 shrink-0 text-[var(--svs-primary)]" />
                           <span>Nairobi (Kenya)</span>
                         </p>
                       </div>
-                      <p className="mt-3 text-base font-bold text-[var(--svs-text)]"><SalePrice price={item.price} currency={item.currency} /></p>
-                      <div className="mt-3 flex gap-2">
+                      <p className="mt-2 text-sm font-bold text-[var(--svs-text)] sm:mt-3 sm:text-base"><SalePrice price={item.price} currency={item.currency} /></p>
+                      <div className="mt-2 flex flex-col gap-2 sm:mt-3 sm:flex-row">
                         <button
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
                             onAddToCart(buildCartItem(item));
                           }}
-                          className={`${cudyBluePrimaryButtonClassName} rounded-full bg-[#0f766e] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#0d6357]`}
+                          className={`${cudyBluePrimaryButtonClassName} w-full rounded-full bg-[#0f6674] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#0d6357] sm:w-auto sm:bg-[#0f766e] sm:px-4 sm:py-2`}
                         >
                           Add to Cart
                         </button>
@@ -7904,7 +7904,7 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
                             event.stopPropagation();
                             navigate(`/secondhand-central/product/${item.id}`);
                           }}
-                          className="rounded-full border border-[var(--svs-border)] bg-white px-4 py-2 text-xs font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
+                          className="hidden rounded-full border border-[var(--svs-border)] bg-white px-4 py-2 text-xs font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)] sm:inline-block"
                         >
                           View Details
                         </button>
@@ -8375,7 +8375,7 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
 
       {/* Main content area */}
       <div className="mt-10 sm:mt-12">
-        <div className="mx-auto grid max-w-[1280px] grid-cols-3 gap-3 sm:gap-5 lg:grid-cols-3">
+        <div className="mx-auto grid max-w-[1280px] grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-3">
           {filteredBeverageItems.slice(0, sectionVisibleCounts[activeCategory] || 6).map((item) => {
             const isOutOfStock = item.isSellerListing && item.availableQuantity === 0;
             return (
@@ -8390,11 +8390,11 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
                     openBeverageItemDetails(item);
                   }
                 }}
-                className="flex cursor-pointer flex-col overflow-hidden rounded-xl bg-white shadow-[0_2px_12px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_8px_28px_rgba(15,23,42,0.14)]"
+                className="flex cursor-pointer flex-col overflow-hidden rounded-3xl border border-[#e0e7ef] bg-white shadow-lg transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_8px_28px_rgba(15,23,42,0.14)] sm:rounded-xl sm:border-0 sm:shadow-[0_2px_12px_rgba(15,23,42,0.08)]"
               >
-                <img src={item.image} alt={item.title} className="h-[160px] w-full object-cover sm:h-[180px]" loading="lazy" />
-                <div className="flex flex-1 flex-col p-4">
-                  <h3 className="text-base font-bold text-[var(--svs-text)]">{item.title}</h3>
+                <img src={item.image} alt={item.title} className="aspect-[4/3] w-full bg-[#f3f4f6] object-cover text-transparent sm:aspect-auto sm:h-[180px]" loading="lazy" />
+                <div className="flex flex-1 flex-col p-2.5 sm:p-4">
+                  <h3 className="line-clamp-2 text-sm font-bold leading-tight text-[#0f6674] sm:text-base sm:text-[var(--svs-text)]">{item.title}</h3>
                   {item.subtitle ? (
                     <p className="mt-0.5 hidden text-xs text-[var(--svs-muted)] sm:block">{item.subtitle}</p>
                   ) : null}
@@ -8411,8 +8411,8 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
                       </p>
                     ) : null}
                   </div>
-                  <p className="mt-3 text-base font-bold text-[var(--svs-text)]">{item.price}</p>
-                  <div className="mt-3">
+                  <p className="mt-2 text-sm font-bold text-[var(--svs-text)] sm:mt-3 sm:text-base">{item.price}</p>
+                  <div className="mt-2 sm:mt-3">
                     <button
                       type="button"
                       disabled={isOutOfStock}
@@ -8428,7 +8428,7 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
                         });
                         onAddToCart(cartItem);
                       }}
-                      className={`${cudyBluePrimaryButtonClassName} rounded-full px-4 py-2 text-xs font-semibold text-white transition ${isOutOfStock ? 'cursor-not-allowed bg-slate-400' : 'bg-[#0f9fb2] hover:bg-[#0d8a9c]'}`}
+                      className={`${cudyBluePrimaryButtonClassName} w-full rounded-full px-3 py-1.5 text-xs font-semibold text-white transition sm:w-auto sm:px-4 sm:py-2 ${isOutOfStock ? 'cursor-not-allowed bg-slate-400' : 'bg-[#0f6674] hover:bg-[#0d8a9c] sm:bg-[#0f9fb2]'}`}
                     >
                       {isOutOfStock ? 'Sold Out' : '+ Add to Basket'}
                     </button>
@@ -9297,7 +9297,7 @@ const HomeCarePage = ({ sellerItems = [], onOpenItemDetails }) => {
   const renderServiceCard = (provider) => (
     <article
       key={provider.id}
-      className="w-full max-w-[340px] overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_4px_12px_rgba(0,0,0,0.08)]"
+      className="flex w-full max-w-[340px] flex-col overflow-hidden rounded-3xl border border-[#e0e7ef] bg-white shadow-lg transition hover:scale-[1.02]"
     >
       <div
         className="relative cursor-pointer"
@@ -9312,19 +9312,19 @@ const HomeCarePage = ({ sellerItems = [], onOpenItemDetails }) => {
         }}
         aria-label={`View ${provider.name} profile`}
       >
-        <img src={provider.image} alt={provider.name} className="h-[180px] w-full object-cover" loading="lazy" />
-        <span className="absolute right-3 top-3 rounded-md bg-black px-2.5 py-1 text-xs font-medium text-white">{provider.category}</span>
+        <img src={provider.image} alt={provider.name} className="aspect-[4/3] w-full rounded-t-3xl bg-[#f3f4f6] object-cover text-transparent sm:aspect-auto sm:h-[180px]" loading="lazy" />
+        <span className="absolute right-2 top-2 rounded-md bg-black/80 px-1.5 py-0.5 text-[10px] font-medium text-white sm:right-3 sm:top-3 sm:px-2.5 sm:py-1 sm:text-xs">{provider.category}</span>
       </div>
-      <div className="space-y-2.5 p-4">
-        <h3 className="text-[20px] font-bold leading-tight text-[#1A1A1A]">{provider.name}</h3>
-        <p className="flex items-center gap-2 text-sm text-[#6B7280]"><MapPin className="h-4 w-4" /> {provider.location}</p>
-        <p className="flex items-center gap-2 text-sm text-[#6B7280]"><User className="h-4 w-4" /> {provider.experience}</p>
-        <p className="flex items-center gap-2 text-sm text-[#6B7280]"><CalendarDays className="h-4 w-4" /> {provider.serviceType} • {provider.availabilityWindow}</p>
-        <p className="flex items-center gap-2 text-sm text-[#374151]"><Star className="h-4 w-4 fill-[#FBBF24] text-[#FBBF24]" /> 4.8 (145 reviews)</p>
+      <div className="flex flex-1 flex-col gap-1.5 p-2.5 sm:gap-2.5 sm:p-4">
+        <h3 className="line-clamp-2 text-sm font-bold leading-tight text-[#0f6674] sm:text-[20px] sm:text-[#1A1A1A]">{provider.name}</h3>
+        <p className="flex items-center gap-1.5 text-[11px] text-[#6B7280] sm:gap-2 sm:text-sm"><MapPin className="h-3 w-3 sm:h-4 sm:w-4" /> <span className="truncate">{provider.location}</span></p>
+        <p className="hidden items-center gap-2 text-sm text-[#6B7280] sm:flex"><User className="h-4 w-4" /> {provider.experience}</p>
+        <p className="hidden items-center gap-2 text-sm text-[#6B7280] sm:flex"><CalendarDays className="h-4 w-4" /> {provider.serviceType} • {provider.availabilityWindow}</p>
+        <p className="hidden items-center gap-2 text-sm text-[#374151] sm:flex"><Star className="h-4 w-4 fill-[#FBBF24] text-[#FBBF24]" /> 4.8 (145 reviews)</p>
         <button
           type="button"
           onClick={() => handleOpenProvider(provider)}
-          className="mt-1 h-12 w-full rounded-lg bg-[#0f9fb2] text-sm font-medium text-white transition hover:bg-[#0d8a9c]"
+          className="mt-auto h-9 w-full rounded-full bg-[#0f6674] text-xs font-semibold text-white transition hover:bg-[#0d8a9c] sm:h-12 sm:rounded-lg sm:text-sm sm:font-medium sm:bg-[#0f9fb2]"
         >
           {provider.buttonLabel}
         </button>
@@ -9333,9 +9333,9 @@ const HomeCarePage = ({ sellerItems = [], onOpenItemDetails }) => {
   );
 
   return (
-    <section className="bg-[var(--svs-bg)] px-4 py-8 font-['Inter',sans-serif] text-[#1A1A1A] sm:px-6 lg:py-10">
+    <section className="bg-[var(--svs-bg)] px-3 py-4 font-['Inter',sans-serif] text-[#1A1A1A] sm:px-6 sm:py-8 lg:py-10">
       <div className="mx-auto w-full max-w-[1280px]">
-        <section className="relative h-[220px] overflow-hidden rounded-2xl sm:h-[260px]">
+        <section className="relative h-[160px] overflow-hidden rounded-2xl sm:h-[260px]">
           <img
             src="https://images.pexels.com/photos/3846022/pexels-photo-3846022.jpeg?auto=compress&cs=tinysrgb&w=1920"
             alt="Book Home Care Services"
@@ -9350,8 +9350,8 @@ const HomeCarePage = ({ sellerItems = [], onOpenItemDetails }) => {
           </div>
         </section>
 
-        <div className="mt-8 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-[var(--svs-text)]">Filters</h2>
+        <div className="mt-5 flex items-center justify-between sm:mt-8">
+          <h2 className="text-base font-semibold text-[var(--svs-text)] sm:text-xl">Filters</h2>
           <button
             type="button"
             onClick={() => {
@@ -9361,15 +9361,15 @@ const HomeCarePage = ({ sellerItems = [], onOpenItemDetails }) => {
                 setIsFilterDrawerOpen(true);
               }
             }}
-            className="inline-flex items-center gap-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-4 py-2 text-sm font-medium text-[#0f9fb2]"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-2.5 py-1.5 text-xs font-medium text-[#0f9fb2] sm:gap-2 sm:px-4 sm:py-2 sm:text-sm"
           >
-            <Menu className="h-4 w-4" />
+            <Menu className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span className="lg:hidden">Filter Services</span>
             <span className="hidden lg:inline">{isDesktopFiltersHidden ? 'Show Filters' : 'Hide Filters'}</span>
           </button>
         </div>
 
-        <div className={`mt-8 grid items-start gap-10 ${isDesktopFiltersHidden ? '' : 'lg:grid-cols-[280px_minmax(0,1fr)]'}`}>
+        <div className={`mt-5 grid items-start gap-6 sm:mt-8 sm:gap-10 ${isDesktopFiltersHidden ? '' : 'lg:grid-cols-[280px_minmax(0,1fr)]'}`}>
           {!isDesktopFiltersHidden ? (
           <aside className="hidden min-h-[calc(100vh-220px)] border-r border-[#E5E7EB] lg:block">
             {FilterPanel}
@@ -9377,15 +9377,15 @@ const HomeCarePage = ({ sellerItems = [], onOpenItemDetails }) => {
           ) : null}
 
           <main ref={providersSectionRef}>
-            <div className="grid justify-items-center gap-6 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-2 justify-items-center gap-3 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
               {filteredProviders.map((provider) => renderServiceCard(provider))}
             </div>
 
-            <section ref={relatedListingsSectionRef} className="mt-14">
-              <h2 className="text-[24px] font-bold text-[var(--svs-text)]">Trending Services &amp; Trusted Professionals</h2>
-              <div className="mt-6 flex gap-6 overflow-x-auto pb-2">
+            <section ref={relatedListingsSectionRef} className="mt-10 sm:mt-14">
+              <h2 className="text-lg font-bold text-[var(--svs-text)] sm:text-[24px]">Trending Services &amp; Trusted Professionals</h2>
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:mt-6 sm:flex sm:gap-6 sm:overflow-x-auto sm:pb-2">
                 {trendingProviders.map((provider) => (
-                  <div key={`trending-${provider.id}`} className="w-[340px] shrink-0">{renderServiceCard(provider)}</div>
+                  <div key={`trending-${provider.id}`} className="w-full sm:w-[340px] sm:shrink-0">{renderServiceCard(provider)}</div>
                 ))}
               </div>
               <div className="mt-8 flex justify-center gap-3">
@@ -11941,10 +11941,6 @@ const MarketsPage = () => {
           const marketLabelClassName = 'text-xs font-semibold uppercase tracking-wide text-[#8eeaff] drop-shadow sm:text-xs';
           const marketTitleClassName = 'text-base font-bold leading-tight text-white drop-shadow line-clamp-3 sm:text-lg sm:line-clamp-none';
           const badgeClassName = 'svs-berkshire-swash rounded-full border border-white/35 bg-white/15 px-2 py-0.5 text-xs text-white sm:px-2 sm:py-1 sm:text-sm';
-          const openMarketClassName = 'text-xs text-white/90 drop-shadow sm:mt-3 sm:text-sm';
-          const ctaClassName = useBookingsPreset
-            ? `${cudyBluePrimaryButtonClassName} inline-flex items-center gap-1 rounded-md bg-[#0f9fb2] px-2.5 py-1.5 text-xs font-semibold text-white transition group-hover:bg-[#0d8a9c] sm:mt-4 sm:gap-2 sm:px-3 sm:py-2 sm:text-sm`
-            : `${cudyBluePrimaryButtonClassName} inline-flex items-center gap-1 rounded-md bg-[var(--svs-primary)] px-2.5 py-1.5 text-xs font-semibold text-white transition group-hover:bg-[#33b9f2] sm:mt-4 sm:gap-2 sm:px-3 sm:py-2 sm:text-sm`;
           const hasHeroImage = isFastFood || isFashion || isBookings || isBeverages || isGroceries || isMobility || isEcommerce || isElectronics || isBetting || isConstruction || isLivestock || isHomeCare || isNaturalResources || isWellness || isStationery || isProperty || isHerbs || isSecondhand;
           const heroImageUrl = isFastFood
             ? 'https://images.pexels.com/photos/2983101/pexels-photo-2983101.jpeg?auto=compress&cs=tinysrgb&w=1200'
