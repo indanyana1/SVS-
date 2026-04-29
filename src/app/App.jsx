@@ -6725,7 +6725,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
               </div>
 
               {/* Category pill tabs */}
-              <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0">
+              <div className="flex flex-wrap gap-1.5 sm:flex-nowrap sm:gap-2 sm:overflow-x-auto sm:pb-0">
                 {bookingsPrototypeCategoryTabs.map((tab) => (
                   <button
                     key={tab}
@@ -7758,7 +7758,7 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
               </div>
 
               {/* Category pill tabs */}
-              <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0">
+              <div className="flex flex-wrap gap-1.5 sm:flex-nowrap sm:gap-2 sm:overflow-x-auto sm:pb-0">
                 {['All', ...secondhandCategoryCards.map((c) => c.key)].map((tab) => {
                   const label = tab === 'All' ? 'All' : secondhandCategoryCards.find((c) => c.key === tab)?.title || tab;
                   return (
@@ -8344,7 +8344,7 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
         <div className="mt-4 rounded-xl border border-[var(--svs-border)] bg-white/80 px-4 py-3 shadow-[0_2px_8px_rgba(15,23,42,0.06)] backdrop-blur sm:px-5">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-              <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0">
+              <div className="flex flex-wrap gap-1.5 sm:flex-nowrap sm:gap-2 sm:overflow-x-auto sm:pb-0">
                 {beveragesCategoryTabs.map((tab) => (
                   <button
                     key={tab}
