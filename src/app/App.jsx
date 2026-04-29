@@ -201,6 +201,31 @@ const marketLinks = [
   { labelKey: 'markets.stationery', href: '/stationery-office' },
 ];
 
+// Short marketing taglines shown beneath the market name on the Markets page cards.
+const marketShortDescriptions = {
+  '/beverages-liquors': 'Wines, spirits & refreshing drinks',
+  '/building-construction-tools': 'Tools & materials for every build',
+  '/fashion-style': 'Trending clothing, shoes & accessories',
+  '/voting-clients': 'Vote for your favourite service clients',
+  '/safety': 'Safety gear & protective equipment',
+  '/hardware-software': 'Latest tech, gadgets & software',
+  '/mobility-vehicles': 'Cars, bikes & mobility solutions',
+  '/natural-resources-minerals': 'Quality raw materials & minerals',
+  '/tickets': 'Events, travel & experience bookings',
+  '/voting-providers': 'Vote for your favourite service providers',
+  '/fast-food': 'Hot meals delivered fast & fresh',
+  '/groceries': 'Fresh produce & everyday essentials',
+  '/home-care': 'Cleaning, laundry & home essentials',
+  '/e-commerce': 'Lifestyle picks & tech essentials',
+  '/traditional-medicines-herbs': 'Authentic herbs & natural remedies',
+  '/livestock-hub': 'Buy & sell livestock with confidence',
+  '/betting-lottery-games': 'Play, predict & win big',
+  '/wellness': 'Health, beauty & wellbeing products',
+  '/property-hub': 'Homes, rentals & commercial space',
+  '/secondhand-central': 'Quality pre-loved goods at great prices',
+  '/stationery-office': 'Office, school & creative supplies',
+};
+
 const sellerMarketOptions = [
   { key: 'beverages', labelKey: 'markets.beverages', route: '/beverages-liquors' },
   { key: 'constructionTools', labelKey: 'markets.constructionTools', route: '/building-construction-tools' },
@@ -5378,11 +5403,11 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
               </button>
 
               {isNotificationsOpen ? (
-                <div className="absolute right-0 top-[calc(100%+8px)] z-[70] w-[min(92vw,380px)] overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-2xl">
-                  <div className="flex items-center justify-between border-b border-[var(--svs-border)] px-4 py-3">
-                    <p className="text-sm font-bold text-[var(--svs-text)]">Notifications</p>
-                    <div className="flex items-center gap-3">
-                      <p className="text-xs text-[var(--svs-muted)]">{notifications.length} total</p>
+                <div className="absolute right-0 top-[calc(100%+8px)] z-[70] w-[min(88vw,300px)] overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-2xl sm:w-[min(92vw,380px)] sm:rounded-2xl">
+                  <div className="flex items-center justify-between border-b border-[var(--svs-border)] px-2 py-2 sm:px-4 sm:py-3">
+                    <p className="text-xs font-bold text-[var(--svs-text)] sm:text-sm">Notifications</p>
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <p className="text-[10px] text-[var(--svs-muted)] sm:text-xs">{notifications.length} total</p>
                       {notifications.length > 0 ? (
                         <button
                           type="button"
@@ -5393,26 +5418,26 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                       ) : null}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[var(--svs-muted)] text-sm font-medium">Price</span>
-                    <span className="ml-auto text-[var(--svs-muted)] text-xs">{priceRange[0]}</span>
-                    <span className="text-[var(--svs-muted)] text-xs">-</span>
-                    <span className="text-[var(--svs-muted)] text-xs">{priceRange[1]}</span>
+                  <div className="flex items-center gap-2 px-2 py-1.5 sm:px-4 sm:py-2">
+                    <span className="text-[var(--svs-muted)] text-[11px] font-medium sm:text-sm">Price</span>
+                    <span className="ml-auto text-[var(--svs-muted)] text-[10px] sm:text-xs">{priceRange[0]}</span>
+                    <span className="text-[var(--svs-muted)] text-[10px] sm:text-xs">-</span>
+                    <span className="text-[var(--svs-muted)] text-[10px] sm:text-xs">{priceRange[1]}</span>
                   </div>
-                  <div className="max-h-80 overflow-y-auto p-2">
+                  <div className="max-h-64 overflow-y-auto p-1.5 sm:max-h-80 sm:p-2">
                     {notifications.length ? notifications.map((notification) => (
                       <Link
                         key={notification.id}
                         to={notification.href || '/orders'}
                         onClick={() => setIsNotificationsOpen(false)}
-                        className="mb-1 block rounded-xl border border-transparent bg-[var(--svs-surface-soft)] px-3 py-2.5 text-left transition last:mb-0 hover:border-[var(--svs-primary)]"
+                        className="mb-1 block rounded-lg border border-transparent bg-[var(--svs-surface-soft)] px-2 py-1.5 text-left transition last:mb-0 hover:border-[var(--svs-primary)] sm:rounded-xl sm:px-3 sm:py-2.5"
                       >
-                        <p className="text-sm font-semibold text-[var(--svs-text)]">{notification.title}</p>
-                        {notification.message ? <p className="mt-0.5 text-xs text-[var(--svs-muted)]">{notification.message}</p> : null}
-                        <p className="mt-1 text-[11px] text-[var(--svs-muted)]">{formatDate(notification.createdAt)}</p>
+                        <p className="text-xs font-semibold text-[var(--svs-text)] sm:text-sm">{notification.title}</p>
+                        {notification.message ? <p className="mt-0.5 text-[10px] text-[var(--svs-muted)] sm:text-xs">{notification.message}</p> : null}
+                        <p className="mt-1 text-[10px] text-[var(--svs-muted)] sm:text-[11px]">{formatDate(notification.createdAt)}</p>
                       </Link>
                     )) : (
-                      <p className="px-2 py-3 text-sm text-[var(--svs-muted)]">No notifications yet.</p>
+                      <p className="px-2 py-2 text-xs text-[var(--svs-muted)] sm:py-3 sm:text-sm">No notifications yet.</p>
                     )}
                   </div>
                 </div>
@@ -5436,7 +5461,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
               </button>
 
               {isAuthenticated && profileOpen ? (
-                <div className="absolute right-0 top-[calc(100%+8px)] w-56 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3 shadow-xl">
+                <div className="absolute right-0 top-[calc(100%+8px)] z-[80] w-56 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3 shadow-xl">
                   <p className="text-xs uppercase tracking-wide text-[var(--svs-muted)]">{t('profile.signedInAs')}</p>
                   <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{profileName}</p>
                   <button
@@ -7303,7 +7328,7 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
               </button>
             </div>
             {filteredMarketItems.length ? (
-              <div className="grid grid-cols-3 gap-3 sm:gap-8 lg:grid-cols-3 xl:grid-cols-4">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-8 lg:grid-cols-3 xl:grid-cols-4">
                 {filteredMarketItems.map((item) => {
                   const itemTitle = getTranslatedValue(t, item.titleKey, item.title);
                   const hasStockValue = item.availableQuantity !== null && item.availableQuantity !== undefined;
@@ -7406,17 +7431,17 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
       titleClassName="text-xl text-white sm:text-2xl"
       subtitleClassName="mt-2 text-xs text-white/90 sm:text-sm"
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10 py-12">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-10 py-6 sm:py-12">
         {groceriesCategoryCards.map((category) => (
           <Link
             key={category.key}
             to={`/groceries/${category.key}`}
-            className="flex flex-col items-center rounded-3xl border-2 border-[#e0e7ef] bg-white p-8 shadow-xl hover:scale-105 hover:shadow-2xl transition-all group min-h-[320px] min-w-[220px] max-w-[320px] mx-auto"
+            className="flex flex-col items-center rounded-xl border border-[#e0e7ef] bg-white p-3 shadow-md hover:shadow-2xl transition-all group sm:rounded-3xl sm:border-2 sm:p-8 sm:shadow-xl sm:hover:scale-105 sm:min-h-[320px] sm:min-w-[220px] sm:max-w-[320px] sm:mx-auto"
             style={{ boxSizing: 'border-box' }}
           >
-            <img src={category.image} alt={category.title} className="w-32 h-32 object-cover rounded-2xl mb-6 group-hover:scale-110 transition-transform duration-300 shadow" />
-            <h3 className="text-2xl font-extrabold text-[#0f6674] mb-2 text-center group-hover:text-[#33b9f2]">{category.title}</h3>
-            <p className="text-base text-[#374151] text-center">{category.subtitle}</p>
+            <img src={category.image} alt={category.title} className="w-16 h-16 object-cover rounded-lg mb-2 group-hover:scale-110 transition-transform duration-300 shadow sm:w-32 sm:h-32 sm:rounded-2xl sm:mb-6" />
+            <h3 className="text-sm font-extrabold text-[#0f6674] mb-1 text-center group-hover:text-[#33b9f2] sm:text-2xl sm:mb-2">{category.title}</h3>
+            <p className="text-[11px] text-[#374151] text-center sm:text-base">{category.subtitle}</p>
           </Link>
         ))}
       </div>
@@ -8125,30 +8150,31 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
             />
           </div>
           {/* Product Cards Grid */}
-          <div ref={gridRef} className="grid grid-cols-3 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-10">
+          <div ref={gridRef} className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-10">
             {filteredItems.map(item => (
-              <div key={item.id} className="bg-[var(--svs-surface-soft)] rounded-2xl shadow-lg flex flex-col overflow-hidden hover:shadow-2xl transition group border border-[var(--svs-border)]">
-                <div className="relative h-56 w-full overflow-hidden cursor-pointer" onClick={() => handleOpenDetails(item)}>
+              <div key={item.id} className="bg-[var(--svs-surface-soft)] rounded-xl shadow-md sm:rounded-2xl sm:shadow-lg flex flex-col overflow-hidden hover:shadow-2xl transition group border border-[var(--svs-border)]">
+                <div className="relative aspect-[4/3] sm:aspect-auto sm:h-56 w-full overflow-hidden cursor-pointer" onClick={() => handleOpenDetails(item)}>
                   <img src={item.image} alt={item.title} className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" />
-                  <span className="absolute top-4 left-4 bg-[var(--svs-primary)] text-white text-sm font-bold px-4 py-1.5 rounded-[10px] shadow">{item.category}</span>
+                  <span className="absolute top-2 left-2 sm:top-4 sm:left-4 bg-[var(--svs-primary)] text-white text-[10px] sm:text-sm font-bold px-2 py-0.5 sm:px-4 sm:py-1.5 rounded-md sm:rounded-[10px] shadow">{item.category}</span>
                   {/* Wishlist icon */}
                   <button
-                    className={`absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 border border-[var(--svs-border)] shadow ${wishlistItemIds.includes(item.id) ? 'text-[var(--svs-primary)]' : 'text-[var(--svs-muted)]'} hover:text-[var(--svs-primary)]`}
+                    className={`absolute top-2 right-2 sm:top-4 sm:right-4 w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center rounded-full bg-white/90 border border-[var(--svs-border)] shadow ${wishlistItemIds.includes(item.id) ? 'text-[var(--svs-primary)]' : 'text-[var(--svs-muted)]'} hover:text-[var(--svs-primary)]`}
                     style={{zIndex:2}}
                     onClick={e => { e.stopPropagation(); handleToggleWishlist(item); }}
                     aria-label="Toggle Wishlist"
                   >
-                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path d="M10 17.5l-1.45-1.32C4.4 12.36 2 10.28 2 7.5 2 5.5 3.5 4 5.5 4c1.04 0 2.09.54 2.7 1.44C8.41 5.54 9.46 5 10.5 5 12.5 5 14 6.5 14 8.5c0 2.78-2.4 4.86-6.55 8.68L10 17.5z"/></svg>
+                    <svg width="16" height="16" className="sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 17.5l-1.45-1.32C4.4 12.36 2 10.28 2 7.5 2 5.5 3.5 4 5.5 4c1.04 0 2.09.54 2.7 1.44C8.41 5.54 9.46 5 10.5 5 12.5 5 14 6.5 14 8.5c0 2.78-2.4 4.86-6.55 8.68L10 17.5z"/></svg>
                   </button>
                 </div>
-                <div className="flex flex-col flex-1 p-6">
-                  <h3 className="font-extrabold text-xl text-[var(--svs-text)] mb-2 truncate">{item.title}</h3>
-                  <span className="text-[var(--svs-muted)] text-base mb-3 font-medium">{item.prepTime}</span>
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="font-extrabold text-2xl text-[var(--svs-primary)]">{item.price}</span>
-                    <button className="ml-auto px-3 py-1 rounded bg-[var(--svs-primary)] text-white text-xs font-bold shadow hover:bg-[var(--svs-primary-strong)] transition" onClick={() => handleBuyNow(item)}>Buy Now</button>
+                <div className="flex flex-col flex-1 p-2.5 sm:p-6">
+                  <h3 className="font-extrabold text-sm sm:text-xl text-[var(--svs-text)] mb-1 sm:mb-2 truncate">{item.title}</h3>
+                  <span className="hidden sm:inline-block text-[var(--svs-muted)] text-base mb-3 font-medium">{item.prepTime}</span>
+                  <span className="sm:hidden text-[var(--svs-muted)] text-xs mb-2 font-medium">{item.prepTime}</span>
+                  <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-4">
+                    <span className="font-extrabold text-base sm:text-2xl text-[var(--svs-primary)]">{item.price}</span>
+                    <button className="ml-auto px-2 py-1 sm:px-3 rounded bg-[var(--svs-primary)] text-white text-[10px] sm:text-xs font-bold shadow hover:bg-[var(--svs-primary-strong)] transition" onClick={() => handleBuyNow(item)}>Buy Now</button>
                   </div>
-                  <button className="mt-auto w-full rounded-[12px] bg-[var(--svs-primary)] text-white font-bold py-3 text-lg shadow hover:bg-[var(--svs-primary-strong)] transition" onClick={() => handleAddToCart(item)}>Add to Cart</button>
+                  <button className="mt-auto w-full rounded-md sm:rounded-[12px] bg-[var(--svs-primary)] text-white font-bold py-2 sm:py-3 text-xs sm:text-lg shadow hover:bg-[var(--svs-primary-strong)] transition" onClick={() => handleAddToCart(item)}>Add to Cart</button>
                 </div>
               </div>
             ))}
@@ -11873,7 +11899,7 @@ const MarketsPage = () => {
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-3">
+      <div className="mt-6 grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-3">
         {orderedMarketLinks.map((market, index) => {
           const isFastFood = market.href === '/fast-food';
           const isFashion = market.href === '/fashion-style';
@@ -11900,13 +11926,13 @@ const MarketsPage = () => {
           const overlayClassName = useBookingsPreset
             ? 'absolute inset-0 bg-gradient-to-t from-[#041a26]/90 via-[#0f6f84]/55 to-[#14b8a6]/30'
             : 'absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20';
-          const marketLabelClassName = 'text-xs font-semibold uppercase tracking-wide text-[#8eeaff] drop-shadow';
-          const marketTitleClassName = 'mt-1 text-lg font-bold text-white drop-shadow';
-          const badgeClassName = 'svs-berkshire-swash rounded-full border border-white/35 bg-white/15 px-2 py-1 text-sm text-white';
-          const openMarketClassName = 'mt-3 text-sm text-white/90 drop-shadow';
+          const marketLabelClassName = 'text-xs font-semibold uppercase tracking-wide text-[#8eeaff] drop-shadow sm:text-xs';
+          const marketTitleClassName = 'text-base font-bold leading-tight text-white drop-shadow line-clamp-3 sm:text-lg sm:line-clamp-none';
+          const badgeClassName = 'svs-berkshire-swash rounded-full border border-white/35 bg-white/15 px-2 py-0.5 text-xs text-white sm:px-2 sm:py-1 sm:text-sm';
+          const openMarketClassName = 'text-xs text-white/90 drop-shadow sm:mt-3 sm:text-sm';
           const ctaClassName = useBookingsPreset
-            ? `${cudyBluePrimaryButtonClassName} mt-4 inline-flex items-center gap-2 rounded-md bg-[#0f9fb2] px-3 py-2 text-sm font-semibold text-white transition group-hover:bg-[#0d8a9c]`
-            : `${cudyBluePrimaryButtonClassName} mt-4 inline-flex items-center gap-2 rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition group-hover:bg-[#33b9f2]`;
+            ? `${cudyBluePrimaryButtonClassName} inline-flex items-center gap-1 rounded-md bg-[#0f9fb2] px-2.5 py-1.5 text-xs font-semibold text-white transition group-hover:bg-[#0d8a9c] sm:mt-4 sm:gap-2 sm:px-3 sm:py-2 sm:text-sm`
+            : `${cudyBluePrimaryButtonClassName} inline-flex items-center gap-1 rounded-md bg-[var(--svs-primary)] px-2.5 py-1.5 text-xs font-semibold text-white transition group-hover:bg-[#33b9f2] sm:mt-4 sm:gap-2 sm:px-3 sm:py-2 sm:text-sm`;
           const hasHeroImage = isFastFood || isFashion || isBookings || isBeverages || isGroceries || isMobility || isEcommerce || isElectronics || isBetting || isConstruction || isLivestock || isHomeCare || isNaturalResources || isWellness || isStationery || isProperty || isHerbs || isSecondhand;
           const heroImageUrl = isFastFood
             ? 'https://images.pexels.com/photos/2983101/pexels-photo-2983101.jpeg?auto=compress&cs=tinysrgb&w=1200'
@@ -11949,7 +11975,7 @@ const MarketsPage = () => {
             <Link
               key={`all-${market.href}`}
               to={market.href}
-              className="group relative overflow-hidden rounded-2xl border border-[var(--svs-border)] shadow-[0_4px_8px_rgba(0,0,0,0.1)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_12px_22px_rgba(0,168,232,0.2)]"
+              className="group relative aspect-[4/5] overflow-hidden rounded-xl border border-[var(--svs-border)] shadow-[0_4px_8px_rgba(0,0,0,0.1)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_12px_22px_rgba(0,168,232,0.2)] sm:aspect-auto sm:rounded-2xl"
             >
               <div
                 className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
@@ -11957,17 +11983,27 @@ const MarketsPage = () => {
                 aria-hidden="true"
               />
               <div className={overlayClassName} aria-hidden="true" />
-              <div className="relative z-10 p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className={marketLabelClassName}>{t('marketsPage.marketLabel', { number: marketDisplayNumber })}</p>
-                    <p className={marketTitleClassName}>{t(market.labelKey)}</p>
-                  </div>
+              <div className="relative z-10 flex h-full flex-col p-3 sm:p-5">
+                {/* Top row: label + SVS badge */}
+                <div className="flex items-start justify-between gap-2 sm:gap-3">
+                  <p className={marketLabelClassName}>{t('marketsPage.marketLabel', { number: marketDisplayNumber })}</p>
                   <span className={badgeClassName}>SVS</span>
                 </div>
-                <p className={openMarketClassName}>{t('marketsPage.openMarket')}</p>
-                <div className={ctaClassName}>
-                  {t('marketsPage.enterMarket')} <span aria-hidden="true">-&gt;</span>
+                {/* Center: market name perfectly centered on the image */}
+                <div className="flex flex-1 flex-col items-center justify-center px-1 text-center sm:items-start sm:px-0 sm:text-left">
+                  <p className={marketTitleClassName}>{t(market.labelKey)}</p>
+                  {marketShortDescriptions[market.href] ? (
+                    <p className="mt-1.5 text-[11px] leading-snug text-white/85 drop-shadow line-clamp-2 sm:mt-2 sm:text-xs">
+                      {marketShortDescriptions[market.href]}
+                    </p>
+                  ) : null}
+                </div>
+                {/* Bottom: open market + CTA */}
+                <div className="flex items-center justify-between gap-2 sm:block">
+                  <p className={openMarketClassName}>{t('marketsPage.openMarket')}</p>
+                  <div className={ctaClassName}>
+                    {t('marketsPage.enterMarket')} <span aria-hidden="true">-&gt;</span>
+                  </div>
                 </div>
               </div>
             </Link>
@@ -11975,17 +12011,22 @@ const MarketsPage = () => {
           <Link
             key={`all-${market.href}`}
             to={market.href}
-            className="group rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_4px_8px_rgba(0,0,0,0.1)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_12px_22px_rgba(0,168,232,0.2)]"
+            className="group rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-2.5 shadow-[0_4px_8px_rgba(0,0,0,0.1)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_12px_22px_rgba(0,168,232,0.2)] sm:rounded-2xl sm:p-5"
           >
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start justify-between gap-2 sm:gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-primary-strong)]">{t('marketsPage.marketLabel', { number: marketDisplayNumber })}</p>
-                <p className="mt-1 text-lg font-bold text-[var(--svs-text)]">{t(market.labelKey)}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--svs-primary-strong)] sm:text-xs">{t('marketsPage.marketLabel', { number: marketDisplayNumber })}</p>
+                <p className="mt-0.5 text-sm font-bold leading-tight text-[var(--svs-text)] line-clamp-2 sm:mt-1 sm:text-lg sm:line-clamp-none">{t(market.labelKey)}</p>
+                {marketShortDescriptions[market.href] ? (
+                  <p className="mt-1 text-[11px] leading-snug text-[var(--svs-muted)] line-clamp-2 sm:text-xs">
+                    {marketShortDescriptions[market.href]}
+                  </p>
+                ) : null}
               </div>
-              <span className="svs-berkshire-swash rounded-full bg-[var(--svs-cyan-surface)] px-2 py-1 text-sm text-[var(--svs-primary-strong)]">SVS</span>
+              <span className="svs-berkshire-swash rounded-full bg-[var(--svs-cyan-surface)] px-1.5 py-0.5 text-[10px] text-[var(--svs-primary-strong)] sm:px-2 sm:py-1 sm:text-sm">SVS</span>
             </div>
-            <p className="mt-3 text-sm text-[var(--svs-muted)]">{t('marketsPage.openMarket')}</p>
-            <div className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex items-center gap-2 rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition group-hover:bg-[#33b9f2]`}>
+            <p className="mt-2 text-[11px] text-[var(--svs-muted)] sm:mt-3 sm:text-sm">{t('marketsPage.openMarket')}</p>
+            <div className={`${cudyBluePrimaryButtonClassName} mt-2 inline-flex items-center gap-1 rounded-md bg-[var(--svs-primary)] px-2 py-1 text-[11px] font-semibold text-white transition group-hover:bg-[#33b9f2] sm:mt-4 sm:gap-2 sm:px-3 sm:py-2 sm:text-sm`}>
               {t('marketsPage.enterMarket')} <span aria-hidden="true">-&gt;</span>
             </div>
           </Link>
@@ -14352,7 +14393,7 @@ const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaR
         onSliderMaximumChange={handleSliderMaximumChange}
       />
       {filteredItems.length ? (
-        <div className="grid grid-cols-3 gap-3 sm:gap-4 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
           {filteredItems.map((item) => {
         const itemTitle = getTranslatedValue(t, item.titleKey, item.title);
         const hasStockValue = item.availableQuantity !== null && item.availableQuantity !== undefined;
@@ -14493,49 +14534,49 @@ const SiteFooter = () => {
 
   return (
     <footer className="bg-gradient-to-b from-[#0c2a32] to-[#0f6674] text-white">
-      {/* ── Main Footer Grid ── */}
-      <div className="mx-auto w-full max-w-7xl px-6 pt-[60px] pb-10 sm:px-8">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+      {/* ── Main Footer Grid — 4 columns on every screen so mobile mirrors desktop, just smaller ── */}
+      <div className="mx-auto w-full max-w-7xl px-3 pt-8 pb-6 sm:px-6 sm:pt-[60px] sm:pb-10 sm:px-8">
+        <div className="grid grid-cols-4 gap-3 sm:gap-10">
           {/* Column 1 – Brand */}
           <div>
-            <h3 className="text-xl font-bold">SVS E-Commerce</h3>
-            <p className="mt-3 text-sm leading-relaxed text-slate-200">
+            <h3 className="text-[11px] font-bold sm:text-xl">SVS E-Commerce</h3>
+            <p className="mt-1.5 text-[10px] leading-snug text-slate-200 sm:mt-3 sm:text-sm sm:leading-relaxed">
               {t('site.tagline', { defaultValue: 'Your one-stop marketplace for everything you need – from groceries to tickets!' })}
             </p>
-            <p className="mt-3 text-sm text-slate-300">{t('site.address')}</p>
+            <p className="mt-1.5 text-[10px] text-slate-300 sm:mt-3 sm:text-sm">{t('site.address')}</p>
             {/* Social icons */}
-            <div className="mt-5 flex items-center gap-3">
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 sm:mt-5 sm:gap-3">
               {/* Facebook */}
               <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="text-white transition hover:text-cyan-200">
-                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" /></svg>
+                <svg className="h-3 w-3 sm:h-5 sm:w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" /></svg>
               </a>
               {/* X / Twitter */}
               <a href="https://x.com" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)" className="text-white transition hover:text-cyan-200">
-                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+                <svg className="h-3 w-3 sm:h-5 sm:w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
               </a>
               {/* LinkedIn */}
               <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="text-white transition hover:text-cyan-200">
-                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
+                <svg className="h-3 w-3 sm:h-5 sm:w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
               </a>
               {/* Instagram */}
               <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="text-white transition hover:text-cyan-200">
-                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" /></svg>
+                <svg className="h-3 w-3 sm:h-5 sm:w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" /></svg>
               </a>
               {/* YouTube */}
               <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="text-white transition hover:text-cyan-200">
-                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" /></svg>
+                <svg className="h-3 w-3 sm:h-5 sm:w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" /></svg>
               </a>
               {/* WhatsApp */}
               <a href="https://wa.me" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="text-white transition hover:text-cyan-200">
-                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
+                <svg className="h-3 w-3 sm:h-5 sm:w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
               </a>
             </div>
           </div>
 
           {/* Column 2 – Quick Links */}
           <div>
-            <h4 className="text-sm font-bold uppercase tracking-wide">{t('footer.quickLinks')}</h4>
-            <ul className="mt-4 space-y-2 text-sm">
+            <h4 className="text-[10px] font-bold uppercase tracking-wide sm:text-sm">{t('footer.quickLinks')}</h4>
+            <ul className="mt-1.5 space-y-1 text-[10px] sm:mt-4 sm:space-y-2 sm:text-sm">
               {footerLinks.quick.map((item) => (
                 <li key={item.href}>
                   <Link to={item.href} className="text-slate-200 transition hover:text-white hover:underline">{t(item.labelKey)}</Link>
@@ -14546,8 +14587,8 @@ const SiteFooter = () => {
 
           {/* Column 3 – Support */}
           <div>
-            <h4 className="text-sm font-bold uppercase tracking-wide">{t('footer.support')}</h4>
-            <ul className="mt-4 space-y-2 text-sm">
+            <h4 className="text-[10px] font-bold uppercase tracking-wide sm:text-sm">{t('footer.support')}</h4>
+            <ul className="mt-1.5 space-y-1 text-[10px] sm:mt-4 sm:space-y-2 sm:text-sm">
               {footerLinks.support.map((item) => (
                 <li key={item.href}>
                   <Link to={item.href} className="text-slate-200 transition hover:text-white hover:underline">{t(item.labelKey)}</Link>
@@ -14558,24 +14599,24 @@ const SiteFooter = () => {
 
           {/* Column 4 – Subscribe to Offers */}
           <div>
-            <h4 className="text-sm font-bold uppercase tracking-wide">{t('footer.subscribe')}</h4>
-            <p className="mt-3 text-sm text-slate-300">{t('footer.subscribeText')}</p>
-            <div className="mt-4 flex gap-2">
+            <h4 className="text-[10px] font-bold uppercase tracking-wide sm:text-sm">{t('footer.subscribe')}</h4>
+            <p className="mt-1.5 text-[10px] text-slate-300 sm:mt-3 sm:text-sm">{t('footer.subscribeText')}</p>
+            <div className="mt-2 flex flex-col gap-1.5 sm:mt-4 sm:flex-row sm:gap-2">
               <input
                 type="text"
                 placeholder={t('footer.subscribePlaceholder')}
-                className="min-w-0 flex-1 rounded-full border border-white/20 bg-white/10 px-4 py-2.5 text-sm text-white placeholder:text-slate-300 focus:border-cyan-300 focus:outline-none focus:ring-1 focus:ring-cyan-300"
+                className="min-w-0 flex-1 rounded-full border border-white/20 bg-white/10 px-2 py-1 text-[10px] text-white placeholder:text-slate-300 focus:border-cyan-300 focus:outline-none focus:ring-1 focus:ring-cyan-300 sm:px-4 sm:py-2.5 sm:text-sm"
                 aria-label={t('footer.subscribeAria')}
               />
               <button
                 type="button"
-                className={`${cudyBluePrimaryButtonClassName} shrink-0 rounded-full bg-[var(--svs-primary)] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0088b8]`}
+                className={`${cudyBluePrimaryButtonClassName} shrink-0 rounded-full bg-[var(--svs-primary)] px-2 py-1 text-[10px] font-semibold text-white transition hover:bg-[#0088b8] sm:px-5 sm:py-2.5 sm:text-sm`}
               >
                 Subscribe
               </button>
             </div>
             {/* Small social circles */}
-            <div className="mt-4 flex items-center gap-2.5">
+            <div className="mt-2 flex items-center gap-1 sm:mt-4 sm:gap-2.5">
               <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25">
                 <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" /></svg>
               </a>
