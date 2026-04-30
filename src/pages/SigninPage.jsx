@@ -63,10 +63,14 @@ const SigninPage = () => {
 		const { email, password } = formData;
 		const normalizedEmail = email.trim().toLowerCase();
 
+		// Use ilike for case-insensitive match so accounts created before email
+		// normalisation (mixed-case) still sign in. Escape ilike wildcards to
+		// prevent the typed email from being interpreted as a pattern.
+		const escapedEmail = normalizedEmail.replace(/[\\%_]/g, (match) => `\\${match}`);
 		const { data, error } = await supabase
 			.from('account_users')
 			.select('id, full_name, email_address, password_hash')
-			.eq('email_address', normalizedEmail)
+			.ilike('email_address', escapedEmail)
 			.maybeSingle();
 
 		if (error) {
