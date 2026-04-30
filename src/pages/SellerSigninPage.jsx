@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Store } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Store } from 'lucide-react';
 import StandalonePageShell from '../components/layout/StandalonePageShell';
 import { hasSupabaseEnv, supabase } from '../lib/supabase';
 import { hasCompleteSellerProfile } from './SellerOnboardingPage';
@@ -38,6 +38,7 @@ const SellerSigninPage = () => {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [message, setMessage] = useState('');
 	const [messageType, setMessageType] = useState('idle');
+	const [showPassword, setShowPassword] = useState(false);
 
 	const handleChange = (event) => {
 		const { name, value } = event.target;
@@ -183,16 +184,26 @@ const SellerSigninPage = () => {
 							>
 								Password
 							</label>
-							<input
-								id="seller-signin-password"
-								type="password"
-								name="password"
-								value={formData.password}
-								onChange={handleChange}
-								required
-								placeholder="Enter your password"
-								className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30"
-							/>
+							<div className="relative">
+								<input
+									id="seller-signin-password"
+									type={showPassword ? 'text' : 'password'}
+									name="password"
+									value={formData.password}
+									onChange={handleChange}
+									required
+									placeholder="Enter your password"
+									className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 pr-11 text-sm text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30"
+								/>
+								<button
+									type="button"
+									onClick={() => setShowPassword((current) => !current)}
+									aria-label={showPassword ? 'Hide password' : 'Show password'}
+									className="absolute inset-y-0 right-0 flex items-center px-3 text-[var(--svs-muted)] transition hover:text-[var(--svs-text)]"
+								>
+									{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+								</button>
+							</div>
 						</div>
 
 						<button
