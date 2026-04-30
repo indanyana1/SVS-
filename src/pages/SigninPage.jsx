@@ -61,11 +61,12 @@ const SigninPage = () => {
 		setMessageType('idle');
 
 		const { email, password } = formData;
+		const normalizedEmail = email.trim().toLowerCase();
 
 		const { data, error } = await supabase
 			.from('account_users')
 			.select('id, full_name, email_address, password_hash')
-			.eq('email_address', email)
+			.eq('email_address', normalizedEmail)
 			.maybeSingle();
 
 		if (error) {

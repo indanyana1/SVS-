@@ -52,17 +52,36 @@ const SignupPage = () => {
 		setMessageType('idle');
 
 		const { name, email, contact, password } = formData;
+		const trimmedName = name.trim();
+		const normalizedEmail = email.trim().toLowerCase();
+		const trimmedContact = contact.trim();
+
+		if (!trimmedName || !normalizedEmail || !trimmedContact) {
+			setMessage('Please complete all fields before continuing.');
+			setMessageType('error');
+			setIsSubmitting(false);
+			return;
+		}
+
 		const passwordHash = await generatePasswordHash(password);
 
 		const { error: profileError } = await supabase.from('account_users').insert({
-			full_name: name,
-			email_address: email,
-			contact_number: contact,
+			full_name: trimmedName,
+			email_address: normalizedEmail,
+			contact_number: trimmedContact,
 			password_hash: passwordHash,
 		});
 
 		if (profileError) {
-			setMessage(profileError.message);
+			let friendlyMessage = profileError.message || 'Unable to create your account.';
+			if (profileError.code === '23505') {
+				if (profileError.message?.includes('account_users_contact_number_key')) {
+					friendlyMessage = 'That contact number is already linked to another account. Use a different number or sign in with the existing account.';
+				} else if (profileError.message?.includes('account_users_email_address_key')) {
+					friendlyMessage = 'That email is already registered. Sign in with the existing account or use a different email.';
+				}
+			}
+			setMessage(friendlyMessage);
 			setMessageType('error');
 			setIsSubmitting(false);
 			return;
@@ -71,8 +90,11 @@ const SignupPage = () => {
 		setMessage('Account created successfully. Redirecting to markets...');
 		setMessageType('success');
 		window.localStorage.setItem('svs-authenticated', 'true');
-		window.localStorage.setItem('svs-user-email', email);
-		window.localStorage.setItem('svs-user-name', name);
+		window.localStorage.setItem('svs-user-email', normalizedEmail);
+		window.localStorage.setItem('svs-user-name', trimmedName);
+		window.localStorage.setItem('svs-user-contact', trimmedContact);
+		window.localStorage.removeItem('svs-has-seller-access');
+		window.localStorage.removeItem('svs-seller-home-path');
 		window.dispatchEvent(new Event('svs-auth-changed'));
 		setFormData({ name: '', email: '', contact: '', password: '' });
 		setIsSubmitting(false);
