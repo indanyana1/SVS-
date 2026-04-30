@@ -3494,11 +3494,13 @@ const FX_CACHE_KEY = 'svs-fx-rates';
 const FX_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
 const BUYER_CURRENCY_STORAGE_KEY = 'svs-buyer-currency';
 
+const DEFAULT_BUYER_CURRENCY = 'ZAR';
+
 const readInitialBuyerCurrency = () => {
-  if (typeof window === 'undefined') return 'USD';
+  if (typeof window === 'undefined') return DEFAULT_BUYER_CURRENCY;
   const stored = window.localStorage.getItem(BUYER_CURRENCY_STORAGE_KEY);
   if (stored && SUPPORTED_CURRENCIES.some((entry) => entry.code === stored)) return stored;
-  return 'USD';
+  return DEFAULT_BUYER_CURRENCY;
 };
 
 const readCachedFxRates = () => {
