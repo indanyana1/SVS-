@@ -3348,32 +3348,146 @@ const formatSaleAmount = (amount, decimals) => new Intl.NumberFormat('en-US', {
 // localStorage cache and a hardcoded fallback table.
 // ---------------------------------------------------------------------------
 const SUPPORTED_CURRENCIES = [
-  { code: 'USD', symbol: '$', name: 'US Dollar', flag: '🇺🇸' },
-  { code: 'EUR', symbol: '€', name: 'Euro', flag: '🇪🇺' },
-  { code: 'GBP', symbol: '£', name: 'British Pound', flag: '🇬🇧' },
-  { code: 'ZAR', symbol: 'R', name: 'South African Rand', flag: '🇿🇦' },
-  { code: 'NGN', symbol: '₦', name: 'Nigerian Naira', flag: '🇳🇬' },
-  { code: 'KES', symbol: 'KSh', name: 'Kenyan Shilling', flag: '🇰🇪' },
-  { code: 'GHS', symbol: 'GH₵', name: 'Ghanaian Cedi', flag: '🇬🇭' },
-  { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar', flag: '🇨🇦' },
-  { code: 'AUD', symbol: 'A$', name: 'Australian Dollar', flag: '🇦🇺' },
-  { code: 'INR', symbol: '₹', name: 'Indian Rupee', flag: '🇮🇳' },
-  { code: 'JPY', symbol: '¥', name: 'Japanese Yen', flag: '🇯🇵' },
-  { code: 'CNY', symbol: '¥', name: 'Chinese Yuan', flag: '🇨🇳' },
-  { code: 'BRL', symbol: 'R$', name: 'Brazilian Real', flag: '🇧🇷' },
   { code: 'AED', symbol: 'AED', name: 'UAE Dirham', flag: '🇦🇪' },
+  { code: 'AFN', symbol: '؋', name: 'Afghan Afghani', flag: '🇦🇫' },
+  { code: 'ALL', symbol: 'L', name: 'Albanian Lek', flag: '🇦🇱' },
+  { code: 'AMD', symbol: '֏', name: 'Armenian Dram', flag: '🇦🇲' },
+  { code: 'AOA', symbol: 'Kz', name: 'Angolan Kwanza', flag: '🇦🇴' },
+  { code: 'ARS', symbol: 'AR$', name: 'Argentine Peso', flag: '🇦🇷' },
+  { code: 'AUD', symbol: 'A$', name: 'Australian Dollar', flag: '🇦🇺' },
+  { code: 'AZN', symbol: '₼', name: 'Azerbaijani Manat', flag: '🇦🇿' },
+  { code: 'BAM', symbol: 'KM', name: 'Bosnia & Herzegovina Mark', flag: '🇧🇦' },
+  { code: 'BDT', symbol: '৳', name: 'Bangladeshi Taka', flag: '🇧🇩' },
+  { code: 'BGN', symbol: 'лв', name: 'Bulgarian Lev', flag: '🇧🇬' },
+  { code: 'BHD', symbol: 'BD', name: 'Bahraini Dinar', flag: '🇧🇭' },
+  { code: 'BOB', symbol: 'Bs', name: 'Bolivian Boliviano', flag: '🇧🇴' },
+  { code: 'BRL', symbol: 'R$', name: 'Brazilian Real', flag: '🇧🇷' },
+  { code: 'BWP', symbol: 'P', name: 'Botswana Pula', flag: '🇧🇼' },
+  { code: 'BYN', symbol: 'Br', name: 'Belarusian Ruble', flag: '🇧🇾' },
+  { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar', flag: '🇨🇦' },
+  { code: 'CHF', symbol: 'CHF', name: 'Swiss Franc', flag: '🇨🇭' },
+  { code: 'CLP', symbol: 'CLP$', name: 'Chilean Peso', flag: '🇨🇱' },
+  { code: 'CNY', symbol: '¥', name: 'Chinese Yuan', flag: '🇨🇳' },
+  { code: 'COP', symbol: 'COL$', name: 'Colombian Peso', flag: '🇨🇴' },
+  { code: 'CZK', symbol: 'Kč', name: 'Czech Koruna', flag: '🇨🇿' },
+  { code: 'DKK', symbol: 'kr', name: 'Danish Krone', flag: '🇩🇰' },
+  { code: 'DOP', symbol: 'RD$', name: 'Dominican Peso', flag: '🇩🇴' },
+  { code: 'DZD', symbol: 'DA', name: 'Algerian Dinar', flag: '🇩🇿' },
+  { code: 'EGP', symbol: 'E£', name: 'Egyptian Pound', flag: '🇪🇬' },
+  { code: 'ETB', symbol: 'Br', name: 'Ethiopian Birr', flag: '🇪🇹' },
+  { code: 'EUR', symbol: '€', name: 'Euro', flag: '🇪🇺' },
+  { code: 'FJD', symbol: 'FJ$', name: 'Fijian Dollar', flag: '🇫🇯' },
+  { code: 'GBP', symbol: '£', name: 'British Pound', flag: '🇬🇧' },
+  { code: 'GEL', symbol: '₾', name: 'Georgian Lari', flag: '🇬🇪' },
+  { code: 'GHS', symbol: 'GH₵', name: 'Ghanaian Cedi', flag: '🇬🇭' },
+  { code: 'GTQ', symbol: 'Q', name: 'Guatemalan Quetzal', flag: '🇬🇹' },
+  { code: 'HKD', symbol: 'HK$', name: 'Hong Kong Dollar', flag: '🇭🇰' },
+  { code: 'HRK', symbol: 'kn', name: 'Croatian Kuna', flag: '🇭🇷' },
+  { code: 'HUF', symbol: 'Ft', name: 'Hungarian Forint', flag: '🇭🇺' },
+  { code: 'IDR', symbol: 'Rp', name: 'Indonesian Rupiah', flag: '🇮🇩' },
+  { code: 'ILS', symbol: '₪', name: 'Israeli Shekel', flag: '🇮🇱' },
+  { code: 'INR', symbol: '₹', name: 'Indian Rupee', flag: '🇮🇳' },
+  { code: 'IQD', symbol: 'IQD', name: 'Iraqi Dinar', flag: '🇮🇶' },
+  { code: 'IRR', symbol: '﷼', name: 'Iranian Rial', flag: '🇮🇷' },
+  { code: 'ISK', symbol: 'kr', name: 'Icelandic Króna', flag: '🇮🇸' },
+  { code: 'JMD', symbol: 'J$', name: 'Jamaican Dollar', flag: '🇯🇲' },
+  { code: 'JOD', symbol: 'JD', name: 'Jordanian Dinar', flag: '🇯🇴' },
+  { code: 'JPY', symbol: '¥', name: 'Japanese Yen', flag: '🇯🇵' },
+  { code: 'KES', symbol: 'KSh', name: 'Kenyan Shilling', flag: '🇰🇪' },
+  { code: 'KHR', symbol: '៛', name: 'Cambodian Riel', flag: '🇰🇭' },
+  { code: 'KRW', symbol: '₩', name: 'South Korean Won', flag: '🇰🇷' },
+  { code: 'KWD', symbol: 'KD', name: 'Kuwaiti Dinar', flag: '🇰🇼' },
+  { code: 'KZT', symbol: '₸', name: 'Kazakhstani Tenge', flag: '🇰🇿' },
+  { code: 'LAK', symbol: '₭', name: 'Lao Kip', flag: '🇱🇦' },
+  { code: 'LBP', symbol: 'L£', name: 'Lebanese Pound', flag: '🇱🇧' },
+  { code: 'LKR', symbol: 'Rs', name: 'Sri Lankan Rupee', flag: '🇱🇰' },
+  { code: 'LSL', symbol: 'L', name: 'Lesotho Loti', flag: '🇱🇸' },
+  { code: 'MAD', symbol: 'DH', name: 'Moroccan Dirham', flag: '🇲🇦' },
+  { code: 'MDL', symbol: 'L', name: 'Moldovan Leu', flag: '🇲🇩' },
+  { code: 'MKD', symbol: 'ден', name: 'Macedonian Denar', flag: '🇲🇰' },
+  { code: 'MMK', symbol: 'K', name: 'Myanmar Kyat', flag: '🇲🇲' },
+  { code: 'MNT', symbol: '₮', name: 'Mongolian Tögrög', flag: '🇲🇳' },
+  { code: 'MUR', symbol: '₨', name: 'Mauritian Rupee', flag: '🇲🇺' },
+  { code: 'MWK', symbol: 'MK', name: 'Malawian Kwacha', flag: '🇲🇼' },
+  { code: 'MXN', symbol: 'Mex$', name: 'Mexican Peso', flag: '🇲🇽' },
+  { code: 'MYR', symbol: 'RM', name: 'Malaysian Ringgit', flag: '🇲🇾' },
+  { code: 'MZN', symbol: 'MT', name: 'Mozambican Metical', flag: '🇲🇿' },
+  { code: 'NAD', symbol: 'N$', name: 'Namibian Dollar', flag: '🇳🇦' },
+  { code: 'NGN', symbol: '₦', name: 'Nigerian Naira', flag: '🇳🇬' },
+  { code: 'NOK', symbol: 'kr', name: 'Norwegian Krone', flag: '🇳🇴' },
+  { code: 'NPR', symbol: '₨', name: 'Nepalese Rupee', flag: '🇳🇵' },
+  { code: 'NZD', symbol: 'NZ$', name: 'New Zealand Dollar', flag: '🇳🇿' },
+  { code: 'OMR', symbol: 'OMR', name: 'Omani Rial', flag: '🇴🇲' },
+  { code: 'PEN', symbol: 'S/', name: 'Peruvian Sol', flag: '🇵🇪' },
+  { code: 'PGK', symbol: 'K', name: 'Papua New Guinean Kina', flag: '🇵🇬' },
+  { code: 'PHP', symbol: '₱', name: 'Philippine Peso', flag: '🇵🇭' },
+  { code: 'PKR', symbol: '₨', name: 'Pakistani Rupee', flag: '🇵🇰' },
+  { code: 'PLN', symbol: 'zł', name: 'Polish Złoty', flag: '🇵🇱' },
+  { code: 'PYG', symbol: '₲', name: 'Paraguayan Guarani', flag: '🇵🇾' },
+  { code: 'QAR', symbol: 'QR', name: 'Qatari Riyal', flag: '🇶🇦' },
+  { code: 'RON', symbol: 'lei', name: 'Romanian Leu', flag: '🇷🇴' },
+  { code: 'RSD', symbol: 'дин', name: 'Serbian Dinar', flag: '🇷🇸' },
+  { code: 'RUB', symbol: '₽', name: 'Russian Ruble', flag: '🇷🇺' },
+  { code: 'RWF', symbol: 'FRw', name: 'Rwandan Franc', flag: '🇷🇼' },
+  { code: 'SAR', symbol: 'SR', name: 'Saudi Riyal', flag: '🇸🇦' },
+  { code: 'SEK', symbol: 'kr', name: 'Swedish Krona', flag: '🇸🇪' },
+  { code: 'SGD', symbol: 'S$', name: 'Singapore Dollar', flag: '🇸🇬' },
+  { code: 'SYP', symbol: 'S£', name: 'Syrian Pound', flag: '🇸🇾' },
+  { code: 'SZL', symbol: 'E', name: 'Eswatini Lilangeni', flag: '🇸🇿' },
+  { code: 'THB', symbol: '฿', name: 'Thai Baht', flag: '🇹🇭' },
+  { code: 'TND', symbol: 'DT', name: 'Tunisian Dinar', flag: '🇹🇳' },
+  { code: 'TRY', symbol: '₺', name: 'Turkish Lira', flag: '🇹🇷' },
+  { code: 'TTD', symbol: 'TT$', name: 'Trinidad & Tobago Dollar', flag: '🇹🇹' },
+  { code: 'TWD', symbol: 'NT$', name: 'Taiwan Dollar', flag: '🇹🇼' },
+  { code: 'TZS', symbol: 'TSh', name: 'Tanzanian Shilling', flag: '🇹🇿' },
+  { code: 'UAH', symbol: '₴', name: 'Ukrainian Hryvnia', flag: '🇺🇦' },
+  { code: 'UGX', symbol: 'USh', name: 'Ugandan Shilling', flag: '🇺🇬' },
+  { code: 'USD', symbol: '$', name: 'US Dollar', flag: '🇺🇸' },
+  { code: 'UYU', symbol: '$U', name: 'Uruguayan Peso', flag: '🇺🇾' },
+  { code: 'UZS', symbol: "so'm", name: 'Uzbek Som', flag: '🇺🇿' },
+  { code: 'VES', symbol: 'Bs.S', name: 'Venezuelan Bolívar', flag: '🇻🇪' },
+  { code: 'VND', symbol: '₫', name: 'Vietnamese Dong', flag: '🇻🇳' },
+  { code: 'XAF', symbol: 'FCFA', name: 'Central African CFA Franc', flag: '🌍' },
+  { code: 'XOF', symbol: 'CFA', name: 'West African CFA Franc', flag: '🌍' },
+  { code: 'YER', symbol: '﷼', name: 'Yemeni Rial', flag: '🇾🇪' },
+  { code: 'ZAR', symbol: 'R', name: 'South African Rand', flag: '🇿🇦' },
+  { code: 'ZMW', symbol: 'ZK', name: 'Zambian Kwacha', flag: '🇿🇲' },
 ];
 
-// Approximate fallback rates per 1 USD (used until live rates load)
+// Approximate fallback rates per 1 USD (used until live rates load).
+// Live values are merged in from open.er-api.com on app start.
 const FALLBACK_FX_RATES_USD = {
-  USD: 1, EUR: 0.92, GBP: 0.79, ZAR: 18.85, NGN: 1500,
-  KES: 129, GHS: 14.5, CAD: 1.36, AUD: 1.51, INR: 83.4,
-  JPY: 154, CNY: 7.24, BRL: 5.05, AED: 3.67,
+  USD: 1, EUR: 0.92, GBP: 0.79, JPY: 154, CNY: 7.24, CHF: 0.88,
+  CAD: 1.36, AUD: 1.51, NZD: 1.66, HKD: 7.82, SGD: 1.34,
+  ZAR: 18.85, NGN: 1500, KES: 129, GHS: 14.5, EGP: 49, MAD: 9.95,
+  TND: 3.12, DZD: 134, XOF: 605, XAF: 605, UGX: 3700, TZS: 2570,
+  RWF: 1330, ETB: 56, ZMW: 26, BWP: 13.5, NAD: 18.85, MUR: 46,
+  MZN: 64, AOA: 880, MWK: 1735, LSL: 18.85, SZL: 18.85,
+  BRL: 5.05, MXN: 17.1, ARS: 980, CLP: 940, COP: 4000, PEN: 3.78,
+  UYU: 41, BOB: 6.92, PYG: 7480, VES: 36, DOP: 60, GTQ: 7.78,
+  JMD: 156, TTD: 6.78,
+  INR: 83.4, PKR: 278, BDT: 117, LKR: 300, NPR: 133, AFN: 71,
+  KRW: 1380, IDR: 15800, MYR: 4.55, PHP: 57, THB: 36, VND: 25200,
+  TWD: 32.3, KZT: 480, UZS: 12700, MMK: 2100, KHR: 4080, LAK: 21500,
+  MNT: 3380, GEL: 2.7, AMD: 388, AZN: 1.7,
+  AED: 3.67, SAR: 3.75, QAR: 3.64, KWD: 0.31, BHD: 0.38, OMR: 0.385,
+  JOD: 0.71, LBP: 89500, ILS: 3.7, IRR: 42000, IQD: 1310, SYP: 13000,
+  YER: 250, TRY: 33,
+  NOK: 10.6, SEK: 10.5, DKK: 6.85, ISK: 138, PLN: 3.96, CZK: 22.9,
+  HUF: 360, RON: 4.55, BGN: 1.79, HRK: 6.92, RSD: 107, UAH: 41,
+  RUB: 92, BYN: 3.27, MDL: 17.7, ALL: 90, MKD: 56, BAM: 1.79,
+  FJD: 2.26, PGK: 3.95,
 };
 
 const SYMBOL_TO_CURRENCY = {
   'R$': 'BRL', 'C$': 'CAD', 'A$': 'AUD', 'GH₵': 'GHS', 'KSh': 'KES', 'AED': 'AED',
+  'NZ$': 'NZD', 'HK$': 'HKD', 'S$': 'SGD', 'CHF': 'CHF', 'Mex$': 'MXN', 'AR$': 'ARS',
+  'CLP$': 'CLP', 'COL$': 'COP', 'TT$': 'TTD', 'NT$': 'TWD', 'RD$': 'DOP', 'J$': 'JMD',
+  'FJ$': 'FJD', 'N$': 'NAD', 'E£': 'EGP', 'L£': 'LBP', 'S£': 'SYP',
   $: 'USD', '€': 'EUR', '£': 'GBP', '₦': 'NGN', '₹': 'INR', '¥': 'JPY', R: 'ZAR',
+  '₩': 'KRW', '₺': 'TRY', '₽': 'RUB', '₴': 'UAH', '₪': 'ILS', '₱': 'PHP', '฿': 'THB',
+  '₫': 'VND', '₸': 'KZT', '₾': 'GEL', '֏': 'AMD', '₼': 'AZN', '₲': 'PYG', '₮': 'MNT',
+  '₭': 'LAK', '៛': 'KHR', '৳': 'BDT', '؋': 'AFN', '﷼': 'SAR',
 };
 
 const FX_CACHE_KEY = 'svs-fx-rates';
@@ -3485,7 +3599,30 @@ const useBuyerCurrency = () => {
     const cb = () => setTick((n) => n + 1);
     _fxSubscribers.add(cb);
     refreshFxRates();
-    return () => { _fxSubscribers.delete(cb); };
+    // Re-check rates when the tab regains focus / becomes visible.
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        refreshFxRates();
+      }
+    };
+    // Periodic refresh (the call itself is a no-op if within TTL).
+    const interval = setInterval(() => { refreshFxRates(); }, 30 * 60 * 1000);
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibility);
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', handleVisibility);
+    }
+    return () => {
+      _fxSubscribers.delete(cb);
+      clearInterval(interval);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibility);
+      }
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('focus', handleVisibility);
+      }
+    };
   }, []);
   return {
     code: _fxState.buyerCurrency,
@@ -4441,7 +4578,7 @@ const PriceFilterPanel = ({
 };
 
 const CurrencySelectorButton = ({ compact = false, className = '' }) => {
-  const { code, setCode } = useBuyerCurrency();
+  const { code, setCode, fetchedAt } = useBuyerCurrency();
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const wrapperRef = useRef(null);
@@ -4506,7 +4643,6 @@ const CurrencySelectorButton = ({ compact = false, className = '' }) => {
                       setCode(entry.code);
                       setIsOpen(false);
                       setSearch('');
-                      if (typeof window !== 'undefined') window.location.reload();
                     }}
                     className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition ${isActive ? 'bg-[var(--svs-primary)] text-white' : 'text-[var(--svs-text)] hover:bg-[var(--svs-surface-soft)]'}`}
                     role="menuitemradio"
@@ -4525,7 +4661,11 @@ const CurrencySelectorButton = ({ compact = false, className = '' }) => {
             ) : null}
           </ul>
           <p className="mt-1 border-t border-[var(--svs-border)] px-3 pt-2 text-[10px] text-[var(--svs-muted)]">
-            Live rates • Sellers always paid in their listed currency.
+            <span className="inline-flex items-center gap-1">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              {fetchedAt ? `Live rates · updated ${new Date(fetchedAt).toLocaleTimeString()}` : 'Live rates loading…'}
+            </span>
+            <br />Sellers always paid in their listed currency.
           </p>
         </div>
       ) : null}
