@@ -164,6 +164,356 @@ const BeveragesSellerFields = ({ formData, onFieldChange, prefix = 'seller-bever
   );
 };
 
+// =====================================================================
+// MARKET FIELD SPEC REGISTRY
+// ---------------------------------------------------------------------
+// Generic per-market attribute spec for sellers. Drives:
+//   - dynamic listing/edit form fields (MarketSpecificFields)
+//   - listing form validation (getSellerListingValidationMessage)
+//   - details_json builder (buildSellerItemDetailsJson)
+//   - empty form state defaults (createSellerListingFormState)
+//
+// Markets that already have rich custom field components (groceries,
+// beverages, tickets) are intentionally excluded from this registry —
+// their fields are still captured by their dedicated components.
+//
+// Each field: { name, label, type, options?, required?, placeholder?,
+//   helper?, fullWidth? }
+//   type: 'select' | 'text' | 'number' | 'date' | 'textarea'
+// Field names use plain attribute keys (brand, color, condition, etc.)
+// so existing per-market filter logic that reads item.brand, item.color,
+// etc. naturally matches seller-listed items.
+// =====================================================================
+const MARKET_FIELD_SPEC = {
+  // Aligned with FashionStylePage filter facets:
+  //   item.category (fashionMainCategories), item.subcategory (fashionSubcategories),
+  //   item.brand, item.size, item.color, item.material, item.condition,
+  //   item.gender (fashionGenderOptions), item.occasion (fashionStyleOccasions)
+  fashionStyle: {
+    title: 'Fashion & Style Listing Details',
+    helper: 'Pick the audience, main category, item type, brand, size, colour, material and occasion so buyers can filter your listing.',
+    fields: [
+      { name: 'gender', label: 'Audience', type: 'select', required: true, options: ['Men', 'Women', 'Unisex', 'Kids'] },
+      { name: 'category', label: 'Main category', type: 'select', required: true, options: ['Clothing', 'Footwear', 'Accessories', 'Outerwear', 'Activewear', 'Underwear & Sleepwear'] },
+      { name: 'subcategory', label: 'Item type', type: 'select', required: true, options: [
+        'T-Shirts', 'Long Sleeve', 'Hoodies & Sweatshirts', 'Sweaters & Knitwear', 'Shirts', 'Polos',
+        'Jackets', 'Coats', 'Blazers', 'Suits', 'Jeans', 'Pants & Trousers', 'Chinos', 'Shorts',
+        'Skirts', 'Dresses', 'Jumpsuits', 'Activewear', 'Swimwear', 'Sleepwear', 'Lingerie',
+        'Socks & Hosiery', 'Formal Shoes', 'Sneakers', 'Boots', 'Heels', 'Sandals', 'Slippers',
+        'Bags & Backpacks', 'Wallets', 'Belts', 'Caps & Hats', 'Watches', 'Sunglasses',
+        'Jewellery', 'Scarves',
+      ] },
+      { name: 'brand', label: 'Brand', type: 'text', required: true, placeholder: 'e.g. Nike, Zara, Adidas' },
+      { name: 'size', label: 'Size', type: 'text', required: true, placeholder: 'e.g. M, XL, UK 9, 32' },
+      { name: 'color', label: 'Colour', type: 'select', required: true, options: ['Black', 'White', 'Grey', 'Beige', 'Brown', 'Red', 'Pink', 'Orange', 'Yellow', 'Green', 'Blue', 'Navy', 'Purple', 'Multi'] },
+      { name: 'material', label: 'Material', type: 'select', options: ['Cotton', 'Linen', 'Denim', 'Leather', 'Wool', 'Polyester', 'Silk', 'Synthetic'] },
+      { name: 'occasion', label: 'Occasion', type: 'select', options: ['Casual', 'Formal', 'Sport', 'Streetwear', 'Evening', 'Business', 'Beach'] },
+      { name: 'condition', label: 'Condition', type: 'select', options: ['Brand New', 'Like New', 'Good', 'Fair'] },
+    ],
+  },
+  // Aligned with HardwareSoftwarePage (CardGrid display, filter expandable later).
+  // Static items reside in productCards / electronics; spec mirrors common e-commerce facets.
+  hardwareSoftware: {
+    title: 'Electronics & Software Listing Details',
+    helper: 'Specify the device category, brand, model, and condition so buyers can compare like-for-like.',
+    fields: [
+      { name: 'category', label: 'Category', type: 'select', required: true, options: ['Phones & Tablets', 'Laptops & Computers', 'Audio & Headphones', 'TV & Home Entertainment', 'Cameras', 'Wearables', 'Networking', 'Accessories', 'Software', 'Gaming', 'Other'] },
+      { name: 'brand', label: 'Brand', type: 'text', required: true, placeholder: 'e.g. Apple, Samsung, HP' },
+      { name: 'model', label: 'Model', type: 'text', placeholder: 'e.g. iPhone 14 Pro, Pavilion 15' },
+      { name: 'condition', label: 'Condition', type: 'select', required: true, options: ['Brand New', 'Refurbished', 'Used - Like New', 'Used - Good', 'Used - Fair'] },
+      { name: 'warranty', label: 'Warranty', type: 'text', placeholder: 'e.g. 12 months, None' },
+      { name: 'color', label: 'Colour', type: 'text', placeholder: 'e.g. Space Grey' },
+    ],
+  },
+  // Aligned with MobilityVehiclesPage. Static items use category: Car, Motorcycle, Rail,
+  // Aircraft, Bicycle. Filterable on category, brand, fuel, year, transmission.
+  mobilityVehicles: {
+    title: 'Mobility & Vehicles Listing Details',
+    helper: 'Provide make, model, year, fuel and key specs so buyers can filter accurately.',
+    fields: [
+      { name: 'category', label: 'Vehicle type', type: 'select', required: true, options: ['Car', 'SUV', 'Bakkie / Pickup', 'Truck', 'Motorcycle', 'Scooter', 'Bicycle', 'E-Bike', 'Boat', 'Aircraft', 'Rail', 'Other'] },
+      { name: 'brand', label: 'Make', type: 'text', required: true, placeholder: 'e.g. Toyota, BMW, Honda' },
+      { name: 'model', label: 'Model', type: 'text', required: true, placeholder: 'e.g. Corolla, X5' },
+      { name: 'year', label: 'Year', type: 'number', required: true, placeholder: 'e.g. 2021' },
+      { name: 'fuel', label: 'Fuel', type: 'select', required: true, options: ['Petrol', 'Diesel', 'Electric', 'Hybrid', 'Pedal', 'Other'] },
+      { name: 'transmission', label: 'Transmission', type: 'select', options: ['Manual', 'Automatic', 'CVT', 'N/A', 'Other'] },
+      { name: 'mileage', label: 'Mileage (km)', type: 'number', placeholder: 'e.g. 45000' },
+      { name: 'color', label: 'Colour', type: 'text', placeholder: 'e.g. Silver' },
+      { name: 'condition', label: 'Condition', type: 'select', options: ['Brand New', 'Used - Like New', 'Used - Good', 'Used - Fair'] },
+    ],
+  },
+  // Aligned with HomeCarePage filter facets (item.category, item.availability,
+  // item.serviceArea) plus the dimensions used by static homeCareProviders
+  // (serviceType, professionalPreference, experienceYears, location).
+  homeCare: {
+    title: 'Home Care Listing Details',
+    helper: 'Describe the service category, billing cycle, professional preference, area covered, and availability so buyers can filter providers.',
+    fields: [
+      { name: 'category', label: 'Service category', type: 'select', required: true, options: [
+        'Elderly Care', 'Nursing Care', 'Physiotherapist', 'Baby Care', 'Post-Surgery Care',
+        'Home Attendant', 'Electrician', 'Plumber', 'Carpenter', 'AC Repair & Servicing',
+        'Cleaning Services', 'Pest Control', 'Appliances Repairing', 'Home Painter',
+      ] },
+      { name: 'serviceType', label: 'Billing cycle', type: 'select', options: ['Hourly', 'Daily', 'Weekly', 'Monthly'] },
+      { name: 'professionalPreference', label: 'Professional preference', type: 'select', options: ['Any', 'Male', 'Female'] },
+      { name: 'experience', label: 'Experience', type: 'select', options: ['0-1 Year', '1-3 Years', '4-5 Years', '5+ Years'] },
+      { name: 'availability', label: 'Availability', type: 'select', options: ['Morning', 'Afternoon', 'Evening', 'Full Day', 'By Appointment'] },
+      { name: 'serviceArea', label: 'Service area / City', type: 'text', required: true, placeholder: 'e.g. Cape Town, Durban, Lagos' },
+      { name: 'brand', label: 'Provider name / Brand', type: 'text', placeholder: 'e.g. SVS Cleaners' },
+    ],
+  },
+  // Aligned with WellnessPage. Page renders CardGrid; filter facets used elsewhere
+  // (item.category, item.brand, item.suitableFor) match these field names.
+  wellness: {
+    title: 'Wellness Listing Details',
+    helper: 'Pick a category, brand, and pack size so buyers can find this in wellness searches.',
+    fields: [
+      { name: 'category', label: 'Category', type: 'select', required: true, options: ['Vitamins & Supplements', 'Skincare', 'Haircare', 'Personal Care', 'Fitness & Equipment', 'Aromatherapy', 'Sexual Wellness', 'Maternal & Baby', 'First Aid', 'Pain Relief', 'Other'] },
+      { name: 'brand', label: 'Brand', type: 'text', required: true, placeholder: 'e.g. Nivea, Solgar' },
+      { name: 'volume', label: 'Pack size / Volume', type: 'text', placeholder: 'e.g. 60 capsules, 250ml' },
+      { name: 'suitableFor', label: 'Suitable for', type: 'select', options: ['Adults', 'Kids', 'Infants', 'Seniors', 'All Ages'] },
+    ],
+  },
+  // Aligned with StationeryPage. Static items use category: Pens, Books, Invoice Books, Office Supplies.
+  stationery: {
+    title: 'Stationery & Office Listing Details',
+    helper: 'Pick a category, brand, and any colour or pack size details so buyers can filter.',
+    fields: [
+      { name: 'category', label: 'Category', type: 'select', required: true, options: ['Pens', 'Pencils', 'Books', 'Notebooks & Paper', 'Invoice Books', 'Office Supplies', 'Art & Craft', 'Storage & Filing', 'Printing & Toner', 'School Sets', 'Other'] },
+      { name: 'brand', label: 'Brand', type: 'text', placeholder: 'e.g. Bic, Pilot, Croxley' },
+      { name: 'color', label: 'Colour', type: 'text', placeholder: 'e.g. Blue, Assorted' },
+      { name: 'volume', label: 'Pack size', type: 'text', placeholder: 'e.g. Pack of 12' },
+    ],
+  },
+  // Aligned with FastFoodPage filter dimensions: categories (from static items),
+  // cuisines, types (outlet kind), availability, brand, prepTime.
+  fastFood: {
+    title: 'Fast Food Listing Details',
+    helper: 'Pick a meal category, cuisine, outlet type and any dietary tags so hungry buyers can filter.',
+    fields: [
+      { name: 'category', label: 'Meal category', type: 'select', required: true, options: ['Burgers', 'Chicken', 'Pizza', 'Wraps', 'Sides', 'Tacos', 'Noodles', 'Drinks', 'Desserts', 'Snacks', 'Combo Meals', 'Other'] },
+      { name: 'cuisine', label: 'Cuisine', type: 'select', options: ['American', 'Italian', 'Mexican', 'Asian', 'African', 'Middle-Eastern', 'Other'] },
+      { name: 'outletType', label: 'Outlet type', type: 'select', options: ['Restaurant', 'Takeaway', 'Street Vendor', 'Food Truck'] },
+      { name: 'availability', label: 'Availability', type: 'select', options: ['Available Now', 'Pre-Order'] },
+      { name: 'dietary', label: 'Dietary tag', type: 'select', options: ['None', 'Halal', 'Vegan', 'Vegetarian', 'Gluten-Free', 'Kosher'] },
+      { name: 'spiceLevel', label: 'Spice level', type: 'select', options: ['Mild', 'Medium', 'Hot', 'Extra Hot'] },
+      { name: 'volume', label: 'Serving size', type: 'text', placeholder: 'e.g. 250g, Single, Family Pack' },
+      { name: 'prepTime', label: 'Prep time', type: 'text', placeholder: 'e.g. 15 min' },
+      { name: 'brand', label: 'Outlet / Brand', type: 'text', placeholder: 'e.g. SVS Diner' },
+    ],
+  },
+  // Aligned with SecondHandPage. Static items group by item.categoryKey
+  // (phones, laptops, gaming, clothing, furniture, appliances, audio, books)
+  // and the filter UI checks item.condition with values:
+  // 'Like New', 'Excellent', 'Good', 'Lightly Worn'.
+  secondhand: {
+    title: 'Secondhand Central Listing Details',
+    helper: 'Tell buyers the category, brand, and condition so it slots into the right secondhand section.',
+    fields: [
+      { name: 'category', label: 'Category', type: 'select', required: true, options: [
+        'Phones & Tablets', 'Laptops & Computers', 'Gaming & Consoles', 'Clothing & Shoes',
+        'Furniture & Decor', 'Home Appliances', 'Audio & Wearables', 'Books & Media', 'Other',
+      ] },
+      { name: 'condition', label: 'Condition', type: 'select', required: true, options: ['Like New', 'Excellent', 'Good', 'Lightly Worn'] },
+      { name: 'brand', label: 'Brand', type: 'text', placeholder: 'e.g. Samsung, IKEA' },
+      { name: 'color', label: 'Colour', type: 'text', placeholder: 'e.g. Black' },
+    ],
+  },
+  // Aligned with ECommercePage filter facets (item.category, item.brand,
+  // item.color, item.condition).
+  ecommerce: {
+    title: 'E-commerce Listing Details',
+    helper: 'Pick a category and brand so this product shows up in the right facets.',
+    fields: [
+      { name: 'category', label: 'Category', type: 'select', required: true, options: ['Electronics', 'Apparel', 'Beauty', 'Home & Garden', 'Sports', 'Tools', 'Toys', 'Books', 'Pet Supplies', 'Groceries', 'Other'] },
+      { name: 'brand', label: 'Brand', type: 'text', required: true, placeholder: 'e.g. Sony, Adidas' },
+      { name: 'color', label: 'Colour', type: 'text', placeholder: 'e.g. Black' },
+      { name: 'condition', label: 'Condition', type: 'select', options: ['Brand New', 'Refurbished', 'Used'] },
+    ],
+  },
+  // Aligned with ConstructionToolsPage filter UI which uses
+  // constructionMainCategories, constructionSubcategories, constructionBrandOptions,
+  // constructionPowerSourceOptions, constructionMaterialOptions, constructionProjectTypes.
+  constructionTools: {
+    title: 'Construction & Tools Listing Details',
+    helper: 'Pick a main category, subcategory, brand, power source, material and project type so trades can filter your listing.',
+    fields: [
+      { name: 'category', label: 'Main category', type: 'select', required: true, options: [
+        'Hand Tools', 'Power Tools', 'Building Materials', 'Measuring Tools', 'Safety Gear',
+        'Plumbing', 'Electrical', 'Masonry', 'Painting & Decorating', 'Hardware & Fasteners',
+        'Engineering Tools', 'Heavy Equipment',
+      ] },
+      { name: 'subcategory', label: 'Subcategory', type: 'select', options: [
+        'Hammers', 'Screwdrivers', 'Wrenches & Spanners', 'Pliers', 'Tape Measures',
+        'Drills', 'Impact Drivers', 'Angle Grinders', 'Circular Saws', 'Jigsaws',
+        'Sanders', 'Welding Machines', 'Generators', 'Compressors',
+        'Cement & Concrete', 'Bricks & Blocks', 'Sand & Aggregate', 'Steel & Rebar',
+        'Timber & Boards', 'Roofing Sheets', 'Tiles & Adhesives',
+        'Paint & Primers', 'Brushes & Rollers',
+        'Pipes & Fittings', 'Taps & Mixers',
+        'Cables & Wiring', 'Switches & Sockets', 'Light Fittings',
+        'Helmets & Hard Hats', 'Safety Boots', 'Gloves', 'Goggles & Face Shields',
+        'Masks & Respirators', 'High-Vis Clothing',
+        'Trowels & Floats', 'Levels', 'Laser Levels', 'Spirit Levels',
+        'Ladders & Scaffolds', 'Wheelbarrows',
+        'Nails & Screws', 'Bolts & Nuts', 'Anchors', 'Hinges & Locks',
+      ] },
+      { name: 'brand', label: 'Brand', type: 'select', required: true, options: ['Bosch', 'DeWalt', 'Makita', 'Stanley', 'Milwaukee', 'Black & Decker', 'Hilti', 'Ryobi', 'Karcher', 'Caterpillar', 'Generic'] },
+      { name: 'powerSource', label: 'Power source', type: 'select', options: ['Manual', 'Corded Electric', 'Cordless Battery', 'Pneumatic', 'Petrol / Diesel'] },
+      { name: 'material', label: 'Material', type: 'select', options: ['Steel', 'Stainless Steel', 'Aluminium', 'Wood', 'Plastic', 'Composite', 'Concrete', 'Rubber'] },
+      { name: 'projectType', label: 'Project type', type: 'select', options: ['DIY / Home', 'Residential', 'Commercial', 'Industrial', 'Infrastructure'] },
+      { name: 'warranty', label: 'Warranty', type: 'text', placeholder: 'e.g. 12 months' },
+      { name: 'condition', label: 'Condition', type: 'select', options: ['Brand New', 'Refurbished', 'Used'] },
+    ],
+  },
+  // Aligned with NaturalResourcesPage. Static items use category:
+  // Minerals, Aggregates, Stone, Natural Resources, Mineral Products. Filterable
+  // on category, volume (unit), grade, origin.
+  naturalResources: {
+    title: 'Natural Resources & Minerals Listing Details',
+    helper: 'Provide the resource category, unit, grade, and origin.',
+    fields: [
+      { name: 'category', label: 'Category', type: 'select', required: true, options: ['Minerals', 'Mineral Products', 'Aggregates', 'Stone', 'Sand', 'Timber', 'Coal', 'Metals', 'Soil & Compost', 'Water', 'Natural Resources', 'Other'] },
+      { name: 'volume', label: 'Sold per (unit)', type: 'select', required: true, options: ['kg', 'ton', 'm³', 'litre', 'unit', 'load', 'pack'] },
+      { name: 'grade', label: 'Grade / Quality', type: 'text', placeholder: 'e.g. Grade A, Industrial, Export-grade' },
+      { name: 'origin', label: 'Origin', type: 'text', placeholder: 'e.g. KwaZulu-Natal, Limpopo' },
+    ],
+  },
+  // Aligned with TraditionalMedicinesPage. Static items use category:
+  // Herbs, Traditional Supplements, Traditional Remedies, Medicinal Herbs, Botanical Remedies.
+  traditionalMedicines: {
+    title: 'Traditional Medicines & Herbs Listing Details',
+    helper: 'Pick the herb/remedy category and the form so buyers can find it.',
+    fields: [
+      { name: 'category', label: 'Category', type: 'select', required: true, options: ['Herbs', 'Medicinal Herbs', 'Traditional Supplements', 'Traditional Remedies', 'Botanical Remedies', 'Tonics', 'Tinctures', 'Powders', 'Teas', 'Roots', 'Oils', 'Capsules', 'Other'] },
+      { name: 'formType', label: 'Form', type: 'select', options: ['Powder', 'Oil', 'Tea', 'Capsule', 'Liquid', 'Raw / Dried', 'Cream', 'Bark', 'Root', 'Other'] },
+      { name: 'volume', label: 'Pack size / Volume', type: 'text', placeholder: 'e.g. 100g, 250ml' },
+      { name: 'origin', label: 'Origin', type: 'text', placeholder: 'e.g. Eastern Cape' },
+    ],
+  },
+};
+
+// All distinct field names across the spec, used to seed empty form state
+// and to clear values when the user changes market.
+const MARKET_SPEC_FIELD_NAMES = Array.from(
+  Object.values(MARKET_FIELD_SPEC).reduce((set, spec) => {
+    spec.fields.forEach((field) => set.add(field.name));
+    return set;
+  }, new Set()),
+);
+
+const EMPTY_GENERIC_LISTING_FIELDS = MARKET_SPEC_FIELD_NAMES.reduce((acc, name) => {
+  acc[name] = '';
+  return acc;
+}, {});
+
+const getMarketFieldSpec = (marketKey) => MARKET_FIELD_SPEC[marketKey] || null;
+
+// Generic dynamic per-market fields component. Used for any market in
+// MARKET_FIELD_SPEC. Markets with their own dedicated component
+// (groceries, beverages, tickets) are still rendered via those.
+const MarketSpecificFields = ({ formData, onFieldChange, prefix = 'seller-spec', isCompact = false, marketKey }) => {
+  const spec = getMarketFieldSpec(marketKey);
+
+  if (!spec) {
+    return null;
+  }
+
+  const containerClassName = isCompact
+    ? 'rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3'
+    : 'sm:col-span-2 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4';
+  const labelClassName = isCompact
+    ? 'mb-1 block text-xs font-medium text-[var(--svs-text)]'
+    : 'mb-1 block text-sm font-medium text-[var(--svs-text)]';
+  const inputClassName = isCompact
+    ? 'w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none'
+    : 'w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none';
+  const helperClassName = isCompact
+    ? 'mt-1 text-[10px] text-[var(--svs-muted)]'
+    : 'mt-1 text-xs text-[var(--svs-muted)]';
+
+  return (
+    <div className={containerClassName}>
+      <div className="mb-3">
+        <h3 className={`${isCompact ? 'text-sm' : 'text-base'} font-bold text-[var(--svs-text)]`}>{spec.title}</h3>
+        {spec.helper ? <p className={`${helperClassName} mt-1`}>{spec.helper}</p> : null}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {spec.fields.map((field) => {
+          const fieldId = `${prefix}-${field.name}`;
+          const wrapperClassName = field.fullWidth ? 'sm:col-span-2' : '';
+          const value = formData?.[field.name] ?? '';
+
+          if (field.type === 'select') {
+            return (
+              <div key={field.name} className={wrapperClassName}>
+                <label htmlFor={fieldId} className={labelClassName}>
+                  {field.label}{field.required ? ' *' : ''}
+                </label>
+                <select
+                  id={fieldId}
+                  name={field.name}
+                  value={value}
+                  onChange={onFieldChange}
+                  required={field.required}
+                  className={inputClassName}
+                >
+                  <option value="">Select {field.label.toLowerCase()}</option>
+                  {field.options.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+                {field.helper ? <p className={helperClassName}>{field.helper}</p> : null}
+              </div>
+            );
+          }
+
+          if (field.type === 'textarea') {
+            return (
+              <div key={field.name} className={wrapperClassName || 'sm:col-span-2'}>
+                <label htmlFor={fieldId} className={labelClassName}>
+                  {field.label}{field.required ? ' *' : ''}
+                </label>
+                <textarea
+                  id={fieldId}
+                  name={field.name}
+                  value={value}
+                  onChange={onFieldChange}
+                  rows={2}
+                  required={field.required}
+                  placeholder={field.placeholder || ''}
+                  className={inputClassName}
+                />
+                {field.helper ? <p className={helperClassName}>{field.helper}</p> : null}
+              </div>
+            );
+          }
+
+          // text / number / date
+          return (
+            <div key={field.name} className={wrapperClassName}>
+              <label htmlFor={fieldId} className={labelClassName}>
+                {field.label}{field.required ? ' *' : ''}
+              </label>
+              <input
+                id={fieldId}
+                type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                name={field.name}
+                value={value}
+                onChange={onFieldChange}
+                required={field.required}
+                placeholder={field.placeholder || ''}
+                className={inputClassName}
+              />
+              {field.helper ? <p className={helperClassName}>{field.helper}</p> : null}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 const navItems = [
   { labelKey: 'nav.home', href: '/' },
   { labelKey: 'nav.markets', href: '/markets' },
@@ -283,6 +633,7 @@ const createSellerListingFormState = () => ({
   ...EMPTY_GROCERIES_LISTING_FIELDS,
   ...EMPTY_TICKETS_LISTING_FIELDS,
   ...EMPTY_BEVERAGES_LISTING_FIELDS,
+  ...EMPTY_GENERIC_LISTING_FIELDS,
 });
 
 const clearGroceriesListingFields = (formState) => ({
@@ -290,6 +641,7 @@ const clearGroceriesListingFields = (formState) => ({
   ...EMPTY_GROCERIES_LISTING_FIELDS,
   ...EMPTY_TICKETS_LISTING_FIELDS,
   ...EMPTY_BEVERAGES_LISTING_FIELDS,
+  ...EMPTY_GENERIC_LISTING_FIELDS,
 });
 
 const TRENDING_MARKET_HREFS = [
@@ -1405,6 +1757,24 @@ const secondhandCategoryCards = [
   { key: 'audio', title: 'Audio & Wearables', subtitle: 'Earbuds, headphones & smartwatches', image: 'https://images.pexels.com/photos/3394666/pexels-photo-3394666.jpeg?auto=compress&cs=tinysrgb&w=1200' },
   { key: 'books', title: 'Books & Media', subtitle: 'Second-hand books, DVDs & vinyl', image: 'https://images.pexels.com/photos/159711/books-bookstore-book-reading-159711.jpeg?auto=compress&cs=tinysrgb&w=1200' },
 ];
+
+// Map a seller-supplied secondhand category label (or keyword) to the
+// internal categoryKey used by SecondHandPage to group items into sections.
+const resolveSecondhandCategoryKey = (categoryLabel = '') => {
+  const value = String(categoryLabel || '').trim().toLowerCase();
+  if (!value) return '';
+  const direct = secondhandCategoryCards.find((card) => card.key === value || card.title.toLowerCase() === value);
+  if (direct) return direct.key;
+  if (/(phone|tablet|smartphone)/.test(value)) return 'phones';
+  if (/(laptop|computer|desktop|pc)/.test(value)) return 'laptops';
+  if (/(gaming|console|playstation|xbox|nintendo)/.test(value)) return 'gaming';
+  if (/(clothing|shoe|fashion|apparel|footwear)/.test(value)) return 'clothing';
+  if (/(furniture|decor|chair|table|sofa|bed)/.test(value)) return 'furniture';
+  if (/(appliance|kitchen|household|microwave|fridge|vacuum)/.test(value)) return 'appliances';
+  if (/(audio|headphone|earbud|speaker|wearable|watch)/.test(value)) return 'audio';
+  if (/(book|media|dvd|vinyl|cd)/.test(value)) return 'books';
+  return '';
+};
 
 const secondhandItems = [
   { id: 'sh1', categoryKey: 'phones', title: 'iPhone 14 Pro – 128 GB', condition: 'Excellent', description: 'Minor signs of use, battery health 92 %. Includes charger.', price: '549.99', image: 'https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=1200' },
@@ -3200,6 +3570,16 @@ const getSellerListingValidationMessage = (formState) => {
   }
   if (formState.marketKey !== 'groceries') {
     if (formState.marketKey !== 'tickets') {
+      // Generic spec-driven validation for any other registered market.
+      const spec = getMarketFieldSpec(formState.marketKey);
+      if (spec) {
+        const missing = spec.fields
+          .filter((field) => field.required && !String(formState[field.name] || '').trim())
+          .map((field) => field.label.toLowerCase());
+        if (missing.length) {
+          return `For ${spec.title.replace(/ Listing Details$/, '')} listings, please complete: ${missing.join(', ')}.`;
+        }
+      }
       return '';
     }
     // ...existing tickets validation code...
@@ -3306,6 +3686,14 @@ const buildSellerItemDetailsJson = (formState) => {
         language: isMoviesCategory ? String(formState.ticketLanguage || '').trim() : '',
         showtime: isMoviesCategory ? String(formState.ticketShowtime || '').trim() : '',
       }).filter(([, value]) => Boolean(String(value || '').trim())),
+    );
+  }
+  // Generic spec-driven payload for other markets.
+  const spec = getMarketFieldSpec(formState.marketKey);
+  if (spec) {
+    const entries = spec.fields.map((field) => [field.name, String(formState[field.name] ?? '').trim()]);
+    return Object.fromEntries(
+      [...Object.entries(sharedFields), ...entries].filter(([, value]) => Boolean(String(value || '').trim())),
     );
   }
   return sharedFields;
@@ -4336,7 +4724,9 @@ const mapSellerItemRecord = (record) => {
         title: record.title,
         description: record.description,
       })
-      : '');
+      : record.market_key === 'secondhand'
+        ? resolveSecondhandCategoryKey(rawDetailsJson.category)
+        : '');
   const resolvedCategory = String(rawDetailsJson.category || '').trim()
     || (record.market_key === 'groceries' ? getGroceriesCategoryTitle(resolvedCategoryKey) : '');
 
@@ -4364,7 +4754,13 @@ const mapSellerItemRecord = (record) => {
     route: marketConfig.route,
     sellerName: record.seller_name || record.seller_email || 'Seller',
     sellerEmail: record.seller_email || '',
-    category: resolvedCategory,
+    // Spread spec-driven attributes first so the explicit fields below win
+    // for groceries / beverages / tickets, but generic markets get every
+    // attribute they captured (size, color, condition, fuel, year, model,
+    // etc.) exposed as flat item properties for filter-matching parity
+    // with static items on each market page.
+    ...rawDetailsJson,
+    category: resolvedCategory || String(rawDetailsJson.category || ''),
     categoryKey: resolvedCategoryKey,
     brand: String(rawDetailsJson.brand || ''),
     volume: String(rawDetailsJson.volume || ''),
@@ -4383,6 +4779,7 @@ const mapSellerItemRecord = (record) => {
     genre: String(rawDetailsJson.genre || ''),
     language: String(rawDetailsJson.language || ''),
     showtime: String(rawDetailsJson.showtime || ''),
+    attributes: rawDetailsJson,
     createdAt: record.created_at,
     // Beverages
     beverageCategory,
@@ -7592,7 +7989,7 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
 }
 
 // --- Next component ---
-const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
+const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { categoryKey = '' } = useParams();
@@ -7616,7 +8013,12 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
   const activeCategoryCard = secondhandCategoryCards.find((c) => c.key === categoryKey) || null;
 
   /* ── derived filtered items (all-categories mode) ── */
-  const allItems = secondhandItems;
+  // Merge seller-listed secondhand items with the static catalog so they
+  // show up in the grouped sections and category-detail views.
+  const allItems = useMemo(
+    () => [...getSellerItemsForMarket(sellerItems, 'secondhand'), ...secondhandItems],
+    [sellerItems],
+  );
 
   const filteredAllItems = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -8131,21 +8533,50 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
   const [priceRange, setPriceRange] = useState([0, 20]);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Unique categories, brands, cuisines, types from fastFoodItems
-  const categories = Array.from(new Set(fastFoodItems.map(i => i.category)));
-  // For demo, cuisines/types/brands are static
-  const cuisines = ["American", "Italian", "Mexican", "Asian", "African"];
-  const types = ["Restaurant", "Takeaway", "Street Vendor"];
-  const brands = ["SVS Burger", "Pizza Palace", "Chicken Hub", "Taco Town"];
-  const availabilities = ["Available Now", "Preorder"];
+  // Unique categories, brands, cuisines, types from merged seller + static items
+  // so seller-listed brands and cuisines appear as filter options.
+  const marketItems = useMemo(
+    () => [...getSellerItemsForMarket(sellerItems, 'fastFood'), ...fastFoodItems],
+    [sellerItems],
+  );
+  const categories = Array.from(new Set(marketItems.map(i => i.category).filter(Boolean)));
+  // Cuisines / outlet types / availability include seller-supplied values.
+  const cuisines = Array.from(new Set([
+    'American', 'Italian', 'Mexican', 'Asian', 'African',
+    ...marketItems.map(i => i.cuisine).filter(Boolean),
+  ]));
+  const types = Array.from(new Set([
+    'Restaurant', 'Takeaway', 'Street Vendor',
+    ...marketItems.map(i => i.outletType).filter(Boolean),
+  ]));
+  const brands = Array.from(new Set([
+    'SVS Burger', 'Pizza Palace', 'Chicken Hub', 'Taco Town',
+    ...marketItems.map(i => i.brand).filter(Boolean),
+  ]));
+  const availabilities = ['Available Now', 'Preorder'];
 
-  // Filter logic
-  const filteredItems = fastFoodItems.filter(item => {
+  // Filter logic — applies to merged seller + static items so seller listings
+  // also appear (and respect the active filters).
+  const filteredItems = marketItems.filter(item => {
     const matchCategory = !selectedCategories.length || selectedCategories.includes(item.category);
-    const matchBrand = !selectedBrands.length || brands.some(b => selectedBrands.includes(b) && item.title.includes(b));
-    const matchCuisine = !selectedCuisines.length || cuisines.some(c => selectedCuisines.includes(c) && item.title.includes(c));
-    const matchType = !selectedTypes.length || types.some(t => selectedTypes.includes(t) && item.title.includes(t));
-    const matchAvailability = !selectedAvailability.length || availabilities.some(a => selectedAvailability.includes(a));
+    const matchBrand = !selectedBrands.length || (
+      // Match against item.brand directly OR fall back to the legacy
+      // title-includes heuristic used for static items.
+      selectedBrands.includes(item.brand)
+      || brands.some(b => selectedBrands.includes(b) && (item.title || '').includes(b))
+    );
+    const matchCuisine = !selectedCuisines.length || (
+      selectedCuisines.includes(item.cuisine)
+      || cuisines.some(c => selectedCuisines.includes(c) && (item.title || '').includes(c))
+    );
+    const matchType = !selectedTypes.length || (
+      selectedTypes.includes(item.outletType)
+      || types.some(tp => selectedTypes.includes(tp) && (item.title || '').includes(tp))
+    );
+    const matchAvailability = !selectedAvailability.length || (
+      selectedAvailability.includes(item.availability)
+      || availabilities.some(a => selectedAvailability.includes(a))
+    );
     const matchPrice = Number(item.price) >= priceRange[0] && Number(item.price) <= priceRange[1];
     const matchSearch = !search || item.title.toLowerCase().includes(search.toLowerCase());
     return matchCategory && matchBrand && matchCuisine && matchType && matchAvailability && matchPrice && matchSearch;
@@ -10378,6 +10809,15 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
     setListActionMessage('');
     setListActionMessageType('idle');
     setEditingId(item.dbId);
+    const specSeed = (() => {
+      const spec = getMarketFieldSpec(item.marketKey);
+      if (!spec) return {};
+      return spec.fields.reduce((acc, field) => {
+        const raw = item[field.name] ?? item.attributes?.[field.name] ?? '';
+        acc[field.name] = raw === null || raw === undefined ? '' : String(raw);
+        return acc;
+      }, {});
+    })();
     setEditForm({
       title: item.title,
       description: item.description,
@@ -10393,6 +10833,9 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
       origin: item.origin || '',
       expiryDate: item.expiryDate || '',
       discount: item.discount || '',
+      // Beverages
+      beverageCategory: item.beverageCategory || '',
+      beverageType: item.beverageType || '',
       ticketCategory: item.category || '',
       ticketDate: item.date || '',
       ticketCountry: item.country || '',
@@ -10403,6 +10846,9 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
       ticketGenre: item.genre || '',
       ticketLanguage: item.language || '',
       ticketShowtime: item.showtime || '',
+      // Generic per-market spec fields populated last so they take precedence
+      // for spec-driven markets where the field name overlaps (e.g. brand).
+      ...specSeed,
     });
     setEditExistingImages(existingImages);
     setEditImageFiles([]);
@@ -11335,6 +11781,15 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                   isCompact
                 />
               ) : null}
+              {editForm.marketKey && getMarketFieldSpec(editForm.marketKey) ? (
+                <MarketSpecificFields
+                  formData={editForm}
+                  onFieldChange={handleEditChange}
+                  prefix={`edit-spec-${editingItem.dbId}`}
+                  marketKey={editForm.marketKey}
+                  isCompact
+                />
+              ) : null}
               <div>
                 <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Description</label>
                 <textarea name="description" value={editForm.description} onChange={handleEditChange} rows={3} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
@@ -11722,6 +12177,9 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
               ) : null}
               {formData.marketKey === 'tickets' ? (
                 <TicketsSellerFields formData={formData} onFieldChange={handleChange} prefix="seller-ticket" />
+              ) : null}
+              {formData.marketKey && getMarketFieldSpec(formData.marketKey) ? (
+                <MarketSpecificFields formData={formData} onFieldChange={handleChange} prefix="seller-spec" marketKey={formData.marketKey} />
               ) : null}
               <div className="sm:col-span-2">
                 <label htmlFor="seller-description" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Description</label>
