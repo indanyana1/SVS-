@@ -1,18 +1,5 @@
 import React, { useEffect, useState } from 'react';
 
-const CATEGORY_OPTIONS = [
-  'All',
-  'Fresh Fruits',
-  'Fresh Vegetables',
-  'Organic Produce',
-  'Local Harvest',
-  'Ready to Cook',
-  'Seasonal Fruits',
-  'Cut & Ready Produce',
-  'Herbs & Seasonings',
-];
-
-
 const AVAILABILITY_OPTIONS = [
   'Available Now',
   'Pre-Order',
