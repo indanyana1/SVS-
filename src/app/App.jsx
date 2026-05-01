@@ -8545,26 +8545,31 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
   const [selectedTypes, setSelectedTypes] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
 
+  // Currency: re-derive bounds whenever the buyer changes their currency so
+  // the slider and computed prices reflect the active currency.
+  const { code: buyerCurrencyCode } = useBuyerCurrency();
   // Unique categories, brands, cuisines, types from merged seller + static items
   // so seller-listed brands and cuisines appear as filter options.
   const marketItems = useMemo(
     () => [...getSellerItemsForMarket(sellerItems, 'fastFood'), ...fastFoodItems],
     [sellerItems],
   );
-  // Compute max price dynamically so seller items priced above the static
-  // catalog (e.g. listings in ZAR) still appear within the slider range.
+  // Compute max price dynamically (in the buyer's currency) so seller items
+  // priced above the static catalog still appear within the slider range,
+  // and so the slider scale matches the displayed prices.
   const priceMax = useMemo(() => {
     const max = marketItems.reduce((m, i) => {
-      const n = Number(i.price);
+      const n = getNumericPriceValue(i?.price, SALE_DISCOUNT_RATE, i?.currency || null);
       return Number.isFinite(n) && n > m ? n : m;
-    }, 20);
+    }, 0);
     return Math.max(20, Math.ceil(max));
-  }, [marketItems]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [marketItems, buyerCurrencyCode]);
   const [priceRange, setPriceRange] = useState([0, priceMax]);
-  // Expand the upper bound when new seller items raise the max, but keep the
-  // user's selection if they've narrowed the range manually.
+  // Expand the upper bound when new seller items raise the max, or when the
+  // buyer's currency changes (so the slider top stays aligned with prices).
   useEffect(() => {
-    setPriceRange((prev) => (prev[1] < priceMax ? [prev[0], priceMax] : prev));
+    setPriceRange((prev) => (prev[1] !== priceMax ? [Math.min(prev[0], priceMax), priceMax] : prev));
   }, [priceMax]);
   const categories = Array.from(new Set(marketItems.map(i => i.category).filter(Boolean)));
   // Cuisines / outlet types / availability include seller-supplied values.
@@ -8604,7 +8609,10 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
       selectedAvailability.includes(item.availability)
       || availabilities.some(a => selectedAvailability.includes(a))
     );
-    const matchPrice = Number(item.price) >= priceRange[0] && Number(item.price) <= priceRange[1];
+    const matchPrice = (() => {
+      const n = getNumericPriceValue(item?.price, SALE_DISCOUNT_RATE, item?.currency || null);
+      return Number.isFinite(n) && n >= priceRange[0] && n <= priceRange[1];
+    })();
     const matchSearch = !search || item.title.toLowerCase().includes(search.toLowerCase());
     return matchCategory && matchBrand && matchCuisine && matchType && matchAvailability && matchPrice && matchSearch;
   });
@@ -8770,7 +8778,7 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
                   <h3 className="mb-1 text-sm font-bold leading-tight text-[#0f6674] group-hover:text-[#33b9f2] sm:text-xl truncate">{item.title}</h3>
                   <span className="hidden sm:inline-block text-base font-medium text-[#374151] mb-2">{item.prepTime}</span>
                   <span className="sm:hidden text-[#374151] text-xs mb-1 font-medium">{item.prepTime}</span>
-                  <div className="mb-2 text-base sm:text-lg font-bold text-[#0f6674]">{item.price}</div>
+                  <div className="mb-2 text-base sm:text-lg font-bold text-[#0f6674]"><SalePrice price={item.price} currency={item.currency} /></div>
                   <div className="mt-auto flex flex-col gap-2 sm:flex-row">
                     <button
                       type="button"
