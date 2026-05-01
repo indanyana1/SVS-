@@ -8530,7 +8530,6 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
   const [selectedBrands, setSelectedBrands] = useState([]);
   const [selectedCuisines, setSelectedCuisines] = useState([]);
   const [selectedTypes, setSelectedTypes] = useState([]);
-  const [priceRange, setPriceRange] = useState([0, 20]);
   const [showFilters, setShowFilters] = useState(false);
 
   // Unique categories, brands, cuisines, types from merged seller + static items
@@ -8539,6 +8538,21 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
     () => [...getSellerItemsForMarket(sellerItems, 'fastFood'), ...fastFoodItems],
     [sellerItems],
   );
+  // Compute max price dynamically so seller items priced above the static
+  // catalog (e.g. listings in ZAR) still appear within the slider range.
+  const priceMax = useMemo(() => {
+    const max = marketItems.reduce((m, i) => {
+      const n = Number(i.price);
+      return Number.isFinite(n) && n > m ? n : m;
+    }, 20);
+    return Math.max(20, Math.ceil(max));
+  }, [marketItems]);
+  const [priceRange, setPriceRange] = useState([0, priceMax]);
+  // Expand the upper bound when new seller items raise the max, but keep the
+  // user's selection if they've narrowed the range manually.
+  useEffect(() => {
+    setPriceRange((prev) => (prev[1] < priceMax ? [prev[0], priceMax] : prev));
+  }, [priceMax]);
   const categories = Array.from(new Set(marketItems.map(i => i.category).filter(Boolean)));
   // Cuisines / outlet types / availability include seller-supplied values.
   const cuisines = Array.from(new Set([
@@ -8689,8 +8703,8 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
               <h3 className="text-lg font-bold mb-3 text-[var(--svs-primary)] tracking-tight">Price</h3>
               <div className="flex items-center gap-3">
                 <span className="text-sm text-[var(--svs-muted)]">{priceRange[0]}</span>
-                <input type="range" min={0} max={20} step={1} value={priceRange[0]} onChange={e => setPriceRange([Number(e.target.value), priceRange[1]])} className="accent-[var(--svs-primary)] w-full svs-range-slider" />
-                <input type="range" min={0} max={20} step={1} value={priceRange[1]} onChange={e => setPriceRange([priceRange[0], Number(e.target.value)])} className="accent-[var(--svs-primary)] w-full svs-range-slider" />
+                <input type="range" min={0} max={priceMax} step={1} value={priceRange[0]} onChange={e => setPriceRange([Number(e.target.value), priceRange[1]])} className="accent-[var(--svs-primary)] w-full svs-range-slider" />
+                <input type="range" min={0} max={priceMax} step={1} value={priceRange[1]} onChange={e => setPriceRange([priceRange[0], Number(e.target.value)])} className="accent-[var(--svs-primary)] w-full svs-range-slider" />
                 <span className="text-sm text-[var(--svs-muted)]">{priceRange[1]}</span>
               </div>
             </div>
