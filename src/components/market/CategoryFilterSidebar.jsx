@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 const CATEGORY_OPTIONS = [
   'All',
@@ -28,6 +28,18 @@ export default function CategoryFilterSidebar({
   categoryTitle = '',
 }) {
   const [price, setPrice] = useState([minPrice, maxPrice]);
+
+  // Resync internal slider state when the bounds change (e.g. when seller
+  // listings raise the maximum price for the active category).
+  useEffect(() => {
+    setPrice(([prevMin, prevMax]) => {
+      const nextMin = Math.max(minPrice, Math.min(prevMin, maxPrice));
+      const nextMax = Math.min(maxPrice, Math.max(prevMax, minPrice));
+      // Expand the upper bound automatically when items now exceed it.
+      const adjustedMax = prevMax >= maxPrice ? maxPrice : Math.max(nextMax, prevMax);
+      return [nextMin, Math.min(adjustedMax, maxPrice)];
+    });
+  }, [minPrice, maxPrice]);
 
   const handleCheckbox = (group, value) => {
     setFilters((prev) => {

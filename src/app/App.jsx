@@ -7752,8 +7752,7 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
   const categoryItems = useMemo(
     () => marketItems.filter((item) => resolveGroceriesCategoryKey(item) === activeCategory?.key),
     [marketItems, activeCategory]
-  );
-  const brandOptions = useMemo(() => {
+  );  const brandOptions = useMemo(() => {
     const brands = new Set();
     categoryItems.forEach((item) => {
       if (item.brand) brands.add(item.brand);
@@ -7767,6 +7766,20 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
     });
     return Array.from(types).sort();
   }, [categoryItems]);
+  // Dynamic price max so seller listings priced above the static catalog
+  // (or in different currencies) still fit inside the slider bounds.
+  const priceMax = useMemo(() => {
+    const max = categoryItems.reduce((m, i) => {
+      const n = parseFloat(i.price);
+      return Number.isFinite(n) && n > m ? n : m;
+    }, 1000);
+    return Math.max(1000, Math.ceil(max));
+  }, [categoryItems]);
+  // Auto-expand the active filter range so newly-listed items above the
+  // previous max remain visible until the user narrows the range manually.
+  useEffect(() => {
+    setFilters((prev) => (prev.price?.[1] < priceMax ? { ...prev, price: [prev.price[0], priceMax] } : prev));
+  }, [priceMax]);
   const filteredMarketItems = useMemo(() => {
     return marketItems.filter((item) => {
       if (resolveGroceriesCategoryKey(item) !== activeCategory?.key) return false;
@@ -7841,7 +7854,7 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
               filters={filters}
               setFilters={setFilters}
               minPrice={0}
-              maxPrice={1000}
+              maxPrice={priceMax}
               brandOptions={brandOptions}
               productTypeOptions={productTypeOptions}
               categoryTitle={activeCategory?.title || ''}
