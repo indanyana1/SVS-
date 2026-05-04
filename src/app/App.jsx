@@ -4022,11 +4022,20 @@ const useBuyerCurrency = () => {
   };
 };
 
-const formatCheckoutAmount = (amount, fromCurrency = 'USD') => {
+const formatCheckoutAmount = (amount, fromCurrency = null) => {
   const buyerCode = _fxState.buyerCurrency;
-  const converted = convertAmount(amount, fromCurrency, buyerCode);
+  const sourceCode = fromCurrency || buyerCode;
+  const converted = convertAmount(amount, sourceCode, buyerCode);
   return formatAmountInCurrency(converted, buyerCode, buyerCode === 'JPY' ? 0 : 2);
 };
+
+const getCartItemSourceCurrency = (item) => (
+  item?.unitPriceCurrency
+  || detectCurrencyFromPriceString(item?.unitPriceLabel || '')
+  || _fxState.buyerCurrency
+);
+
+const formatCartItemAmount = (item, amount) => formatCheckoutAmount(amount, getCartItemSourceCurrency(item));
 
 const formatSellerAmount = (amount, sellerCurrency = 'USD', decimals) => formatAmountInCurrency(amount, sellerCurrency, decimals);
 
@@ -4090,6 +4099,28 @@ const getPriceFilterStep = (minPrice, maxPrice) => {
   }
 
   return 50;
+};
+
+const useListingFocusFromQuery = (items, openHandler) => {
+  const location = useLocation();
+  const handledRef = useRef(null);
+
+  useEffect(() => {
+    const focusKey = new URLSearchParams(location.search).get('focus');
+    if (!focusKey || !openHandler || handledRef.current === focusKey) return;
+    const match = (items || []).find((candidate) => (
+      String(candidate?.id) === focusKey || String(candidate?.sku) === focusKey
+    ));
+    if (!match) return;
+    handledRef.current = focusKey;
+    if (typeof window !== 'undefined') {
+      window.requestAnimationFrame(() => {
+        const target = document.getElementById(`listing-${match.id}`);
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        openHandler(match);
+      });
+    }
+  }, [location.search, items, openHandler]);
 };
 
 const useMarketplacePriceFilter = (items = [], boundsItems = null) => {
@@ -4220,7 +4251,11 @@ const useMarketplacePriceFilter = (items = [], boundsItems = null) => {
 };
 
 const getCartCount = (cartItems) => cartItems.reduce((total, item) => total + item.quantity, 0);
-const getCartSubtotal = (cartItems) => cartItems.reduce((total, item) => total + (item.unitPrice * item.quantity), 0);
+const getCartSubtotal = (cartItems) => cartItems.reduce((total, item) => {
+  const fromCurrency = getCartItemSourceCurrency(item);
+  const lineTotal = (Number(item.unitPrice) || 0) * (Number(item.quantity) || 0);
+  return total + convertAmount(lineTotal, fromCurrency, _fxState.buyerCurrency);
+}, 0);
 const getServiceFee = (subtotal) => subtotal * 0.03;
 const GUEST_ORDER_EMAIL = 'guest@svs.app';
 const STANDARD_SHIPPING_FEE = 150;
@@ -4530,6 +4565,7 @@ const createSavedItem = ({ id, title, image, price, route, marketName, details =
   availableQuantity: String(id || '').startsWith('seller-') ? normalizeListingQuantity(availableQuantity, 0) : null,
   unitPrice: getNumericPriceValue(price),
   unitPriceLabel: getSalePrices(price).nowPrice,
+  unitPriceCurrency: _fxState.buyerCurrency,
 });
 
 const createCartItem = (item) => ({
@@ -4552,6 +4588,7 @@ const mapCartItemRecord = (record) => ({
   quantity: Math.max(Number(record.quantity) || 1, 1),
   unitPrice: Number(record.unit_price) || 0,
   unitPriceLabel: record.unit_price_label,
+  unitPriceCurrency: detectCurrencyFromPriceString(record.unit_price_label || '') || _fxState.buyerCurrency,
 });
 
 const mapWishlistItemRecord = (record) => ({
@@ -4566,6 +4603,7 @@ const mapWishlistItemRecord = (record) => ({
   sellerEmail: normalizeEmail(record.seller_email || ''),
   unitPrice: Number(record.unit_price) || 0,
   unitPriceLabel: record.unit_price_label,
+  unitPriceCurrency: detectCurrencyFromPriceString(record.unit_price_label || '') || _fxState.buyerCurrency,
 });
 
 const toCartItemRecord = (userEmail, item) => ({
@@ -7195,6 +7233,18 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
     },
   ].filter((section) => section.show && section.items.length > 0);
 
+  const allBookingsItems = useMemo(
+    () => bookingsSections.flatMap((section) => section.items),
+    [bookingsSections],
+  );
+  useListingFocusFromQuery(allBookingsItems, (item) => {
+    if (!item.isSellerListing && item.category === 'Movies') {
+      navigate(`/movie/${item.id}`);
+    } else {
+      openBookingItemDetails(item);
+    }
+  });
+
   return (
     <PageFrame
       title="Bookings And Tickets Sales Market"
@@ -7527,6 +7577,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
                   return (
                 <article
                   key={item.id}
+                  id={`listing-${item.id}`}
                   role="button"
                   tabIndex={0}
                   onClick={() => {
@@ -7747,7 +7798,6 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
   const { categoryKey = '' } = useParams();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'groceries'), ...groceries], [sellerItems]);
   const activeCategory = groceriesCategoryCards.find((category) => category.key === categoryKey) || null;
-
   // Compute dynamic filter options based on items in the current category
   const categoryItems = useMemo(
     () => marketItems.filter((item) => resolveGroceriesCategoryKey(item) === activeCategory?.key),
@@ -7795,18 +7845,25 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
       return true;
     });
   }, [marketItems, activeCategory, filters]);
-  const buildCartItem = (item) => createCartItem({
-    ...item,
-    route: '/groceries',
-    marketName: t('markets.groceries'),
-    details: getGroceriesListingDetailsText(item),
-  });
-  const buildWishlistItem = (item) => createWishlistItem({
-    ...item,
-    route: '/groceries',
-    marketName: t('markets.groceries'),
-    details: getGroceriesListingDetailsText(item),
-  });
+  useListingFocusFromQuery(filteredMarketItems, onOpenItemDetails);
+  const buildCartItem = (item) => {
+    const itemCategoryKey = resolveGroceriesCategoryKey(item);
+    return createCartItem({
+      ...item,
+      route: itemCategoryKey ? `/groceries/${itemCategoryKey}` : '/groceries',
+      marketName: t('markets.groceries'),
+      details: getGroceriesListingDetailsText(item),
+    });
+  };
+  const buildWishlistItem = (item) => {
+    const itemCategoryKey = resolveGroceriesCategoryKey(item);
+    return createWishlistItem({
+      ...item,
+      route: itemCategoryKey ? `/groceries/${itemCategoryKey}` : '/groceries',
+      marketName: t('markets.groceries'),
+      details: getGroceriesListingDetailsText(item),
+    });
+  };
 
   if (categoryKey && !activeCategory) {
     return <Navigate to="/groceries" replace />;
@@ -7889,6 +7946,7 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
                   return (
                     <article
                       key={item.id}
+                      id={`listing-${item.id}`}
                       className="flex flex-col overflow-hidden rounded-3xl border border-[#e0e7ef] bg-white shadow-lg hover:scale-[1.03] transition group"
                       role="button"
                       tabIndex={0}
@@ -8079,13 +8137,13 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
 
   const buildCartItem = (item) => createCartItem({
     ...item,
-    route: '/secondhand-central',
+    route: `/secondhand-central/product/${item.id}`,
     marketName: t('markets.secondhand'),
     details: `${item.condition || 'Pre-owned'} • ${item.description || ''}`,
   });
   const buildWishlistItem = (item) => createWishlistItem({
     ...item,
-    route: '/secondhand-central',
+    route: `/secondhand-central/product/${item.id}`,
     marketName: t('markets.secondhand'),
     details: `${item.condition || 'Pre-owned'}`,
   });
@@ -8617,6 +8675,8 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
     return matchCategory && matchBrand && matchCuisine && matchType && matchAvailability && matchPrice && matchSearch;
   });
 
+  useListingFocusFromQuery(filteredItems, handleOpenDetails);
+
   return (
     <div className="bg-[var(--svs-bg)] min-h-screen font-sans">
       {/* Hero Banner */}
@@ -8760,7 +8820,7 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
           {/* Product Cards Grid */}
           <div ref={gridRef} className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-10">
             {filteredItems.map(item => (
-              <div key={item.id} className="bg-white rounded-3xl shadow-lg flex flex-col overflow-hidden hover:scale-[1.02] transition group border border-[#e0e7ef]">
+              <div key={item.id} id={`listing-${item.id}`} className="bg-white rounded-3xl shadow-lg flex flex-col overflow-hidden hover:scale-[1.02] transition group border border-[#e0e7ef]">
                 <div className="relative aspect-[4/3] sm:aspect-auto sm:h-48 w-full overflow-hidden cursor-pointer rounded-t-3xl" onClick={() => handleOpenDetails(item)}>
                   <img src={item.image} alt={item.title} className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" />
                   <span className="absolute top-2 left-2 sm:top-4 sm:left-4 bg-[#0f6674] text-white text-[10px] sm:text-sm font-bold px-2 py-0.5 sm:px-4 sm:py-1.5 rounded-full shadow">{item.category}</span>
@@ -8921,6 +8981,8 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
     });
   };
 
+  useListingFocusFromQuery(filteredBeverageItems, openBeverageItemDetails);
+
   return (
     <PageFrame
       title="Beverages & Liquors"
@@ -8989,6 +9051,7 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
             return (
               <article
                 key={item.id}
+                id={`listing-${item.id}`}
                 role="button"
                 tabIndex={0}
                 onClick={() => openBeverageItemDetails(item)}
@@ -12830,8 +12893,6 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
   const checkoutItems = useMemo(() => (
     isBuyNowMode ? (buyNowCheckout?.items || []) : cartItems
   ), [buyNowCheckout, cartItems, isBuyNowMode]);
-  const shippingFee = checkoutItems.length ? STANDARD_SHIPPING_FEE : 0;
-  const totals = useMemo(() => getCheckoutTotals(checkoutItems, shippingFee), [checkoutItems, shippingFee]);
   const [formState, setFormState] = useState({
     contact: typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''),
     saveInformation: false,
@@ -12868,6 +12929,24 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
   const isPhoneMissing = !formState.phone.trim();
   const contactEmail = String(formState.contact || '').trim();
   const hasInvalidContactEmail = Boolean(contactEmail) && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail);
+  const isDeliveryComplete = useMemo(() => {
+    if (!checkoutItems.length) return false;
+    const requiredFields = [
+      formState.contact,
+      formState.firstName,
+      formState.lastName,
+      formState.address1,
+      formState.city,
+      formState.province,
+      formState.postalCode,
+      formState.phone,
+    ];
+    if (requiredFields.some((value) => !String(value || '').trim())) return false;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) return false;
+    return true;
+  }, [checkoutItems.length, formState, contactEmail]);
+  const shippingFee = checkoutItems.length && isDeliveryComplete ? STANDARD_SHIPPING_FEE : 0;
+  const totals = useMemo(() => getCheckoutTotals(checkoutItems, shippingFee), [checkoutItems, shippingFee]);
   const shippingMethodLabel = `Standard – ${formatCheckoutAmount(shippingFee)}`;
   const sectionClassName = 'rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 shadow-sm md:p-8';
   const fieldLabelClassName = 'mb-2 block text-sm font-medium text-[var(--svs-text)]';
@@ -13109,56 +13188,139 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
   let activeStepContent = null;
 
   if (currentStep === 1) {
-    activeStepContent = (
-      <section className={sectionClassName}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-xl font-black text-[var(--svs-text)]">Items</h2>
-            <p className={`${mutedTextClassName} mt-1`}>{isBuyNowMode ? 'This order contains a single item.' : 'Adjust quantities here before paying.'}</p>
-          </div>
-          {isBuyNowMode ? <span className="rounded-full bg-[#111111] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-white">Single item</span> : null}
-        </div>
+    const estimatedTotal = totals.subtotal + totals.serviceFee;
+    const isCartMode = !isBuyNowMode;
+    const handleQtyChange = (item, nextQty) => {
+      if (!isCartMode || !onUpdateCartQuantity) return;
+      const safe = Math.max(1, Math.min(99, Number(nextQty) || 1));
+      if (safe !== item.quantity) onUpdateCartQuantity(item.id, safe);
+    };
+    const handleRemove = (item) => {
+      if (!isCartMode || !onRemoveCartItem) return;
+      onRemoveCartItem(item.id);
+    };
 
-        <div className="mt-5 space-y-3">
-          {checkoutItems.map((item) => (
-            <article key={item.id} className="flex gap-4 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4">
-              <img src={item.image} alt={item.title} className="h-24 w-24 rounded-2xl object-cover" loading="lazy" />
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-lg font-bold text-[var(--svs-text)]">{item.title}</h3>
-                    <p className="mt-1 text-sm text-[var(--svs-muted)]">{item.marketName}</p>
-                    {item.details ? <p className="mt-1 text-sm text-[var(--svs-muted)]">{item.details}</p> : null}
-                  </div>
-                  <p className="text-sm font-semibold text-[var(--svs-text)]">{item.unitPriceLabel}</p>
-                </div>
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                  {isBuyNowMode ? (
-                    <div className="inline-flex items-center rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-2 text-sm font-semibold text-[var(--svs-text)]">
-                      1 item
-                    </div>
-                  ) : (
-                    <>
-                      <div className="inline-flex items-center overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)]">
-                        <button type="button" onClick={() => onUpdateCartQuantity(item.id, -1)} className="px-3 py-2 text-sm font-semibold text-[var(--svs-text)]">-</button>
-                        <span className="min-w-10 border-x border-[var(--svs-border)] px-3 py-2 text-center text-sm font-semibold text-[var(--svs-text)]">{item.quantity}</span>
-                        <button type="button" onClick={() => onUpdateCartQuantity(item.id, 1)} className="px-3 py-2 text-sm font-semibold text-[var(--svs-text)]">+</button>
+    activeStepContent = (
+      <section className="relative mx-auto w-full max-w-3xl rounded-3xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 shadow-sm md:p-10">
+        <h3 className="text-center text-xl font-black text-[var(--svs-primary-strong)] underline decoration-[var(--svs-primary)]/30 underline-offset-8 md:text-2xl">
+          Order Summary
+        </h3>
+
+        <ul className="mt-8 divide-y divide-[var(--svs-border)]/70">
+          {checkoutItems.map((item) => {
+            const linePrice = (Number(item.unitPrice) || 0) * (Number(item.quantity) || 1);
+            const baseHref = item.route || '/markets';
+            const focusKey = item.sku ? encodeURIComponent(String(item.sku)) : '';
+            const listingHref = focusKey ? `${baseHref}?focus=${focusKey}` : baseHref;
+            return (
+              <li key={`preview-${item.id}`} className="flex items-start gap-4 py-4">
+                <Link
+                  to={listingHref}
+                  aria-label={`View ${item.title} in ${item.marketName || 'market'}`}
+                  className="shrink-0"
+                >
+                  <img
+                    src={item.image}
+                    alt={item.title}
+                    className="h-20 w-20 rounded-xl border border-[var(--svs-border)] object-cover transition hover:opacity-90"
+                    loading="lazy"
+                  />
+                </Link>
+                <div className="min-w-0 flex-1">
+                  <Link
+                    to={listingHref}
+                    className="block truncate text-sm font-semibold text-[var(--svs-text)] hover:text-[var(--svs-primary)] hover:underline sm:text-base"
+                  >
+                    {item.title}
+                  </Link>
+                  {item.marketName ? (
+                    <Link
+                      to={listingHref}
+                      className="mt-0.5 block truncate text-xs text-[var(--svs-muted)] hover:text-[var(--svs-primary)] hover:underline"
+                    >
+                      {item.marketName}
+                    </Link>
+                  ) : null}
+                  <p className="mt-1 text-xs text-[var(--svs-muted)]">
+                    {formatCartItemAmount(item, item.unitPrice)} each
+                  </p>
+
+                  {isCartMode ? (
+                    <div className="mt-3 flex items-center gap-3">
+                      <div className="inline-flex items-center rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface-soft)]">
+                        <button
+                          type="button"
+                          onClick={() => handleQtyChange(item, item.quantity - 1)}
+                          disabled={item.quantity <= 1}
+                          aria-label="Decrease quantity"
+                          className="h-8 w-8 rounded-full text-base font-bold text-[var(--svs-text)] transition hover:text-[var(--svs-primary)] disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          −
+                        </button>
+                        <span className="min-w-[2ch] text-center text-sm font-semibold text-[var(--svs-text)]">
+                          {item.quantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleQtyChange(item, item.quantity + 1)}
+                          aria-label="Increase quantity"
+                          className="h-8 w-8 rounded-full text-base font-bold text-[var(--svs-text)] transition hover:text-[var(--svs-primary)]"
+                        >
+                          +
+                        </button>
                       </div>
-                      <button type="button" onClick={() => onRemoveCartItem(item.id)} className="text-sm font-semibold text-rose-600 transition hover:text-rose-500">
+                      <button
+                        type="button"
+                        onClick={() => handleRemove(item)}
+                        className="text-xs font-semibold text-[var(--svs-muted)] underline-offset-2 transition hover:text-[#d94d4d] hover:underline"
+                      >
                         Remove
                       </button>
-                    </>
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-xs text-[var(--svs-muted)]">Qty: {item.quantity}</p>
                   )}
                 </div>
-              </div>
-            </article>
-          ))}
-        </div>
+                <p className="shrink-0 text-sm font-semibold text-[var(--svs-text)] sm:text-base">
+                  {formatCartItemAmount(item, linePrice)}
+                </p>
+              </li>
+            );
+          })}
+        </ul>
 
-        <div className="mt-6 flex justify-end">
-          <button type="button" onClick={handleContinueFromItems} className={`${cudyBluePrimaryButtonClassName} rounded-xl bg-[var(--svs-primary)] px-5 py-3 text-sm font-bold text-white`}>
-            Continue to Delivery
+        <dl className="mt-2 space-y-3 border-t border-[var(--svs-border)] pt-5 text-sm md:text-base">
+          <div className="flex items-center justify-between">
+            <dt className="text-[var(--svs-primary-strong)]">Subtotal</dt>
+            <dd className="font-semibold text-[var(--svs-text)]">{formatCheckoutAmount(totals.subtotal)}</dd>
+          </div>
+          <div className="flex items-center justify-between">
+            <dt className="text-[var(--svs-primary-strong)]">Platform fee</dt>
+            <dd className="font-semibold text-[var(--svs-text)]">{formatCheckoutAmount(totals.serviceFee)}</dd>
+          </div>
+          <div className="flex items-center justify-between">
+            <dt className="text-[var(--svs-primary-strong)]">Delivery</dt>
+            <dd className="text-xs italic text-[var(--svs-muted)]">Calculated at next step</dd>
+          </div>
+        </dl>
+
+        <div className="mt-5 flex items-center justify-between border-t border-[var(--svs-border)] pt-5 text-base font-black text-[var(--svs-primary-strong)] md:text-lg">
+          <span>Estimated total</span>
+          <span>{formatCheckoutAmount(estimatedTotal)}</span>
+        </div>
+        <p className="mt-1 text-right text-xs text-[var(--svs-muted)]">Excludes delivery</p>
+
+        <div className="mt-8 flex flex-col items-center gap-3">
+          <button
+            type="button"
+            onClick={handleContinueFromItems}
+            className={`${cudyBluePrimaryButtonClassName} w-full max-w-md rounded-xl bg-[var(--svs-primary)] px-6 py-3.5 text-sm font-bold uppercase tracking-wide text-white transition hover:opacity-95 sm:text-base`}
+          >
+            Proceed to Checkout
           </button>
+          <p className="text-center text-sm italic text-[var(--svs-primary-strong)]/80">
+            Don't miss out—complete your purchase today.
+          </p>
         </div>
       </section>
     );
@@ -13400,19 +13562,43 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
   }
 
   return (
-    <MinimalCheckoutShell
-      title="Checkout"
-      badge={isBuyNowMode ? <div className="rounded-full bg-[#111111] px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-white">Buy it now</div> : null}
-    >
+    <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          aria-label="Go back"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--svs-primary-strong)] transition hover:bg-[var(--svs-cyan-surface)]"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        {isBuyNowMode ? (
+          <div className="rounded-full bg-[#111111] px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-white">Buy it now</div>
+        ) : <span aria-hidden="true" />}
+      </div>
+
+      {currentStep === 1 ? (
+        <div className="border-y border-[var(--svs-border)] bg-[var(--svs-surface)]/40 py-6 text-center">
+          <h1 className="text-3xl font-black text-[var(--svs-primary-strong)] md:text-4xl">Order Summary</h1>
+          <p className="mt-2 text-sm text-[var(--svs-primary-strong)]/80 md:text-base">
+            Review your selected items before you proceed.
+          </p>
+        </div>
+      ) : null}
+
         {!checkoutItems.length ? (
-          <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 text-sm text-[var(--svs-text)] shadow-sm md:p-8">
+          <div className="mt-8 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 text-sm text-[var(--svs-text)] shadow-sm md:p-8">
             <p>Your checkout is empty. Add products or tickets from any market to continue.</p>
             <Link to="/markets" className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex rounded-xl bg-[var(--svs-primary)] px-4 py-3 text-sm font-bold text-white`}>
               Browse Markets
             </Link>
           </div>
+        ) : currentStep === 1 ? (
+          <div className="mt-8">
+            {activeStepContent}
+          </div>
         ) : (
-          <form onSubmit={handleSubmit} className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_390px]">
+          <form onSubmit={handleSubmit} className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1fr)_390px]">
             <section className="mx-auto w-full max-w-3xl space-y-5 xl:mx-0 xl:max-w-none">
               <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 shadow-sm md:p-8">
                 <div className="flex flex-wrap items-center justify-between gap-4">
@@ -13457,21 +13643,38 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
 
               <h2 className="text-xl font-black text-[var(--svs-text)]">Order Summary</h2>
               <div className="mt-5 space-y-4">
-                {checkoutItems.map((item) => (
-                  <div key={`summary-${item.id}`} className="flex items-center gap-3 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3">
+                {checkoutItems.map((item) => {
+                  const baseHref = item.route || '/markets';
+                  const focusKey = item.sku ? encodeURIComponent(String(item.sku)) : '';
+                  const listingHref = focusKey ? `${baseHref}?focus=${focusKey}` : baseHref;
+                  return (
+                  <Link
+                    key={`summary-${item.id}`}
+                    to={listingHref}
+                    aria-label={`View ${item.title} in ${item.marketName || 'market'}`}
+                    className="flex items-center gap-3 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3 transition hover:border-[var(--svs-primary)] hover:bg-[var(--svs-cyan-surface)]"
+                  >
                     <img src={item.image} alt={item.title} className="h-16 w-16 rounded-2xl object-cover" loading="lazy" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-semibold text-[var(--svs-text)]">{item.title}</p>
                       <p className="mt-1 text-xs text-[var(--svs-muted)]">{item.quantity} item{item.quantity === 1 ? '' : 's'}</p>
                     </div>
-                    <p className="text-sm font-semibold text-[var(--svs-text)]">{formatCheckoutAmount(item.unitPrice * item.quantity)}</p>
-                  </div>
-                ))}
+                    <p className="text-sm font-semibold text-[var(--svs-text)]">{formatCartItemAmount(item, item.unitPrice * item.quantity)}</p>
+                  </Link>
+                  );
+                })}
               </div>
 
               <div className="mt-6 space-y-3 text-sm text-[var(--svs-muted)]">
                 <div className="flex items-center justify-between"><span>Subtotal</span><span>{formatCheckoutAmount(totals.subtotal)}</span></div>
-                <div className="flex items-center justify-between"><span>Shipping</span><span>{formatCheckoutAmount(totals.shippingFee)}</span></div>
+                <div className="flex items-center justify-between">
+                  <span>Shipping</span>
+                  {isDeliveryComplete ? (
+                    <span>{formatCheckoutAmount(totals.shippingFee)}</span>
+                  ) : (
+                    <span className="text-xs italic">Calculated at next step</span>
+                  )}
+                </div>
                 <div className="flex items-center justify-between"><span>Platform fee</span><span>{formatCheckoutAmount(totals.serviceFee)}</span></div>
                 <div className="flex items-center justify-between border-t border-[var(--svs-border)] pt-4 text-base font-bold text-[var(--svs-text)]"><span>Total</span><span>{formatCheckoutAmount(totals.total)}</span></div>
               </div>
@@ -13479,7 +13682,7 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
             </aside>
           </form>
         )}
-    </MinimalCheckoutShell>
+    </main>
   );
 };
 
@@ -13943,7 +14146,7 @@ const OrdersPage = ({ orders, cartItems, onCancelOrder }) => {
                     </div>
                     <div className="text-right text-sm">
                       <p className="font-semibold text-[var(--svs-text)]">x{item.quantity}</p>
-                      <p className="text-[var(--svs-primary-strong)]">{formatCheckoutAmount(item.unitPrice * item.quantity)}</p>
+                      <p className="text-[var(--svs-primary-strong)]">{formatCartItemAmount(item, item.unitPrice * item.quantity)}</p>
                     </div>
                   </div>
                 ))}
@@ -14986,6 +15189,7 @@ const SecondHandProductDetailPage = ({ onAddToCart, onBuyNow, onToggleWishlist, 
 const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaRenderer, onPrimaryAction, onBuyNowAction, onToggleWishlist, isItemWishlisted, onOpenItemDetails, reviewSummaryMap = {}, getItemReviewKey }) => {
   const { t } = useTranslation();
   const [selectedSizesByItem, setSelectedSizesByItem] = useState({});
+  useListingFocusFromQuery(items, onOpenItemDetails);
   const {
     filteredItems,
     hasActivePriceFilter,
@@ -15044,6 +15248,7 @@ const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaR
         return (
           <article
             key={item.id}
+            id={`listing-${item.id}`}
             className="flex flex-col overflow-hidden rounded-3xl border border-[#e0e7ef] bg-white shadow-lg transition hover:scale-[1.02] group"
             role="button"
             tabIndex={0}
@@ -16737,7 +16942,6 @@ const App = () => {
   }, []);
 
   const standaloneShellRoutes = new Set([
-    '/checkout',
     '/checkout/payfast',
     '/signin',
     '/signup',
