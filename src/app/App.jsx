@@ -13532,74 +13532,16 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
 
           {selectedPaymentGroup.id === 'card' ? (
             <div className="mt-6 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-5">
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="text-base font-bold text-[var(--svs-text)]">Card Details</h3>
-                <button type="button" className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--svs-primary)] hover:underline">
-                  <Plus className="h-3.5 w-3.5" /> Add New Card
-                </button>
-              </div>
-              <div className="mt-4 space-y-4">
-                <div>
-                  <label htmlFor="checkout-card-number" className={fieldLabelClassName}>Card Number</label>
-                  <input
-                    id="checkout-card-number"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="cc-number"
-                    value={formState.cardNumber || ''}
-                    onChange={(event) => updateField('cardNumber', event.target.value)}
-                    placeholder="1234 5678 9012 3456"
-                    className={inputClassName}
-                  />
+              <div className="flex items-start gap-3">
+                <span aria-hidden="true" className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--svs-surface)] text-[var(--svs-primary-strong)]">
+                  <CreditCard className="h-4 w-4" />
+                </span>
+                <div className="min-w-0">
+                  <h3 className="text-base font-bold text-[var(--svs-text)]">Card Details</h3>
+                  <p className="mt-1 text-xs text-[var(--svs-muted)]">
+                    For your security, your card number, expiry, and CVV are entered on the next step inside Stripe&apos;s encrypted form. We never see or store your raw card data.
+                  </p>
                 </div>
-                <div>
-                  <label htmlFor="checkout-card-name" className={fieldLabelClassName}>Cardholder Name</label>
-                  <input
-                    id="checkout-card-name"
-                    type="text"
-                    autoComplete="cc-name"
-                    value={formState.cardholderName || ''}
-                    onChange={(event) => updateField('cardholderName', event.target.value)}
-                    placeholder="Enter your cardholder name"
-                    className={inputClassName}
-                  />
-                </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <label htmlFor="checkout-card-expiry" className={fieldLabelClassName}>Expiry Date</label>
-                    <input
-                      id="checkout-card-expiry"
-                      type="text"
-                      autoComplete="cc-exp"
-                      value={formState.cardExpiry || ''}
-                      onChange={(event) => updateField('cardExpiry', event.target.value)}
-                      placeholder="MM/YY"
-                      className={inputClassName}
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="checkout-card-cvv" className={fieldLabelClassName}>CVV</label>
-                    <input
-                      id="checkout-card-cvv"
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete="cc-csc"
-                      value={formState.cardCvv || ''}
-                      onChange={(event) => updateField('cardCvv', event.target.value)}
-                      placeholder="123"
-                      className={inputClassName}
-                    />
-                  </div>
-                </div>
-                <label className="flex items-center gap-3 text-sm text-[var(--svs-text)]">
-                  <input
-                    type="checkbox"
-                    checked={formState.saveCard || false}
-                    onChange={(event) => updateField('saveCard', event.target.checked)}
-                    className="h-4 w-4 rounded border-[#d9d1c6] accent-[var(--svs-primary)]"
-                  />
-                  <span>Save this card for future booking</span>
-                </label>
               </div>
             </div>
           ) : null}
