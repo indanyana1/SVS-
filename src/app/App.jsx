@@ -36,6 +36,8 @@ import {
   Smartphone,
   CheckCircle2,
   Download,
+  RefreshCw,
+  Circle,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -14202,7 +14204,7 @@ const OrderConfirmationPage = ({ orders }) => {
 
           <div className="mt-6 flex justify-center">
             <Link
-              to="/orders"
+              to={`/orders/${order.id}/track`}
               state={{ orderId: order.id, reference: order.reference }}
               className={`${cudyBluePrimaryButtonClassName} inline-flex items-center justify-center rounded-xl bg-[var(--svs-primary-strong)] px-8 py-3 text-sm font-bold text-white`}
             >
@@ -14245,127 +14247,742 @@ const OrderConfirmationPage = ({ orders }) => {
   );
 };
 
+const TRACK_ORDER_TIMELINE = [
+  {
+    key: 'orderConfirmed',
+    title: 'Order Confirmed',
+    description: 'Your order has been confirmed and payment received',
+    minStatusIndex: 0, // Processing
+  },
+  {
+    key: 'orderProcessing',
+    title: 'Order Processing',
+    description: 'Items are being prepared and packaged',
+    minStatusIndex: 1, // Confirmed
+  },
+  {
+    key: 'packageShipped',
+    title: 'Package Shipped',
+    description: 'Package left warehouse and is on the way',
+    minStatusIndex: 2, // Preparing for Shipping
+  },
+  {
+    key: 'inTransit',
+    title: 'In Transit',
+    description: 'Package is in transit to your location',
+    minStatusIndex: 3, // Shipped
+  },
+  {
+    key: 'outForDelivery',
+    title: 'Out for Delivery',
+    description: 'Package is out for delivery today',
+    minStatusIndex: 3, // Shipped (sub-state, optional)
+    requireDeliveredOrLater: false,
+  },
+  {
+    key: 'delivered',
+    title: 'Delivered',
+    description: 'Package has been delivered',
+    minStatusIndex: 4, // Delivered
+  },
+];
+
+const formatTrackTimestamp = (value) => {
+  if (!value) return '';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('en-US', {
+    year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit',
+  });
+};
+
+const formatTrackDate = (value) => {
+  if (!value) return '';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+};
+
+const buildTrackTimeline = (order) => {
+  if (!order) return [];
+
+  const orderCreatedAt = order.createdAt ? new Date(order.createdAt) : new Date();
+  const currentStatusIndex = ORDER_STATUS_FLOW.indexOf(order.status);
+  const effectiveIndex = currentStatusIndex === -1 ? 0 : currentStatusIndex;
+
+  // Pull seller-provided history if present (array of { status, at, location })
+  const history = Array.isArray(order.statusHistory) ? order.statusHistory : [];
+  const findHistory = (statusName) => history.find((entry) => entry?.status === statusName);
+
+  const fallbackOrigin = order.fulfillment?.warehouseLocation
+    || order.shippingOrigin
+    || 'Warehouse';
+  const fallbackDestination = order.customer?.shippingAddress?.city
+    || order.customer?.shippingAddress?.province
+    || 'Your location';
+
+  const offsetDate = (baseDate, hoursOffset) => {
+    const next = new Date(baseDate);
+    next.setHours(next.getHours() + hoursOffset);
+    return next;
+  };
+
+  const stageMeta = {
+    orderConfirmed: { historyKey: 'Confirmed', offsetHours: 0, location: fallbackDestination },
+    orderProcessing: { historyKey: 'Confirmed', offsetHours: 2, location: fallbackOrigin },
+    packageShipped: { historyKey: 'Preparing for Shipping', offsetHours: 18, location: fallbackOrigin },
+    inTransit: { historyKey: 'Shipped', offsetHours: 48, location: 'In transit' },
+    outForDelivery: { historyKey: 'Shipped', offsetHours: 70, location: fallbackDestination },
+    delivered: { historyKey: 'Delivered', offsetHours: 80, location: fallbackDestination },
+  };
+
+  return TRACK_ORDER_TIMELINE.map((step) => {
+    const meta = stageMeta[step.key];
+    const historyEntry = meta ? findHistory(meta.historyKey) : null;
+    const reached = effectiveIndex >= step.minStatusIndex;
+    const at = historyEntry?.at
+      ? new Date(historyEntry.at)
+      : reached
+        ? offsetDate(orderCreatedAt, meta?.offsetHours || 0)
+        : null;
+    const location = historyEntry?.location || meta?.location || '';
+
+    return { ...step, reached, at, location, expected: !reached };
+  }).map((step, _i, arr) => {
+    const lastReachedIndex = arr.reduce((acc, s, idx) => (s.reached ? idx : acc), 0);
+    return { ...step, isCurrent: arr.indexOf(step) === lastReachedIndex && step.key !== 'delivered' };
+  });
+};
+
+const TRACK_BADGE_STYLES = {
+  Processing: 'bg-amber-50 text-amber-700 border-amber-200',
+  Confirmed: 'bg-sky-50 text-sky-700 border-sky-200',
+  'Preparing for Shipping': 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  Shipped: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+  Delivered: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  'Cancelled by Buyer': 'bg-rose-50 text-rose-700 border-rose-200',
+  'Refund Pending': 'bg-orange-50 text-orange-700 border-orange-200',
+  'Refund Made': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+};
+
+const getTrackBadgeLabel = (status) => {
+  if (status === 'Shipped') return 'In Transit';
+  if (status === 'Preparing for Shipping') return 'Processing';
+  return status || 'Pending';
+};
+
+const TrackOrderPage = ({ orders }) => {
+  const params = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const orderIdFromState = location.state?.orderId;
+  const referenceFromState = location.state?.reference;
+
+  const order = useMemo(() => {
+    if (!Array.isArray(orders) || !orders.length) return null;
+    const targetId = params?.orderId || orderIdFromState;
+    if (targetId) {
+      const byId = orders.find((entry) => entry?.id === targetId);
+      if (byId) return byId;
+    }
+    if (referenceFromState) {
+      const byRef = orders.find((entry) => entry?.reference === referenceFromState);
+      if (byRef) return byRef;
+    }
+    return orders[0] || null;
+  }, [orders, params, orderIdFromState, referenceFromState]);
+
+  const timeline = useMemo(() => buildTrackTimeline(order), [order]);
+
+  const estimatedDelivery = useMemo(() => {
+    if (!order) return null;
+    if (order.estimatedDeliveryAt) return new Date(order.estimatedDeliveryAt);
+    const base = order.createdAt ? new Date(order.createdAt) : new Date();
+    base.setDate(base.getDate() + 7);
+    return base;
+  }, [order]);
+
+  if (!order) {
+    return (
+      <main className="mx-auto w-full max-w-4xl px-4 py-10 sm:py-14">
+        <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-8 text-center shadow-sm">
+          <h1 className="text-2xl font-bold text-[var(--svs-text)]">Order not found</h1>
+          <p className="mt-2 text-sm text-[var(--svs-muted)]">We couldn't find this order. It may have been removed or you may need to sign in.</p>
+          <div className="mt-6 flex justify-center gap-3">
+            <Link to="/orders" className={`${cudyBluePrimaryButtonClassName} rounded-xl bg-[var(--svs-primary-strong)] px-5 py-2.5 text-sm font-bold text-white`}>View All Orders</Link>
+            <Link to="/" className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 py-2.5 text-sm font-bold text-[var(--svs-text)]">Continue Shopping</Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  const customer = order.customer || {};
+  const shipping = customer.shippingAddress || {};
+  const recipientName = customer.fullName
+    || [shipping.firstName, shipping.lastName].filter(Boolean).join(' ').trim()
+    || 'Customer';
+
+  const addressLines = [
+    [shipping.address1, shipping.address2].filter(Boolean).join(' ').trim(),
+    shipping.address2 && !shipping.address1 ? shipping.address2 : null,
+    [shipping.city, shipping.province, shipping.postalCode].filter(Boolean).join(', '),
+    shipping.country,
+  ].filter((line) => line && String(line).trim().length);
+
+  const courierName = order.fulfillment?.courier || 'SVS Logistics';
+  const trackingNumber = order.fulfillment?.trackingNumber || `SVS${String(order.reference || order.id || '').replace(/\D/g, '').slice(-12).padStart(12, '0')}`;
+  const badgeLabel = getTrackBadgeLabel(order.status);
+  const badgeClass = TRACK_BADGE_STYLES[order.status] || 'bg-slate-50 text-slate-700 border-slate-200';
+  const lastUpdatedRelative = (() => {
+    const tail = [...timeline].reverse().find((step) => step.reached && step.at);
+    if (!tail?.at) return 'Just now';
+    const diffMs = Date.now() - tail.at.getTime();
+    const minutes = Math.round(diffMs / 60000);
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes} min ago`;
+    const hours = Math.round(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+    const days = Math.round(hours / 24);
+    return `${days} day${days === 1 ? '' : 's'} ago`;
+  })();
+
+  return (
+    <main className="bg-[var(--svs-bg)] py-6 sm:py-10">
+      <div className="mx-auto w-full max-w-4xl px-4 sm:px-6">
+        {/* Header */}
+        <div className="mb-6 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            aria-label="Go back"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--svs-primary-strong)] transition hover:bg-[var(--svs-cyan-surface)]"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="mb-6 text-center">
+          <h1 className="text-2xl font-black text-[var(--svs-primary-strong)] sm:text-3xl">Track Your Order</h1>
+          <p className="mt-1 text-sm text-[var(--svs-muted)]">Monitor the status of your order in real-time.</p>
+        </div>
+
+        {/* Order Summary */}
+        <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-sm sm:p-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-base font-bold text-[var(--svs-primary-strong)]">Order Summary</h2>
+              <p className="text-xs text-[var(--svs-muted)]">
+                {order.status === 'Delivered' ? 'Your package has been delivered' : 'Your package is on the way'}
+              </p>
+            </div>
+            <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${badgeClass}`}>
+              <Truck className="h-3.5 w-3.5" /> {badgeLabel}
+            </span>
+          </div>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
+                <Package className="h-4 w-4 text-[var(--svs-primary-strong)]" /> Order ID
+              </div>
+              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{order.reference || order.id}</p>
+            </div>
+            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
+                <CalendarDays className="h-4 w-4 text-[var(--svs-primary-strong)]" /> Order Date
+              </div>
+              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{formatTrackDate(order.createdAt)}</p>
+            </div>
+            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
+                <CreditCard className="h-4 w-4 text-[var(--svs-primary-strong)]" /> Payment Status
+              </div>
+              <div className="mt-1 flex items-center gap-2">
+                <p className="text-sm font-bold text-[var(--svs-text)] capitalize">{order.paymentStatus || 'Paid'}</p>
+                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                  Confirmed
+                </span>
+              </div>
+            </div>
+            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
+                <Truck className="h-4 w-4 text-[var(--svs-primary-strong)]" /> Estimated Delivery
+              </div>
+              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{formatTrackDate(estimatedDelivery)}</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Live Tracking */}
+        <section className="mt-6 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-sm sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-base font-bold text-[var(--svs-primary-strong)]">Live Tracking</h2>
+              <p className="text-xs text-[var(--svs-muted)]">See real-time location and status of your package.</p>
+            </div>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-1 text-xs font-semibold text-[var(--svs-muted)]">
+              <RefreshCw className="h-3.5 w-3.5" /> Last updated: {lastUpdatedRelative}
+            </span>
+          </div>
+
+          <ol className="mt-5 relative space-y-3 pl-2">
+            {timeline.map((step, index) => {
+              const isLast = index === timeline.length - 1;
+              const reached = step.reached;
+              return (
+                <li key={step.key} className="relative pl-10">
+                  {!isLast ? (
+                    <span
+                      aria-hidden="true"
+                      className={`absolute left-[14px] top-7 h-[calc(100%-12px)] w-0.5 ${reached ? 'bg-[var(--svs-primary-strong)]' : 'bg-[var(--svs-border)]'}`}
+                    />
+                  ) : null}
+                  <span
+                    aria-hidden="true"
+                    className={`absolute left-0 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full border-2 ${reached ? 'border-[var(--svs-primary-strong)] bg-[var(--svs-primary-strong)] text-white' : 'border-[var(--svs-border)] bg-[var(--svs-surface)] text-[var(--svs-muted)]'}`}
+                  >
+                    {reached ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-3.5 w-3.5" />}
+                  </span>
+                  <div
+                    className={`rounded-xl border p-3 ${step.isCurrent ? 'border-[var(--svs-primary-strong)] bg-[var(--svs-cyan-surface)]' : reached ? 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)]' : 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)] opacity-70'}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className={`text-sm font-bold ${reached ? 'text-[var(--svs-primary-strong)]' : 'text-[var(--svs-muted)]'}`}>
+                          {step.title}
+                        </p>
+                        <p className="mt-0.5 text-xs text-[var(--svs-muted)]">{step.description}</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--svs-muted)]">
+                          <span className="inline-flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {step.at ? formatTrackTimestamp(step.at) : (step.expected ? `Expected ${formatTrackDate(estimatedDelivery)}` : '—')}
+                          </span>
+                          {step.location ? (
+                            <span className="inline-flex items-center gap-1">
+                              <MapPin className="h-3 w-3" /> {step.location}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                      {step.isCurrent ? (
+                        <span className="shrink-0 rounded-full bg-[var(--svs-primary-strong)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+                          Current
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+
+          <div className="mt-5 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-4 py-3 text-xs text-[var(--svs-text)]">
+            We&apos;ll notify you via email and SMS when your order status changes.
+          </div>
+        </section>
+
+        {/* Delivery Details */}
+        <section className="mt-6 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-sm sm:p-6">
+          <h2 className="text-base font-bold text-[var(--svs-primary-strong)]">Delivery Details</h2>
+          <p className="text-xs text-[var(--svs-muted)]">
+            {order.status === 'Delivered' ? 'Your package was delivered' : 'Your package is on the way'}
+          </p>
+
+          <div className="mt-5 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
+              <Truck className="h-4 w-4 text-[var(--svs-primary-strong)]" /> Expected Delivery
+            </div>
+            <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{formatTrackDate(estimatedDelivery)}</p>
+            <p className="mt-1 text-xs text-[var(--svs-muted)]">Your package is on its way and will arrive soon</p>
+          </div>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
+                <Truck className="h-4 w-4 text-[var(--svs-primary-strong)]" /> Courier Service
+              </div>
+              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{courierName}</p>
+            </div>
+            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
+                <Package className="h-4 w-4 text-[var(--svs-primary-strong)]" /> Tracking Number
+              </div>
+              <p className="mt-1 text-sm font-bold tracking-wide text-[var(--svs-text)]">{trackingNumber}</p>
+            </div>
+          </div>
+
+          <div className="mt-5 border-t border-[var(--svs-border)] pt-5">
+            <h3 className="text-sm font-bold text-[var(--svs-primary-strong)]">Delivery Address</h3>
+            <div className="mt-3 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4 text-sm text-[var(--svs-text)]">
+              <p className="font-bold">{recipientName}</p>
+              {addressLines.map((line, idx) => (
+                <p key={`${line}-${idx}`} className="text-[var(--svs-muted)]">{line}</p>
+              ))}
+              {shipping.deliveryInstructions ? (
+                <p className="mt-2 text-xs italic text-[var(--svs-muted)]">Note: {shipping.deliveryInstructions}</p>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="mt-5 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-4 py-3 text-xs text-[var(--svs-text)]">
+            Need assistance?{' '}
+            <Link to="/help-center" className="font-semibold text-[var(--svs-primary-strong)] underline">
+              Contact Support
+            </Link>
+          </div>
+        </section>
+
+        {/* Footer Buttons */}
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <Link
+            to="/orders"
+            className={`${cudyBluePrimaryButtonClassName} inline-flex items-center justify-center rounded-xl bg-[var(--svs-primary-strong)] px-5 py-3 text-sm font-bold text-white`}
+          >
+            View All Orders
+          </Link>
+          <Link
+            to="/"
+            className="inline-flex items-center justify-center rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 py-3 text-sm font-bold text-[var(--svs-text)] transition hover:border-[var(--svs-primary-strong)] hover:text-[var(--svs-primary-strong)]"
+          >
+            Continue Shopping
+          </Link>
+        </div>
+      </div>
+    </main>
+  );
+};
+
+const ORDERS_PER_PAGE = 4;
+const RETURN_WINDOW_DAYS = 7;
+
+const formatOrdersDateLong = (value) => {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-US', { weekday: 'long', day: '2-digit', month: 'short' });
+};
+
+const formatOrdersDateShort = (value) => {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-US', { weekday: 'short', day: '2-digit', month: 'short' });
+};
+
+const getOrderDisplayMeta = (order) => {
+  const createdAt = order?.createdAt ? new Date(order.createdAt) : new Date();
+  const status = order?.status || '';
+
+  if (status === 'Delivered') {
+    const deliveredAt = order.deliveredAt ? new Date(order.deliveredAt) : createdAt;
+    const returnWindowEnd = new Date(deliveredAt);
+    returnWindowEnd.setDate(returnWindowEnd.getDate() + RETURN_WINDOW_DAYS);
+    return {
+      label: 'Delivered',
+      dateLabel: formatOrdersDateLong(deliveredAt),
+      tone: 'delivered',
+      returnWindowEnd,
+      returnWindowClosed: Date.now() > returnWindowEnd.getTime(),
+    };
+  }
+
+  if (status === 'Cancelled') {
+    return { label: 'Cancelled', dateLabel: formatOrdersDateLong(createdAt), tone: 'cancelled' };
+  }
+  if (status === 'Refund Pending') {
+    return { label: 'Refund Pending', dateLabel: formatOrdersDateLong(createdAt), tone: 'refund' };
+  }
+  if (status === 'Refund Made') {
+    return { label: 'Refund Made', dateLabel: formatOrdersDateLong(createdAt), tone: 'refund' };
+  }
+
+  const expected = order?.estimatedDeliveryAt ? new Date(order.estimatedDeliveryAt) : (() => {
+    const d = new Date(createdAt);
+    d.setDate(d.getDate() + 3);
+    return d;
+  })();
+
+  return {
+    label: 'Expected Delivery',
+    dateLabel: formatOrdersDateLong(expected),
+    tone: 'expected',
+  };
+};
+
+const OrderCard = ({ order, onCancelOrder, cancellingOrderId, onSetCancelError }) => {
+  const navigate = useNavigate();
+  const meta = getOrderDisplayMeta(order);
+  const item = order.items?.[0];
+  if (!item) return null;
+
+  const labelToneClass = meta.tone === 'cancelled'
+    ? 'text-rose-600'
+    : 'text-[var(--svs-primary-strong)]';
+
+  const isDelivered = meta.tone === 'delivered';
+  const returnWindowClosed = Boolean(meta.returnWindowClosed);
+  const canCancel = canBuyerCancelOrder(order.status);
+  const isCancelling = cancellingOrderId === order.id;
+
+  const handleCancelClick = async () => {
+    if (!canCancel || !onCancelOrder) return;
+    onSetCancelError('');
+    const result = await onCancelOrder(order.id);
+    if (result?.error) onSetCancelError(result.error);
+  };
+
+  const ratingValue = Math.max(0, Math.min(5, Number(order.rating ?? item.rating ?? (isDelivered ? 3 : 0)) || 0));
+
+  return (
+    <article className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 shadow-[0_4px_8px_rgba(0,0,0,0.06)]">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className={`text-sm font-semibold ${labelToneClass}`}>{meta.label}</p>
+          <p className="mt-0.5 text-xs text-[var(--svs-muted)]">On {meta.dateLabel}</p>
+        </div>
+        <Link
+          to={`/orders/${order.id}/track`}
+          state={{ orderId: order.id, reference: order.reference }}
+          className="text-sm font-semibold text-[var(--svs-primary-strong)] underline underline-offset-4 hover:text-[var(--svs-primary)]"
+        >
+          View Order Detail
+        </Link>
+      </div>
+
+      {order.status === 'Refund Pending' ? (
+        <div className="mt-3 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-700">
+          Refund has been initiated. Please allow 3-7 business days for your bank to post the reversal.
+        </div>
+      ) : null}
+      {order.status === 'Refund Made' ? (
+        <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+          Refund has been made by the seller. Bank reflection can still take 3-7 business days.
+        </div>
+      ) : null}
+
+      <div className="mt-4 rounded-xl bg-white/60 p-3 sm:p-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-1 items-center gap-3 sm:gap-4">
+            {item.image ? (
+              <img
+                src={item.image}
+                alt={item.title}
+                className="h-16 w-16 flex-shrink-0 rounded-lg object-cover sm:h-20 sm:w-20"
+                loading="lazy"
+              />
+            ) : (
+              <div className="h-16 w-16 flex-shrink-0 rounded-lg bg-[var(--svs-surface-soft)] sm:h-20 sm:w-20" />
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                {item.brand ? (
+                  <span className="text-sm font-semibold text-[var(--svs-text)]">{item.brand}</span>
+                ) : null}
+                {item.category ? (
+                  <span className="rounded-md border border-[var(--svs-border)] bg-white px-2 py-0.5 text-[11px] font-medium text-[var(--svs-muted)]">
+                    {item.category}
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-1 truncate text-sm font-bold text-[var(--svs-text)] sm:text-base">{item.title}</p>
+              <p className="mt-0.5 text-xs text-[var(--svs-muted)]">Quantity: {item.quantity}</p>
+              {order.items.length > 1 ? (
+                <p className="mt-0.5 text-[11px] text-[var(--svs-muted)]">
+                  + {order.items.length - 1} more item{order.items.length - 1 === 1 ? '' : 's'}
+                </p>
+              ) : null}
+            </div>
+          </div>
+          <div className="flex sm:justify-end">
+            {isDelivered ? (
+              <button
+                type="button"
+                onClick={() => navigate('/markets')}
+                className={`${cudyBluePrimaryButtonClassName} inline-flex items-center justify-center rounded-lg bg-[var(--svs-primary-strong)] px-4 py-2 text-sm font-semibold text-white`}
+              >
+                Buy it again
+              </button>
+            ) : (
+              <Link
+                to={`/orders/${order.id}/track`}
+                state={{ orderId: order.id, reference: order.reference }}
+                className={`${cudyBluePrimaryButtonClassName} inline-flex items-center justify-center rounded-lg bg-[var(--svs-primary-strong)] px-4 py-2 text-sm font-semibold text-white`}
+              >
+                <Truck className="mr-2 h-4 w-4" /> Track Your Order
+              </Link>
+            )}
+          </div>
+        </div>
+
+        {isDelivered && returnWindowClosed ? (
+          <div className="mt-3 flex items-center gap-2 border-t border-[var(--svs-border)] pt-3 text-xs text-[var(--svs-muted)]">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--svs-muted)]" aria-hidden="true" />
+            Exchange/Return window closed on {formatOrdersDateShort(meta.returnWindowEnd)}
+          </div>
+        ) : null}
+
+        <div className="mt-3 flex flex-col gap-3 border-t border-[var(--svs-border)] pt-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center" aria-label={`Rating ${ratingValue} of 5`}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                  key={`order-${order.id}-star-${star}`}
+                  className={`h-4 w-4 ${star <= ratingValue ? 'fill-[#FBBF24] text-[#FBBF24]' : 'text-slate-300'}`}
+                />
+              ))}
+            </div>
+            <Link
+              to={`/orders/${order.id}/track`}
+              state={{ orderId: order.id, reference: order.reference, openReview: true }}
+              className="text-sm font-semibold text-[var(--svs-primary-strong)] underline underline-offset-4 hover:text-[var(--svs-primary)]"
+            >
+              Add Rate &amp; Review
+            </Link>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            <button
+              type="button"
+              onClick={handleCancelClick}
+              disabled={!canCancel || isCancelling}
+              className="rounded-lg border border-[var(--svs-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isCancelling ? 'Cancelling...' : 'Cancel Order'}
+            </button>
+            <button
+              type="button"
+              disabled={!isDelivered || returnWindowClosed}
+              className="rounded-lg border border-[var(--svs-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Return/Exchange
+            </button>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+};
+
 const OrdersPage = ({ orders, cartItems, onCancelOrder }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const location = useLocation();
   const [cancellingOrderId, setCancellingOrderId] = useState('');
   const [cancelError, setCancelError] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   const handleCancelOrder = async (orderId) => {
-    if (!onCancelOrder) {
-      return;
-    }
-
+    if (!onCancelOrder) return { error: 'Cancel handler unavailable.' };
     setCancelError('');
     setCancellingOrderId(orderId);
     const result = await onCancelOrder(orderId);
-
-    if (result?.error) {
-      setCancelError(result.error);
-    }
-
+    if (result?.error) setCancelError(result.error);
     setCancellingOrderId('');
+    return result;
   };
 
-  return (
-  <PageFrame title={t('orders.title')} subtitle={t('orders.subtitle')}>
-    {!orders.length ? (
-      <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4 text-sm text-[var(--svs-text)]">
-        <p>{t('orders.empty')}</p>
-        {cartItems.length ? (
-          <Link to="/checkout" className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
-            Continue to Checkout
-          </Link>
-        ) : null}
-      </div>
-    ) : (
-      <div className="space-y-4">
-        {location.state?.reference ? (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            Order {location.state.reference} was placed successfully.{location.state.guestCheckout ? ' Guest checkout details were captured for this purchase.' : ''}
-          </div>
-        ) : null}
-        {cancelError ? (
-          <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{cancelError}</div>
-        ) : null}
-        {cartItems.length ? (
-          <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4 text-sm text-[var(--svs-text)]">
-            You still have {getCartCount(cartItems)} item{getCartCount(cartItems) === 1 ? '' : 's'} in your cart.
-            <Link to="/checkout" className="ml-2 font-semibold text-[var(--svs-primary-strong)] underline">Review cart</Link>
-          </div>
-        ) : null}
-        {orders.map((order) => (
-          <article key={order.id} className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h3 className="text-xl font-bold text-[var(--svs-text)]">Order {order.reference}</h3>
-                <p className="mt-1 text-sm text-[var(--svs-muted)]">Placed on {formatDate(order.createdAt)}</p>
-                <p className="mt-1 text-sm text-[var(--svs-muted)]">{order.customer.fullName} • {order.customer.email || order.customer.contact || order.customer.phone || 'Guest checkout'}</p>
-              </div>
-              <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getStatusClasses(order.status)}`}>
-                {order.status}
-              </span>
-            </div>
+  const totalPages = Math.max(1, Math.ceil(orders.length / ORDERS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * ORDERS_PER_PAGE;
+  const visibleOrders = orders.slice(startIndex, startIndex + ORDERS_PER_PAGE);
 
-            {order.status === 'Refund Pending' ? (
-              <div className="mt-3 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-700">
-                Refund has been initiated. If funds have not reflected yet, please allow 3-7 business days for your bank to post the reversal.
-              </div>
-            ) : null}
-            {order.status === 'Refund Made' ? (
-              <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-                Refund has been made by the seller. Bank reflection can still take 3-7 business days.
-              </div>
-            ) : null}
-            <div className="mt-4 grid gap-4 lg:grid-cols-[1.4fr_0.8fr]">
-              <div className="space-y-3">
-                {order.items.map((item) => (
-                  <div key={`${order.id}-${item.id}`} className="flex items-center justify-between gap-3 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3">
-                    <div>
-                      <p className="font-semibold text-[var(--svs-text)]">{item.title}</p>
-                      <p className="text-sm text-[var(--svs-muted)]">{item.marketName}</p>
-                      {item.details ? <p className="text-sm text-[var(--svs-muted)]">{item.details}</p> : null}
-                    </div>
-                    <div className="text-right text-sm">
-                      <p className="font-semibold text-[var(--svs-text)]">x{item.quantity}</p>
-                      <p className="text-[var(--svs-primary-strong)]">{formatCartItemAmount(item, item.unitPrice * item.quantity)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4">
-                <h4 className="text-sm font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Summary</h4>
-                <div className="mt-3 space-y-2 text-sm text-[var(--svs-muted)]">
-                  <div className="flex items-center justify-between"><span>Payment</span><span>{order.paymentMethod}</span></div>
-                  <div className="flex items-center justify-between"><span>Payment status</span><span className="capitalize">{order.paymentStatus || 'pending'}</span></div>
-                  {order.paymentReference ? <div className="flex items-center justify-between"><span>Reference</span><span>{order.paymentReference}</span></div> : null}
-                  <div className="flex items-center justify-between"><span>Subtotal</span><span>{formatCheckoutAmount(order.subtotal)}</span></div>
-                  <div className="flex items-center justify-between"><span>Delivery & fees</span><span>{formatCheckoutAmount(order.serviceFee)}</span></div>
-                  <div className="flex items-center justify-between border-t border-[var(--svs-border)] pt-3 text-base font-bold text-[var(--svs-text)]"><span>Total</span><span>{formatCheckoutAmount(order.total)}</span></div>
-                </div>
-                <div className="mt-4 border-t border-[var(--svs-border)] pt-3">
-                  {canBuyerCancelOrder(order.status) ? (
-                    <button
-                      type="button"
-                      onClick={() => handleCancelOrder(order.id)}
-                      disabled={cancellingOrderId === order.id}
-                      className="w-full rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-60"
-                    >
-                      {cancellingOrderId === order.id ? 'Cancelling...' : 'Cancel Order'}
-                    </button>
-                  ) : (
-                    <p className="text-xs text-[var(--svs-muted)]">
-                      Cancellation is only available before the order is shipped.
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </article>
-        ))}
+  const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
+
+  return (
+    <PageFrame
+      title={t('orders.title')}
+      subtitle={t('orders.subtitle')}
+      titleClassName="text-center"
+      subtitleClassName="text-center"
+      heroContentClassName="relative"
+    >
+      <div className="-mt-2 mb-4 flex items-center">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          aria-label="Go back"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--svs-border)] bg-white text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)]"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
       </div>
-    )}
-  </PageFrame>
+
+      {!orders.length ? (
+        <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4 text-sm text-[var(--svs-text)]">
+          <p>{t('orders.empty')}</p>
+          {cartItems.length ? (
+            <Link to="/checkout" className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
+              Continue to Checkout
+            </Link>
+          ) : null}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {location.state?.reference ? (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              Order {location.state.reference} was placed successfully.{location.state.guestCheckout ? ' Guest checkout details were captured for this purchase.' : ''}
+            </div>
+          ) : null}
+          {cancelError ? (
+            <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{cancelError}</div>
+          ) : null}
+          {cartItems.length ? (
+            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4 text-sm text-[var(--svs-text)]">
+              You still have {getCartCount(cartItems)} item{getCartCount(cartItems) === 1 ? '' : 's'} in your cart.
+              <Link to="/checkout" className="ml-2 font-semibold text-[var(--svs-primary-strong)] underline">Review cart</Link>
+            </div>
+          ) : null}
+
+          {visibleOrders.map((order) => (
+            <OrderCard
+              key={order.id}
+              order={order}
+              onCancelOrder={handleCancelOrder}
+              cancellingOrderId={cancellingOrderId}
+              onSetCancelError={setCancelError}
+            />
+          ))}
+
+          {totalPages > 1 ? (
+            <nav className="mt-4 flex items-center justify-center gap-2" aria-label="Orders pagination">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={safePage === 1}
+                aria-label="Previous page"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--svs-border)] bg-white text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              {pageNumbers.map((page) => {
+                const active = page === safePage;
+                return (
+                  <button
+                    key={`orders-page-${page}`}
+                    type="button"
+                    onClick={() => setCurrentPage(page)}
+                    aria-current={active ? 'page' : undefined}
+                    className={`inline-flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition ${
+                      active
+                        ? 'bg-[var(--svs-primary-strong)] text-white shadow'
+                        : 'border border-[var(--svs-border)] bg-white text-[var(--svs-text)] hover:bg-[var(--svs-surface-soft)]'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={safePage === totalPages}
+                aria-label="Next page"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--svs-border)] bg-white text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </nav>
+          ) : null}
+        </div>
+      )}
+    </PageFrame>
   );
 };
 
@@ -15676,6 +16293,8 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/markets" element={<MarketsPage />} />
     <Route path="/offers" element={<OffersPage />} />
     <Route path="/orders" element={<OrdersPage orders={orders} cartItems={cartItems} onCancelOrder={onCancelOrder} />} />
+    <Route path="/orders/:orderId/track" element={<TrackOrderPage orders={orders} />} />
+    <Route path="/orders/track" element={<TrackOrderPage orders={orders} />} />
     <Route path="/order-confirmation" element={<OrderConfirmationPage orders={orders} />} />
     <Route path="/wishlist" element={<WishlistPage wishlistItems={wishlistItems} onAddToCart={onAddToCart} onRemoveWishlistItem={onRemoveWishlistItem} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/checkout" element={<CheckoutPage cartItems={cartItems} buyNowCheckout={buyNowCheckout} onUpdateCartQuantity={onUpdateCartQuantity} onRemoveCartItem={onRemoveCartItem} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />

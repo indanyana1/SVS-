@@ -193,8 +193,8 @@
     "subtitle": "Weekly deals, bundle pricing, and Buy 1 Get 1 Free promotions."
   },
   "orders": {
-    "title": "Orders",
-    "subtitle": "Track purchases, service bookings, tickets, and delivery updates in one view.",
+    "title": "All Order",
+    "subtitle": "Review your complete order history along with detailed information for each purchase.",
     "empty": "No active orders yet. Your history and status updates will appear here."
   },
   "simplePages": {
