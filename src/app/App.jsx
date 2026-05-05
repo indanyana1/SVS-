@@ -30,6 +30,10 @@ import {
   ArrowUpRight,
   Clock,
   Truck,
+  CreditCard,
+  Wallet,
+  Landmark,
+  Smartphone,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -4280,6 +4284,12 @@ const PAYFAST_METHOD_OPTIONS = [
   { value: 'scan_to_pay', label: 'Scan to Pay' },
 ];
 const CARD_PAYMENT_METHOD_VALUE = 'credit_cheque_card';
+const PAYMENT_METHOD_GROUPS = [
+  { id: 'card', label: 'Credit/Debit Card', sub: 'Visa, Mastercard, Amex', value: 'credit_cheque_card', Icon: CreditCard },
+  { id: 'upi', label: 'UPI', sub: 'Google Pay, Phone Pay, Paytm', value: 'scan_to_pay', Icon: Smartphone },
+  { id: 'wallet', label: 'Wallets', sub: 'PayPal, Apple Pay', value: 'snapscan', Icon: Wallet },
+  { id: 'netbanking', label: 'Net Banking', sub: 'All major Banks', value: 'instant_eft', Icon: Landmark },
+];
 const PAYFAST_PENDING_PAYMENT_STORAGE_KEY = 'svs-payfast-pending-payment';
 
 const readPendingPayfastSession = () => {
@@ -4318,23 +4328,47 @@ const clearPendingPayfastSession = () => {
 const toStripeMinorUnitAmount = (amount) => Math.max(Math.round((Number(amount) || 0) * 100), 0);
 
 const requestStripeClientSecret = async ({ amount, currency, email, fullName }) => {
-  const response = await fetch('/api/payment-intent', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      amount: toStripeMinorUnitAmount(amount),
-      currency: String(currency || stripeCurrency || 'usd').toLowerCase(),
-      email,
-      fullName,
-    }),
-  });
+  const minorUnitAmount = toStripeMinorUnitAmount(amount);
+  if (!minorUnitAmount) {
+    throw new Error('Invalid payment amount.');
+  }
 
-  const result = await response.json().catch(() => ({}));
+  let response;
+  try {
+    response = await fetch('/api/payment-intent', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        amount: minorUnitAmount,
+        currency: String(currency || stripeCurrency || 'usd').toLowerCase(),
+        email,
+        fullName,
+      }),
+    });
+  } catch (networkError) {
+    // eslint-disable-next-line no-console
+    console.error('[stripe] payment-intent network error:', networkError);
+    throw new Error('Cannot reach the payment server. Make sure the API server is running (npm run dev) and try again.');
+  }
+
+  const rawBody = await response.text();
+  let result = {};
+  try {
+    result = rawBody ? JSON.parse(rawBody) : {};
+  } catch (_error) {
+    result = {};
+  }
 
   if (!response.ok) {
-    throw new Error(result.error || 'Could not initialize secure card payment.');
+    // eslint-disable-next-line no-console
+    console.error('[stripe] payment-intent failed', response.status, rawBody);
+    const detail = result.error
+      || result.message
+      || (rawBody && rawBody.length < 240 ? rawBody : '')
+      || 'Could not initialize secure card payment.';
+    throw new Error(`${detail} (HTTP ${response.status})`);
   }
 
   if (!result.clientSecret) {
@@ -5264,6 +5298,7 @@ const AddressAutocompleteField = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isApplyingSelection, setIsApplyingSelection] = useState(false);
   const [lookupError, setLookupError] = useState('');
+  const [hasSearched, setHasSearched] = useState(false);
   const containerRef = useRef(null);
   const suppressLookupRef = useRef(false);
   const sessionTokenRef = useRef(createAddressLookupSessionToken());
@@ -5281,38 +5316,50 @@ const AddressAutocompleteField = ({
       setIsOpen(false);
       setLookupError('');
       setIsLoading(false);
+      setHasSearched(false);
       return undefined;
     }
 
     let cancelled = false;
     setIsLoading(true);
 
-    const timeoutId = window.setTimeout(() => {
-      lookupAddressSuggestions({
-        input: query,
-        sessionToken: sessionTokenRef.current,
-        countryCode: 'za',
-      }).then((nextSuggestions) => {
-        if (cancelled) {
-          return;
-        }
-
+    const attemptLookup = async (attempt) => {
+      try {
+        const nextSuggestions = await lookupAddressSuggestions({
+          input: query,
+          sessionToken: sessionTokenRef.current,
+          countryCode: 'za',
+        });
+        if (cancelled) return;
         setSuggestions(nextSuggestions);
-        setIsOpen(nextSuggestions.length > 0);
+        setIsOpen(true);
         setLookupError('');
-      }).catch((error) => {
-        if (cancelled) {
+        setHasSearched(true);
+      } catch (error) {
+        if (cancelled) return;
+        if (attempt < 1) {
+          // Single silent retry for transient failures (rate limit / proxy hiccup).
+          window.setTimeout(() => {
+            if (!cancelled) attemptLookup(attempt + 1);
+          }, 600);
           return;
         }
-
         setSuggestions([]);
         setIsOpen(false);
-        setLookupError(error instanceof Error ? error.message : 'Unable to load address suggestions.');
-      }).finally(() => {
-        if (!cancelled) {
+        setHasSearched(true);
+        setLookupError("We couldn't reach the address service. You can type your address manually below.");
+      } finally {
+        if (!cancelled && attempt >= 1) {
+          setIsLoading(false);
+        } else if (!cancelled) {
+          // success path resolves loading here too
           setIsLoading(false);
         }
-      });
+      }
+    };
+
+    const timeoutId = window.setTimeout(() => {
+      attemptLookup(0);
     }, 280);
 
     return () => {
@@ -5387,6 +5434,11 @@ const AddressAutocompleteField = ({
       {isOpen ? (
         <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-20 overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-2xl">
           <div className="max-h-72 overflow-y-auto p-2">
+            {suggestions.length === 0 && hasSearched && !isLoading ? (
+              <div className="px-3 py-4 text-center text-xs text-[var(--svs-muted)]">
+                No matches found. Try adding the suburb or city, or type your address manually.
+              </div>
+            ) : null}
             {suggestions.map((suggestion) => (
               <button
                 key={suggestion.placeId}
@@ -12908,6 +12960,7 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
     postalCode: '',
     phoneCountryCode: '+27',
     phone: '',
+    deliveryInstructions: '',
     paymentMethod: PAYFAST_METHOD_OPTIONS[0].value,
     billingAddressMode: 'same',
     billingFirstName: '',
@@ -12922,10 +12975,6 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [, setSubmitError] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
-  const [isMethodSelectorOpen, setIsMethodSelectorOpen] = useState(false);
-  const [focusedMethodIndex, setFocusedMethodIndex] = useState(0);
-  const methodCardRefs = useRef([]);
-  const methodMenuRef = useRef(null);
   const isPhoneMissing = !formState.phone.trim();
   const contactEmail = String(formState.contact || '').trim();
   const hasInvalidContactEmail = Boolean(contactEmail) && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail);
@@ -12952,11 +13001,6 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
   const fieldLabelClassName = 'mb-2 block text-sm font-medium text-[var(--svs-text)]';
   const inputClassName = 'w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/20';
   const mutedTextClassName = 'text-sm text-[var(--svs-muted)]';
-  const checkoutSteps = [
-    { id: 1, label: 'Items' },
-    { id: 2, label: 'Delivery' },
-    { id: 3, label: 'Payment' },
-  ];
 
   useEffect(() => {
     if (!location.state?.prefillCheckout) {
@@ -12971,31 +13015,6 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
       onClearBuyNowCheckout?.();
     }
   }, [buyNowCheckout, isBuyNowMode, onClearBuyNowCheckout]);
-
-  useEffect(() => {
-    const nextIndex = PAYFAST_METHOD_OPTIONS.findIndex((option) => option.value === formState.paymentMethod);
-    setFocusedMethodIndex(nextIndex >= 0 ? nextIndex : 0);
-  }, [formState.paymentMethod]);
-
-  useEffect(() => {
-    if (!isMethodSelectorOpen) {
-      return undefined;
-    }
-
-    const handlePointerDown = (event) => {
-      if (!methodMenuRef.current?.contains(event.target)) {
-        setIsMethodSelectorOpen(false);
-      }
-    };
-
-    window.addEventListener('mousedown', handlePointerDown);
-    window.addEventListener('touchstart', handlePointerDown);
-
-    return () => {
-      window.removeEventListener('mousedown', handlePointerDown);
-      window.removeEventListener('touchstart', handlePointerDown);
-    };
-  }, [isMethodSelectorOpen]);
 
   const applyAutofillAddress = useCallback((prefix, details) => {
     const normalizeFieldName = (field) => (prefix ? `${prefix}${field.charAt(0).toUpperCase()}${field.slice(1)}` : field);
@@ -13079,18 +13098,6 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
     setCurrentStep(2);
   };
 
-  const handleContinueToPayment = () => {
-    const validationError = validateDeliveryStep();
-
-    if (validationError) {
-      setSubmitError(validationError);
-      return;
-    }
-
-    setSubmitError('');
-    setCurrentStep(3);
-  };
-
   const handleSubmit = (event) => {
     event.preventDefault();
     setSubmitError('');
@@ -13117,6 +13124,7 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
       province: formState.province,
       postalCode: formState.postalCode.trim(),
       phone: `${formState.phoneCountryCode} ${formState.phone.trim()}`.trim(),
+      deliveryInstructions: String(formState.deliveryInstructions || '').trim(),
     };
     const billingAddress = formState.billingAddressMode === 'different'
       ? {
@@ -13324,240 +13332,296 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
         </div>
       </section>
     );
-  } else if (currentStep === 2) {
+  } else {
+    const selectedPaymentGroup = PAYMENT_METHOD_GROUPS.find((g) => g.value === formState.paymentMethod) || PAYMENT_METHOD_GROUPS[0];
+    const fullNameValue = `${formState.firstName}${formState.firstName && formState.lastName ? ' ' : ''}${formState.lastName}`;
+    const handleFullNameChange = (val) => {
+      const parts = String(val).trim().split(/\s+/);
+      setFormState((current) => ({
+        ...current,
+        firstName: parts[0] || '',
+        lastName: parts.slice(1).join(' ') || '',
+      }));
+    };
+
     activeStepContent = (
-      <>
+      <div className="mx-auto w-full max-w-3xl space-y-6">
+        {/* Contact Details */}
         <section className={sectionClassName}>
-          <h2 className="text-xl font-black text-[var(--svs-text)]">Contact</h2>
-          <p className={`${mutedTextClassName} mt-1`}>Email address</p>
-          <div className="mt-4">
-            <input
-              type="email"
-              value={formState.contact}
-              onChange={(event) => updateField('contact', event.target.value)}
-              placeholder="Email address"
-              className={inputClassName}
-            />
+          <h2 className="text-xl font-black text-[var(--svs-primary-strong)]">Contact Details</h2>
+          <div className="mt-5 space-y-4">
+            <div>
+              <label htmlFor="checkout-fullname" className={fieldLabelClassName}>Full Name</label>
+              <input
+                id="checkout-fullname"
+                type="text"
+                value={fullNameValue}
+                onChange={(event) => handleFullNameChange(event.target.value)}
+                placeholder="Enter your full name"
+                className={inputClassName}
+              />
+            </div>
+            <div>
+              <label htmlFor="checkout-email" className={fieldLabelClassName}>Email Address</label>
+              <input
+                id="checkout-email"
+                type="email"
+                value={formState.contact}
+                onChange={(event) => updateField('contact', event.target.value)}
+                placeholder="Enter your email address"
+                className={inputClassName}
+              />
+              <p className={`${mutedTextClassName} mt-1.5 text-xs`}>Booking confirmation will be sent to this email</p>
+              {hasInvalidContactEmail ? (
+                <p className="mt-2 text-xs font-medium text-[#d94d4d]">Enter a valid email address to continue</p>
+              ) : null}
+            </div>
+            <div>
+              <label htmlFor="checkout-phone" className={fieldLabelClassName}>Phone Number</label>
+              <div className="grid grid-cols-[108px_minmax(0,1fr)] gap-2">
+                <select
+                  value={formState.phoneCountryCode}
+                  onChange={(event) => updateField('phoneCountryCode', event.target.value)}
+                  className={inputClassName}
+                  aria-label="Phone country code"
+                >
+                  <option value="+27">🇿🇦 +27</option>
+                </select>
+                <input
+                  id="checkout-phone"
+                  type="tel"
+                  value={formState.phone}
+                  onChange={(event) => updateField('phone', event.target.value)}
+                  placeholder="Enter your phone number"
+                  className={`w-full rounded-xl px-4 py-3 text-sm text-[var(--svs-text)] outline-none transition focus:ring-2 ${isPhoneMissing ? 'border border-[#e46b6b] bg-[#fff6f6] focus:border-[#d94d4d] focus:ring-[#ffd9d9]' : 'border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] focus:border-[var(--svs-primary)] focus:ring-[#33b9f2]/20'}`}
+                />
+              </div>
+              <p className={`${mutedTextClassName} mt-1.5 text-xs`}>Booking confirmation will be sent to this phone number</p>
+            </div>
           </div>
-          {hasInvalidContactEmail ? (
-            <p className="mt-2 text-xs font-medium text-[#d94d4d]">Enter a valid email address to continue</p>
-          ) : null}
-          <label className="mt-4 flex items-start gap-3 text-sm text-[var(--svs-text)]">
-            <input
-              type="checkbox"
-              checked={formState.saveInformation}
-              onChange={(event) => updateField('saveInformation', event.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-[#d9d1c6]"
-            />
-            <span>Save this information for next time</span>
-          </label>
-          <label className="mt-3 flex items-start gap-3 text-sm text-[var(--svs-text)]">
-            <input
-              type="checkbox"
-              checked={formState.marketingOptIn}
-              onChange={(event) => updateField('marketingOptIn', event.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-[#d9d1c6]"
-            />
-            <span>Text me with news and offers</span>
-          </label>
         </section>
 
+        {/* Delivery Address */}
         <section className={sectionClassName}>
-          <h2 className="text-xl font-black text-[var(--svs-text)]">Delivery</h2>
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
-            <label className="md:col-span-2">
-              <span className={fieldLabelClassName}>Country/Region</span>
-              <select value={formState.country} onChange={(event) => updateField('country', event.target.value)} className={inputClassName}>
-                <option>South Africa</option>
-              </select>
-            </label>
-            <label>
-              <span className={fieldLabelClassName}>First name</span>
-              <input type="text" value={formState.firstName} onChange={(event) => updateField('firstName', event.target.value)} className={inputClassName} />
-            </label>
-            <label>
-              <span className={fieldLabelClassName}>Last name</span>
-              <input type="text" value={formState.lastName} onChange={(event) => updateField('lastName', event.target.value)} className={inputClassName} />
-            </label>
-            <label className="md:col-span-2">
-              <span className={fieldLabelClassName}>Company (optional)</span>
-              <input type="text" value={formState.company} onChange={(event) => updateField('company', event.target.value)} className={inputClassName} />
-            </label>
-            <div className="md:col-span-2">
+          <h2 className="text-xl font-black text-[var(--svs-primary-strong)]">Delivery Address</h2>
+          <div className="mt-5 space-y-4">
+            <div>
+              <label htmlFor="checkout-apt" className={fieldLabelClassName}>House / Apartment Number</label>
+              <input
+                id="checkout-apt"
+                type="text"
+                value={formState.address2}
+                onChange={(event) => updateField('address2', event.target.value)}
+                placeholder="e.g., Apt B"
+                className={inputClassName}
+              />
+            </div>
+            <div>
+              <span className={fieldLabelClassName}>Street / Area</span>
               <AddressAutocompleteField
-                label="Address"
+                label=""
                 value={formState.address1}
                 onChange={(nextValue) => updateField('address1', nextValue)}
                 onSelectAddress={(details) => applyAutofillAddress('', details)}
                 inputClassName={inputClassName}
+                placeholder="Enter street or area name"
               />
             </div>
-            <label className="md:col-span-2">
-              <span className={fieldLabelClassName}>Apartment, suite, etc. (optional)</span>
-              <input type="text" value={formState.address2} onChange={(event) => updateField('address2', event.target.value)} className={inputClassName} />
-            </label>
-            <label>
-              <span className={fieldLabelClassName}>City</span>
-              <input type="text" value={formState.city} onChange={(event) => updateField('city', event.target.value)} className={inputClassName} />
-            </label>
-            <label>
-              <span className={fieldLabelClassName}>Province</span>
-              <select value={formState.province} onChange={(event) => updateField('province', event.target.value)} className={inputClassName}>
-                {SOUTH_AFRICA_PROVINCES.map((province) => <option key={province}>{province}</option>)}
-              </select>
-            </label>
-            <label>
-              <span className={fieldLabelClassName}>Postal code</span>
-              <input type="text" value={formState.postalCode} onChange={(event) => updateField('postalCode', event.target.value)} className={inputClassName} />
-            </label>
-            <label>
-              <span className={fieldLabelClassName}>Phone</span>
-              <div className="grid grid-cols-[108px_minmax(0,1fr)] gap-2">
-                <select value={formState.phoneCountryCode} onChange={(event) => updateField('phoneCountryCode', event.target.value)} className={inputClassName}>
-                  <option value="+27">🇿🇦 +27</option>
-                </select>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label htmlFor="checkout-city" className={fieldLabelClassName}>City</label>
                 <input
-                  type="tel"
-                  value={formState.phone}
-                  onChange={(event) => updateField('phone', event.target.value)}
-                  className={`w-full rounded-xl px-4 py-3 text-sm text-[var(--svs-text)] outline-none transition focus:ring-2 ${isPhoneMissing ? 'border border-[#e46b6b] bg-[#fff6f6] focus:border-[#d94d4d] focus:ring-[#ffd9d9]' : 'border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] focus:border-[var(--svs-primary)] focus:ring-[#33b9f2]/20'}`}
+                  id="checkout-city"
+                  type="text"
+                  value={formState.city}
+                  onChange={(event) => updateField('city', event.target.value)}
+                  placeholder="Enter city"
+                  className={inputClassName}
                 />
               </div>
-              {isPhoneMissing ? (
-                <p className="mt-2 text-xs font-medium text-[#d94d4d]">Enter a phone number to use this delivery method</p>
-              ) : null}
-            </label>
-          </div>
-        </section>
-
-        <section className={sectionClassName}>
-          <h2 className="text-xl font-black text-[var(--svs-text)]">Shipping Method</h2>
-          <div className="mt-5 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-4">
-            <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-semibold text-[var(--svs-text)]">{shippingMethodLabel}</p>
-                <p className="mt-1 text-xs text-[var(--svs-muted)]">South Africa delivery</p>
-              </div>
-              <p className="text-sm font-semibold text-[var(--svs-text)]">{formatCheckoutAmount(shippingFee)}</p>
-            </div>
-          </div>
-        </section>
-
-        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-          <button type="button" onClick={() => setCurrentStep(1)} className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 py-3 text-sm font-bold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]">
-            Back to Items
-          </button>
-          <button type="button" onClick={handleContinueToPayment} className={`${cudyBluePrimaryButtonClassName} rounded-xl bg-[var(--svs-primary)] px-5 py-3 text-sm font-bold text-white`}>
-            Continue to Payment
-          </button>
-        </div>
-      </>
-    );
-  } else {
-    activeStepContent = (
-      <>
-        <section className={sectionClassName}>
-          <h2 className="text-xl font-black text-[var(--svs-text)]">Payment</h2>
-          <div className="mt-5 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-[var(--svs-text)]">Payfast</p>
-                <p className="mt-1 text-xs text-[var(--svs-muted)]">You'll be redirected to Payfast to complete your purchase.</p>
-              </div>
-              <div className="flex flex-wrap gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--svs-muted)]">
-                <span className="rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2.5 py-1">Visa</span>
-                <span className="rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2.5 py-1">Mastercard</span>
-                <span className="rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2.5 py-1">EFT</span>
+                <label htmlFor="checkout-postal" className={fieldLabelClassName}>Postal Code</label>
+                <input
+                  id="checkout-postal"
+                  type="text"
+                  value={formState.postalCode}
+                  onChange={(event) => updateField('postalCode', event.target.value)}
+                  placeholder="Enter code"
+                  className={inputClassName}
+                />
               </div>
             </div>
-            <div className="mt-4 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-4 text-sm text-[var(--svs-text)]">
-              <p className="font-semibold text-[var(--svs-text)]">Payment method</p>
-              <div className="relative mt-3" ref={methodMenuRef}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFocusedMethodIndex(PAYFAST_METHOD_OPTIONS.findIndex((option) => option.value === formState.paymentMethod));
-                    setIsMethodSelectorOpen((prev) => !prev);
-                  }}
-                  className="flex w-full items-center justify-between gap-3 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-left text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)]"
-                  aria-haspopup="menu"
-                  aria-expanded={isMethodSelectorOpen}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label htmlFor="checkout-province" className={fieldLabelClassName}>Province</label>
+                <select
+                  id="checkout-province"
+                  value={formState.province}
+                  onChange={(event) => updateField('province', event.target.value)}
+                  className={inputClassName}
                 >
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate">{PAYFAST_METHOD_OPTIONS.find((option) => option.value === formState.paymentMethod)?.label || PAYFAST_METHOD_OPTIONS[0].label}</span>
-                    {formState.paymentMethod === CARD_PAYMENT_METHOD_VALUE ? (
-                      <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#1a73e8]">
-                        Default
-                      </span>
-                    ) : null}
-                  </span>
-                  <ChevronDown className={`h-4 w-4 shrink-0 transition ${isMethodSelectorOpen ? 'rotate-180' : ''}`} />
-                </button>
-                <PaymentMethodSelectorPopover
-                  isOpen={isMethodSelectorOpen}
-                  selectedValue={formState.paymentMethod}
-                  focusedIndex={focusedMethodIndex}
-                  onSelect={(value) => {
-                    updateField('paymentMethod', value);
-                    setFocusedMethodIndex(PAYFAST_METHOD_OPTIONS.findIndex((option) => option.value === value));
-                    setIsMethodSelectorOpen(false);
-                  }}
-                  onFocusIndex={setFocusedMethodIndex}
-                  cardRefs={methodCardRefs}
-                  className="w-full"
+                  <option value="">Select province</option>
+                  {SOUTH_AFRICA_PROVINCES.map((province) => (
+                    <option key={province} value={province}>{province}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="checkout-country" className={fieldLabelClassName}>Country</label>
+                <input
+                  id="checkout-country"
+                  type="text"
+                  value={formState.country}
+                  onChange={(event) => updateField('country', event.target.value)}
+                  placeholder="Country"
+                  className={inputClassName}
                 />
               </div>
-              <p className="mt-4 text-sm text-[#4d463d]">Additional payment methods may be available on Payfast.</p>
             </div>
+            <div>
+              <label htmlFor="checkout-delivery-instructions" className={fieldLabelClassName}>
+                Delivery Instructions <span className="text-[var(--svs-muted)] font-normal">(optional)</span>
+              </label>
+              <textarea
+                id="checkout-delivery-instructions"
+                value={formState.deliveryInstructions || ''}
+                onChange={(event) => updateField('deliveryInstructions', event.target.value)}
+                placeholder="Gate code, complex name, landmark, or any notes for the courier"
+                rows={3}
+                className={`${inputClassName} resize-y min-h-[88px]`}
+              />
+            </div>
+            <label className="flex items-center gap-3 text-sm text-[var(--svs-text)]">
+              <input
+                type="checkbox"
+                checked={formState.saveInformation}
+                onChange={(event) => updateField('saveInformation', event.target.checked)}
+                className="h-4 w-4 rounded border-[#d9d1c6] accent-[var(--svs-primary)]"
+              />
+              <span>Save this address for future orders</span>
+            </label>
           </div>
         </section>
 
+        {/* Payment Method */}
         <section className={sectionClassName}>
-          <h2 className="text-xl font-black text-[var(--svs-text)]">Billing Address</h2>
-          <div className="mt-5 space-y-3">
-            <label className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium ${formState.billingAddressMode === 'same' ? 'border-[var(--svs-primary)] bg-[var(--svs-cyan-surface)] text-[var(--svs-text)]' : 'border-[var(--svs-border)] bg-[var(--svs-surface)] text-[var(--svs-text)]'}`}>
-              <input type="radio" name="billing-address-mode" checked={formState.billingAddressMode === 'same'} onChange={() => updateField('billingAddressMode', 'same')} />
-              <span>Same as shipping address</span>
-            </label>
-            <label className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium ${formState.billingAddressMode === 'different' ? 'border-[var(--svs-primary)] bg-[var(--svs-cyan-surface)] text-[var(--svs-text)]' : 'border-[var(--svs-border)] bg-[var(--svs-surface)] text-[var(--svs-text)]'}`}>
-              <input type="radio" name="billing-address-mode" checked={formState.billingAddressMode === 'different'} onChange={() => updateField('billingAddressMode', 'different')} />
-              <span>Use a different billing address</span>
-            </label>
+          <h2 className="text-xl font-black text-[var(--svs-primary-strong)]">Payment Method</h2>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            {PAYMENT_METHOD_GROUPS.map((group) => {
+              const isSelected = selectedPaymentGroup.id === group.id;
+              const Icon = group.Icon;
+              return (
+                <button
+                  key={group.id}
+                  type="button"
+                  onClick={() => updateField('paymentMethod', group.value)}
+                  aria-pressed={isSelected}
+                  className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition ${isSelected ? 'border-[var(--svs-primary)] bg-[var(--svs-cyan-surface)] shadow-[0_0_0_3px_rgba(15,159,178,0.15)]' : 'border-[var(--svs-border)] bg-[var(--svs-surface)] hover:border-[var(--svs-primary)]'}`}
+                >
+                  <span aria-hidden="true" className="mt-0.5 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--svs-surface-soft)] text-[var(--svs-primary-strong)]">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-bold text-[var(--svs-text)]">{group.label}</span>
+                    <span className="mt-0.5 block text-xs text-[var(--svs-muted)]">{group.sub}</span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
-          {formState.billingAddressMode === 'different' ? (
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <input type="text" value={formState.billingFirstName} onChange={(event) => updateField('billingFirstName', event.target.value)} placeholder="Billing first name" className={inputClassName} />
-              <input type="text" value={formState.billingLastName} onChange={(event) => updateField('billingLastName', event.target.value)} placeholder="Billing last name" className={inputClassName} />
-              <input type="text" value={formState.billingCompany} onChange={(event) => updateField('billingCompany', event.target.value)} placeholder="Billing company (optional)" className={`md:col-span-2 ${inputClassName}`} />
-              <div className="md:col-span-2">
-                <AddressAutocompleteField
-                  label="Billing address"
-                  value={formState.billingAddress1}
-                  onChange={(nextValue) => updateField('billingAddress1', nextValue)}
-                  onSelectAddress={(details) => applyAutofillAddress('billing', details)}
-                  inputClassName={inputClassName}
-                />
+          {selectedPaymentGroup.id === 'card' ? (
+            <div className="mt-6 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-5">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-base font-bold text-[var(--svs-text)]">Card Details</h3>
+                <button type="button" className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--svs-primary)] hover:underline">
+                  <Plus className="h-3.5 w-3.5" /> Add New Card
+                </button>
               </div>
-              <input type="text" value={formState.billingAddress2} onChange={(event) => updateField('billingAddress2', event.target.value)} placeholder="Apartment, suite, etc. (optional)" className={`md:col-span-2 ${inputClassName}`} />
-              <input type="text" value={formState.billingCity} onChange={(event) => updateField('billingCity', event.target.value)} placeholder="Billing city" className={inputClassName} />
-              <select value={formState.billingProvince} onChange={(event) => updateField('billingProvince', event.target.value)} className={inputClassName}>
-                {SOUTH_AFRICA_PROVINCES.map((province) => <option key={province}>{province}</option>)}
-              </select>
-              <input type="text" value={formState.billingPostalCode} onChange={(event) => updateField('billingPostalCode', event.target.value)} placeholder="Billing postal code" className={inputClassName} />
+              <div className="mt-4 space-y-4">
+                <div>
+                  <label htmlFor="checkout-card-number" className={fieldLabelClassName}>Card Number</label>
+                  <input
+                    id="checkout-card-number"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="cc-number"
+                    value={formState.cardNumber || ''}
+                    onChange={(event) => updateField('cardNumber', event.target.value)}
+                    placeholder="1234 5678 9012 3456"
+                    className={inputClassName}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="checkout-card-name" className={fieldLabelClassName}>Cardholder Name</label>
+                  <input
+                    id="checkout-card-name"
+                    type="text"
+                    autoComplete="cc-name"
+                    value={formState.cardholderName || ''}
+                    onChange={(event) => updateField('cardholderName', event.target.value)}
+                    placeholder="Enter your cardholder name"
+                    className={inputClassName}
+                  />
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label htmlFor="checkout-card-expiry" className={fieldLabelClassName}>Expiry Date</label>
+                    <input
+                      id="checkout-card-expiry"
+                      type="text"
+                      autoComplete="cc-exp"
+                      value={formState.cardExpiry || ''}
+                      onChange={(event) => updateField('cardExpiry', event.target.value)}
+                      placeholder="MM/YY"
+                      className={inputClassName}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="checkout-card-cvv" className={fieldLabelClassName}>CVV</label>
+                    <input
+                      id="checkout-card-cvv"
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="cc-csc"
+                      value={formState.cardCvv || ''}
+                      onChange={(event) => updateField('cardCvv', event.target.value)}
+                      placeholder="123"
+                      className={inputClassName}
+                    />
+                  </div>
+                </div>
+                <label className="flex items-center gap-3 text-sm text-[var(--svs-text)]">
+                  <input
+                    type="checkbox"
+                    checked={formState.saveCard || false}
+                    onChange={(event) => updateField('saveCard', event.target.checked)}
+                    className="h-4 w-4 rounded border-[#d9d1c6] accent-[var(--svs-primary)]"
+                  />
+                  <span>Save this card for future booking</span>
+                </label>
+              </div>
             </div>
           ) : null}
         </section>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-          <button type="button" onClick={() => setCurrentStep(2)} className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 py-3 text-sm font-bold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]">
-            Back to Delivery
+        <div className="flex flex-col items-center gap-3 pt-2 sm:flex-row sm:justify-between">
+          <button
+            type="button"
+            onClick={() => setCurrentStep(1)}
+            className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 py-3 text-sm font-bold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
+          >
+            Back to Items
           </button>
-          <button type="submit" disabled={isSubmitting} className={`${cudyBluePrimaryButtonClassName} rounded-xl bg-[var(--svs-primary)] px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-70`}>
-            {isSubmitting ? 'Processing...' : 'Pay now'}
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className={`${cudyBluePrimaryButtonClassName} w-full max-w-md rounded-xl bg-[var(--svs-primary)] px-6 py-3.5 text-sm font-bold uppercase tracking-wide text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto sm:text-base`}
+          >
+            {isSubmitting ? 'Processing...' : 'Complete Payment'}
           </button>
         </div>
-      </>
+      </div>
     );
   }
 
@@ -13584,7 +13648,14 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
             Review your selected items before you proceed.
           </p>
         </div>
-      ) : null}
+      ) : (
+        <div className="border-y border-[var(--svs-border)] bg-[var(--svs-surface)]/40 py-6 text-center">
+          <h1 className="text-3xl font-black text-[var(--svs-primary-strong)] md:text-4xl">Checkout</h1>
+          <p className="mt-2 text-sm text-[var(--svs-primary-strong)]/80 md:text-base">
+            Confirm your details and complete your purchase securely.
+          </p>
+        </div>
+      )}
 
         {!checkoutItems.length ? (
           <div className="mt-8 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 text-sm text-[var(--svs-text)] shadow-sm md:p-8">
@@ -13598,88 +13669,8 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
             {activeStepContent}
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1fr)_390px]">
-            <section className="mx-auto w-full max-w-3xl space-y-5 xl:mx-0 xl:max-w-none">
-              <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 shadow-sm md:p-8">
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div>
-                    <h2 className="text-2xl font-black text-[var(--svs-text)]">Checkout</h2>
-                    <p className="mt-2 text-sm text-[var(--svs-muted)]">Review your items, delivery details, and payment method.</p>
-                  </div>
-                  <div className="inline-flex flex-wrap rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-1 text-sm font-semibold">
-                    {checkoutSteps.map((step) => {
-                      const isActive = currentStep === step.id;
-                      const isComplete = currentStep > step.id;
-
-                      return (
-                        <button
-                          key={step.id}
-                          type="button"
-                          onClick={() => {
-                            if (step.id <= currentStep) {
-                              setSubmitError('');
-                              setCurrentStep(step.id);
-                            }
-                          }}
-                          className={`rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] transition ${isActive ? 'bg-[var(--svs-primary)] text-white' : isComplete ? 'text-[var(--svs-primary)]' : 'text-[var(--svs-muted)]'}`}
-                        >
-                          {step.id}. {step.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </section>
-              {activeStepContent}
-            </section>
-
-            <aside className="hidden self-start rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 shadow-sm md:p-8 lg:sticky lg:top-24 xl:block">
-              {isBuyNowMode ? (
-                <div className="mb-5 rounded-[24px] bg-[#111111] px-4 py-4 text-white">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">Buy it now</p>
-                  <p className="mt-2 text-sm text-slate-200">Express guest checkout for this single item.</p>
-                </div>
-              ) : null}
-
-              <h2 className="text-xl font-black text-[var(--svs-text)]">Order Summary</h2>
-              <div className="mt-5 space-y-4">
-                {checkoutItems.map((item) => {
-                  const baseHref = item.route || '/markets';
-                  const focusKey = item.sku ? encodeURIComponent(String(item.sku)) : '';
-                  const listingHref = focusKey ? `${baseHref}?focus=${focusKey}` : baseHref;
-                  return (
-                  <Link
-                    key={`summary-${item.id}`}
-                    to={listingHref}
-                    aria-label={`View ${item.title} in ${item.marketName || 'market'}`}
-                    className="flex items-center gap-3 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3 transition hover:border-[var(--svs-primary)] hover:bg-[var(--svs-cyan-surface)]"
-                  >
-                    <img src={item.image} alt={item.title} className="h-16 w-16 rounded-2xl object-cover" loading="lazy" />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold text-[var(--svs-text)]">{item.title}</p>
-                      <p className="mt-1 text-xs text-[var(--svs-muted)]">{item.quantity} item{item.quantity === 1 ? '' : 's'}</p>
-                    </div>
-                    <p className="text-sm font-semibold text-[var(--svs-text)]">{formatCartItemAmount(item, item.unitPrice * item.quantity)}</p>
-                  </Link>
-                  );
-                })}
-              </div>
-
-              <div className="mt-6 space-y-3 text-sm text-[var(--svs-muted)]">
-                <div className="flex items-center justify-between"><span>Subtotal</span><span>{formatCheckoutAmount(totals.subtotal)}</span></div>
-                <div className="flex items-center justify-between">
-                  <span>Shipping</span>
-                  {isDeliveryComplete ? (
-                    <span>{formatCheckoutAmount(totals.shippingFee)}</span>
-                  ) : (
-                    <span className="text-xs italic">Calculated at next step</span>
-                  )}
-                </div>
-                <div className="flex items-center justify-between"><span>Platform fee</span><span>{formatCheckoutAmount(totals.serviceFee)}</span></div>
-                <div className="flex items-center justify-between border-t border-[var(--svs-border)] pt-4 text-base font-bold text-[var(--svs-text)]"><span>Total</span><span>{formatCheckoutAmount(totals.total)}</span></div>
-              </div>
-
-            </aside>
+          <form onSubmit={handleSubmit} className="mt-8">
+            {activeStepContent}
           </form>
         )}
     </main>
