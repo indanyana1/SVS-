@@ -12975,7 +12975,7 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
     billingPostalCode: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [, setSubmitError] = useState('');
+  const [submitError, setSubmitError] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
   const isPhoneMissing = !formState.phone.trim();
   const contactEmail = String(formState.contact || '').trim();
@@ -12985,7 +12985,6 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
     const requiredFields = [
       formState.contact,
       formState.firstName,
-      formState.lastName,
       formState.address1,
       formState.city,
       formState.province,
@@ -13039,23 +13038,23 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
   };
 
   const validateDeliveryStep = () => {
-    const requiredFields = [
-      formState.contact,
-      formState.firstName,
-      formState.lastName,
-      formState.address1,
-      formState.city,
-      formState.province,
-      formState.postalCode,
-      formState.phone,
-    ];
-
     if (!checkoutItems.length) {
       return 'Your checkout is empty. Choose an item before continuing.';
     }
 
-    if (requiredFields.some((value) => !String(value || '').trim())) {
-      return 'Please complete your contact, delivery, and phone details before paying.';
+    const requiredFields = [
+      { value: formState.contact, label: 'Email Address' },
+      { value: formState.firstName, label: 'Full Name' },
+      { value: formState.address1, label: 'Street / Area' },
+      { value: formState.city, label: 'City' },
+      { value: formState.province, label: 'Province' },
+      { value: formState.postalCode, label: 'Postal Code' },
+      { value: formState.phone, label: 'Phone Number' },
+    ];
+
+    const missing = requiredFields.find((field) => !String(field.value || '').trim());
+    if (missing) {
+      return `Please complete the "${missing.label}" field before paying.`;
     }
 
     if (hasInvalidContactEmail) {
@@ -13548,6 +13547,15 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
             </div>
           ) : null}
         </section>
+
+        {submitError ? (
+          <div
+            role="alert"
+            className="rounded-xl border border-[#f1b8b8] bg-[#fff4f4] px-4 py-3 text-sm font-semibold text-[#c74d4d]"
+          >
+            {submitError}
+          </div>
+        ) : null}
 
         <div className="flex flex-col items-center gap-3 pt-2 sm:flex-row sm:justify-between">
           <button
