@@ -12,6 +12,7 @@ const NOMINATIM_USER_AGENT = 'SVS E-Commerce/1.0 (local development address look
 const staticAllowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001',
+  'http://localhost:5000',
   ...(process.env.CORS_ALLOWED_ORIGINS || '')
     .split(',')
     .map((origin) => origin.trim())
@@ -22,8 +23,12 @@ app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true); // server-to-server / curl
-      if (staticAllowedOrigins.includes(origin)) return callback(null, true);
-      if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)) return callback(null, true);
+      // Trim trailing slash and match.
+      const normalized = origin.replace(/\/$/, '');
+      if (staticAllowedOrigins.includes(normalized)) return callback(null, true);
+      if (/^http:\/\/localhost(:\d+)?$/i.test(normalized)) return callback(null, true);
+      if (/^http:\/\/127\.0\.0\.1(:\d+)?$/i.test(normalized)) return callback(null, true);
+      if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(normalized)) return callback(null, true);
       return callback(new Error(`Origin ${origin} not allowed by CORS`));
     },
     credentials: true,

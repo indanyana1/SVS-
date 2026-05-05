@@ -34,6 +34,8 @@ import {
   Wallet,
   Landmark,
   Smartphone,
+  CheckCircle2,
+  Download,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -13843,10 +13845,9 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
     }
 
     setIsSubmitting(false);
-    navigate('/orders', {
+    navigate('/order-confirmation', {
       state: {
-        orderId: order.id,
-        reference: order.reference,
+        order,
         guestCheckout: !getAuthState(),
       },
     });
@@ -13872,10 +13873,9 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
       onClearBuyNowCheckout?.();
     }
 
-    navigate('/orders', {
+    navigate('/order-confirmation', {
       state: {
-        orderId: order.id,
-        reference: order.reference,
+        order,
         guestCheckout: !getAuthState(),
       },
     });
@@ -13993,6 +13993,247 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
         </div>
       </div>
     </MinimalCheckoutShell>
+  );
+};
+
+const OrderConfirmationPage = ({ orders }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const stateOrder = location.state?.order || null;
+  const guestCheckout = Boolean(location.state?.guestCheckout);
+  const fallbackOrder = useMemo(() => {
+    if (stateOrder) return null;
+    return Array.isArray(orders) && orders.length ? orders[0] : null;
+  }, [stateOrder, orders]);
+  const order = stateOrder || fallbackOrder;
+
+  const estimatedDeliveryDate = useMemo(() => {
+    const base = order?.createdAt ? new Date(order.createdAt) : new Date();
+    base.setDate(base.getDate() + 3);
+    return base;
+  }, [order?.createdAt]);
+
+  useEffect(() => {
+    if (!order) {
+      navigate('/orders', { replace: true });
+    }
+  }, [order, navigate]);
+
+  if (!order) return null;
+
+  const customer = order.customer || {};
+  const shipping = customer.shippingAddress || {};
+  const fullName = customer.fullName
+    || [shipping.firstName, shipping.lastName].filter(Boolean).join(' ').trim()
+    || [customer.firstName, customer.lastName].filter(Boolean).join(' ').trim()
+    || 'Customer';
+  const contactEmail = customer.email || customer.contact || '';
+  const itemCount = order.items?.length || 0;
+  const headlineItem = order.items?.[0] || null;
+
+  const deliveryLabel = estimatedDeliveryDate.toLocaleDateString('en-US', {
+    year: 'numeric', month: 'long', day: 'numeric',
+  });
+  const itemDeliveryShort = estimatedDeliveryDate.toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric',
+  });
+
+  const addressLines = [
+    [shipping.address1, shipping.address2].filter(Boolean).join(' ').trim(),
+    shipping.address2 && shipping.address1 ? null : shipping.address2,
+    [shipping.city, shipping.province, shipping.postalCode].filter(Boolean).join(', '),
+    shipping.country,
+  ].filter(Boolean);
+
+  const handleDownloadInvoice = () => {
+    if (typeof window === 'undefined') return;
+    const html = `<!doctype html><html><head><meta charset="utf-8"/><title>Invoice ${order.reference}</title>
+      <style>body{font-family:Arial,sans-serif;color:#1f1f1f;padding:40px;max-width:720px;margin:auto}h1{color:#1a73e8;margin:0 0 4px}h2{font-size:16px;margin:24px 0 8px;color:#1f1f1f}table{width:100%;border-collapse:collapse;margin-top:8px}th,td{text-align:left;padding:8px;border-bottom:1px solid #e2dbd0;font-size:13px}.right{text-align:right}.muted{color:#6b6258;font-size:12px}.box{border:1px solid #ddd5c8;border-radius:12px;padding:16px;margin-top:16px}</style>
+      </head><body>
+      <h1>SVS E-Commerce</h1>
+      <p class="muted">Invoice • ${order.reference}</p>
+      <p class="muted">Placed: ${new Date(order.createdAt || Date.now()).toLocaleString()}</p>
+      <h2>Bill To</h2>
+      <div class="box">
+        <strong>${fullName}</strong><br/>
+        ${contactEmail ? `${contactEmail}<br/>` : ''}
+        ${addressLines.join('<br/>')}
+      </div>
+      <h2>Items</h2>
+      <table><thead><tr><th>Item</th><th class="right">Qty</th><th class="right">Total</th></tr></thead><tbody>
+      ${(order.items || []).map((it) => `<tr><td>${it.title || ''}<div class="muted">${it.marketName || ''}</div></td><td class="right">${it.quantity || 1}</td><td class="right">${formatCheckoutAmount((Number(it.unitPrice) || 0) * (Number(it.quantity) || 1))}</td></tr>`).join('')}
+      </tbody></table>
+      <table style="margin-top:12px">
+        <tr><td>Subtotal</td><td class="right">${formatCheckoutAmount(order.subtotal)}</td></tr>
+        <tr><td>Delivery & fees</td><td class="right">${formatCheckoutAmount(order.serviceFee)}</td></tr>
+        <tr><td><strong>Total</strong></td><td class="right"><strong>${formatCheckoutAmount(order.total)}</strong></td></tr>
+        <tr><td>Payment</td><td class="right">${order.paymentMethod || ''} ${order.paymentReference ? `(${order.paymentReference})` : ''}</td></tr>
+      </table>
+      <p class="muted" style="margin-top:32px">Thank you for shopping with SVS E-Commerce.</p>
+      <script>window.print();</script>
+      </body></html>`;
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank');
+    if (!win) {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice-${order.reference}.html`;
+      a.click();
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  };
+
+  return (
+    <section className="bg-[var(--svs-bg)] px-4 py-8 sm:py-12">
+      <div className="mx-auto w-full max-w-3xl">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-[var(--svs-primary-strong)] hover:text-[var(--svs-primary)]"
+        >
+          <ChevronLeft className="h-4 w-4" /> Back
+        </button>
+
+        <div className="flex flex-col items-center text-center">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--svs-primary-strong)] text-white">
+            <CheckCircle2 className="h-12 w-12" strokeWidth={2.2} />
+          </div>
+          <h1 className="mt-5 text-3xl font-extrabold text-[var(--svs-primary-strong)] sm:text-4xl">
+            Order Placed Successfully!
+          </h1>
+          <p className="mt-3 text-sm text-[var(--svs-muted)] sm:text-base">
+            Thank you for your purchase. Your order has been confirmed.
+          </p>
+        </div>
+
+        <div className="mt-8 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.05)] sm:p-7">
+          <h2 className="text-center text-lg font-bold text-[var(--svs-primary-strong)]">Confirmed Order</h2>
+
+          {headlineItem ? (
+            <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-start">
+              {headlineItem.image ? (
+                <img
+                  src={headlineItem.image}
+                  alt={headlineItem.title}
+                  className="h-32 w-32 shrink-0 rounded-xl object-cover sm:h-36 sm:w-36"
+                />
+              ) : (
+                <div className="flex h-32 w-32 shrink-0 items-center justify-center rounded-xl bg-[var(--svs-surface-soft)] sm:h-36 sm:w-36">
+                  <Package className="h-8 w-8 text-[var(--svs-muted)]" />
+                </div>
+              )}
+              <div className="flex-1 space-y-2">
+                <h3 className="text-lg font-bold text-[var(--svs-primary-strong)]">{headlineItem.title}</h3>
+                {headlineItem.category || headlineItem.marketName ? (
+                  <span className="inline-block rounded-full bg-[var(--svs-primary-strong)] px-3 py-1 text-xs font-semibold text-white">
+                    {headlineItem.category || headlineItem.marketName}
+                  </span>
+                ) : null}
+                {Number(headlineItem.rating) ? (
+                  <p className="flex items-center gap-1 text-sm text-[var(--svs-text)]">
+                    <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                    <span className="font-semibold">{Number(headlineItem.rating).toFixed(1)}/5.0</span>
+                  </p>
+                ) : null}
+                <p className="text-sm text-[var(--svs-muted)]">Quantity: {headlineItem.quantity || 1}{itemCount > 1 ? ` (+${itemCount - 1} more item${itemCount - 1 === 1 ? '' : 's'})` : ''}</p>
+                <p className="flex items-center gap-2 text-sm text-[var(--svs-primary-strong)]">
+                  <CalendarDays className="h-4 w-4" />
+                  Delivery {itemDeliveryShort}
+                </p>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="mt-6 space-y-3 border-t border-[var(--svs-border)] pt-5 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-[var(--svs-muted)]">Total Amount Paid</span>
+              <span className="font-bold text-[var(--svs-text)]">{formatCheckoutAmount(order.total)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[var(--svs-muted)]">Order ID:</span>
+              <span className="font-semibold text-[var(--svs-text)]">{order.reference}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[var(--svs-muted)]">Payment ID:</span>
+              <span className="font-semibold text-[var(--svs-text)]">{order.paymentReference || order.id}</span>
+            </div>
+          </div>
+
+          {contactEmail ? (
+            <p className="mt-5 border-t border-[var(--svs-border)] pt-4 text-center text-sm text-[var(--svs-muted)]">
+              Order confirmation has been sent to{' '}
+              <span className="font-semibold text-[var(--svs-primary-strong)] underline">{contactEmail}</span>
+            </p>
+          ) : null}
+        </div>
+
+        <div className="mt-6 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.05)] sm:p-7">
+          <h2 className="text-base font-bold text-[var(--svs-primary-strong)]">Delivery Information</h2>
+
+          <div className="mt-4 space-y-1 text-sm">
+            <p className="text-[var(--svs-muted)]">Estimated Delivery</p>
+            <div className="rounded-xl bg-[var(--svs-cyan-surface)] px-4 py-3 font-semibold text-[var(--svs-text)]">
+              {deliveryLabel}
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-1 text-sm">
+            <p className="text-[var(--svs-muted)]">Delivery Address</p>
+            <div className="rounded-xl bg-[var(--svs-cyan-surface)] px-4 py-3 text-[var(--svs-text)]">
+              <p className="font-semibold">{fullName}</p>
+              {addressLines.map((line, idx) => (
+                <p key={idx} className="text-sm">{line}</p>
+              ))}
+              {shipping.deliveryInstructions ? (
+                <p className="mt-2 text-xs italic text-[var(--svs-muted)]">Note: {shipping.deliveryInstructions}</p>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-center">
+            <Link
+              to="/orders"
+              state={{ orderId: order.id, reference: order.reference }}
+              className={`${cudyBluePrimaryButtonClassName} inline-flex items-center justify-center rounded-xl bg-[var(--svs-primary-strong)] px-8 py-3 text-sm font-bold text-white`}
+            >
+              <Truck className="mr-2 h-4 w-4" /> Track Your order
+            </Link>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          <Link
+            to="/orders"
+            className={`${cudyBluePrimaryButtonClassName} inline-flex items-center justify-center rounded-xl bg-[var(--svs-primary-strong)] px-5 py-3 text-sm font-bold text-white`}
+          >
+            View All Orders
+          </Link>
+          <Link
+            to="/"
+            className="inline-flex items-center justify-center rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 py-3 text-sm font-bold text-[var(--svs-text)] transition hover:border-[var(--svs-primary-strong)] hover:text-[var(--svs-primary-strong)]"
+          >
+            Continue Shopping
+          </Link>
+          <button
+            type="button"
+            onClick={handleDownloadInvoice}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 py-3 text-sm font-bold text-[var(--svs-text)] transition hover:border-[var(--svs-primary-strong)] hover:text-[var(--svs-primary-strong)]"
+          >
+            <Download className="h-4 w-4" /> Download Invoice
+          </button>
+        </div>
+
+        <div className="mt-6 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 py-4 text-center text-sm text-[var(--svs-muted)]">
+          <p>You will receive your Invoice via SMS and Email{guestCheckout ? ' (guest checkout)' : ''}</p>
+          <p className="mt-1">
+            For support, contact{' '}
+            <Link to="/help-center" className="font-semibold text-[var(--svs-primary-strong)] underline">customer care</Link>
+          </p>
+        </div>
+      </div>
+    </section>
   );
 };
 
@@ -15427,6 +15668,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/markets" element={<MarketsPage />} />
     <Route path="/offers" element={<OffersPage />} />
     <Route path="/orders" element={<OrdersPage orders={orders} cartItems={cartItems} onCancelOrder={onCancelOrder} />} />
+    <Route path="/order-confirmation" element={<OrderConfirmationPage orders={orders} />} />
     <Route path="/wishlist" element={<WishlistPage wishlistItems={wishlistItems} onAddToCart={onAddToCart} onRemoveWishlistItem={onRemoveWishlistItem} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/checkout" element={<CheckoutPage cartItems={cartItems} buyNowCheckout={buyNowCheckout} onUpdateCartQuantity={onUpdateCartQuantity} onRemoveCartItem={onRemoveCartItem} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />
     <Route path="/checkout/payfast" element={<PayfastCheckoutPage buyNowCheckout={buyNowCheckout} onPlaceOrder={onPlaceOrder} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />
