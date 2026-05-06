@@ -3225,12 +3225,25 @@ const NOTIFICATIONS_STORAGE_KEY = 'svs-notifications';
 const PRODUCT_REVIEWS_STORAGE_KEY = 'svs-product-reviews';
 const SELLER_ACCESS_STORAGE_KEY = 'svs-has-seller-access';
 const SELLER_HOME_PATH_STORAGE_KEY = 'svs-seller-home-path';
-const ORDER_STATUS_FLOW = ['Processing', 'Confirmed', 'Preparing for Shipping', 'Shipped', 'Delivered'];
+const ORDER_STATUS_FLOW = ['Order Confirmed', 'Order Processing', 'Package Shipped', 'In Transit', 'Out for Delivery', 'Delivered'];
 const REFUND_STATUS_FLOW = ['Cancelled by Buyer', 'Refund Pending', 'Refund Made'];
+const LEGACY_ORDER_STATUS_MAP = {
+  Processing: 'Order Confirmed',
+  Confirmed: 'Order Processing',
+  'Preparing for Shipping': 'Package Shipped',
+  Shipped: 'In Transit',
+};
+const normalizeOrderStatus = (value) => {
+  const status = String(value || '').trim();
+  if (!status) return ORDER_STATUS_FLOW[0];
+  if (ORDER_STATUS_FLOW.includes(status) || REFUND_STATUS_FLOW.includes(status)) return status;
+  return LEGACY_ORDER_STATUS_MAP[status] || status;
+};
 const ORDER_AUTO_PROGRESS_MS = {
-  confirmed: 45 * 1000,
-  preparingForShipping: 3 * 60 * 1000,
-  shipped: 8 * 60 * 1000,
+  orderProcessing: 45 * 1000,
+  packageShipped: 3 * 60 * 1000,
+  inTransit: 8 * 60 * 1000,
+  outForDelivery: 12 * 60 * 1000,
   delivered: 15 * 60 * 1000,
 };
 const ORDERS_TABLE = 'orders';
@@ -3369,7 +3382,7 @@ const getSellerStatusOptions = (currentStatus) => {
 };
 
 const canBuyerCancelOrder = (status) => (
-  status === 'Processing' || status === 'Confirmed' || status === 'Preparing for Shipping'
+  status === 'Order Confirmed' || status === 'Order Processing'
 );
 
 const sanitizeStorageSegment = (value) => String(value || 'seller')
@@ -4528,15 +4541,18 @@ const getAutoOrderStatus = (order, now = Date.now()) => {
 
   if (elapsed >= ORDER_AUTO_PROGRESS_MS.delivered) {
     targetStatus = 'Delivered';
-  } else if (elapsed >= ORDER_AUTO_PROGRESS_MS.shipped) {
-    targetStatus = 'Shipped';
-  } else if (elapsed >= ORDER_AUTO_PROGRESS_MS.preparingForShipping) {
-    targetStatus = 'Preparing for Shipping';
-  } else if (elapsed >= ORDER_AUTO_PROGRESS_MS.confirmed) {
-    targetStatus = 'Confirmed';
+  } else if (elapsed >= ORDER_AUTO_PROGRESS_MS.outForDelivery) {
+    targetStatus = 'Out for Delivery';
+  } else if (elapsed >= ORDER_AUTO_PROGRESS_MS.inTransit) {
+    targetStatus = 'In Transit';
+  } else if (elapsed >= ORDER_AUTO_PROGRESS_MS.packageShipped) {
+    targetStatus = 'Package Shipped';
+  } else if (elapsed >= ORDER_AUTO_PROGRESS_MS.orderProcessing) {
+    targetStatus = 'Order Processing';
   }
 
-  const currentIndex = ORDER_STATUS_FLOW.indexOf(order.status);
+  const normalizedCurrent = normalizeOrderStatus(order.status);
+  const currentIndex = ORDER_STATUS_FLOW.indexOf(normalizedCurrent);
   const targetIndex = ORDER_STATUS_FLOW.indexOf(targetStatus);
 
   if (currentIndex === -1) {
@@ -4590,21 +4606,26 @@ const getSellerListingStock = (sellerItems, candidateItem) => {
   return normalizeListingQuantity(listing.availableQuantity, 0);
 };
 
-const createSavedItem = ({ id, title, image, price, route, marketName, details = '', sellerName = '', sellerEmail = '', availableQuantity = null }) => ({
-  id: getCollectionItemId(route, id),
-  sku: id,
-  title,
-  image,
-  route,
-  marketName,
-  details,
-  sellerName,
-  sellerEmail: normalizeEmail(sellerEmail),
-  availableQuantity: String(id || '').startsWith('seller-') ? normalizeListingQuantity(availableQuantity, 0) : null,
-  unitPrice: getNumericPriceValue(price),
-  unitPriceLabel: getSalePrices(price).nowPrice,
-  unitPriceCurrency: _fxState.buyerCurrency,
-});
+const createSavedItem = ({ id, title, image, price, currency = null, route, marketName, details = '', sellerName = '', sellerEmail = '', availableQuantity = null }) => {
+  const sourceCurrency = currency
+    || detectCurrencyFromPriceString(String(price ?? ''))
+    || _fxState.buyerCurrency;
+  return {
+    id: getCollectionItemId(route, id),
+    sku: id,
+    title,
+    image,
+    route,
+    marketName,
+    details,
+    sellerName,
+    sellerEmail: normalizeEmail(sellerEmail),
+    availableQuantity: String(id || '').startsWith('seller-') ? normalizeListingQuantity(availableQuantity, 0) : null,
+    unitPrice: getNumericPriceValue(price, SALE_DISCOUNT_RATE, sourceCurrency),
+    unitPriceLabel: getSalePrices(price, SALE_DISCOUNT_RATE, sourceCurrency).nowPrice,
+    unitPriceCurrency: _fxState.buyerCurrency,
+  };
+};
 
 const createCartItem = (item) => ({
   ...createSavedItem(item),
@@ -4690,7 +4711,8 @@ const mapOrderRecord = (record) => ({
   subtotal: Number(record.subtotal) || 0,
   serviceFee: Number(record.service_fee) || 0,
   total: Number(record.total) || 0,
-  status: record.status || ORDER_STATUS_FLOW[0],
+  status: normalizeOrderStatus(record.status || ORDER_STATUS_FLOW[0]),
+  statusHistory: Array.isArray(record.status_history) ? record.status_history : [],
 });
 
 const toOrderRecord = (userEmail, order) => ({
@@ -4709,6 +4731,7 @@ const toOrderRecord = (userEmail, order) => ({
   service_fee: order.serviceFee,
   total: order.total,
   status: order.status,
+  status_history: Array.isArray(order.statusHistory) ? order.statusHistory : [],
 });
 
 const syncUserCollection = async ({ tableName, userEmail, records, removeMissing = true }) => {
@@ -4761,17 +4784,19 @@ const syncUserCollection = async ({ tableName, userEmail, records, removeMissing
 };
 
 const getStatusClasses = (status) => {
-  switch (status) {
+  switch (normalizeOrderStatus(status)) {
     case 'Delivered':
       return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-    case 'Shipped':
+    case 'Out for Delivery':
+      return 'border-teal-200 bg-teal-50 text-teal-700';
+    case 'In Transit':
       return 'border-cyan-200 bg-cyan-50 text-cyan-700';
-    case 'Preparing for Shipping':
+    case 'Package Shipped':
+      return 'border-indigo-200 bg-indigo-50 text-indigo-700';
+    case 'Order Processing':
       return 'border-blue-200 bg-blue-50 text-blue-700';
-    case 'Confirmed':
+    case 'Order Confirmed':
       return 'border-violet-200 bg-violet-50 text-violet-700';
-    case 'Processing':
-      return 'border-amber-200 bg-amber-50 text-amber-700';
     case 'Cancelled by Buyer':
       return 'border-rose-200 bg-rose-50 text-rose-700';
     case 'Refund Pending':
@@ -8609,24 +8634,28 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
 };
 
 const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
-    // Helper to create cart/wishlist item
-    const createCartItem = (item) => ({ ...item, quantity: 1 });
-    const createWishlistItem = (item) => ({ ...item });
+    const { t } = useTranslation();
 
-
-    // Handler: Add to Cart
+    // Helper to create cart/wishlist item — delegate to global helpers so
+    // unitPrice/unitPriceLabel/currency are populated (otherwise checkout sees price 0).
+    const buildSavedPayload = (item) => ({
+      ...item,
+      route: item.route || '/fast-food',
+      marketName: item.marketName || t('markets.fastFood'),
+      details: item.details || item.subtitle || item.description || item.prepTime || item.sellerName || '',
+    });
     const handleAddToCart = (item) => {
-      if (onAddToCart) onAddToCart(createCartItem(item));
+      if (onAddToCart) onAddToCart(createCartItem(buildSavedPayload(item)));
     };
 
     // Handler: Buy Now
     const handleBuyNow = (item) => {
-      if (onBuyNow) onBuyNow(createCartItem(item));
+      if (onBuyNow) onBuyNow(createCartItem(buildSavedPayload(item)));
     };
 
     // Handler: Wishlist
     const handleToggleWishlist = (item) => {
-      if (onToggleWishlist) onToggleWishlist(createWishlistItem(item));
+      if (onToggleWishlist) onToggleWishlist(createWishlistItem(buildSavedPayload(item)));
     };
 
     // Handler: Open Details Modal (use global modal)
@@ -10884,7 +10913,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
 
       const { data, error } = await supabase
         .from(ORDERS_TABLE)
-        .select('user_email, order_key, reference, order_created_at, customer, items, payment_method, payment_provider, payment_status, payment_reference, currency, subtotal, service_fee, total, status')
+        .select('user_email, order_key, reference, order_created_at, customer, items, payment_method, payment_provider, payment_status, payment_reference, currency, subtotal, service_fee, total, status, status_history')
         .order('order_created_at', { ascending: false });
 
       if (isCancelled) {
@@ -11280,11 +11309,20 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
       return;
     }
 
-    setSellerOrders((currentOrders) => currentOrders.map((order) => (
-      order.id === orderId
-        ? { ...order, status: nextStatus }
-        : order
-    )));
+    const historyEntry = result?.data?.historyEntry;
+
+    setSellerOrders((currentOrders) => currentOrders.map((order) => {
+      if (order.id !== orderId) return order;
+      const existingHistory = Array.isArray(order.statusHistory) ? order.statusHistory : [];
+      const filteredHistory = historyEntry
+        ? existingHistory.filter((entry) => entry?.status !== historyEntry.status)
+        : existingHistory;
+      return {
+        ...order,
+        status: nextStatus,
+        statusHistory: historyEntry ? [...filteredHistory, historyEntry] : existingHistory,
+      };
+    }));
 
     setUpdatingOrderId('');
   };
@@ -14252,38 +14290,37 @@ const TRACK_ORDER_TIMELINE = [
     key: 'orderConfirmed',
     title: 'Order Confirmed',
     description: 'Your order has been confirmed and payment received',
-    minStatusIndex: 0, // Processing
+    minStatusIndex: 0,
   },
   {
     key: 'orderProcessing',
     title: 'Order Processing',
     description: 'Items are being prepared and packaged',
-    minStatusIndex: 1, // Confirmed
+    minStatusIndex: 1,
   },
   {
     key: 'packageShipped',
     title: 'Package Shipped',
     description: 'Package left warehouse and is on the way',
-    minStatusIndex: 2, // Preparing for Shipping
+    minStatusIndex: 2,
   },
   {
     key: 'inTransit',
     title: 'In Transit',
     description: 'Package is in transit to your location',
-    minStatusIndex: 3, // Shipped
+    minStatusIndex: 3,
   },
   {
     key: 'outForDelivery',
     title: 'Out for Delivery',
     description: 'Package is out for delivery today',
-    minStatusIndex: 3, // Shipped (sub-state, optional)
-    requireDeliveredOrLater: false,
+    minStatusIndex: 4,
   },
   {
     key: 'delivered',
     title: 'Delivered',
     description: 'Package has been delivered',
-    minStatusIndex: 4, // Delivered
+    minStatusIndex: 5,
   },
 ];
 
@@ -14307,7 +14344,8 @@ const buildTrackTimeline = (order) => {
   if (!order) return [];
 
   const orderCreatedAt = order.createdAt ? new Date(order.createdAt) : new Date();
-  const currentStatusIndex = ORDER_STATUS_FLOW.indexOf(order.status);
+  const normalizedStatus = normalizeOrderStatus(order.status);
+  const currentStatusIndex = ORDER_STATUS_FLOW.indexOf(normalizedStatus);
   const effectiveIndex = currentStatusIndex === -1 ? 0 : currentStatusIndex;
 
   // Pull seller-provided history if present (array of { status, at, location })
@@ -14328,11 +14366,11 @@ const buildTrackTimeline = (order) => {
   };
 
   const stageMeta = {
-    orderConfirmed: { historyKey: 'Confirmed', offsetHours: 0, location: fallbackDestination },
-    orderProcessing: { historyKey: 'Confirmed', offsetHours: 2, location: fallbackOrigin },
-    packageShipped: { historyKey: 'Preparing for Shipping', offsetHours: 18, location: fallbackOrigin },
-    inTransit: { historyKey: 'Shipped', offsetHours: 48, location: 'In transit' },
-    outForDelivery: { historyKey: 'Shipped', offsetHours: 70, location: fallbackDestination },
+    orderConfirmed: { historyKey: 'Order Confirmed', offsetHours: 0, location: fallbackDestination },
+    orderProcessing: { historyKey: 'Order Processing', offsetHours: 2, location: fallbackOrigin },
+    packageShipped: { historyKey: 'Package Shipped', offsetHours: 18, location: fallbackOrigin },
+    inTransit: { historyKey: 'In Transit', offsetHours: 48, location: 'In transit' },
+    outForDelivery: { historyKey: 'Out for Delivery', offsetHours: 70, location: fallbackDestination },
     delivered: { historyKey: 'Delivered', offsetHours: 80, location: fallbackDestination },
   };
 
@@ -14355,21 +14393,18 @@ const buildTrackTimeline = (order) => {
 };
 
 const TRACK_BADGE_STYLES = {
-  Processing: 'bg-amber-50 text-amber-700 border-amber-200',
-  Confirmed: 'bg-sky-50 text-sky-700 border-sky-200',
-  'Preparing for Shipping': 'bg-indigo-50 text-indigo-700 border-indigo-200',
-  Shipped: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+  'Order Confirmed': 'bg-violet-50 text-violet-700 border-violet-200',
+  'Order Processing': 'bg-blue-50 text-blue-700 border-blue-200',
+  'Package Shipped': 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  'In Transit': 'bg-cyan-50 text-cyan-700 border-cyan-200',
+  'Out for Delivery': 'bg-teal-50 text-teal-700 border-teal-200',
   Delivered: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   'Cancelled by Buyer': 'bg-rose-50 text-rose-700 border-rose-200',
   'Refund Pending': 'bg-orange-50 text-orange-700 border-orange-200',
   'Refund Made': 'bg-emerald-50 text-emerald-700 border-emerald-200',
 };
 
-const getTrackBadgeLabel = (status) => {
-  if (status === 'Shipped') return 'In Transit';
-  if (status === 'Preparing for Shipping') return 'Processing';
-  return status || 'Pending';
-};
+const getTrackBadgeLabel = (status) => normalizeOrderStatus(status) || 'Pending';
 
 const TrackOrderPage = ({ orders }) => {
   const params = useParams();
@@ -14555,9 +14590,11 @@ const TrackOrderPage = ({ orders }) => {
                         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--svs-muted)]">
                           <span className="inline-flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            {step.at ? formatTrackTimestamp(step.at) : (step.expected ? `Expected ${formatTrackDate(estimatedDelivery)}` : '—')}
+                            {step.at
+                              ? formatTrackTimestamp(step.at)
+                              : (step.key === 'delivered' ? `Expected ${formatTrackDate(estimatedDelivery)}` : '—')}
                           </span>
-                          {step.location ? (
+                          {step.location && (step.reached || step.key === 'delivered') ? (
                             <span className="inline-flex items-center gap-1">
                               <MapPin className="h-3 w-3" /> {step.location}
                             </span>
@@ -16181,7 +16218,6 @@ const SiteFooter = () => {
             <p className="mt-1.5 text-[10px] leading-snug text-slate-200 sm:mt-3 sm:text-sm sm:leading-relaxed">
               {t('site.tagline', { defaultValue: 'Your one-stop marketplace for everything you need – from groceries to tickets!' })}
             </p>
-            <p className="mt-1.5 text-[10px] text-slate-300 sm:mt-3 sm:text-sm">{t('site.address')}</p>
             {/* Social icons */}
             <div className="mt-2 flex flex-wrap items-center gap-1.5 sm:mt-5 sm:gap-3">
               {/* Facebook */}
@@ -16273,7 +16309,6 @@ const SiteFooter = () => {
       <div className="border-t border-white/15 bg-[#082028]">
         <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-6 py-4 text-xs text-slate-300 sm:px-8">
           <p>{t('footer.est')}</p>
-          <p className="hidden text-center sm:block">{t('site.address')}</p>
           <p className="flex items-center gap-1.5">
             <ShieldCheck className="h-4 w-4" />
             {t('footer.securePayments')}
@@ -16360,7 +16395,10 @@ const App = () => {
   const location = useLocation();
   const [cartItems, setCartItems] = useState(getStoredCartItems);
   const [wishlistItems, setWishlistItems] = useState(getStoredWishlistItems(getCurrentUserEmail()));
-  const [orders, setOrders] = useState(getStoredOrders);
+  const [orders, setOrders] = useState(() => getStoredOrders().map((order) => ({
+    ...order,
+    status: normalizeOrderStatus(order.status),
+  })));
   const [notifications, setNotifications] = useState(getStoredNotifications);
   const [sellerItems, setSellerItems] = useState([]);
   const [productReviews, setProductReviews] = useState([]);
@@ -16619,7 +16657,7 @@ const App = () => {
 
     const { data, error } = await supabase
       .from(ORDERS_TABLE)
-      .select('user_email, order_key, reference, order_created_at, customer, items, payment_method, payment_provider, payment_status, payment_reference, currency, subtotal, service_fee, total, status')
+      .select('user_email, order_key, reference, order_created_at, customer, items, payment_method, payment_provider, payment_status, payment_reference, currency, subtotal, service_fee, total, status, status_history')
       .eq('user_email', normalizedUserEmail)
       .order('order_created_at', { ascending: false });
 
@@ -16698,7 +16736,10 @@ const App = () => {
 
     const localCartItems = getStoredCartItems(activeUserEmail);
     const localWishlistItems = getStoredWishlistItems(activeUserEmail);
-    const localOrders = getStoredOrders(activeUserEmail);
+    const localOrders = getStoredOrders(activeUserEmail).map((order) => ({
+      ...order,
+      status: normalizeOrderStatus(order.status),
+    }));
 
     // Clear previous user's state immediately before loading the current user's records.
     setCartItems([]);
@@ -16731,7 +16772,7 @@ const App = () => {
           .order('created_at', { ascending: false }),
         supabase
           .from(ORDERS_TABLE)
-          .select('user_email, order_key, reference, order_created_at, customer, items, payment_method, payment_provider, payment_status, payment_reference, currency, subtotal, service_fee, total, status')
+          .select('user_email, order_key, reference, order_created_at, customer, items, payment_method, payment_provider, payment_status, payment_reference, currency, subtotal, service_fee, total, status, status_history')
           .eq('user_email', normalizeEmail(activeUserEmail))
           .order('order_created_at', { ascending: false }),
       ]);
@@ -17207,7 +17248,16 @@ const App = () => {
       subtotal: fallbackTotals.subtotal,
       serviceFee: orderFeeTotal,
       total: orderTotal,
-      status: 'Processing',
+      status: 'Order Confirmed',
+      statusHistory: [
+        {
+          status: 'Order Confirmed',
+          at: new Date().toISOString(),
+          location: customer?.shippingAddress?.city
+            || customer?.shippingAddress?.province
+            || '',
+        },
+      ],
     };
 
     const inventoryRequest = Array.from(orderItems.reduce((accumulator, item) => {
@@ -17526,7 +17576,7 @@ const App = () => {
     if (!targetOrder && hasSupabaseEnv && supabase) {
       const { data, error: fetchError } = await supabase
         .from(ORDERS_TABLE)
-        .select('user_email, order_key, reference, order_created_at, customer, items, payment_method, payment_provider, payment_status, payment_reference, currency, subtotal, service_fee, total, status')
+        .select('user_email, order_key, reference, order_created_at, customer, items, payment_method, payment_provider, payment_status, payment_reference, currency, subtotal, service_fee, total, status, status_history')
         .eq('order_key', orderId)
         .single();
 
@@ -17554,22 +17604,65 @@ const App = () => {
       return { error: 'You can only update orders that include your listings.' };
     }
 
+    const updateTimestamp = new Date().toISOString();
+    const inferredLocation = (() => {
+      const shipFrom = targetOrder?.fulfillment?.warehouseLocation || targetOrder?.shippingOrigin || '';
+      const shipTo = targetOrder?.customer?.shippingAddress?.city
+        || targetOrder?.customer?.shippingAddress?.province
+        || '';
+      switch (nextStatus) {
+        case 'Order Processing':
+        case 'Package Shipped':
+          return shipFrom || 'Warehouse';
+        case 'In Transit':
+          return 'In transit';
+        case 'Out for Delivery':
+        case 'Delivered':
+          return shipTo || 'Your location';
+        default:
+          return '';
+      }
+    })();
+    const newHistoryEntry = { status: nextStatus, at: updateTimestamp, location: inferredLocation };
+    const existingHistoryForUpdate = Array.isArray(targetOrder.statusHistory) ? targetOrder.statusHistory : [];
+    const mergedHistoryForUpdate = [
+      ...existingHistoryForUpdate.filter((entry) => entry?.status !== nextStatus),
+      newHistoryEntry,
+    ];
+
     if (hasSupabaseEnv && supabase) {
       const { error } = await supabase
         .from(ORDERS_TABLE)
-        .update({ status: nextStatus })
+        .update({ status: nextStatus, status_history: mergedHistoryForUpdate })
         .eq('order_key', orderId);
 
       if (error) {
-        return { error: error.message || 'Could not update order status.' };
+        // If status_history column doesn't exist yet, retry without it so status still updates.
+        const message = String(error.message || '').toLowerCase();
+        if (message.includes('status_history')) {
+          const { error: fallbackError } = await supabase
+            .from(ORDERS_TABLE)
+            .update({ status: nextStatus })
+            .eq('order_key', orderId);
+          if (fallbackError) {
+            return { error: fallbackError.message || 'Could not update order status.' };
+          }
+        } else {
+          return { error: error.message || 'Could not update order status.' };
+        }
       }
     }
 
-    setOrders((currentOrders) => currentOrders.map((order) => (
-      order.id === orderId
-        ? { ...order, status: nextStatus }
-        : order
-    )));
+    setOrders((currentOrders) => currentOrders.map((order) => {
+      if (order.id !== orderId) return order;
+      const existingHistory = Array.isArray(order.statusHistory) ? order.statusHistory : [];
+      const filteredHistory = existingHistory.filter((entry) => entry?.status !== nextStatus);
+      return {
+        ...order,
+        status: nextStatus,
+        statusHistory: [...filteredHistory, newHistoryEntry],
+      };
+    }));
 
     if (targetOrder.ownerEmail) {
       const refundNote = nextStatus === 'Refund Made'
@@ -17585,7 +17678,7 @@ const App = () => {
       });
     }
 
-    return { data: true };
+    return { data: { historyEntry: newHistoryEntry } };
   }, [activeUserEmail, orders, pushNotificationToUser, sellerItems]);
 
   const handleCancelOrder = useCallback(async (orderId) => {
