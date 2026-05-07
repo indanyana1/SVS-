@@ -17089,7 +17089,7 @@ const SiteFooter = () => {
           {/* Column 1 – Brand */}
           <div>
             <h3 className="text-[11px] font-bold sm:text-xl">SVS E-Commerce</h3>
-            <p className="mt-1.5 text-[10px] leading-snug text-slate-200 sm:mt-3 sm:text-sm sm:leading-relaxed">
+            <p className="mt-1.5 text-xs leading-snug text-slate-200 sm:mt-3 sm:text-base sm:leading-relaxed">
               {t('site.tagline', { defaultValue: 'Your one-stop marketplace for everything you need – from groceries to tickets!' })}
             </p>
           </div>
