@@ -219,16 +219,27 @@ const MARKET_FIELD_SPEC = {
       { name: 'condition', label: 'Condition', type: 'select', options: ['Brand New', 'Like New', 'Good', 'Fair'] },
     ],
   },
-  // Aligned with HardwareSoftwarePage (CardGrid display, filter expandable later).
-  // Static items reside in productCards / electronics; spec mirrors common e-commerce facets.
+  // Aligned with HardwareSoftwarePage filters: productType, category, brand,
+  // licenseType (Software), availability, priceUnit. Field names map directly
+  // onto item attributes via mapSellerItemRecord (rawDetailsJson spread).
   hardwareSoftware: {
-    title: 'Electronics & Software Listing Details',
-    helper: 'Specify the device category, brand, model, and condition so buyers can compare like-for-like.',
+    title: 'Electronics & Gadgets Listing Details',
+    helper: 'Pick the product type, category, brand, availability and (for software) the license model so buyers can filter accurately.',
     fields: [
-      { name: 'category', label: 'Category', type: 'select', required: true, options: ['Phones & Tablets', 'Laptops & Computers', 'Audio & Headphones', 'TV & Home Entertainment', 'Cameras', 'Wearables', 'Networking', 'Accessories', 'Software', 'Gaming', 'Other'] },
-      { name: 'brand', label: 'Brand', type: 'text', required: true, placeholder: 'e.g. Apple, Samsung, HP' },
-      { name: 'model', label: 'Model', type: 'text', placeholder: 'e.g. iPhone 14 Pro, Pavilion 15' },
-      { name: 'condition', label: 'Condition', type: 'select', required: true, options: ['Brand New', 'Refurbished', 'Used - Like New', 'Used - Good', 'Used - Fair'] },
+      { name: 'productType', label: 'Product type', type: 'select', required: true, options: ['Hardware', 'Software'] },
+      { name: 'category', label: 'Category', type: 'select', required: true, options: [
+        'Mobile Devices', 'Desktop Computers', 'Laptops', 'Storage Devices',
+        'Peripherals & Accessories', 'Printers & POS Devices', 'Operating Systems',
+        'Productivity Software', 'Security Software', 'Development & DevOps Tools',
+        'Cloud & Hosting Services', 'AI / ML / Emerging Tech', 'Data Encryption Software',
+        'Hosting Services', 'Other',
+      ] },
+      { name: 'brand', label: 'Brand', type: 'text', required: true, placeholder: 'e.g. Apple, HP, Microsoft' },
+      { name: 'model', label: 'Model', type: 'text', placeholder: 'e.g. MacBook Pro 16", iPhone 15' },
+      { name: 'licenseType', label: 'License type (Software only)', type: 'select', options: ['', 'One-Time Purchase', 'Subscription', 'Free / Trial'] },
+      { name: 'priceUnit', label: 'Price unit', type: 'select', options: ['', 'per year', 'per month', 'single PC', 'one-time'] },
+      { name: 'availability', label: 'Availability', type: 'select', required: true, options: ['In Stock', 'Pre-Order'] },
+      { name: 'condition', label: 'Condition', type: 'select', options: ['Brand New', 'Refurbished', 'Used - Like New', 'Used - Good', 'Used - Fair'] },
       { name: 'warranty', label: 'Warranty', type: 'text', placeholder: 'e.g. 12 months, None' },
       { name: 'color', label: 'Colour', type: 'text', placeholder: 'e.g. Space Grey' },
     ],
@@ -2664,24 +2675,127 @@ const HomeCareProviderDetailPage = () => {
 const techItems = [
   {
     id: 'x1',
-    title: 'Ultra Laptop 15',
-    price: '899.00',
-    image:
-      'https://images.pexels.com/photos/18105/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=1200',
+    title: 'MacBook Pro 16" M3 Max Chip',
+    price: '2899.94',
+    image: 'https://images.pexels.com/photos/18105/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=1200',
+    productType: 'Hardware',
+    category: 'Laptops',
+    brand: 'Apple',
+    sellerName: 'by Apple',
+    rating: 4.5,
+    reviewsCount: 130,
+    priceUnit: '',
+    inStock: true,
+    description: 'M3 Max performance with Liquid Retina XDR display for creative pros.',
   },
   {
     id: 'x2',
-    title: 'Developer Mechanical Keyboard',
-    price: '139.00',
-    image:
-      'https://images.pexels.com/photos/2115256/pexels-photo-2115256.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    title: 'Sony WH-1000XM5 Premium Noise Cancelling',
+    price: '349.90',
+    image: 'https://images.pexels.com/photos/3756879/pexels-photo-3756879.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    productType: 'Hardware',
+    category: 'Peripherals & Accessories',
+    brand: 'Sony',
+    sellerName: 'by Others',
+    rating: 4.8,
+    reviewsCount: 145,
+    priceUnit: '',
+    inStock: true,
+    description: 'Industry-leading noise cancellation with 30-hour battery life.',
   },
   {
     id: 'x3',
-    title: 'Secure Home Router',
-    price: '99.00',
-    image:
-      'https://images.pexels.com/photos/1148820/pexels-photo-1148820.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    title: 'Dell UltraSharp 32" 4K USB-C Monitor',
+    price: '480.00',
+    image: 'https://images.pexels.com/photos/777001/pexels-photo-777001.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    productType: 'Hardware',
+    category: 'Peripherals & Accessories',
+    brand: 'Dell',
+    sellerName: 'by Dell',
+    rating: 4.8,
+    reviewsCount: 145,
+    priceUnit: '',
+    inStock: true,
+    description: '4K UHD IPS panel with USB-C 90W power delivery and DisplayHDR 400.',
+  },
+  {
+    id: 'x4',
+    title: 'iPad Pro 12.9" M2 Chip',
+    price: '779.99',
+    image: 'https://images.pexels.com/photos/1334597/pexels-photo-1334597.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    productType: 'Hardware',
+    category: 'Mobile Devices',
+    brand: 'Apple',
+    sellerName: 'by Apple',
+    rating: 4.8,
+    reviewsCount: 145,
+    priceUnit: '',
+    inStock: true,
+    description: 'M2 powered tablet with Liquid Retina XDR and Apple Pencil hover.',
+  },
+  {
+    id: 'x5',
+    title: 'Microsoft 365 Business Premium',
+    price: '219.60',
+    image: 'https://images.pexels.com/photos/265631/pexels-photo-265631.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    productType: 'Software',
+    category: 'Productivity Software',
+    brand: 'Microsoft',
+    sellerName: 'by Microsoft',
+    rating: 4.8,
+    reviewsCount: 145,
+    priceUnit: 'per year',
+    licenseType: 'Subscription',
+    inStock: true,
+    description: 'Office apps, Teams, advanced security and device management.',
+  },
+  {
+    id: 'x6',
+    title: 'Adobe Creative Cloud All Apps',
+    price: '33.82',
+    image: 'https://images.pexels.com/photos/1779487/pexels-photo-1779487.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    productType: 'Software',
+    category: 'Productivity Software',
+    brand: 'Adobe',
+    sellerName: 'by Adobe',
+    rating: 4.8,
+    reviewsCount: 145,
+    priceUnit: 'per month',
+    licenseType: 'Subscription',
+    inStock: true,
+    description: '20+ creative apps including Photoshop, Illustrator and Premiere Pro.',
+  },
+  {
+    id: 'x7',
+    title: 'Norton 360 Deluxe Security Suite',
+    price: '24.25',
+    image: 'https://images.pexels.com/photos/60504/security-protection-anti-virus-software-60504.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    productType: 'Software',
+    category: 'Security Software',
+    brand: 'Norton',
+    sellerName: 'by Others',
+    rating: 4.8,
+    reviewsCount: 145,
+    priceUnit: 'per year',
+    licenseType: 'Subscription',
+    inStock: true,
+    description: 'Multi-device antivirus, VPN, password manager and dark web monitoring.',
+  },
+  {
+    id: 'x8',
+    title: 'Windows 11 Pro',
+    price: '50.00',
+    image: 'https://images.pexels.com/photos/1029757/pexels-photo-1029757.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    productType: 'Software',
+    category: 'Operating Systems',
+    brand: 'Microsoft',
+    sellerName: 'by Microsoft',
+    rating: 4.8,
+    reviewsCount: 145,
+    priceUnit: 'single PC',
+    licenseType: 'One-Time Purchase',
+    inStock: true,
+    description: 'Pro-grade OS with BitLocker, Hyper-V and Windows Sandbox.',
   },
 ];
 
@@ -10185,9 +10299,375 @@ const HomeCarePage = ({ sellerItems = [], onOpenItemDetails }) => {
   );
 };
 
+const HARDWARE_SOFTWARE_BASE_CATEGORIES = [
+  'Mobile Devices',
+  'Desktop Computers',
+  'Laptops',
+  'Storage Devices',
+  'Peripherals & Accessories',
+  'Printers & POS Devices',
+  'Operating Systems',
+  'Productivity Software',
+  'Security Software',
+  'Development & DevOps Tools',
+  'Cloud & Hosting Services',
+  'AI / ML / Emerging Tech',
+  'Data Encryption Software',
+  'Hosting Services',
+];
+
+const HARDWARE_SOFTWARE_BASE_BRANDS = ['Apple', 'HP', 'Asus / Acer', 'Lenovo', 'Microsoft', 'Adobe', 'Google'];
+const HARDWARE_SOFTWARE_PRODUCT_TYPES = ['Hardware', 'Software'];
+const HARDWARE_SOFTWARE_AVAILABILITY = ['In Stock', 'Pre-Order'];
+const HARDWARE_SOFTWARE_LICENSES = ['One-Time Purchase', 'Subscription', 'Free / Trial'];
+const HARDWARE_SOFTWARE_HERO_IMAGE =
+  'https://images.pexels.com/photos/1779487/pexels-photo-1779487.jpeg?auto=compress&cs=tinysrgb&w=1600';
+
+const buildHardwareSoftwareDetailPayload = (item, t) => {
+  const description = item.description || item.subtitle || '';
+  const productOverview = item.productOverview
+    || (description
+      ? description
+      : `The ${item.title} represents the pinnacle of modern technology, combining cutting-edge performance with elegant design. Built with precision engineering and premium materials, this product delivers exceptional performance for professionals and enthusiasts alike.`);
+  const keyHighlights = Array.isArray(item.keyHighlights) && item.keyHighlights.length
+    ? item.keyHighlights
+    : [
+      'Premium build quality with aerospace-grade materials',
+      'Industry-leading performance and efficiency',
+      'Advanced connectivity options for seamless integration',
+      'Long-lasting battery life for all-day productivity',
+      'Stunning display with vibrant colors and deep blacks',
+      'Enhanced security features for data protection',
+    ];
+  const technicalSpecs = item.technicalSpecs && typeof item.technicalSpecs === 'object'
+    ? item.technicalSpecs
+    : (item.productType === 'Software'
+      ? {
+        'License Type': item.licenseType || 'Subscription',
+        'Billing': item.priceUnit || 'per year',
+        'Platform': item.platform || 'Windows / macOS / Web',
+        'Updates': 'Continuous updates included',
+        'Support': '24/7 priority support',
+        'Activation': 'Single-user license key',
+      }
+      : {
+        'Processor': item.processor || 'Latest generation high-performance chip',
+        'Memory (RAM)': item.memory || '16GB - 64GB unified memory',
+        'Storage': item.storage || '512GB - 2TB SSD',
+        'Display': item.display || 'Retina Display with True Tone technology',
+        'Connectivity': item.connectivity || 'Wi-Fi 6E, Bluetooth 5.3, USB-C/Thunderbolt',
+        'Battery Life': item.batteryLife || 'Up to 18 hours',
+        'Weight': item.weight || '1.5 - 2.0 kg',
+        'Warranty': item.warranty || '1-year limited warranty with optional AppleCare+',
+      });
+  const whatsIncluded = Array.isArray(item.whatsIncluded) && item.whatsIncluded.length
+    ? item.whatsIncluded
+    : [
+      `${item.title}`,
+      'Power adapter and cable',
+      'USB-C to USB-C cable',
+      'Quick start guide',
+      'Warranty documentation',
+      'Premium protective case (select models)',
+    ];
+  const compatibility = Array.isArray(item.compatibility) && item.compatibility.length
+    ? item.compatibility
+    : [
+      'Compatible with all major operating systems',
+      'Works with USB-C and Thunderbolt devices',
+      'Supports external displays up to 8K resolution',
+      'Compatible with all major wireless standards',
+      'Works seamlessly with cloud services',
+    ];
+  return { productOverview, keyHighlights, technicalSpecs, whatsIncluded, compatibility };
+};
+
+const HardwareSoftwareFilterCheckbox = ({ label, checked, onChange }) => (
+  <label className="flex cursor-pointer items-center gap-2 py-1 text-sm text-[var(--svs-text)]">
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={onChange}
+      className="h-4 w-4 rounded border-[var(--svs-border)] text-[var(--svs-primary)] focus:ring-[var(--svs-primary)]"
+    />
+    <span>{label}</span>
+  </label>
+);
+
+const HardwareSoftwareProductCard = ({ item, isWishlisted, onAddToCart, onToggleWishlist, onOpenDetails, reviewSummary }) => {
+  const { nowPrice } = getSalePrices(item.price, SALE_DISCOUNT_RATE, item.currency);
+  const rating = reviewSummary?.average || item.rating || 4.8;
+  const reviewsCount = reviewSummary?.count || item.reviewsCount || 145;
+  return (
+    <article className="flex flex-col overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-sm transition hover:shadow-md">
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
+        {item.image ? (
+          <img src={item.image} alt={item.title} className="h-full w-full object-cover" loading="lazy" />
+        ) : null}
+        {item.productType ? (
+          <span className="absolute right-3 top-3 rounded-full bg-slate-900/90 px-3 py-1 text-xs font-semibold text-white shadow">
+            {item.productType}
+          </span>
+        ) : null}
+        <button
+          type="button"
+          onClick={onToggleWishlist}
+          aria-label="Toggle wishlist"
+          className={`absolute left-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/60 bg-white/90 text-[var(--svs-primary-strong)] shadow transition hover:bg-white ${isWishlisted ? 'text-red-500' : ''}`}
+        >
+          <Heart className="h-4 w-4" fill={isWishlisted ? 'currentColor' : 'none'} />
+        </button>
+      </div>
+      <div className="flex flex-1 flex-col gap-2 p-3 sm:gap-3 sm:p-4">
+        <h3 className="text-sm font-semibold leading-snug text-[var(--svs-text)] line-clamp-2 sm:text-base">{item.title}</h3>
+        <span className="inline-flex w-fit items-center gap-1 rounded-full bg-[var(--svs-primary)]/10 px-2 py-0.5 text-xs font-semibold text-[var(--svs-primary-strong)] sm:px-3 sm:py-1 sm:text-sm">
+          {nowPrice}
+          {item.priceUnit ? <span className="text-[10px] font-normal text-[var(--svs-muted)] sm:text-xs">{item.priceUnit}</span> : null}
+        </span>
+        {item.category ? (
+          <p className="flex items-center gap-1.5 text-xs text-[var(--svs-muted)] sm:gap-2 sm:text-sm">
+            <Package className="h-3.5 w-3.5 text-[var(--svs-primary-strong)] sm:h-4 sm:w-4" />
+            <span className="truncate">{item.category}</span>
+          </p>
+        ) : null}
+        {item.sellerName ? (
+          <p className="flex items-center gap-1.5 text-xs text-[var(--svs-muted)] sm:gap-2 sm:text-sm">
+            <Store className="h-3.5 w-3.5 text-[var(--svs-primary-strong)] sm:h-4 sm:w-4" />
+            <span className="truncate">{item.sellerName}</span>
+          </p>
+        ) : null}
+        <p className="flex items-center gap-1 text-xs text-[var(--svs-muted)] sm:text-sm">
+          <Star className="h-3.5 w-3.5 text-amber-400 sm:h-4 sm:w-4" fill="currentColor" />
+          <span className="font-semibold text-[var(--svs-text)]">{Number(rating).toFixed(1)}</span>
+          <span>({reviewsCount})</span>
+        </p>
+        <div className="mt-auto flex flex-col gap-1.5 pt-1 sm:gap-2 sm:pt-2">
+          <button
+            type="button"
+            onClick={onOpenDetails}
+            className="rounded-lg bg-[var(--svs-primary)] px-3 py-1.5 text-xs font-semibold text-white shadow transition hover:bg-[var(--svs-primary-strong)] sm:px-4 sm:py-2 sm:text-sm"
+          >
+            View Details
+          </button>
+          <button
+            type="button"
+            onClick={onAddToCart}
+            className="rounded-lg border border-[var(--svs-primary)] px-3 py-1.5 text-xs font-semibold text-[var(--svs-primary-strong)] transition hover:bg-[var(--svs-primary)]/10 sm:px-4 sm:py-2 sm:text-sm"
+          >
+            Add to Cart
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+};
+
+const HardwareSoftwareFiltersPanel = ({
+  categories, brands, productTypes, availability, licenses, priceBounds,
+  selectedCategories, setSelectedCategories,
+  selectedBrands, setSelectedBrands,
+  selectedTypes, setSelectedTypes,
+  selectedAvailability, setSelectedAvailability,
+  selectedLicenses, setSelectedLicenses,
+  priceMax, setPriceMax,
+  toggleSelection, onApply,
+}) => (
+  <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-sm">
+    <div>
+      <h3 className="text-sm font-bold text-[var(--svs-text)]">Product Category</h3>
+      <div className="mt-2 max-h-72 overflow-y-auto pr-1">
+        {categories.map((category) => (
+          <HardwareSoftwareFilterCheckbox
+            key={category}
+            label={category}
+            checked={selectedCategories.includes(category)}
+            onChange={() => toggleSelection(selectedCategories, setSelectedCategories, category, true)}
+          />
+        ))}
+      </div>
+    </div>
+    <hr className="my-4 border-[var(--svs-border)]" />
+    <div>
+      <h3 className="text-sm font-bold text-[var(--svs-text)]">Brand</h3>
+      <div className="mt-2 max-h-56 overflow-y-auto pr-1">
+        {brands.map((brand) => (
+          <HardwareSoftwareFilterCheckbox
+            key={brand}
+            label={brand}
+            checked={selectedBrands.includes(brand)}
+            onChange={() => toggleSelection(selectedBrands, setSelectedBrands, brand, true)}
+          />
+        ))}
+      </div>
+    </div>
+    <hr className="my-4 border-[var(--svs-border)]" />
+    <div>
+      <h3 className="text-sm font-bold text-[var(--svs-text)]">Product Type</h3>
+      <div className="mt-2">
+        {productTypes.map((type) => (
+          <HardwareSoftwareFilterCheckbox
+            key={type}
+            label={type}
+            checked={selectedTypes.includes(type)}
+            onChange={() => toggleSelection(selectedTypes, setSelectedTypes, type, false)}
+          />
+        ))}
+      </div>
+    </div>
+    <hr className="my-4 border-[var(--svs-border)]" />
+    <div>
+      <h3 className="text-sm font-bold text-[var(--svs-text)]">Price Range</h3>
+      <input
+        type="range"
+        min={priceBounds.min}
+        max={priceBounds.max}
+        value={priceMax}
+        onChange={(event) => setPriceMax(Number(event.target.value))}
+        className="mt-3 w-full accent-[var(--svs-primary)]"
+      />
+      <div className="mt-1 flex justify-between text-xs text-[var(--svs-muted)]">
+        <span>{Math.round(priceBounds.min)}</span>
+        <span>{Math.round(priceMax)}</span>
+        <span>{Math.round(priceBounds.max)}</span>
+      </div>
+    </div>
+    <hr className="my-4 border-[var(--svs-border)]" />
+    <div>
+      <h3 className="text-sm font-bold text-[var(--svs-text)]">Availability</h3>
+      <div className="mt-2">
+        {availability.map((avail) => (
+          <HardwareSoftwareFilterCheckbox
+            key={avail}
+            label={avail}
+            checked={selectedAvailability.includes(avail)}
+            onChange={() => toggleSelection(selectedAvailability, setSelectedAvailability, avail, false)}
+          />
+        ))}
+      </div>
+    </div>
+    <hr className="my-4 border-[var(--svs-border)]" />
+    <div>
+      <h3 className="text-sm font-bold text-[var(--svs-text)]">License Type (Software)</h3>
+      <div className="mt-2">
+        {licenses.map((license) => (
+          <HardwareSoftwareFilterCheckbox
+            key={license}
+            label={license}
+            checked={selectedLicenses.includes(license)}
+            onChange={() => toggleSelection(selectedLicenses, setSelectedLicenses, license, false)}
+          />
+        ))}
+      </div>
+    </div>
+    <button
+      type="button"
+      onClick={onApply}
+      className="mt-5 w-full rounded-lg bg-[var(--svs-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-[var(--svs-primary-strong)]"
+    >
+      Apply Filters
+    </button>
+  </div>
+);
+
 const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
-  const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'hardwareSoftware'), ...techItems], [sellerItems]);
+  const navigate = useNavigate();
+  const marketItems = useMemo(
+    () => [...getSellerItemsForMarket(sellerItems, 'hardwareSoftware'), ...techItems],
+    [sellerItems]
+  );
+
+  // Dynamic options derived from items + base sets so seller-added values appear.
+  const dynamicCategories = useMemo(() => {
+    const set = new Set(HARDWARE_SOFTWARE_BASE_CATEGORIES);
+    marketItems.forEach((item) => {
+      if (item.category) set.add(item.category);
+    });
+    return ['All', ...Array.from(set)];
+  }, [marketItems]);
+
+  const dynamicBrands = useMemo(() => {
+    const set = new Set(HARDWARE_SOFTWARE_BASE_BRANDS);
+    marketItems.forEach((item) => {
+      if (item.brand) set.add(item.brand);
+    });
+    return ['All', ...Array.from(set)];
+  }, [marketItems]);
+
+  const priceBounds = useMemo(() => {
+    const numericPrices = marketItems
+      .map((item) => Number(getNumericPriceValue(item.price)))
+      .filter((value) => Number.isFinite(value) && value > 0);
+    if (!numericPrices.length) return { min: 0, max: 1000 };
+    const min = Math.floor(Math.min(...numericPrices));
+    const max = Math.ceil(Math.max(...numericPrices));
+    return { min, max: max > min ? max : min + 100 };
+  }, [marketItems]);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState(['All']);
+  const [selectedBrands, setSelectedBrands] = useState(['All']);
+  const [selectedTypes, setSelectedTypes] = useState([]);
+  const [selectedAvailability, setSelectedAvailability] = useState([]);
+  const [selectedLicenses, setSelectedLicenses] = useState([]);
+  const [priceMax, setPriceMax] = useState(priceBounds.max);
+  const [showAll, setShowAll] = useState(false);
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+
+  useEffect(() => {
+    setPriceMax(priceBounds.max);
+  }, [priceBounds.max]);
+
+  const toggleSelection = useCallback((current, setter, value, exclusiveAll = false) => {
+    if (exclusiveAll && value === 'All') {
+      setter(['All']);
+      return;
+    }
+    setter((prev) => {
+      const without = prev.filter((entry) => entry !== 'All');
+      if (without.includes(value)) {
+        const next = without.filter((entry) => entry !== value);
+        return next.length ? next : (exclusiveAll ? ['All'] : []);
+      }
+      return [...without, value];
+    });
+  }, []);
+
+  const handleApplyFilters = () => {
+    setShowAll(false);
+    setIsMobileFiltersOpen(false);
+  };
+
+  const filteredItems = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return marketItems.filter((item) => {
+      if (query) {
+        const haystack = [item.title, item.category, item.brand, item.sellerName, item.description]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        if (!haystack.includes(query)) return false;
+      }
+      const cats = selectedCategories;
+      if (cats.length && !cats.includes('All') && !cats.includes(item.category)) return false;
+      const brands = selectedBrands;
+      if (brands.length && !brands.includes('All') && !brands.includes(item.brand)) return false;
+      if (selectedTypes.length && !selectedTypes.includes(item.productType)) return false;
+      if (selectedAvailability.length) {
+        const itemAvail = item.availability || (item.inStock === false ? 'Pre-Order' : 'In Stock');
+        if (!selectedAvailability.includes(itemAvail)) return false;
+      }
+      if (selectedLicenses.length && item.productType === 'Software') {
+        if (!item.licenseType || !selectedLicenses.includes(item.licenseType)) return false;
+      }
+      const numeric = Number(getNumericPriceValue(item.price));
+      if (Number.isFinite(numeric) && numeric > priceMax) return false;
+      return true;
+    });
+  }, [marketItems, searchQuery, selectedCategories, selectedBrands, selectedTypes, selectedAvailability, selectedLicenses, priceMax]);
+
+  const visibleItems = showAll ? filteredItems : filteredItems.slice(0, 8);
+
   const buildCartItem = (item) => createCartItem({
     ...item,
     route: '/hardware-software',
@@ -10200,35 +10680,193 @@ const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
     marketName: t('markets.hardwareSoftware'),
     details: item.subtitle || item.sellerName,
   });
+  const handleAdd = (item) => onAddToCart(buildCartItem(item));
+  const handleWishlist = (item) => onToggleWishlist(buildWishlistItem(item));
+  const handleOpen = (item) => {
+    const wishlistItem = buildWishlistItem(item);
+    const detailPayload = buildHardwareSoftwareDetailPayload(item, t);
+    const similar = marketItems
+      .filter((other) => other.id !== item.id && (other.category === item.category || other.productType === item.productType))
+      .slice(0, 6)
+      .map((other) => ({
+        id: other.id,
+        title: other.title,
+        image: other.image,
+        price: getSalePrices(other.price, SALE_DISCOUNT_RATE, other.currency).nowPrice,
+        productType: other.productType,
+        category: other.category,
+        brand: other.brand,
+        sellerName: other.sellerName,
+        rating: other.rating || 4.8,
+        reviewsCount: other.reviewsCount || 145,
+      }));
+    onOpenItemDetails?.({
+      ...detailPayload,
+      title: getTranslatedValue(t, item.titleKey, item.title),
+      image: item.image,
+      images: item.images || (item.image ? [item.image] : []),
+      marketName: t('markets.hardwareSoftware'),
+      details: item.description || item.subtitle || item.sellerName,
+      priceLabel: getSalePrices(item.price, SALE_DISCOUNT_RATE, item.currency).nowPrice,
+      priceUnit: item.priceUnit,
+      productType: item.productType,
+      category: item.category,
+      brand: item.brand,
+      sellerName: item.sellerName,
+      similarProducts: similar,
+      detailVariant: 'electronics',
+      cartItem: buildCartItem(item),
+      wishlistItem,
+    });
+  };
+  const isWishlistedItem = (item) => wishlistItemIds.includes(getCollectionItemId('/hardware-software', item.id));
+
+  const trendingItems = useMemo(() => marketItems.slice(0, 6), [marketItems]);
+  const filtersPanel = (
+    <HardwareSoftwareFiltersPanel
+      categories={dynamicCategories}
+      brands={dynamicBrands}
+      productTypes={HARDWARE_SOFTWARE_PRODUCT_TYPES}
+      availability={HARDWARE_SOFTWARE_AVAILABILITY}
+      licenses={HARDWARE_SOFTWARE_LICENSES}
+      priceBounds={priceBounds}
+      selectedCategories={selectedCategories}
+      setSelectedCategories={setSelectedCategories}
+      selectedBrands={selectedBrands}
+      setSelectedBrands={setSelectedBrands}
+      selectedTypes={selectedTypes}
+      setSelectedTypes={setSelectedTypes}
+      selectedAvailability={selectedAvailability}
+      setSelectedAvailability={setSelectedAvailability}
+      selectedLicenses={selectedLicenses}
+      setSelectedLicenses={setSelectedLicenses}
+      priceMax={priceMax}
+      setPriceMax={setPriceMax}
+      toggleSelection={toggleSelection}
+      onApply={handleApplyFilters}
+    />
+  );
 
   return (
-  <PageFrame title={t('markets.hardwareSoftware')} subtitle={t('pageSubtitles.hardwareSoftware')}>
-    <CardGrid
-      items={marketItems}
-      buttonLabel={t('common.addToCart')}
-      secondaryButtonLabel={t('common.viewMore')}
-      reviewSummaryMap={productReviewSummaryMap}
-      getItemReviewKey={(item) => getCollectionItemId('/hardware-software', item.id)}
-      onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-      onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
-      onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
-      onOpenItemDetails={(item) => {
-        const wishlistItem = buildWishlistItem(item);
-        onOpenItemDetails?.({
-          title: getTranslatedValue(t, item.titleKey, item.title),
-          image: item.image,
-          images: item.images || (item.image ? [item.image] : []),
-          marketName: t('markets.hardwareSoftware'),
-          details: item.description || item.subtitle || item.sellerName,
-          priceLabel: getSalePrices(item.price).nowPrice,
-          cartItem: buildCartItem(item),
-          wishlistItem,
-        });
-      }}
-      isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/hardware-software', item.id))}
-      metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} currency={item.currency} />{item.sellerName ? ` • ${item.sellerName}` : ''}</p>}
-    />
-  </PageFrame>
+    <section className="bg-[var(--svs-bg)] text-[var(--svs-text)]">
+      {/* Hero */}
+      <div className="px-4 pt-6">
+        <div
+          className="relative mx-auto w-full max-w-7xl overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 px-6 py-12 text-white shadow-lg sm:px-10 sm:py-16"
+          style={{ backgroundImage: `linear-gradient(rgba(8,15,30,0.78), rgba(8,15,30,0.85)), url(${HARDWARE_SOFTWARE_HERO_IMAGE})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+        >
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            aria-label="Go back"
+            className="absolute left-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur transition hover:bg-white/25"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <div className="mx-auto max-w-3xl text-center">
+            <h1 className="text-3xl font-bold sm:text-4xl">{t('markets.hardwareSoftware')}</h1>
+            <p className="mt-3 text-sm text-slate-200 sm:text-base">
+              Explore a comprehensive hardware and software marketplace offering verified vendors, secure solutions, and performance-driven tools built for modern business requirements.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Search bar + mobile filter toggle */}
+      <div className="mx-auto mt-6 w-full max-w-7xl px-4">
+        <div className="flex items-center gap-2 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-3 shadow-sm">
+          <Search className="h-5 w-5 text-[var(--svs-primary-strong)]" />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search for products, brands, or features..."
+            className="w-full bg-transparent text-sm text-[var(--svs-text)] placeholder:text-[var(--svs-muted)] focus:outline-none"
+          />
+        </div>
+        <div className="mt-3 flex justify-end lg:hidden">
+          <button
+            type="button"
+            onClick={() => setIsMobileFiltersOpen((prev) => !prev)}
+            className="inline-flex items-center gap-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-2 text-sm font-semibold text-[var(--svs-text)] shadow-sm"
+            aria-expanded={isMobileFiltersOpen}
+          >
+            <Filter className="h-4 w-4" />
+            {isMobileFiltersOpen ? 'Hide Filters' : 'Show Filters'}
+          </button>
+        </div>
+      </div>
+
+      {/* Filters + Grid */}
+      <div className="mx-auto mt-6 grid w-full max-w-7xl grid-cols-1 gap-6 px-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+        {/* Desktop sidebar */}
+        <aside className="hidden lg:block">{filtersPanel}</aside>
+
+        {/* Mobile collapsible panel */}
+        {isMobileFiltersOpen ? (
+          <div className="lg:hidden">{filtersPanel}</div>
+        ) : null}
+
+        <div>
+          {visibleItems.length ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-5">
+              {visibleItems.map((item) => (
+                <HardwareSoftwareProductCard
+                  key={item.id}
+                  item={item}
+                  isWishlisted={isWishlistedItem(item)}
+                  onAddToCart={() => handleAdd(item)}
+                  onToggleWishlist={() => handleWishlist(item)}
+                  onOpenDetails={() => handleOpen(item)}
+                  reviewSummary={productReviewSummaryMap[getCollectionItemId('/hardware-software', item.id)]}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface)] p-10 text-center text-sm text-[var(--svs-muted)]">
+              No products match your filters.
+            </div>
+          )}
+
+          {filteredItems.length > 8 ? (
+            <div className="mt-6 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setShowAll((prev) => !prev)}
+                className="rounded-lg bg-[var(--svs-primary)] px-8 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-[var(--svs-primary-strong)]"
+              >
+                {showAll ? 'Show Less' : 'View All'}
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      {/* Trending strip */}
+      {trendingItems.length ? (
+        <div className="mt-12 px-4 pb-12">
+          <div
+            className="relative mx-auto w-full max-w-7xl overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 px-6 py-10 text-white shadow-lg sm:px-10"
+            style={{ backgroundImage: `linear-gradient(rgba(8,15,30,0.85), rgba(8,15,30,0.9)), url(${HARDWARE_SOFTWARE_HERO_IMAGE})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+          >
+            <h2 className="text-lg font-bold sm:text-xl">Trending Products & Trusted Technology Providers</h2>
+            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+              {trendingItems.slice(0, 3).map((item) => (
+                <HardwareSoftwareProductCard
+                  key={`trend-${item.id}`}
+                  item={item}
+                  isWishlisted={isWishlistedItem(item)}
+                  onAddToCart={() => handleAdd(item)}
+                  onToggleWishlist={() => handleWishlist(item)}
+                  onOpenDetails={() => handleOpen(item)}
+                  reviewSummary={productReviewSummaryMap[getCollectionItemId('/hardware-software', item.id)]}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </section>
   );
 };
 
@@ -15427,9 +16065,108 @@ const ItemDetailsModal = ({
             </div>
           </div>
         </div>
+        {/* Electronics & Gadgets rich detail sections */}
+        {item.detailVariant === 'electronics' ? (
+          <div className="space-y-6 border-t border-[var(--svs-border)] px-6 py-6">
+            {item.productOverview ? (
+              <div>
+                <h3 className="text-lg font-bold text-[var(--svs-primary-strong)]">Product Overview</h3>
+                <p className="mt-2 text-[15px] leading-relaxed text-slate-600">{item.productOverview}</p>
+              </div>
+            ) : null}
+            {item.keyHighlights?.length ? (
+              <div>
+                <h3 className="text-lg font-bold text-[var(--svs-primary-strong)]">Key Highlights</h3>
+                <ul className="mt-2 space-y-2">
+                  {item.keyHighlights.map((highlight, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-[15px] text-[var(--svs-primary-strong)]">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--svs-primary)]" />
+                      <span>{highlight}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {item.technicalSpecs && Object.keys(item.technicalSpecs).length ? (
+              <div className="rounded-2xl bg-[var(--svs-primary)]/5 p-5">
+                <h3 className="text-lg font-bold text-[var(--svs-primary-strong)]">Technical Specifications</h3>
+                <table className="mt-3 w-full text-[15px] text-slate-700">
+                  <tbody>
+                    {Object.entries(item.technicalSpecs).map(([key, value]) => (
+                      <tr key={key} className="border-b border-[var(--svs-primary)]/15 last:border-0">
+                        <td className="py-2 pr-4 align-top font-semibold text-[var(--svs-text)]">{key}</td>
+                        <td className="py-2 align-top">{value}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+            {item.whatsIncluded?.length ? (
+              <div>
+                <h3 className="text-lg font-bold text-[var(--svs-primary-strong)]">What's Included</h3>
+                <ul className="mt-2 space-y-1.5 text-[15px] text-slate-700">
+                  {item.whatsIncluded.map((entry, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className="text-[var(--svs-primary-strong)]">✓</span>
+                      <span>{entry}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {item.compatibility?.length ? (
+              <div>
+                <ul className="space-y-1.5 text-[15px] text-slate-700">
+                  {item.compatibility.map((entry, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className="mt-2 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[var(--svs-primary-strong)]" />
+                      <span>{entry}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         {/* Reviews Section */}
-        <div className="border-t border-[var(--svs-border)] px-6 py-6">
-          <h3 className="text-lg font-bold text-[var(--svs-text)] mb-2">Ratings & Reviews</h3>
+        <div className={`${item.detailVariant === 'electronics' ? 'rounded-2xl bg-[var(--svs-primary)]/5 mx-6 mb-6' : 'border-t border-[var(--svs-border)]'} px-6 py-6`}>
+          <h3 className="text-lg font-bold text-[var(--svs-primary-strong)] mb-3">Ratings &amp; Reviews</h3>
+          {item.detailVariant === 'electronics' ? (() => {
+            const ratingValues = reviews.length ? reviews.map((r) => r.rating) : [5, 5, 5, 5, 4, 4, 4, 3, 5, 5];
+            const total = ratingValues.length;
+            const avg = total ? (ratingValues.reduce((sum, n) => sum + n, 0) / total).toFixed(1) : '0.0';
+            const distribution = [5, 4, 3, 2, 1].map((star) => ({
+              star,
+              count: ratingValues.filter((value) => Math.round(value) === star).length,
+            }));
+            return (
+              <div className="mb-5 grid gap-6 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center">
+                <div className="text-center">
+                  <div className="text-4xl font-bold text-[var(--svs-text)]">{avg}</div>
+                  <div className="mt-1 flex items-center justify-center gap-0.5 text-amber-400">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star key={s} className={`h-4 w-4 ${s <= Math.round(Number(avg)) ? 'fill-amber-400' : 'fill-slate-200 text-slate-300'}`} />
+                    ))}
+                  </div>
+                  <div className="mt-1 text-xs text-[var(--svs-muted)]">{total.toLocaleString()} reviews</div>
+                </div>
+                <div className="space-y-1.5">
+                  {distribution.map(({ star, count }) => {
+                    const pct = total ? (count / total) * 100 : 0;
+                    return (
+                      <div key={star} className="flex items-center gap-2 text-xs">
+                        <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-200">
+                          <div className="h-full rounded-full bg-[var(--svs-primary)]" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })() : null}
           {/* Reviews List */}
           <div className="mb-4">
             {isLoadingReviews ? (
@@ -15501,16 +16238,63 @@ const ItemDetailsModal = ({
         {/* Similar Products Section (optional, if available) */}
         {item.similarProducts?.length ? (
           <div className="border-t border-[var(--svs-border)] px-6 py-6">
-            <h3 className="text-lg font-bold text-[var(--svs-text)] mb-2">Similar Products</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {item.similarProducts.map((sim, idx) => (
-                <div key={idx} className="rounded-lg border border-[#e0e7ef] bg-white p-3 flex flex-col items-center">
-                  <img src={sim.image} alt={sim.title} className="h-24 w-24 object-cover rounded mb-2" />
-                  <div className="font-semibold text-[var(--svs-text)]">{sim.title}</div>
-                  <div className="text-sm text-[var(--svs-muted)]">{sim.price}</div>
-                </div>
-              ))}
-            </div>
+            <h3 className="text-lg font-bold text-[var(--svs-text)] mb-3">Similar Products</h3>
+            {item.detailVariant === 'electronics' ? (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+                {item.similarProducts.map((sim) => (
+                  <article key={sim.id} className="overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-sm">
+                    <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
+                      {sim.image ? (
+                        <img src={sim.image} alt={sim.title} className="h-full w-full object-cover" loading="lazy" />
+                      ) : null}
+                      {sim.productType ? (
+                        <span className="absolute right-3 top-3 rounded-full bg-slate-900/90 px-3 py-1 text-xs font-semibold text-white shadow">
+                          {sim.productType}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="space-y-2 p-3">
+                      <h4 className="text-sm font-semibold leading-snug text-[var(--svs-text)]">{sim.title}</h4>
+                      <span className="inline-flex w-fit rounded-full bg-[var(--svs-primary)]/10 px-3 py-1 text-xs font-semibold text-[var(--svs-primary-strong)]">{sim.price}</span>
+                      {sim.category ? (
+                        <p className="flex items-center gap-1.5 text-xs text-[var(--svs-muted)]">
+                          <Package className="h-3.5 w-3.5 text-[var(--svs-primary-strong)]" />
+                          <span>{sim.category}</span>
+                        </p>
+                      ) : null}
+                      {sim.sellerName ? (
+                        <p className="flex items-center gap-1.5 text-xs text-[var(--svs-muted)]">
+                          <Store className="h-3.5 w-3.5 text-[var(--svs-primary-strong)]" />
+                          <span>{sim.sellerName}</span>
+                        </p>
+                      ) : null}
+                      <p className="flex items-center gap-1 text-xs text-[var(--svs-muted)]">
+                        <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                        <span className="font-semibold text-[var(--svs-text)]">{Number(sim.rating || 4.8).toFixed(1)}</span>
+                        <span>({sim.reviewsCount || 145} reviews)</span>
+                      </p>
+                      <button
+                        type="button"
+                        className="mt-1 w-full rounded-lg bg-[var(--svs-primary)] px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-[var(--svs-primary-strong)]"
+                        onClick={onClose}
+                      >
+                        View Details
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {item.similarProducts.map((sim, idx) => (
+                  <div key={idx} className="rounded-lg border border-[#e0e7ef] bg-white p-3 flex flex-col items-center">
+                    <img src={sim.image} alt={sim.title} className="h-24 w-24 object-cover rounded mb-2" />
+                    <div className="font-semibold text-[var(--svs-text)]">{sim.title}</div>
+                    <div className="text-sm text-[var(--svs-muted)]">{sim.price}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ) : null}
       </div>
