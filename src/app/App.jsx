@@ -15807,14 +15807,18 @@ const OrderCard = ({ order, onCancelOrder, cancellingOrderId, onSetCancelError }
             </Link>
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-            <button
-              type="button"
-              onClick={() => navigate(`/orders/${order.id}/cancel`)}
-              disabled={!canCancel || isCancelling}
-              className="rounded-lg border border-[var(--svs-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isCancelling ? 'Cancelling...' : 'Cancel Order'}
-            </button>
+            {/* Cancel: only available before the item is shipped (Order Confirmed / Order Processing). */}
+            {canCancel ? (
+              <button
+                type="button"
+                onClick={() => navigate(`/orders/${order.id}/cancel`)}
+                disabled={isCancelling}
+                className="rounded-lg border border-[var(--svs-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isCancelling ? 'Cancelling...' : 'Cancel Order'}
+              </button>
+            ) : null}
+            {/* Return / Exchange: only after successful delivery and within the return window. */}
             {existingReturn ? (
               <button
                 type="button"
@@ -15823,16 +15827,15 @@ const OrderCard = ({ order, onCancelOrder, cancellingOrderId, onSetCancelError }
               >
                 <RefreshCw className="h-3.5 w-3.5" /> Track Return &middot; {existingReturn.status}
               </button>
-            ) : (
+            ) : isDelivered && !returnWindowClosed ? (
               <button
                 type="button"
                 onClick={() => navigate(`/orders/${order.id}/return`, { state: { orderId: order.id, reference: order.reference } })}
-                disabled={!isDelivered || returnWindowClosed}
-                className="rounded-lg border border-[var(--svs-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg border border-[var(--svs-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)]"
               >
                 Return
               </button>
-            )}
+            ) : null}
             {existingExchange ? (
               <button
                 type="button"
@@ -15841,16 +15844,15 @@ const OrderCard = ({ order, onCancelOrder, cancellingOrderId, onSetCancelError }
               >
                 <RefreshCw className="h-3.5 w-3.5" /> Track Exchange &middot; {existingExchange.status}
               </button>
-            ) : (
+            ) : isDelivered && !returnWindowClosed ? (
               <button
                 type="button"
                 onClick={() => navigate(`/orders/${order.id}/exchange`, { state: { orderId: order.id, reference: order.reference } })}
-                disabled={!isDelivered || returnWindowClosed}
-                className="rounded-lg border border-[var(--svs-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg border border-[var(--svs-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)]"
               >
                 Exchange
               </button>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
