@@ -4071,6 +4071,119 @@ const SUPPORTED_CURRENCIES = [
   { code: 'ZMW', symbol: 'ZK', name: 'Zambian Kwacha', flag: '🇿🇲' },
 ];
 
+// Maps each supported buyer currency to its primary country (and dial code) so
+// the checkout / address forms can react when the buyer changes their currency.
+const CURRENCY_COUNTRY_INFO = {
+  AED: { country: 'United Arab Emirates', phoneCode: '+971', flag: '🇦🇪' },
+  AFN: { country: 'Afghanistan', phoneCode: '+93', flag: '🇦🇫' },
+  ALL: { country: 'Albania', phoneCode: '+355', flag: '🇦🇱' },
+  AMD: { country: 'Armenia', phoneCode: '+374', flag: '🇦🇲' },
+  AOA: { country: 'Angola', phoneCode: '+244', flag: '🇦🇴' },
+  ARS: { country: 'Argentina', phoneCode: '+54', flag: '🇦🇷' },
+  AUD: { country: 'Australia', phoneCode: '+61', flag: '🇦🇺' },
+  AZN: { country: 'Azerbaijan', phoneCode: '+994', flag: '🇦🇿' },
+  BAM: { country: 'Bosnia & Herzegovina', phoneCode: '+387', flag: '🇧🇦' },
+  BDT: { country: 'Bangladesh', phoneCode: '+880', flag: '🇧🇩' },
+  BGN: { country: 'Bulgaria', phoneCode: '+359', flag: '🇧🇬' },
+  BHD: { country: 'Bahrain', phoneCode: '+973', flag: '🇧🇭' },
+  BOB: { country: 'Bolivia', phoneCode: '+591', flag: '🇧🇴' },
+  BRL: { country: 'Brazil', phoneCode: '+55', flag: '🇧🇷' },
+  BWP: { country: 'Botswana', phoneCode: '+267', flag: '🇧🇼' },
+  BYN: { country: 'Belarus', phoneCode: '+375', flag: '🇧🇾' },
+  CAD: { country: 'Canada', phoneCode: '+1', flag: '🇨🇦' },
+  CHF: { country: 'Switzerland', phoneCode: '+41', flag: '🇨🇭' },
+  CLP: { country: 'Chile', phoneCode: '+56', flag: '🇨🇱' },
+  CNY: { country: 'China', phoneCode: '+86', flag: '🇨🇳' },
+  COP: { country: 'Colombia', phoneCode: '+57', flag: '🇨🇴' },
+  CZK: { country: 'Czech Republic', phoneCode: '+420', flag: '🇨🇿' },
+  DKK: { country: 'Denmark', phoneCode: '+45', flag: '🇩🇰' },
+  DOP: { country: 'Dominican Republic', phoneCode: '+1', flag: '🇩🇴' },
+  DZD: { country: 'Algeria', phoneCode: '+213', flag: '🇩🇿' },
+  EGP: { country: 'Egypt', phoneCode: '+20', flag: '🇪🇬' },
+  ETB: { country: 'Ethiopia', phoneCode: '+251', flag: '🇪🇹' },
+  EUR: { country: 'European Union', phoneCode: '+', flag: '🇪🇺' },
+  FJD: { country: 'Fiji', phoneCode: '+679', flag: '🇫🇯' },
+  GBP: { country: 'United Kingdom', phoneCode: '+44', flag: '🇬🇧' },
+  GEL: { country: 'Georgia', phoneCode: '+995', flag: '🇬🇪' },
+  GHS: { country: 'Ghana', phoneCode: '+233', flag: '🇬🇭' },
+  GTQ: { country: 'Guatemala', phoneCode: '+502', flag: '🇬🇹' },
+  HKD: { country: 'Hong Kong', phoneCode: '+852', flag: '🇭🇰' },
+  HRK: { country: 'Croatia', phoneCode: '+385', flag: '🇭🇷' },
+  HUF: { country: 'Hungary', phoneCode: '+36', flag: '🇭🇺' },
+  IDR: { country: 'Indonesia', phoneCode: '+62', flag: '🇮🇩' },
+  ILS: { country: 'Israel', phoneCode: '+972', flag: '🇮🇱' },
+  INR: { country: 'India', phoneCode: '+91', flag: '🇮🇳' },
+  IQD: { country: 'Iraq', phoneCode: '+964', flag: '🇮🇶' },
+  IRR: { country: 'Iran', phoneCode: '+98', flag: '🇮🇷' },
+  ISK: { country: 'Iceland', phoneCode: '+354', flag: '🇮🇸' },
+  JMD: { country: 'Jamaica', phoneCode: '+1', flag: '🇯🇲' },
+  JOD: { country: 'Jordan', phoneCode: '+962', flag: '🇯🇴' },
+  JPY: { country: 'Japan', phoneCode: '+81', flag: '🇯🇵' },
+  KES: { country: 'Kenya', phoneCode: '+254', flag: '🇰🇪' },
+  KHR: { country: 'Cambodia', phoneCode: '+855', flag: '🇰🇭' },
+  KRW: { country: 'South Korea', phoneCode: '+82', flag: '🇰🇷' },
+  KWD: { country: 'Kuwait', phoneCode: '+965', flag: '🇰🇼' },
+  KZT: { country: 'Kazakhstan', phoneCode: '+7', flag: '🇰🇿' },
+  LAK: { country: 'Laos', phoneCode: '+856', flag: '🇱🇦' },
+  LBP: { country: 'Lebanon', phoneCode: '+961', flag: '🇱🇧' },
+  LKR: { country: 'Sri Lanka', phoneCode: '+94', flag: '🇱🇰' },
+  LSL: { country: 'Lesotho', phoneCode: '+266', flag: '🇱🇸' },
+  MAD: { country: 'Morocco', phoneCode: '+212', flag: '🇲🇦' },
+  MDL: { country: 'Moldova', phoneCode: '+373', flag: '🇲🇩' },
+  MKD: { country: 'North Macedonia', phoneCode: '+389', flag: '🇲🇰' },
+  MMK: { country: 'Myanmar', phoneCode: '+95', flag: '🇲🇲' },
+  MNT: { country: 'Mongolia', phoneCode: '+976', flag: '🇲🇳' },
+  MUR: { country: 'Mauritius', phoneCode: '+230', flag: '🇲🇺' },
+  MWK: { country: 'Malawi', phoneCode: '+265', flag: '🇲🇼' },
+  MXN: { country: 'Mexico', phoneCode: '+52', flag: '🇲🇽' },
+  MYR: { country: 'Malaysia', phoneCode: '+60', flag: '🇲🇾' },
+  MZN: { country: 'Mozambique', phoneCode: '+258', flag: '🇲🇿' },
+  NAD: { country: 'Namibia', phoneCode: '+264', flag: '🇳🇦' },
+  NGN: { country: 'Nigeria', phoneCode: '+234', flag: '🇳🇬' },
+  NOK: { country: 'Norway', phoneCode: '+47', flag: '🇳🇴' },
+  NPR: { country: 'Nepal', phoneCode: '+977', flag: '🇳🇵' },
+  NZD: { country: 'New Zealand', phoneCode: '+64', flag: '🇳🇿' },
+  OMR: { country: 'Oman', phoneCode: '+968', flag: '🇴🇲' },
+  PEN: { country: 'Peru', phoneCode: '+51', flag: '🇵🇪' },
+  PGK: { country: 'Papua New Guinea', phoneCode: '+675', flag: '🇵🇬' },
+  PHP: { country: 'Philippines', phoneCode: '+63', flag: '🇵🇭' },
+  PKR: { country: 'Pakistan', phoneCode: '+92', flag: '🇵🇰' },
+  PLN: { country: 'Poland', phoneCode: '+48', flag: '🇵🇱' },
+  PYG: { country: 'Paraguay', phoneCode: '+595', flag: '🇵🇾' },
+  QAR: { country: 'Qatar', phoneCode: '+974', flag: '🇶🇦' },
+  RON: { country: 'Romania', phoneCode: '+40', flag: '🇷🇴' },
+  RSD: { country: 'Serbia', phoneCode: '+381', flag: '🇷🇸' },
+  RUB: { country: 'Russia', phoneCode: '+7', flag: '🇷🇺' },
+  RWF: { country: 'Rwanda', phoneCode: '+250', flag: '🇷🇼' },
+  SAR: { country: 'Saudi Arabia', phoneCode: '+966', flag: '🇸🇦' },
+  SEK: { country: 'Sweden', phoneCode: '+46', flag: '🇸🇪' },
+  SGD: { country: 'Singapore', phoneCode: '+65', flag: '🇸🇬' },
+  SYP: { country: 'Syria', phoneCode: '+963', flag: '🇸🇾' },
+  SZL: { country: 'Eswatini', phoneCode: '+268', flag: '🇸🇿' },
+  THB: { country: 'Thailand', phoneCode: '+66', flag: '🇹🇭' },
+  TND: { country: 'Tunisia', phoneCode: '+216', flag: '🇹🇳' },
+  TRY: { country: 'Turkey', phoneCode: '+90', flag: '🇹🇷' },
+  TTD: { country: 'Trinidad & Tobago', phoneCode: '+1', flag: '🇹🇹' },
+  TWD: { country: 'Taiwan', phoneCode: '+886', flag: '🇹🇼' },
+  TZS: { country: 'Tanzania', phoneCode: '+255', flag: '🇹🇿' },
+  UAH: { country: 'Ukraine', phoneCode: '+380', flag: '🇺🇦' },
+  UGX: { country: 'Uganda', phoneCode: '+256', flag: '🇺🇬' },
+  USD: { country: 'United States', phoneCode: '+1', flag: '🇺🇸' },
+  UYU: { country: 'Uruguay', phoneCode: '+598', flag: '🇺🇾' },
+  UZS: { country: 'Uzbekistan', phoneCode: '+998', flag: '🇺🇿' },
+  VES: { country: 'Venezuela', phoneCode: '+58', flag: '🇻🇪' },
+  VND: { country: 'Vietnam', phoneCode: '+84', flag: '🇻🇳' },
+  XAF: { country: 'Central African CFA', phoneCode: '+', flag: '🌍' },
+  XOF: { country: 'West African CFA', phoneCode: '+', flag: '🌍' },
+  YER: { country: 'Yemen', phoneCode: '+967', flag: '🇾🇪' },
+  ZAR: { country: 'South Africa', phoneCode: '+27', flag: '🇿🇦' },
+  ZMW: { country: 'Zambia', phoneCode: '+260', flag: '🇿🇲' },
+};
+
+const getCountryInfoForCurrency = (code) => (
+  CURRENCY_COUNTRY_INFO[code] || CURRENCY_COUNTRY_INFO[DEFAULT_BUYER_CURRENCY] || { country: 'South Africa', phoneCode: '+27', flag: '🇿🇦' }
+);
+
 // Approximate fallback rates per 1 USD (used until live rates load).
 // Live values are merged in from open.er-api.com on app start.
 const FALLBACK_FX_RATES_USD = {
@@ -13718,6 +13831,8 @@ const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onOpen
 const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemoveCartItem, onClearBuyNowCheckout }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { code: buyerCurrencyCode } = useBuyerCurrency();
+  const initialCurrencyCountryInfo = getCountryInfoForCurrency(buyerCurrencyCode);
   const isBuyNowMode = Boolean(location.state?.checkoutMode === 'buy-now' && buyNowCheckout?.items?.length);
   const checkoutItems = useMemo(() => (
     isBuyNowMode ? (buyNowCheckout?.items || []) : cartItems
@@ -13726,7 +13841,7 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
     contact: typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''),
     saveInformation: false,
     marketingOptIn: false,
-    country: 'South Africa',
+    country: initialCurrencyCountryInfo.country,
     firstName: '',
     lastName: '',
     company: '',
@@ -13735,7 +13850,7 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
     city: '',
     province: 'KwaZulu-Natal',
     postalCode: '',
-    phoneCountryCode: '+27',
+    phoneCountryCode: initialCurrencyCountryInfo.phoneCode,
     phone: '',
     deliveryInstructions: '',
     paymentMethod: PAYFAST_METHOD_OPTIONS[0].value,
@@ -13811,6 +13926,26 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
   const updateField = (field, value) => {
     setFormState((current) => ({ ...current, [field]: value }));
   };
+
+  // When the buyer changes their currency, automatically populate the country
+  // (and phone dial code) tied to that currency so the delivery section
+  // reflects where they are shopping from.
+  useEffect(() => {
+    const info = getCountryInfoForCurrency(buyerCurrencyCode);
+    setFormState((current) => {
+      const next = { ...current };
+      let changed = false;
+      if (info.country && current.country !== info.country) {
+        next.country = info.country;
+        changed = true;
+      }
+      if (info.phoneCode && current.phoneCountryCode !== info.phoneCode) {
+        next.phoneCountryCode = info.phoneCode;
+        changed = true;
+      }
+      return changed ? next : current;
+    });
+  }, [buyerCurrencyCode]);
 
   const validateDeliveryStep = () => {
     if (!checkoutItems.length) {
@@ -14161,7 +14296,18 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
                   className={inputClassName}
                   aria-label="Phone country code"
                 >
-                  <option value="+27">🇿🇦 +27</option>
+                  {Object.entries(CURRENCY_COUNTRY_INFO)
+                    .map(([code, info]) => ({ code, ...info }))
+                    .filter((entry) => entry.phoneCode && entry.phoneCode !== '+')
+                    .filter((entry, index, list) => (
+                      list.findIndex((other) => other.phoneCode === entry.phoneCode) === index
+                    ))
+                    .sort((a, b) => a.country.localeCompare(b.country))
+                    .map((entry) => (
+                      <option key={`${entry.code}-${entry.phoneCode}`} value={entry.phoneCode}>
+                        {entry.flag} {entry.phoneCode}
+                      </option>
+                    ))}
                 </select>
                 <input
                   id="checkout-phone"
@@ -14244,14 +14390,24 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
               </div>
               <div>
                 <label htmlFor="checkout-country" className={fieldLabelClassName}>Country</label>
-                <input
+                <select
                   id="checkout-country"
-                  type="text"
                   value={formState.country}
                   onChange={(event) => updateField('country', event.target.value)}
-                  placeholder="Country"
                   className={inputClassName}
-                />
+                >
+                  {Object.entries(CURRENCY_COUNTRY_INFO)
+                    .map(([code, info]) => ({ code, ...info }))
+                    .filter((entry, index, list) => (
+                      list.findIndex((other) => other.country === entry.country) === index
+                    ))
+                    .sort((a, b) => a.country.localeCompare(b.country))
+                    .map((entry) => (
+                      <option key={entry.code} value={entry.country}>
+                        {entry.flag} {entry.country}
+                      </option>
+                    ))}
+                </select>
               </div>
             </div>
             <div>
@@ -18914,21 +19070,21 @@ const SiteFooter = () => {
 
   return (
     <footer className="bg-gradient-to-b from-[#0c2a32] to-[#0f6674] text-white">
-      {/* ── Main Footer Grid — 4 columns on every screen so mobile mirrors desktop, just smaller ── */}
-      <div className="mx-auto w-full max-w-7xl px-3 pt-8 pb-6 sm:px-6 sm:pt-[60px] sm:pb-10 sm:px-8">
-        <div className="grid grid-cols-4 gap-3 sm:gap-10">
+      {/* ── Main Footer Grid — stacks on mobile so each section is fully readable, then fans out to 4 columns on larger screens ── */}
+      <div className="mx-auto w-full max-w-7xl px-5 pt-10 pb-8 sm:px-6 sm:pt-[60px] sm:pb-10 sm:px-8">
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-4 sm:gap-10">
           {/* Column 1 – Brand */}
           <div>
-            <h3 className="text-[11px] font-bold sm:text-xl">SVS E-Commerce</h3>
-            <p className="mt-1.5 text-xs leading-snug text-slate-200 sm:mt-3 sm:text-base sm:leading-relaxed">
+            <h3 className="whitespace-nowrap text-lg font-bold sm:text-xl">SVS E-Commerce</h3>
+            <p className="mt-2 text-sm leading-relaxed text-slate-200 sm:mt-3 sm:text-base">
               {t('site.tagline', { defaultValue: 'Your one-stop marketplace for everything you need – from groceries to tickets!' })}
             </p>
           </div>
 
           {/* Column 2 – Quick Links */}
           <div>
-            <h4 className="text-[10px] font-bold uppercase tracking-wide sm:text-sm">{t('footer.quickLinks')}</h4>
-            <ul className="mt-1.5 space-y-1 text-[10px] sm:mt-4 sm:space-y-2 sm:text-sm">
+            <h4 className="whitespace-nowrap text-xs font-bold uppercase tracking-wide sm:text-sm">{t('footer.quickLinks')}</h4>
+            <ul className="mt-2 space-y-1.5 text-sm sm:mt-4 sm:space-y-2">
               {footerLinks.quick.map((item) => (
                 <li key={item.href}>
                   <Link to={item.href} className="text-slate-200 transition hover:text-white hover:underline">{t(item.labelKey)}</Link>
@@ -18939,8 +19095,8 @@ const SiteFooter = () => {
 
           {/* Column 3 – Support */}
           <div>
-            <h4 className="text-[10px] font-bold uppercase tracking-wide sm:text-sm">{t('footer.support')}</h4>
-            <ul className="mt-1.5 space-y-1 text-[10px] sm:mt-4 sm:space-y-2 sm:text-sm">
+            <h4 className="whitespace-nowrap text-xs font-bold uppercase tracking-wide sm:text-sm">{t('footer.support')}</h4>
+            <ul className="mt-2 space-y-1.5 text-sm sm:mt-4 sm:space-y-2">
               {footerLinks.support.map((item) => (
                 <li key={item.href}>
                   <Link to={item.href} className="text-slate-200 transition hover:text-white hover:underline">{t(item.labelKey)}</Link>
@@ -18951,18 +19107,18 @@ const SiteFooter = () => {
 
           {/* Column 4 – Subscribe to Offers */}
           <div>
-            <h4 className="text-[10px] font-bold uppercase tracking-wide sm:text-sm">{t('footer.subscribe')}</h4>
-            <p className="mt-1.5 text-[10px] text-slate-300 sm:mt-3 sm:text-sm">{t('footer.subscribeText')}</p>
-            <div className="mt-2 flex flex-col gap-1.5 sm:mt-4 sm:flex-row sm:gap-2">
+            <h4 className="whitespace-nowrap text-xs font-bold uppercase tracking-wide sm:text-sm">{t('footer.subscribe')}</h4>
+            <p className="mt-2 text-sm leading-relaxed text-slate-300 sm:mt-3">{t('footer.subscribeText')}</p>
+            <div className="mt-3 flex flex-col gap-2 sm:mt-4 sm:flex-row">
               <input
                 type="text"
                 placeholder={t('footer.subscribePlaceholder')}
-                className="min-w-0 flex-1 rounded-full border border-white/20 bg-white/10 px-2 py-1 text-[10px] text-white placeholder:text-slate-300 focus:border-cyan-300 focus:outline-none focus:ring-1 focus:ring-cyan-300 sm:px-4 sm:py-2.5 sm:text-sm"
+                className="min-w-0 flex-1 rounded-full border border-white/20 bg-white/10 px-4 py-2.5 text-sm text-white placeholder:text-slate-300 focus:border-cyan-300 focus:outline-none focus:ring-1 focus:ring-cyan-300"
                 aria-label={t('footer.subscribeAria')}
               />
               <button
                 type="button"
-                className={`${cudyBluePrimaryButtonClassName} shrink-0 rounded-full bg-[var(--svs-primary)] px-2 py-1 text-[10px] font-semibold text-white transition hover:bg-[#0088b8] sm:px-5 sm:py-2.5 sm:text-sm`}
+                className={`${cudyBluePrimaryButtonClassName} shrink-0 rounded-full bg-[var(--svs-primary)] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0088b8]`}
               >
                 Subscribe
               </button>
