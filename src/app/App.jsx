@@ -38,6 +38,10 @@ import {
   Download,
   RefreshCw,
   Circle,
+  Upload,
+  Pencil,
+  Trash2,
+  Info,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -12486,6 +12490,9 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                 <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{orderUpdateError}</div>
               ) : null}
 
+              <SellerReturnsInbox />
+              <SellerExchangesInbox />
+
               {visibleOrders.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {[
@@ -15157,6 +15164,21 @@ const TrackOrderPage = ({ orders }) => {
   }, [orders, params, orderIdFromState, referenceFromState]);
 
   const timeline = useMemo(() => buildTrackTimeline(order), [order]);
+  const isCancelledOrder = order && (order.status === 'Cancelled' || order.status === 'Cancelled by Buyer' || order.status === 'Cancelled by Seller');
+  const cancellationTimeline = useMemo(() => {
+    if (!isCancelledOrder || !order) return [];
+    const cancelledAt = order.cancelledAt ? new Date(order.cancelledAt) : (order.updatedAt ? new Date(order.updatedAt) : new Date());
+    const wasCardPayment = order.paymentMethod === 'Card';
+    const refundInitiatedAt = new Date(cancelledAt.getTime() + 30 * 60 * 1000);
+    const refundCompletedEta = new Date(cancelledAt.getTime() + 6 * 24 * 60 * 60 * 1000);
+    const refundCompleted = order.status === 'Refund Made';
+    return [
+      { key: 'requested', title: 'Cancellation Requested', description: 'You requested to cancel this order.', reached: true, at: cancelledAt, location: 'Account' },
+      { key: 'confirmed', title: 'Cancellation Confirmed', description: 'Order successfully cancelled and removed from fulfilment.', reached: true, at: cancelledAt, location: 'SVS' },
+      { key: 'refundInitiated', title: 'Refund Initiated', description: wasCardPayment ? 'Refund issued back to your card.' : 'Refund being processed via your original payment method.', reached: true, at: refundInitiatedAt, location: 'Payments' },
+      { key: 'refundCompleted', title: refundCompleted ? 'Refund Completed' : 'Refund Completion', description: refundCompleted ? 'Refund settled to your account.' : 'Bank reflection can take 3-7 business days.', reached: refundCompleted, at: refundCompleted ? refundCompletedEta : null, location: 'Bank', isCurrent: !refundCompleted },
+    ];
+  }, [isCancelledOrder, order]);
 
   const estimatedDelivery = useMemo(() => {
     if (!order) return null;
@@ -15236,7 +15258,9 @@ const TrackOrderPage = ({ orders }) => {
             <div>
               <h2 className="text-base font-bold text-[var(--svs-primary-strong)]">Order Summary</h2>
               <p className="text-xs text-[var(--svs-muted)]">
-                {order.status === 'Delivered' ? 'Your package has been delivered' : 'Your package is on the way'}
+                {isCancelledOrder
+                  ? 'This order has been cancelled.'
+                  : (order.status === 'Delivered' ? 'Your package has been delivered' : 'Your package is on the way')}
               </p>
             </div>
             <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${badgeClass}`}>
@@ -15289,8 +15313,8 @@ const TrackOrderPage = ({ orders }) => {
           </div>
 
           <ol className="mt-5 relative space-y-3 pl-2">
-            {timeline.map((step, index) => {
-              const isLast = index === timeline.length - 1;
+            {(isCancelledOrder ? cancellationTimeline : timeline).map((step, index, arr) => {
+              const isLast = index === arr.length - 1;
               const reached = step.reached;
               return (
                 <li key={step.key} className="relative pl-10">
@@ -15342,11 +15366,39 @@ const TrackOrderPage = ({ orders }) => {
           </ol>
 
           <div className="mt-5 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-4 py-3 text-xs text-[var(--svs-text)]">
-            We&apos;ll notify you via email and SMS when your order status changes.
+            {isCancelledOrder
+              ? (order.paymentMethod === 'Card'
+                ? 'Refund has been issued. Bank reflection can take 3-7 business days.'
+                : 'We\u2019ll keep you posted by email and SMS as the refund settles.')
+              : 'We\u2019ll notify you via email and SMS when your order status changes.'}
           </div>
         </section>
 
         {/* Delivery Details */}
+        {isCancelledOrder ? (
+          <section className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-5 shadow-sm sm:p-6">
+            <h2 className="text-base font-bold text-rose-900">Cancellation Details</h2>
+            <p className="text-xs text-rose-700">This order will not be shipped. Refund processing details below.</p>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-xl border border-rose-200 bg-white p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-700">Refund Method</p>
+                <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{order.paymentMethod === 'Card' ? 'Credit Card (original)' : (order.paymentMethod || 'Original payment method')}</p>
+              </div>
+              <div className="rounded-xl border border-rose-200 bg-white p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-700">Processing Time</p>
+                <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">5-7 business days</p>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-rose-200 bg-white px-4 py-3 text-xs text-[var(--svs-text)]">
+              Need assistance?{' '}
+              <Link to="/help-center" className="font-semibold text-[var(--svs-primary-strong)] underline">
+                Contact Support
+              </Link>
+            </div>
+          </section>
+        ) : (
         <section className="mt-6 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-sm sm:p-6">
           <h2 className="text-base font-bold text-[var(--svs-primary-strong)]">Delivery Details</h2>
           <p className="text-xs text-[var(--svs-muted)]">
@@ -15396,6 +15448,7 @@ const TrackOrderPage = ({ orders }) => {
             </Link>
           </div>
         </section>
+        )}
 
         {/* Footer Buttons */}
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -15449,8 +15502,8 @@ const getOrderDisplayMeta = (order) => {
     };
   }
 
-  if (status === 'Cancelled') {
-    return { label: 'Cancelled', dateLabel: formatOrdersDateLong(createdAt), tone: 'cancelled' };
+  if (status === 'Cancelled' || status === 'Cancelled by Buyer' || status === 'Cancelled by Seller') {
+    return { label: 'Cancelled', dateLabel: formatOrdersDateLong(order.cancelledAt ? new Date(order.cancelledAt) : createdAt), tone: 'cancelled' };
   }
   if (status === 'Refund Pending') {
     return { label: 'Refund Pending', dateLabel: formatOrdersDateLong(createdAt), tone: 'refund' };
@@ -15476,6 +15529,8 @@ const OrderCard = ({ order, onCancelOrder, cancellingOrderId, onSetCancelError }
   const navigate = useNavigate();
   const meta = getOrderDisplayMeta(order);
   const item = order.items?.[0];
+  const existingReturn = useMemo(() => getReturnForOrder(order.id), [order.id]);
+  const existingExchange = useMemo(() => getExchangeForOrder(order.id), [order.id]);
   if (!item) return null;
 
   const labelToneClass = meta.tone === 'cancelled'
@@ -15486,13 +15541,6 @@ const OrderCard = ({ order, onCancelOrder, cancellingOrderId, onSetCancelError }
   const returnWindowClosed = Boolean(meta.returnWindowClosed);
   const canCancel = canBuyerCancelOrder(order.status);
   const isCancelling = cancellingOrderId === order.id;
-
-  const handleCancelClick = async () => {
-    if (!canCancel || !onCancelOrder) return;
-    onSetCancelError('');
-    const result = await onCancelOrder(order.id);
-    if (result?.error) onSetCancelError(result.error);
-  };
 
   const ratingValue = Math.max(0, Math.min(5, Number(order.rating ?? item.rating ?? (isDelivered ? 3 : 0)) || 0));
 
@@ -15605,23 +15653,1806 @@ const OrderCard = ({ order, onCancelOrder, cancellingOrderId, onSetCancelError }
           <div className="flex flex-wrap items-center gap-2 sm:justify-end">
             <button
               type="button"
-              onClick={handleCancelClick}
+              onClick={() => navigate(`/orders/${order.id}/cancel`)}
               disabled={!canCancel || isCancelling}
               className="rounded-lg border border-[var(--svs-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isCancelling ? 'Cancelling...' : 'Cancel Order'}
             </button>
-            <button
-              type="button"
-              disabled={!isDelivered || returnWindowClosed}
-              className="rounded-lg border border-[var(--svs-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Return/Exchange
-            </button>
+            {existingReturn ? (
+              <button
+                type="button"
+                onClick={() => navigate(`/orders/${order.id}/return/track`)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--svs-primary-strong)] bg-[var(--svs-primary-strong)] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[var(--svs-primary)]"
+              >
+                <RefreshCw className="h-3.5 w-3.5" /> Track Return &middot; {existingReturn.status}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => navigate(`/orders/${order.id}/return`, { state: { orderId: order.id, reference: order.reference } })}
+                disabled={!isDelivered || returnWindowClosed}
+                className="rounded-lg border border-[var(--svs-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Return
+              </button>
+            )}
+            {existingExchange ? (
+              <button
+                type="button"
+                onClick={() => navigate(`/orders/${order.id}/exchange/track`)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--svs-primary-strong)] bg-[var(--svs-primary-strong)] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[var(--svs-primary)]"
+              >
+                <RefreshCw className="h-3.5 w-3.5" /> Track Exchange &middot; {existingExchange.status}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => navigate(`/orders/${order.id}/exchange`, { state: { orderId: order.id, reference: order.reference } })}
+                disabled={!isDelivered || returnWindowClosed}
+                className="rounded-lg border border-[var(--svs-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Exchange
+              </button>
+            )}
           </div>
         </div>
       </div>
     </article>
+  );
+};
+
+const RETURN_REASONS = [
+  { value: 'defective', label: 'Item is defective / not working' },
+  { value: 'damaged', label: 'Damaged during delivery' },
+  { value: 'wrong_item', label: 'Wrong item received' },
+  { value: 'not_as_described', label: 'Not as described' },
+  { value: 'quality', label: 'Item failed quality checks' },
+  { value: 'changed_mind', label: 'Changed my mind' },
+  { value: 'other', label: 'Other reason' },
+];
+
+const RETURN_TIMELINE_STEPS = [
+  { key: 'inspection', label: 'Request Inspection', detail: 'Submitted via Buyer' },
+  { key: 'pickup', label: 'Pickup Scheduled', detail: 'Item collected from buyer' },
+  { key: 'quality', label: 'Quality Check', detail: '1-3 business days' },
+  { key: 'refund', label: 'Refund Issued', detail: '3-7 business days' },
+];
+
+const RETURN_STATUS_FLOW = ['Submitted', 'Pickup Scheduled', 'Item Picked Up', 'In Transit', 'Quality Check', 'Refund Issued'];
+const RETURNS_STORAGE_KEY = 'svs-returns';
+
+const EXCHANGE_REASONS = [
+  { value: 'defective', label: 'Defective product' },
+  { value: 'wrong_item', label: 'Wrong item delivered' },
+  { value: 'not_as_described', label: 'Not as described' },
+  { value: 'damaged', label: 'Damaged during delivery' },
+  { value: 'poor_quality', label: 'Poor quality' },
+  { value: 'size_fit', label: 'Size or fit issue' },
+  { value: 'changed_mind', label: 'Changed my mind' },
+  { value: 'other', label: 'Other reason' },
+];
+
+const EXCHANGE_TIMELINE_STEPS = [
+  { key: 'submitted', label: 'Request Submitted', detail: 'Instant confirmation' },
+  { key: 'pickup', label: 'Pickup Scheduled', detail: 'Item collected from you' },
+  { key: 'quality', label: 'Quality Check', detail: '1-2 business days' },
+  { key: 'shipped', label: 'Exchange Shipped', detail: '5-7 business days' },
+];
+
+const EXCHANGE_STATUS_FLOW = ['Submitted', 'Pickup Scheduled', 'Item Picked Up', 'Quality Check', 'Exchange Shipped', 'Exchange Delivered'];
+const EXCHANGES_STORAGE_KEY = 'svs-exchanges';
+
+const EXCHANGE_TIMELINE_DESCRIPTIONS = {
+  'Submitted': 'Your exchange request has been received.',
+  'Pickup Scheduled': 'A courier has been assigned for pickup.',
+  'Item Picked Up': 'The item has been collected from your address.',
+  'Quality Check': 'The seller is inspecting the returned item.',
+  'Exchange Shipped': 'The replacement item is on its way to you.',
+  'Exchange Delivered': 'Your replacement item has been delivered.',
+};
+
+const readStoredList = (key) => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeStoredList = (key, list) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(list));
+  } catch {
+    /* ignore quota errors */
+  }
+};
+
+const readStoredExchanges = () => readStoredList(EXCHANGES_STORAGE_KEY);
+const writeStoredExchanges = (list) => writeStoredList(EXCHANGES_STORAGE_KEY, list);
+
+const getExchangeForOrder = (orderId) => {
+  if (!orderId) return null;
+  return readStoredExchanges().find((r) => String(r.orderId) === String(orderId)) || null;
+};
+
+const saveExchangeRequest = (entry) => {
+  const existing = readStoredExchanges().filter((r) => String(r.orderId) !== String(entry.orderId));
+  const next = [{ ...entry }, ...existing];
+  writeStoredExchanges(next);
+  return entry;
+};
+
+const buildExchangeTimeline = (entry) => {
+  const status = entry?.status || 'Submitted';
+  const statusIndex = Math.max(0, EXCHANGE_STATUS_FLOW.indexOf(status));
+  const baseAt = entry?.createdAt ? new Date(entry.createdAt) : new Date();
+  const history = Array.isArray(entry?.history) ? entry.history : [];
+  return EXCHANGE_STATUS_FLOW.map((label, idx) => {
+    const reached = idx <= statusIndex;
+    const isCurrent = idx === statusIndex;
+    const histEntry = history.find((h) => h.status === label);
+    const at = histEntry?.at ? new Date(histEntry.at) : (idx === 0 && reached ? baseAt : null);
+    return {
+      key: label,
+      title: label,
+      description: EXCHANGE_TIMELINE_DESCRIPTIONS[label] || '',
+      reached,
+      isCurrent,
+      at,
+    };
+  });
+};
+
+const readStoredReturns = () => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(RETURNS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeStoredReturns = (returns) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(RETURNS_STORAGE_KEY, JSON.stringify(returns));
+  } catch {
+    /* ignore quota errors */
+  }
+};
+
+const getReturnForOrder = (orderId) => {
+  if (!orderId) return null;
+  return readStoredReturns().find((r) => String(r.orderId) === String(orderId)) || null;
+};
+
+const saveReturnRequest = (entry) => {
+  const existing = readStoredReturns().filter((r) => String(r.orderId) !== String(entry.orderId));
+  const next = [{ ...entry }, ...existing];
+  writeStoredReturns(next);
+  return entry;
+};
+
+const buildReturnTimeline = (returnEntry) => {
+  const status = returnEntry?.status || 'Submitted';
+  const statusIndex = Math.max(0, RETURN_STATUS_FLOW.indexOf(status));
+  const baseAt = returnEntry?.createdAt ? new Date(returnEntry.createdAt) : new Date();
+  const history = Array.isArray(returnEntry?.history) ? returnEntry.history : [];
+  return RETURN_STATUS_FLOW.map((label, idx) => {
+    const reached = idx <= statusIndex;
+    const isCurrent = idx === statusIndex;
+    const histEntry = history.find((h) => h.status === label);
+    const at = histEntry?.at ? new Date(histEntry.at) : (idx === 0 && reached ? baseAt : null);
+    return {
+      key: label,
+      title: label,
+      description: RETURN_TIMELINE_DESCRIPTIONS[label] || '',
+      reached,
+      isCurrent,
+      at,
+    };
+  });
+};
+
+const RETURN_TIMELINE_DESCRIPTIONS = {
+  'Submitted': 'Your return request has been received.',
+  'Pickup Scheduled': 'A courier has been assigned for pickup.',
+  'Item Picked Up': 'The item has been collected from your address.',
+  'In Transit': 'The item is on its way back to the seller.',
+  'Quality Check': 'The seller is inspecting the returned item.',
+  'Refund Issued': 'Your refund has been issued. Allow 3-7 business days for it to reflect.',
+};
+
+const SellerReturnsInbox = () => {
+  const [returns, setReturns] = useState(() => readStoredReturns());
+
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (!e || e.key === RETURNS_STORAGE_KEY) setReturns(readStoredReturns());
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  const advance = (entry) => {
+    const idx = Math.max(0, RETURN_STATUS_FLOW.indexOf(entry.status));
+    if (idx >= RETURN_STATUS_FLOW.length - 1) return;
+    const nextStatus = RETURN_STATUS_FLOW[idx + 1];
+    const updated = {
+      ...entry,
+      status: nextStatus,
+      history: [...(entry.history || []), { status: nextStatus, at: new Date().toISOString() }],
+    };
+    saveReturnRequest(updated);
+    setReturns(readStoredReturns());
+  };
+
+  if (!returns.length) return null;
+
+  return (
+    <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-bold text-[var(--svs-primary-strong)]">Returns Inbox</h3>
+          <p className="text-xs text-[var(--svs-muted)]">Manage buyer return requests and advance their status.</p>
+        </div>
+        <span className="rounded-full bg-white px-2.5 py-0.5 text-[11px] font-bold text-[var(--svs-primary-strong)]">{returns.length}</span>
+      </div>
+      <ul className="mt-3 space-y-2">
+        {returns.map((entry) => {
+          const idx = Math.max(0, RETURN_STATUS_FLOW.indexOf(entry.status));
+          const isComplete = idx >= RETURN_STATUS_FLOW.length - 1;
+          const nextStatus = isComplete ? null : RETURN_STATUS_FLOW[idx + 1];
+          return (
+            <li key={entry.orderId} className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--svs-border)] bg-white p-3">
+              {entry.itemImage ? (
+                <img src={entry.itemImage} alt={entry.itemTitle} className="h-12 w-12 flex-shrink-0 rounded-md object-cover" loading="lazy" />
+              ) : (
+                <div className="h-12 w-12 flex-shrink-0 rounded-md bg-[var(--svs-surface-soft)]" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-[var(--svs-text)]">{entry.itemTitle}</p>
+                <p className="truncate text-[11px] text-[var(--svs-muted)]">
+                  {entry.reference || entry.orderId} &middot; {entry.reasonLabel || entry.reason}
+                </p>
+              </div>
+              <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${isComplete ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] text-[var(--svs-primary-strong)]'}`}>
+                {entry.status}
+              </span>
+              {nextStatus ? (
+                <button
+                  type="button"
+                  onClick={() => advance(entry)}
+                  className={`${cudyBluePrimaryButtonClassName} inline-flex items-center gap-1.5 rounded-lg bg-[var(--svs-primary-strong)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--svs-primary)]`}
+                >
+                  <RefreshCw className="h-3.5 w-3.5" /> Advance to {nextStatus}
+                </button>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+};
+
+const SellerExchangesInbox = () => {
+  const [exchanges, setExchanges] = useState(() => readStoredExchanges());
+
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (!e || e.key === EXCHANGES_STORAGE_KEY) setExchanges(readStoredExchanges());
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  const advance = (entry) => {
+    const idx = Math.max(0, EXCHANGE_STATUS_FLOW.indexOf(entry.status));
+    if (idx >= EXCHANGE_STATUS_FLOW.length - 1) return;
+    const nextStatus = EXCHANGE_STATUS_FLOW[idx + 1];
+    const updated = {
+      ...entry,
+      status: nextStatus,
+      history: [...(entry.history || []), { status: nextStatus, at: new Date().toISOString() }],
+    };
+    saveExchangeRequest(updated);
+    setExchanges(readStoredExchanges());
+  };
+
+  if (!exchanges.length) return null;
+
+  return (
+    <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-bold text-[var(--svs-primary-strong)]">Exchanges Inbox</h3>
+          <p className="text-xs text-[var(--svs-muted)]">Manage buyer exchange requests and advance their status.</p>
+        </div>
+        <span className="rounded-full bg-white px-2.5 py-0.5 text-[11px] font-bold text-[var(--svs-primary-strong)]">{exchanges.length}</span>
+      </div>
+      <ul className="mt-3 space-y-2">
+        {exchanges.map((entry) => {
+          const idx = Math.max(0, EXCHANGE_STATUS_FLOW.indexOf(entry.status));
+          const isComplete = idx >= EXCHANGE_STATUS_FLOW.length - 1;
+          const nextStatus = isComplete ? null : EXCHANGE_STATUS_FLOW[idx + 1];
+          return (
+            <li key={entry.orderId} className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--svs-border)] bg-white p-3">
+              {entry.itemImage ? (
+                <img src={entry.itemImage} alt={entry.itemTitle} className="h-12 w-12 flex-shrink-0 rounded-md object-cover" loading="lazy" />
+              ) : (
+                <div className="h-12 w-12 flex-shrink-0 rounded-md bg-[var(--svs-surface-soft)]" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-[var(--svs-text)]">{entry.itemTitle}</p>
+                <p className="truncate text-[11px] text-[var(--svs-muted)]">
+                  {entry.reference || entry.orderId} &middot; {entry.reasonLabel || entry.reason}
+                </p>
+              </div>
+              <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${isComplete ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] text-[var(--svs-primary-strong)]'}`}>
+                {entry.status}
+              </span>
+              {nextStatus ? (
+                <button
+                  type="button"
+                  onClick={() => advance(entry)}
+                  className={`${cudyBluePrimaryButtonClassName} inline-flex items-center gap-1.5 rounded-lg bg-[var(--svs-primary-strong)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--svs-primary)]`}
+                >
+                  <RefreshCw className="h-3.5 w-3.5" /> Advance to {nextStatus}
+                </button>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+};
+
+const ReturnOrderPage = ({ orders }) => {
+  const navigate = useNavigate();
+  const { orderId } = useParams();
+  const order = useMemo(() => orders.find((o) => String(o.id) === String(orderId)), [orders, orderId]);
+  const item = order?.items?.[0];
+
+  const [reason, setReason] = useState('');
+  const [notes, setNotes] = useState('');
+  const [files, setFiles] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
+
+  if (!order || !item) {
+    return (
+      <PageFrame
+        title="Return Your Order"
+        subtitle="Start a return for eligible products in just a few simple steps."
+        titleClassName="text-center"
+        subtitleClassName="text-center"
+      >
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          We couldn&apos;t find that order.{' '}
+          <button type="button" onClick={() => navigate('/orders')} className="font-semibold underline">Back to Orders</button>
+        </div>
+      </PageFrame>
+    );
+  }
+
+  const meta = getOrderDisplayMeta(order);
+  const itemTotal = (Number(item.price) || 0) * (Number(item.quantity) || 1);
+  const shipping = order.customer?.shippingAddress || {};
+  const buyerName = order.customer?.name || `${shipping.firstName || ''} ${shipping.lastName || ''}`.trim() || 'Buyer';
+  const buyerPhone = order.customer?.phone || shipping.phone || '';
+  const addressLines = [
+    shipping.address1,
+    shipping.address2,
+    [shipping.city, shipping.province, shipping.postalCode].filter(Boolean).join(', '),
+    shipping.country,
+  ].filter(Boolean);
+
+  const handleFilesChange = (e) => {
+    const incoming = Array.from(e.target.files || []);
+    if (!incoming.length) return;
+    setFiles((prev) => [...prev, ...incoming].slice(0, 5));
+    e.target.value = '';
+  };
+
+  const removeFile = (index) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setError('');
+    if (!reason) {
+      setError('Please select a reason for your return.');
+      return;
+    }
+    setSubmitting(true);
+    setTimeout(() => {
+      try {
+        saveReturnRequest({
+          orderId: order.id,
+          reference: order.reference || null,
+          itemTitle: item.title,
+          itemImage: item.image || null,
+          itemTotal,
+          reason,
+          reasonLabel: RETURN_REASONS.find((r) => r.value === reason)?.label || reason,
+          notes,
+          evidenceCount: files.length,
+          status: 'Submitted',
+          createdAt: new Date().toISOString(),
+          history: [{ status: 'Submitted', at: new Date().toISOString() }],
+          pickupAddress: shipping,
+          buyerName,
+          buyerPhone,
+        });
+      } catch {
+        /* localStorage unavailable - continue anyway */
+      }
+      setSubmitting(false);
+      setSubmitted(true);
+    }, 700);
+  };
+
+  return (
+    <PageFrame
+      title="Return Your Order"
+      subtitle="Start a return for eligible products in just a few simple steps."
+      titleClassName="text-center"
+      subtitleClassName="text-center"
+    >
+      <div className="-mt-2 mb-4 flex items-center">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          aria-label="Go back"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--svs-border)] bg-white text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)]"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Selected Order Item */}
+        <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 shadow-[0_4px_8px_rgba(0,0,0,0.04)]">
+          <h3 className="text-sm font-bold text-[var(--svs-text)]">Selected Order Item</h3>
+          <p className="mt-1 text-xs text-[var(--svs-muted)]">Choose the product you&apos;d like to return or exchange from your recent orders.</p>
+          <div className="mt-4 rounded-xl bg-white p-3 sm:p-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-1 items-center gap-3 sm:gap-4">
+                {item.image ? (
+                  <img src={item.image} alt={item.title} className="h-16 w-16 flex-shrink-0 rounded-lg object-cover sm:h-20 sm:w-20" loading="lazy" />
+                ) : (
+                  <div className="h-16 w-16 flex-shrink-0 rounded-lg bg-[var(--svs-surface-soft)] sm:h-20 sm:w-20" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-[var(--svs-text)] sm:text-base">{item.title}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px]">
+                    {meta.label ? (
+                      <span className="rounded-md bg-[var(--svs-primary)]/10 px-2 py-0.5 font-semibold text-[var(--svs-primary-strong)]">{meta.label}</span>
+                    ) : null}
+                    {order.reference ? (
+                      <span className="rounded-md border border-[var(--svs-border)] bg-white px-2 py-0.5 font-medium text-[var(--svs-muted)]">{order.reference}</span>
+                    ) : null}
+                  </div>
+                  <p className="mt-1 text-xs text-[var(--svs-muted)]">
+                    Order ID: {order.id} &middot; {meta.dateLabel}
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--svs-muted)]">Qty: {item.quantity}</p>
+                </div>
+              </div>
+              <div className="text-right text-sm font-bold text-[var(--svs-text)] sm:text-base">
+                {formatAmountInCurrency(itemTotal)}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Reason for Return */}
+        <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 shadow-[0_4px_8px_rgba(0,0,0,0.04)]">
+          <h3 className="text-sm font-bold text-[var(--svs-text)]">Reason for Return</h3>
+          <p className="mt-1 text-xs text-[var(--svs-muted)]">Please tell us why you&apos;d like to return this product. This helps us improve our service.</p>
+
+          <label className="mt-4 block text-xs font-semibold text-[var(--svs-text)]">Select a reason</label>
+          <div className="relative mt-1">
+            <select
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="w-full appearance-none rounded-lg border border-[var(--svs-border)] bg-white px-3 py-2.5 pr-9 text-sm text-[var(--svs-text)] shadow-sm focus:border-[var(--svs-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--svs-primary)]/30"
+            >
+              <option value="">Choose a reason...</option>
+              {RETURN_REASONS.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--svs-muted)]" />
+          </div>
+
+          <label className="mt-4 block text-xs font-semibold text-[var(--svs-text)]">Please specify</label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+            maxLength={500}
+            placeholder="Tell us more about your reason..."
+            className="mt-1 w-full rounded-lg border border-[var(--svs-border)] bg-white px-3 py-2 text-sm text-[var(--svs-text)] shadow-sm focus:border-[var(--svs-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--svs-primary)]/30"
+          />
+          <p className="mt-1 text-[11px] text-[var(--svs-muted)]">{notes.length}/500 characters</p>
+
+          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
+            <p className="font-semibold text-emerald-900">Helpful Tips</p>
+            <ul className="mt-1.5 list-disc space-y-1 pl-4">
+              <li>Be specific about the issue to help us resolve it faster.</li>
+              <li>Upload photos if the product is damaged or defective.</li>
+              <li>Keep all original packaging and accessories.</li>
+            </ul>
+          </div>
+
+          {error ? (
+            <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</div>
+          ) : null}
+        </section>
+
+        {/* Upload Evidence */}
+        <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 shadow-[0_4px_8px_rgba(0,0,0,0.04)]">
+          <h3 className="text-sm font-bold text-[var(--svs-text)]">Upload Evidence (Optional)</h3>
+          <p className="mt-1 text-xs text-[var(--svs-muted)]">Upload photos showing product damage, defects, or any issues. This helps us process your request faster.</p>
+
+          <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[var(--svs-primary)]/40 bg-white px-4 py-8 text-center transition hover:bg-[var(--svs-surface-soft)]">
+            <Upload className="h-8 w-8 text-[var(--svs-primary)]" />
+            <p className="mt-2 text-sm font-semibold text-[var(--svs-text)]">Drop files here or click to upload</p>
+            <p className="mt-1 text-[11px] text-[var(--svs-muted)]">PNG, JPG up to 5MB &middot; Up to 5 images</p>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFilesChange}
+              className="hidden"
+            />
+          </label>
+
+          {files.length ? (
+            <ul className="mt-3 space-y-2">
+              {files.map((f, i) => (
+                <li key={`${f.name}-${i}`} className="flex items-center justify-between rounded-lg border border-[var(--svs-border)] bg-white px-3 py-2 text-xs">
+                  <span className="truncate text-[var(--svs-text)]">{f.name}</span>
+                  <button type="button" onClick={() => removeFile(i)} aria-label={`Remove ${f.name}`} className="ml-3 inline-flex h-6 w-6 items-center justify-center rounded-md text-rose-500 hover:bg-rose-50">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+
+        {/* Pickup Address */}
+        <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 shadow-[0_4px_8px_rgba(0,0,0,0.04)]">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-[var(--svs-text)]">Pickup Address</h3>
+              <p className="mt-1 text-xs text-[var(--svs-muted)]">Confirm or update the address where we should pick up the item.</p>
+            </div>
+            <button type="button" className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--svs-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--svs-primary-strong)] hover:bg-[var(--svs-surface-soft)]">
+              <Pencil className="h-3.5 w-3.5" /> Edit
+            </button>
+          </div>
+          <div className="mt-3 rounded-xl bg-white p-4 text-sm text-[var(--svs-text)]">
+            <p className="font-bold">{buyerName}</p>
+            {buyerPhone ? <p className="mt-0.5 text-[var(--svs-primary-strong)]">{buyerPhone}</p> : null}
+            {addressLines.length ? (
+              <div className="mt-1 space-y-0.5 text-xs text-[var(--svs-muted)]">
+                {addressLines.map((line, i) => <p key={i}>{line}</p>)}
+              </div>
+            ) : (
+              <p className="mt-1 text-xs text-[var(--svs-muted)]">No address on file. Please add one before submitting.</p>
+            )}
+          </div>
+        </section>
+
+        {/* Estimated Refund */}
+        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-emerald-900">Estimated Refund</h3>
+              <p className="mt-1 text-xs text-emerald-800">Refund will be processed within 3-7 business days after item inspection.</p>
+            </div>
+            <p className="text-lg font-extrabold text-emerald-900 sm:text-xl">{formatAmountInCurrency(itemTotal)}</p>
+          </div>
+        </section>
+
+        {/* Processing Timeline */}
+        <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5">
+          <h3 className="text-sm font-bold text-[var(--svs-text)]">Processing Timeline</h3>
+          <ol className="mt-4 space-y-4">
+            {RETURN_TIMELINE_STEPS.map((step, idx) => (
+              <li key={step.key} className="flex items-start gap-3">
+                <span className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[var(--svs-primary)] text-[11px] font-bold text-white">
+                  {idx + 1}
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-[var(--svs-text)]">{step.label}</p>
+                  <p className="text-xs text-[var(--svs-muted)]">{step.detail}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        {/* Return Policy */}
+        <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-[var(--svs-primary-strong)]" />
+            <h3 className="text-sm font-bold text-[var(--svs-text)]">Return Policy</h3>
+          </div>
+          <ul className="mt-3 list-disc space-y-1.5 pl-5 text-xs text-[var(--svs-muted)]">
+            <li>Hardware can be returned within 30 days of delivery.</li>
+            <li>Unopened software can be returned within 14 days of purchase; activated software is non-returnable.</li>
+            <li>Products must be unused, in original packaging, with all accessories and labels intact.</li>
+            <li>Items showing misuse or damage (buyer-defect) are not eligible for return.</li>
+            <li>Free pickup is available after return approval.</li>
+          </ul>
+        </section>
+
+        <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-between">
+          <button
+            type="button"
+            onClick={() => navigate(`/orders/${order.id}/track`)}
+            className="rounded-xl border border-[var(--svs-border)] bg-white px-6 py-3 text-sm font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)] sm:min-w-[180px]"
+          >
+            Go Back to Order Details
+          </button>
+          <button
+            type="submit"
+            disabled={submitting}
+            className={`${cudyBluePrimaryButtonClassName} rounded-xl bg-[var(--svs-primary-strong)] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary)] disabled:cursor-not-allowed disabled:opacity-60 sm:min-w-[180px]`}
+          >
+            {submitting ? 'Submitting...' : 'Submit Request'}
+          </button>
+        </div>
+      </form>
+
+      {submitted ? (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/45 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Return request confirmation"
+          onClick={() => { setSubmitted(false); navigate('/orders'); }}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl bg-white p-8 text-center shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--svs-primary)]/10">
+              <RefreshCw className="h-7 w-7 text-[var(--svs-primary-strong)]" />
+            </div>
+            <h3 className="mt-4 text-lg font-extrabold text-[var(--svs-primary-strong)]">Return Request Submitted!</h3>
+            <p className="mt-2 text-xs text-[var(--svs-muted)]">
+              We&apos;ve received your return request. You&apos;ll get an email confirmation with pickup details shortly.
+            </p>
+            <div className="mt-5 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => navigate(`/orders/${order.id}/return/track`)}
+                className={`${cudyBluePrimaryButtonClassName} w-full rounded-lg bg-[var(--svs-primary-strong)] py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary)]`}
+              >
+                Track Return
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/orders')}
+                className="w-full rounded-lg border border-[var(--svs-border)] bg-white py-2.5 text-sm font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)]"
+              >
+                Back to Orders
+              </button>
+              <button
+                type="button"
+                onClick={() => setSubmitted(false)}
+                className="w-full rounded-lg py-1.5 text-xs font-medium text-[var(--svs-muted)] transition hover:text-[var(--svs-text)]"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </PageFrame>
+  );
+};
+
+const TrackReturnPage = ({ orders }) => {
+  const { orderId } = useParams();
+  const navigate = useNavigate();
+  const [returnEntry, setReturnEntry] = useState(() => getReturnForOrder(orderId));
+
+  useEffect(() => {
+    setReturnEntry(getReturnForOrder(orderId));
+  }, [orderId]);
+
+  const order = useMemo(() => orders.find((o) => String(o.id) === String(orderId)), [orders, orderId]);
+
+  if (!returnEntry) {
+    return (
+      <main className="mx-auto w-full max-w-3xl px-4 py-10 sm:py-14">
+        <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-8 text-center shadow-sm">
+          <h1 className="text-2xl font-bold text-[var(--svs-text)]">No return found</h1>
+          <p className="mt-2 text-sm text-[var(--svs-muted)]">We couldn&apos;t find a return request for this order.</p>
+          <div className="mt-6 flex justify-center gap-3">
+            <Link to="/orders" className={`${cudyBluePrimaryButtonClassName} rounded-xl bg-[var(--svs-primary-strong)] px-5 py-2.5 text-sm font-bold text-white`}>View Orders</Link>
+            {order ? (
+              <Link to={`/orders/${order.id}/return`} className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 py-2.5 text-sm font-bold text-[var(--svs-text)]">Start a Return</Link>
+            ) : null}
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  const timeline = buildReturnTimeline(returnEntry);
+  const isComplete = returnEntry.status === 'Refund Issued';
+  const createdAt = returnEntry.createdAt ? new Date(returnEntry.createdAt) : null;
+
+  const refundEta = (() => {
+    if (!createdAt) return null;
+    const eta = new Date(createdAt);
+    eta.setDate(eta.getDate() + 10);
+    return eta;
+  })();
+
+  return (
+    <main className="bg-[var(--svs-bg)] py-6 sm:py-10">
+      <div className="mx-auto w-full max-w-4xl px-4 sm:px-6">
+        <div className="mb-6 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            aria-label="Go back"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--svs-primary-strong)] transition hover:bg-[var(--svs-cyan-surface)]"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="mb-6 text-center">
+          <h1 className="text-2xl font-black text-[var(--svs-primary-strong)] sm:text-3xl">Track Your Return</h1>
+          <p className="mt-1 text-sm text-[var(--svs-muted)]">Monitor the status of your return request in real-time.</p>
+        </div>
+
+        {/* Return Summary */}
+        <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-sm sm:p-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-base font-bold text-[var(--svs-primary-strong)]">Return Summary</h2>
+              <p className="text-xs text-[var(--svs-muted)]">
+                {isComplete ? 'Your refund has been issued.' : 'Your return is being processed.'}
+              </p>
+            </div>
+            <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${isComplete ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] text-[var(--svs-primary-strong)]'}`}>
+              <RefreshCw className="h-3.5 w-3.5" /> {returnEntry.status}
+            </span>
+          </div>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
+                <Package className="h-4 w-4 text-[var(--svs-primary-strong)]" /> Order
+              </div>
+              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{returnEntry.reference || returnEntry.orderId}</p>
+            </div>
+            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
+                <CalendarDays className="h-4 w-4 text-[var(--svs-primary-strong)]" /> Requested On
+              </div>
+              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{createdAt ? formatTrackDate(createdAt) : '—'}</p>
+            </div>
+            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
+                <AlertTriangle className="h-4 w-4 text-[var(--svs-primary-strong)]" /> Reason
+              </div>
+              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{returnEntry.reasonLabel || returnEntry.reason}</p>
+            </div>
+            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
+                <DollarSign className="h-4 w-4 text-[var(--svs-primary-strong)]" /> Estimated Refund
+              </div>
+              <p className="mt-1 text-sm font-bold text-emerald-700">{formatAmountInCurrency(returnEntry.itemTotal || 0)}</p>
+            </div>
+          </div>
+
+          {/* Item snapshot */}
+          <div className="mt-5 flex items-center gap-3 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3 sm:p-4">
+            {returnEntry.itemImage ? (
+              <img src={returnEntry.itemImage} alt={returnEntry.itemTitle} className="h-14 w-14 flex-shrink-0 rounded-lg object-cover sm:h-16 sm:w-16" loading="lazy" />
+            ) : (
+              <div className="h-14 w-14 flex-shrink-0 rounded-lg bg-[var(--svs-surface)] sm:h-16 sm:w-16" />
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-bold text-[var(--svs-text)]">{returnEntry.itemTitle}</p>
+              {returnEntry.notes ? (
+                <p className="mt-0.5 line-clamp-2 text-xs text-[var(--svs-muted)]">&ldquo;{returnEntry.notes}&rdquo;</p>
+              ) : null}
+            </div>
+          </div>
+        </section>
+
+        {/* Live Timeline */}
+        <section className="mt-6 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-sm sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-base font-bold text-[var(--svs-primary-strong)]">Live Tracking</h2>
+              <p className="text-xs text-[var(--svs-muted)]">See real-time updates as your return progresses.</p>
+            </div>
+          </div>
+
+          <ol className="mt-5 relative space-y-3 pl-2">
+            {timeline.map((step, index) => {
+              const isLast = index === timeline.length - 1;
+              const reached = step.reached;
+              return (
+                <li key={step.key} className="relative pl-10">
+                  {!isLast ? (
+                    <span
+                      aria-hidden="true"
+                      className={`absolute left-[14px] top-7 h-[calc(100%-12px)] w-0.5 ${reached ? 'bg-[var(--svs-primary-strong)]' : 'bg-[var(--svs-border)]'}`}
+                    />
+                  ) : null}
+                  <span
+                    aria-hidden="true"
+                    className={`absolute left-0 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full border-2 ${reached ? 'border-[var(--svs-primary-strong)] bg-[var(--svs-primary-strong)] text-white' : 'border-[var(--svs-border)] bg-[var(--svs-surface)] text-[var(--svs-muted)]'}`}
+                  >
+                    {reached ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-3.5 w-3.5" />}
+                  </span>
+                  <div
+                    className={`rounded-xl border p-3 ${step.isCurrent ? 'border-[var(--svs-primary-strong)] bg-[var(--svs-cyan-surface)]' : reached ? 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)]' : 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)] opacity-70'}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className={`text-sm font-bold ${reached ? 'text-[var(--svs-primary-strong)]' : 'text-[var(--svs-muted)]'}`}>
+                          {step.title}
+                        </p>
+                        <p className="mt-0.5 text-xs text-[var(--svs-muted)]">{step.description}</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--svs-muted)]">
+                          <span className="inline-flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {step.at ? formatTrackTimestamp(step.at) : '—'}
+                          </span>
+                        </div>
+                      </div>
+                      {step.isCurrent ? (
+                        <span className="shrink-0 rounded-full bg-[var(--svs-primary-strong)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+                          Current
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+
+          {refundEta && !isComplete ? (
+            <div className="mt-5 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-4 py-3 text-xs text-[var(--svs-text)]">
+              Expected refund completion: <span className="font-semibold">{formatTrackDate(refundEta)}</span>
+            </div>
+          ) : null}
+        </section>
+
+        {/* Pickup Address */}
+        {returnEntry.pickupAddress ? (
+          <section className="mt-6 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-sm sm:p-6">
+            <h2 className="text-base font-bold text-[var(--svs-primary-strong)]">Pickup Address</h2>
+            <div className="mt-3 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4 text-sm text-[var(--svs-text)]">
+              <p className="font-bold">{returnEntry.buyerName || 'Buyer'}</p>
+              {returnEntry.buyerPhone ? <p className="text-[var(--svs-primary-strong)]">{returnEntry.buyerPhone}</p> : null}
+              {[returnEntry.pickupAddress.address1, returnEntry.pickupAddress.address2, [returnEntry.pickupAddress.city, returnEntry.pickupAddress.province, returnEntry.pickupAddress.postalCode].filter(Boolean).join(', '), returnEntry.pickupAddress.country]
+                .filter(Boolean)
+                .map((line, i) => (
+                  <p key={i} className="text-[var(--svs-muted)]">{line}</p>
+                ))}
+            </div>
+          </section>
+        ) : null}
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <Link
+            to="/orders"
+            className={`${cudyBluePrimaryButtonClassName} inline-flex items-center justify-center rounded-xl bg-[var(--svs-primary-strong)] px-5 py-3 text-sm font-bold text-white`}
+          >
+            View All Orders
+          </Link>
+          <Link
+            to="/help-center"
+            className="inline-flex items-center justify-center rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 py-3 text-sm font-bold text-[var(--svs-text)] transition hover:border-[var(--svs-primary-strong)] hover:text-[var(--svs-primary-strong)]"
+          >
+            Contact Support
+          </Link>
+        </div>
+      </div>
+    </main>
+  );
+};
+
+const ExchangeOrderPage = ({ orders }) => {
+  const navigate = useNavigate();
+  const { orderId } = useParams();
+  const order = useMemo(() => orders.find((o) => String(o.id) === String(orderId)), [orders, orderId]);
+  const item = order?.items?.[0];
+
+  const [reason, setReason] = useState('');
+  const [notes, setNotes] = useState('');
+  const [files, setFiles] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
+
+  if (!order || !item) {
+    return (
+      <PageFrame
+        title="Exchange Your Order"
+        subtitle="Request an exchange for eligible products in just a few simple steps."
+        titleClassName="text-center"
+        subtitleClassName="text-center"
+      >
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          We couldn&apos;t find that order.{' '}
+          <button type="button" onClick={() => navigate('/orders')} className="font-semibold underline">Back to Orders</button>
+        </div>
+      </PageFrame>
+    );
+  }
+
+  const meta = getOrderDisplayMeta(order);
+  const itemTotal = (Number(item.price) || 0) * (Number(item.quantity) || 1);
+  const shipping = order.customer?.shippingAddress || {};
+  const buyerName = order.customer?.name || `${shipping.firstName || ''} ${shipping.lastName || ''}`.trim() || 'Buyer';
+  const buyerPhone = order.customer?.phone || shipping.phone || '';
+  const addressLines = [
+    shipping.address1,
+    shipping.address2,
+    [shipping.city, shipping.province, shipping.postalCode].filter(Boolean).join(', '),
+    shipping.country,
+  ].filter(Boolean);
+
+  const handleFilesChange = (e) => {
+    const incoming = Array.from(e.target.files || []);
+    if (!incoming.length) return;
+    setFiles((prev) => [...prev, ...incoming].slice(0, 5));
+    e.target.value = '';
+  };
+
+  const removeFile = (index) => setFiles((prev) => prev.filter((_, i) => i !== index));
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setError('');
+    if (!reason) {
+      setError('Please select a reason for your exchange.');
+      return;
+    }
+    if (notes && notes.trim().length < 10) {
+      setError('Please provide at least 10 characters in the notes.');
+      return;
+    }
+    setSubmitting(true);
+    setTimeout(() => {
+      try {
+        saveExchangeRequest({
+          orderId: order.id,
+          reference: order.reference || null,
+          itemTitle: item.title,
+          itemImage: item.image || null,
+          itemTotal,
+          reason,
+          reasonLabel: EXCHANGE_REASONS.find((r) => r.value === reason)?.label || reason,
+          notes,
+          evidenceCount: files.length,
+          status: 'Submitted',
+          createdAt: new Date().toISOString(),
+          history: [{ status: 'Submitted', at: new Date().toISOString() }],
+          pickupAddress: shipping,
+          buyerName,
+          buyerPhone,
+        });
+      } catch {
+        /* localStorage unavailable - continue anyway */
+      }
+      setSubmitting(false);
+      setSubmitted(true);
+    }, 700);
+  };
+
+  return (
+    <PageFrame
+      title="Exchange Your Order"
+      subtitle="Request an exchange for eligible products in just a few simple steps."
+      titleClassName="text-center"
+      subtitleClassName="text-center"
+    >
+      <div className="-mt-2 mb-4 flex items-center">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          aria-label="Go back"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--svs-border)] bg-white text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)]"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Selected Order Item */}
+        <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 shadow-[0_4px_8px_rgba(0,0,0,0.04)]">
+          <h3 className="text-sm font-bold text-[var(--svs-text)]">Selected Order Item</h3>
+          <p className="mt-1 text-xs text-[var(--svs-muted)]">Choose the product you&apos;d like to return or exchange from your recent orders.</p>
+          <div className="mt-4 rounded-xl bg-white p-3 sm:p-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-1 items-center gap-3 sm:gap-4">
+                {item.image ? (
+                  <img src={item.image} alt={item.title} className="h-16 w-16 flex-shrink-0 rounded-lg object-cover sm:h-20 sm:w-20" loading="lazy" />
+                ) : (
+                  <div className="h-16 w-16 flex-shrink-0 rounded-lg bg-[var(--svs-surface-soft)] sm:h-20 sm:w-20" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-[var(--svs-text)] sm:text-base">{item.title}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px]">
+                    {meta.label ? (
+                      <span className="rounded-md bg-[var(--svs-primary)]/10 px-2 py-0.5 font-semibold text-[var(--svs-primary-strong)]">{meta.label}</span>
+                    ) : null}
+                    {order.reference ? (
+                      <span className="rounded-md border border-[var(--svs-border)] bg-white px-2 py-0.5 font-medium text-[var(--svs-muted)]">{order.reference}</span>
+                    ) : null}
+                  </div>
+                  <p className="mt-1 text-xs text-[var(--svs-muted)]">
+                    Order ID: {order.id} &middot; {meta.dateLabel}
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--svs-muted)]">Qty: {item.quantity}</p>
+                </div>
+              </div>
+              <div className="text-right text-sm font-bold text-[var(--svs-text)] sm:text-base">
+                {formatAmountInCurrency(itemTotal)}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Reason for Exchange */}
+        <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 shadow-[0_4px_8px_rgba(0,0,0,0.04)]">
+          <h3 className="text-sm font-bold text-[var(--svs-text)]">Reason for Exchange</h3>
+          <p className="mt-1 text-xs text-[var(--svs-muted)]">Please tell us why you&apos;d like to return this product. This helps us improve our service.</p>
+
+          <label className="mt-4 block text-xs font-semibold text-[var(--svs-text)]">Select a reason</label>
+          <div className="relative mt-1">
+            <select
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="w-full appearance-none rounded-lg border border-[var(--svs-border)] bg-white px-3 py-2.5 pr-9 text-sm text-[var(--svs-text)] shadow-sm focus:border-[var(--svs-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--svs-primary)]/30"
+            >
+              <option value="">Choose a reason...</option>
+              {EXCHANGE_REASONS.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--svs-muted)]" />
+          </div>
+
+          <label className="mt-4 block text-xs font-semibold text-[var(--svs-text)]">Please specify</label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+            maxLength={500}
+            placeholder="Tell us more about your reason..."
+            className="mt-1 w-full rounded-lg border border-[var(--svs-border)] bg-white px-3 py-2 text-sm text-[var(--svs-text)] shadow-sm focus:border-[var(--svs-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--svs-primary)]/30"
+          />
+          <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Please provide at least 10 characters.</p>
+
+          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
+            <p className="font-semibold text-emerald-900">Helpful Tips</p>
+            <ul className="mt-1.5 list-disc space-y-1 pl-4">
+              <li>Be specific about the issue to help us resolve it faster.</li>
+              <li>Upload photos if the product is damaged or defective.</li>
+              <li>Keep all original packaging and accessories.</li>
+            </ul>
+          </div>
+
+          {error ? (
+            <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</div>
+          ) : null}
+        </section>
+
+        {/* Upload Evidence */}
+        <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 shadow-[0_4px_8px_rgba(0,0,0,0.04)]">
+          <h3 className="text-sm font-bold text-[var(--svs-text)]">Upload Evidence (Optional)</h3>
+          <p className="mt-1 text-xs text-[var(--svs-muted)]">Upload photos showing product damage, defects, or any issues. This helps us process your request faster.</p>
+
+          <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[var(--svs-primary)]/40 bg-white px-4 py-8 text-center transition hover:bg-[var(--svs-surface-soft)]">
+            <Upload className="h-8 w-8 text-[var(--svs-primary)]" />
+            <p className="mt-2 text-sm font-semibold text-[var(--svs-text)]">Drop files here or click to upload</p>
+            <p className="mt-1 text-[11px] text-[var(--svs-muted)]">PDF, JPG up to 10MB</p>
+            <p className="mt-0.5 text-[11px] text-[var(--svs-muted)]">Upload up to 5 images. Recommended size: 1200x1200px</p>
+            <input type="file" accept="image/*,application/pdf" multiple onChange={handleFilesChange} className="hidden" />
+          </label>
+
+          {files.length ? (
+            <ul className="mt-3 space-y-2">
+              {files.map((f, i) => (
+                <li key={`${f.name}-${i}`} className="flex items-center justify-between rounded-lg border border-[var(--svs-border)] bg-white px-3 py-2 text-xs">
+                  <span className="truncate text-[var(--svs-text)]">{f.name}</span>
+                  <button type="button" onClick={() => removeFile(i)} aria-label={`Remove ${f.name}`} className="ml-3 inline-flex h-6 w-6 items-center justify-center rounded-md text-rose-500 hover:bg-rose-50">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+
+        {/* Pickup Address */}
+        <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 shadow-[0_4px_8px_rgba(0,0,0,0.04)]">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-[var(--svs-text)]">Pickup Address</h3>
+              <p className="mt-1 text-xs text-[var(--svs-muted)]">Confirm or update the address where we should pick up the item.</p>
+            </div>
+            <button type="button" className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--svs-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--svs-primary-strong)] hover:bg-[var(--svs-surface-soft)]">
+              <Pencil className="h-3.5 w-3.5" /> Edit
+            </button>
+          </div>
+          <div className="mt-3 rounded-xl bg-white p-4 text-sm text-[var(--svs-text)]">
+            <p className="font-bold">{buyerName}</p>
+            {buyerPhone ? <p className="mt-0.5 text-[var(--svs-primary-strong)]">{buyerPhone}</p> : null}
+            {addressLines.length ? (
+              <div className="mt-1 space-y-0.5 text-xs text-[var(--svs-muted)]">
+                {addressLines.map((line, i) => <p key={i}>{line}</p>)}
+              </div>
+            ) : (
+              <p className="mt-1 text-xs text-[var(--svs-muted)]">No address on file. Please add one before submitting.</p>
+            )}
+          </div>
+        </section>
+
+        {/* Estimated Refund (placeholder for value of exchange) */}
+        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-emerald-900">Estimated Refund</h3>
+              <p className="mt-1 text-xs text-emerald-800">Refund will be processed within 5-7 business days after item inspection.</p>
+            </div>
+            <p className="text-lg font-extrabold text-emerald-900 sm:text-xl">{formatAmountInCurrency(itemTotal)}</p>
+          </div>
+        </section>
+
+        {/* Processing Timeline */}
+        <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5">
+          <h3 className="text-sm font-bold text-[var(--svs-text)]">Processing Timeline</h3>
+          <ol className="mt-4 space-y-4">
+            {EXCHANGE_TIMELINE_STEPS.map((step, idx) => (
+              <li key={step.key} className="flex items-start gap-3">
+                <span className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[var(--svs-primary)] text-[11px] font-bold text-white">
+                  {idx + 1}
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-[var(--svs-text)]">{step.label}</p>
+                  <p className="text-xs text-[var(--svs-muted)]">{step.detail}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        {/* Exchange Policy */}
+        <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-[var(--svs-primary-strong)]" />
+            <h3 className="text-sm font-bold text-[var(--svs-text)]">Exchange Policy</h3>
+          </div>
+          <ul className="mt-3 list-disc space-y-1.5 pl-5 text-xs text-[var(--svs-muted)]">
+            <li>Hardware can be exchanged within 30 days of delivery.</li>
+            <li>Unopened software can be exchanged within 14 days of purchase; activated software is not eligible for exchange.</li>
+            <li>Products must be unused, in original packaging, with all accessories and labels intact.</li>
+            <li>Items showing misuse or damage (except manufacturing defects) are not eligible for exchange.</li>
+            <li>Free pickup is available after exchange approval.</li>
+          </ul>
+        </section>
+
+        <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-between">
+          <button
+            type="button"
+            onClick={() => navigate(`/orders/${order.id}/track`)}
+            className="rounded-xl border border-[var(--svs-border)] bg-white px-6 py-3 text-sm font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)] sm:min-w-[180px]"
+          >
+            Go Back to Order Details
+          </button>
+          <button
+            type="submit"
+            disabled={submitting}
+            className={`${cudyBluePrimaryButtonClassName} rounded-xl bg-[var(--svs-primary-strong)] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary)] disabled:cursor-not-allowed disabled:opacity-60 sm:min-w-[180px]`}
+          >
+            {submitting ? 'Submitting...' : 'Submit Request'}
+          </button>
+        </div>
+      </form>
+
+      {submitted ? (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/45 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Exchange request confirmation"
+          onClick={() => { setSubmitted(false); navigate('/orders'); }}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl bg-white p-8 text-center shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--svs-primary)]/10">
+              <RefreshCw className="h-7 w-7 text-[var(--svs-primary-strong)]" />
+            </div>
+            <h3 className="mt-4 text-lg font-extrabold text-[var(--svs-primary-strong)]">Exchange Request Submitted!</h3>
+            <p className="mt-2 text-xs text-[var(--svs-muted)]">
+              We&apos;ve received your exchange request. You&apos;ll get an email confirmation with pickup details shortly.
+            </p>
+            <div className="mt-5 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => navigate(`/orders/${order.id}/exchange/track`)}
+                className={`${cudyBluePrimaryButtonClassName} w-full rounded-lg bg-[var(--svs-primary-strong)] py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary)]`}
+              >
+                Track Exchange
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/orders')}
+                className="w-full rounded-lg border border-[var(--svs-border)] bg-white py-2.5 text-sm font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)]"
+              >
+                Back to Orders
+              </button>
+              <button
+                type="button"
+                onClick={() => setSubmitted(false)}
+                className="w-full rounded-lg py-1.5 text-xs font-medium text-[var(--svs-muted)] transition hover:text-[var(--svs-text)]"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </PageFrame>
+  );
+};
+
+const TrackExchangePage = ({ orders }) => {
+  const { orderId } = useParams();
+  const navigate = useNavigate();
+  const [exchangeEntry, setExchangeEntry] = useState(() => getExchangeForOrder(orderId));
+
+  useEffect(() => {
+    setExchangeEntry(getExchangeForOrder(orderId));
+  }, [orderId]);
+
+  const order = useMemo(() => orders.find((o) => String(o.id) === String(orderId)), [orders, orderId]);
+
+  if (!exchangeEntry) {
+    return (
+      <main className="mx-auto w-full max-w-3xl px-4 py-10 sm:py-14">
+        <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-8 text-center shadow-sm">
+          <h1 className="text-2xl font-bold text-[var(--svs-text)]">No exchange found</h1>
+          <p className="mt-2 text-sm text-[var(--svs-muted)]">We couldn&apos;t find an exchange request for this order.</p>
+          <div className="mt-6 flex justify-center gap-3">
+            <Link to="/orders" className={`${cudyBluePrimaryButtonClassName} rounded-xl bg-[var(--svs-primary-strong)] px-5 py-2.5 text-sm font-bold text-white`}>View Orders</Link>
+            {order ? (
+              <Link to={`/orders/${order.id}/exchange`} className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 py-2.5 text-sm font-bold text-[var(--svs-text)]">Start an Exchange</Link>
+            ) : null}
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  const timeline = buildExchangeTimeline(exchangeEntry);
+  const isComplete = exchangeEntry.status === 'Exchange Delivered';
+  const createdAt = exchangeEntry.createdAt ? new Date(exchangeEntry.createdAt) : null;
+  const eta = (() => {
+    if (!createdAt) return null;
+    const d = new Date(createdAt);
+    d.setDate(d.getDate() + 12);
+    return d;
+  })();
+
+  return (
+    <main className="bg-[var(--svs-bg)] py-6 sm:py-10">
+      <div className="mx-auto w-full max-w-4xl px-4 sm:px-6">
+        <div className="mb-6 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            aria-label="Go back"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--svs-primary-strong)] transition hover:bg-[var(--svs-cyan-surface)]"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="mb-6 text-center">
+          <h1 className="text-2xl font-black text-[var(--svs-primary-strong)] sm:text-3xl">Track Your Exchange</h1>
+          <p className="mt-1 text-sm text-[var(--svs-muted)]">Monitor the status of your exchange request in real-time.</p>
+        </div>
+
+        <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-sm sm:p-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-base font-bold text-[var(--svs-primary-strong)]">Exchange Summary</h2>
+              <p className="text-xs text-[var(--svs-muted)]">
+                {isComplete ? 'Your replacement item has been delivered.' : 'Your exchange is being processed.'}
+              </p>
+            </div>
+            <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${isComplete ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] text-[var(--svs-primary-strong)]'}`}>
+              <RefreshCw className="h-3.5 w-3.5" /> {exchangeEntry.status}
+            </span>
+          </div>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
+                <Package className="h-4 w-4 text-[var(--svs-primary-strong)]" /> Order
+              </div>
+              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{exchangeEntry.reference || exchangeEntry.orderId}</p>
+            </div>
+            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
+                <CalendarDays className="h-4 w-4 text-[var(--svs-primary-strong)]" /> Requested On
+              </div>
+              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{createdAt ? formatTrackDate(createdAt) : '—'}</p>
+            </div>
+            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
+                <AlertTriangle className="h-4 w-4 text-[var(--svs-primary-strong)]" /> Reason
+              </div>
+              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{exchangeEntry.reasonLabel || exchangeEntry.reason}</p>
+            </div>
+            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
+                <DollarSign className="h-4 w-4 text-[var(--svs-primary-strong)]" /> Item Value
+              </div>
+              <p className="mt-1 text-sm font-bold text-emerald-700">{formatAmountInCurrency(exchangeEntry.itemTotal || 0)}</p>
+            </div>
+          </div>
+
+          <div className="mt-5 flex items-center gap-3 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3 sm:p-4">
+            {exchangeEntry.itemImage ? (
+              <img src={exchangeEntry.itemImage} alt={exchangeEntry.itemTitle} className="h-14 w-14 flex-shrink-0 rounded-lg object-cover sm:h-16 sm:w-16" loading="lazy" />
+            ) : (
+              <div className="h-14 w-14 flex-shrink-0 rounded-lg bg-[var(--svs-surface)] sm:h-16 sm:w-16" />
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-bold text-[var(--svs-text)]">{exchangeEntry.itemTitle}</p>
+              {exchangeEntry.notes ? (
+                <p className="mt-0.5 line-clamp-2 text-xs text-[var(--svs-muted)]">&ldquo;{exchangeEntry.notes}&rdquo;</p>
+              ) : null}
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-6 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-sm sm:p-6">
+          <div>
+            <h2 className="text-base font-bold text-[var(--svs-primary-strong)]">Live Tracking</h2>
+            <p className="text-xs text-[var(--svs-muted)]">See real-time updates as your exchange progresses.</p>
+          </div>
+
+          <ol className="mt-5 relative space-y-3 pl-2">
+            {timeline.map((step, index) => {
+              const isLast = index === timeline.length - 1;
+              const reached = step.reached;
+              return (
+                <li key={step.key} className="relative pl-10">
+                  {!isLast ? (
+                    <span
+                      aria-hidden="true"
+                      className={`absolute left-[14px] top-7 h-[calc(100%-12px)] w-0.5 ${reached ? 'bg-[var(--svs-primary-strong)]' : 'bg-[var(--svs-border)]'}`}
+                    />
+                  ) : null}
+                  <span
+                    aria-hidden="true"
+                    className={`absolute left-0 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full border-2 ${reached ? 'border-[var(--svs-primary-strong)] bg-[var(--svs-primary-strong)] text-white' : 'border-[var(--svs-border)] bg-[var(--svs-surface)] text-[var(--svs-muted)]'}`}
+                  >
+                    {reached ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-3.5 w-3.5" />}
+                  </span>
+                  <div
+                    className={`rounded-xl border p-3 ${step.isCurrent ? 'border-[var(--svs-primary-strong)] bg-[var(--svs-cyan-surface)]' : reached ? 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)]' : 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)] opacity-70'}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className={`text-sm font-bold ${reached ? 'text-[var(--svs-primary-strong)]' : 'text-[var(--svs-muted)]'}`}>
+                          {step.title}
+                        </p>
+                        <p className="mt-0.5 text-xs text-[var(--svs-muted)]">{step.description}</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--svs-muted)]">
+                          <span className="inline-flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {step.at ? formatTrackTimestamp(step.at) : '—'}
+                          </span>
+                        </div>
+                      </div>
+                      {step.isCurrent ? (
+                        <span className="shrink-0 rounded-full bg-[var(--svs-primary-strong)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+                          Current
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+
+          {eta && !isComplete ? (
+            <div className="mt-5 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-4 py-3 text-xs text-[var(--svs-text)]">
+              Expected exchange delivery: <span className="font-semibold">{formatTrackDate(eta)}</span>
+            </div>
+          ) : null}
+        </section>
+
+        {exchangeEntry.pickupAddress ? (
+          <section className="mt-6 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-sm sm:p-6">
+            <h2 className="text-base font-bold text-[var(--svs-primary-strong)]">Pickup Address</h2>
+            <div className="mt-3 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4 text-sm text-[var(--svs-text)]">
+              <p className="font-bold">{exchangeEntry.buyerName || 'Buyer'}</p>
+              {exchangeEntry.buyerPhone ? <p className="text-[var(--svs-primary-strong)]">{exchangeEntry.buyerPhone}</p> : null}
+              {[exchangeEntry.pickupAddress.address1, exchangeEntry.pickupAddress.address2, [exchangeEntry.pickupAddress.city, exchangeEntry.pickupAddress.province, exchangeEntry.pickupAddress.postalCode].filter(Boolean).join(', '), exchangeEntry.pickupAddress.country]
+                .filter(Boolean)
+                .map((line, i) => (
+                  <p key={i} className="text-[var(--svs-muted)]">{line}</p>
+                ))}
+            </div>
+          </section>
+        ) : null}
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <Link to="/orders" className={`${cudyBluePrimaryButtonClassName} inline-flex items-center justify-center rounded-xl bg-[var(--svs-primary-strong)] px-5 py-3 text-sm font-bold text-white`}>
+            View All Orders
+          </Link>
+          <Link to="/help-center" className="inline-flex items-center justify-center rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 py-3 text-sm font-bold text-[var(--svs-text)] transition hover:border-[var(--svs-primary-strong)] hover:text-[var(--svs-primary-strong)]">
+            Contact Support
+          </Link>
+        </div>
+      </div>
+    </main>
+  );
+};
+
+const CANCELLATION_REASONS = [
+  { value: 'mistake', label: 'Ordered by mistake' },
+  { value: 'better-alternative', label: 'Found a better alternative' },
+  { value: 'delivery-delay', label: 'Delivery delay' },
+  { value: 'no-longer-required', label: 'No longer required' },
+  { value: 'other', label: 'Other reason' },
+];
+
+const CancelOrderPage = ({ orders, onCancelOrder }) => {
+  const navigate = useNavigate();
+  const { orderId } = useParams();
+  const order = useMemo(() => orders.find((o) => String(o.id) === String(orderId)), [orders, orderId]);
+
+  const [reason, setReason] = useState('');
+  const [notes, setNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  if (!order) {
+    return (
+      <PageFrame
+        title="Cancel Your Order"
+        subtitle="Review order details and request cancellation."
+        titleClassName="text-center"
+        subtitleClassName="text-center"
+      >
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          We couldn&apos;t find that order.{' '}
+          <button type="button" onClick={() => navigate('/orders')} className="font-semibold underline">Back to Orders</button>
+        </div>
+      </PageFrame>
+    );
+  }
+
+  const meta = getOrderDisplayMeta(order);
+  const canCancel = canBuyerCancelOrder(order.status);
+  const items = Array.isArray(order.items) ? order.items : [];
+  const itemsTotal = items.reduce((sum, it) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 1), 0);
+  const taxRate = 0.15;
+  const taxAdjustment = itemsTotal * taxRate;
+  const refundTotal = itemsTotal + taxAdjustment;
+
+  const createdAt = order.createdAt ? new Date(order.createdAt) : null;
+  const estimatedDelivery = order.estimatedDeliveryAt
+    ? new Date(order.estimatedDeliveryAt)
+    : (createdAt ? (() => { const d = new Date(createdAt); d.setDate(d.getDate() + 3); return d; })() : null);
+
+  const paymentMethodLabel = order.paymentMethod === 'Card' ? 'Credit Card' : (order.paymentMethod || 'Original payment method');
+
+  const handleConfirm = async () => {
+    if (!canCancel) {
+      setError('This order is no longer eligible for cancellation.');
+      return;
+    }
+    if (!reason) {
+      setError('Please select a reason for cancellation.');
+      return;
+    }
+    if (!onCancelOrder) {
+      setError('Cancel handler unavailable.');
+      return;
+    }
+    setError('');
+    setSubmitting(true);
+    const result = await onCancelOrder(order.id);
+    setSubmitting(false);
+    if (result?.error) {
+      setError(result.error);
+      return;
+    }
+    navigate('/orders');
+  };
+
+  return (
+    <PageFrame
+      title="Cancel Your Order"
+      subtitle="Review order details and request cancellation."
+      titleClassName="text-center"
+      subtitleClassName="text-center"
+    >
+      <div className="-mt-2 mb-4 flex items-center">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          aria-label="Go back"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--svs-border)] bg-white text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)]"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+      </div>
+
+      <div className="space-y-5">
+        {/* Order Summary */}
+        <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 shadow-[0_4px_8px_rgba(0,0,0,0.04)]">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-bold text-[var(--svs-text)]">Order Summary</h3>
+              <p className="mt-1 text-xs text-[var(--svs-muted)]">Please review the order summary before proceeding with cancellation.</p>
+            </div>
+            <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${canCancel ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-rose-200 bg-rose-50 text-rose-700'}`}>
+              {canCancel ? 'Eligible for cancellation' : 'Not eligible'}
+            </span>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
+            <p className="font-bold text-rose-900">⚠ Important: This action cannot be undone</p>
+            <p className="mt-1">Once cancelled, your order cannot be reinstated. Please review all details carefully before confirming.</p>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl bg-white p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Order ID</p>
+              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{order.reference || order.id}</p>
+            </div>
+            <div className="rounded-xl bg-white p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Order Date</p>
+              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{createdAt ? formatTrackDate(createdAt) : meta.dateLabel}</p>
+            </div>
+            <div className="rounded-xl bg-white p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Payment Method</p>
+              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{paymentMethodLabel} {order.paymentReference ? <span className="text-[var(--svs-muted)] font-normal">· {order.paymentReference}</span> : null}</p>
+            </div>
+            <div className="rounded-xl bg-white p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Estimated Delivery</p>
+              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{estimatedDelivery ? formatTrackDate(estimatedDelivery) : '—'}</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Order Items */}
+        <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 shadow-[0_4px_8px_rgba(0,0,0,0.04)]">
+          <h3 className="text-sm font-bold text-[var(--svs-text)]">Order Items</h3>
+          <p className="mt-1 text-xs text-[var(--svs-muted)]">Verify your order items prior to cancellation.</p>
+
+          <div className="mt-4 rounded-xl border border-[var(--svs-primary)]/30 bg-white p-4">
+            <div className="flex items-center gap-2">
+              <Info className="h-4 w-4 text-[var(--svs-primary-strong)]" />
+              <h4 className="text-xs font-bold text-[var(--svs-primary-strong)]">Cancellation Policy</h4>
+            </div>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-[var(--svs-muted)]">
+              <li>Hardware orders can be cancelled before dispatch from the store.</li>
+              <li>Software orders can be cancelled before license activation or digital delivery.</li>
+              <li>Partial cancellations are allowed for eligible items within the same order.</li>
+              <li>Once shipped or activated, cancellations may not be permitted.</li>
+              <li>Refund eligibility depends on the seller&apos;s cancellation and return policy.</li>
+              <li>Customized, downloaded or downloadable software may be non-cancellable.</li>
+              <li>Cancellation requests must be raised through the platform within the allowed time frame.</li>
+            </ul>
+          </div>
+
+          <div className="mt-4 overflow-hidden rounded-xl border border-[var(--svs-border)] bg-white">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-[var(--svs-surface-soft)] text-[11px] uppercase tracking-wide text-[var(--svs-muted)]">
+                <tr>
+                  <th className="px-3 py-2 font-semibold">Product</th>
+                  <th className="px-3 py-2 font-semibold">Type</th>
+                  <th className="px-3 py-2 font-semibold">Quantity</th>
+                  <th className="px-3 py-2 font-semibold">Price</th>
+                  <th className="px-3 py-2 font-semibold">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--svs-border)]">
+                {items.map((it, idx) => (
+                  <tr key={`${it.id || it.title}-${idx}`} className="text-[var(--svs-text)]">
+                    <td className="px-3 py-3">
+                      <div className="flex items-center gap-2">
+                        {it.image ? (
+                          <img src={it.image} alt={it.title} className="h-10 w-10 rounded-md object-cover" loading="lazy" />
+                        ) : (
+                          <div className="h-10 w-10 rounded-md bg-[var(--svs-surface-soft)]" />
+                        )}
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold">{it.title}</p>
+                          {it.brand ? <p className="text-[10px] text-[var(--svs-muted)]">{it.brand}</p> : null}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className="rounded-md bg-[var(--svs-primary)]/10 px-2 py-0.5 text-[10px] font-semibold text-[var(--svs-primary-strong)]">
+                        {it.type || it.category || 'Hardware'}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3">{it.quantity || 1}</td>
+                    <td className="px-3 py-3 font-semibold">{formatAmountInCurrency((Number(it.price) || 0) * (Number(it.quantity) || 1))}</td>
+                    <td className="px-3 py-3">
+                      <span className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-0.5 text-[10px] font-medium text-[var(--svs-muted)]">
+                        {order.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* Refund Summary */}
+        <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 shadow-[0_4px_8px_rgba(0,0,0,0.04)]">
+          <h3 className="text-sm font-bold text-[var(--svs-text)]">Refund Summary</h3>
+          <p className="mt-1 text-xs text-[var(--svs-muted)]">Review your refund summary before cancellation.</p>
+
+          <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
+            <p className="font-bold">Partial cancellation</p>
+            <p className="mt-0.5">Some items may be eligible for cancellation only. Review the breakdown below.</p>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center justify-between rounded-lg border border-[var(--svs-border)] bg-white px-3 py-2 text-sm">
+              <span className="text-[var(--svs-text)]">Cancellable Items</span>
+              <span className="font-bold text-[var(--svs-text)]">{formatAmountInCurrency(itemsTotal)}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-[var(--svs-border)] bg-white px-3 py-2 text-sm">
+              <span className="text-[var(--svs-text)]">Non-Cancellable items</span>
+              <span className="font-bold text-[var(--svs-text)]">{formatAmountInCurrency(0)}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-[var(--svs-border)] bg-white px-3 py-2 text-sm">
+              <span className="text-[var(--svs-text)]">Tax Adjustment</span>
+              <span className="font-bold text-[var(--svs-text)]">{formatAmountInCurrency(taxAdjustment)}</span>
+            </div>
+          </div>
+
+          <div className="mt-4 flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+            <span className="text-sm font-bold text-emerald-900">Refund Summary</span>
+            <span className="text-base font-extrabold text-emerald-700 sm:text-lg">{formatAmountInCurrency(refundTotal)}</span>
+          </div>
+        </section>
+
+        {/* Refund Method */}
+        <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 shadow-[0_4px_8px_rgba(0,0,0,0.04)]">
+          <h3 className="text-sm font-bold text-[var(--svs-text)]">Refund Method</h3>
+          <p className="mt-1 text-xs text-[var(--svs-muted)]">Review your refund method before cancellation.</p>
+
+          <div className="mt-4 flex items-center gap-3 rounded-xl border border-[var(--svs-primary)]/30 bg-white p-4">
+            <CreditCard className="h-5 w-5 text-[var(--svs-primary-strong)]" />
+            <div>
+              <p className="text-sm font-bold text-[var(--svs-text)]">{paymentMethodLabel}</p>
+              <p className="text-[11px] text-[var(--svs-muted)]">Original payment method</p>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
+            <p className="font-bold">Refund Processing Time</p>
+            <p className="mt-0.5">Your refund will be processed within 5-7 business days after your cancellation is confirmed.</p>
+          </div>
+        </section>
+
+        {/* Cancellation Reason */}
+        <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 shadow-[0_4px_8px_rgba(0,0,0,0.04)]">
+          <h3 className="text-sm font-bold text-[var(--svs-text)]">Cancellation Reason</h3>
+          <p className="mt-1 text-xs text-[var(--svs-muted)]">Select an appropriate reason to proceed with cancellation.</p>
+
+          <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-[11px] text-emerald-800">
+            Please help us understand why you&apos;re cancelling this order. Your feedback helps us improve our service.
+          </div>
+
+          <div className="mt-3 space-y-2">
+            {CANCELLATION_REASONS.map((r) => (
+              <label
+                key={r.value}
+                className={`flex cursor-pointer items-center gap-3 rounded-lg border bg-white px-3 py-2.5 text-sm transition ${reason === r.value ? 'border-[var(--svs-primary-strong)] ring-2 ring-[var(--svs-primary)]/20' : 'border-[var(--svs-border)] hover:bg-[var(--svs-surface-soft)]'}`}
+              >
+                <input
+                  type="radio"
+                  name="cancel-reason"
+                  value={r.value}
+                  checked={reason === r.value}
+                  onChange={(e) => setReason(e.target.value)}
+                  className="h-4 w-4 accent-[var(--svs-primary-strong)]"
+                />
+                <span className="text-[var(--svs-text)]">{r.label}</span>
+              </label>
+            ))}
+          </div>
+
+          <label className="mt-4 block text-xs font-semibold text-[var(--svs-text)]">Please specify your reason</label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+            maxLength={500}
+            placeholder="Tell us more about why you're cancelling..."
+            className="mt-1 w-full rounded-lg border border-[var(--svs-border)] bg-white px-3 py-2 text-sm text-[var(--svs-text)] shadow-sm focus:border-[var(--svs-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--svs-primary)]/30"
+          />
+          <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Optional but appreciated.</p>
+
+          <div className="mt-4 rounded-xl border border-[var(--svs-primary)]/30 bg-white p-3 text-xs">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-[var(--svs-primary-strong)]" />
+              <p className="font-bold text-[var(--svs-primary-strong)]">Refund &amp; Cancellation Policy</p>
+            </div>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-[var(--svs-muted)]">
+              <li>Full refund for orders cancelled before shipping.</li>
+              <li>0% processing fee may apply for shipped orders.</li>
+              <li>Refunds will be processed to original payment method.</li>
+              <li>Processing time: 5-7 business days.</li>
+              <li>Software licenses cannot be refunded once activated.</li>
+            </ul>
+          </div>
+
+          {error ? (
+            <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</div>
+          ) : null}
+        </section>
+
+        <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-between">
+          <button
+            type="button"
+            onClick={() => navigate(`/orders/${order.id}/track`)}
+            className={`${cudyBluePrimaryButtonClassName} rounded-xl bg-[var(--svs-primary-strong)] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary)] sm:min-w-[200px]`}
+          >
+            Go Back to Order Details
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirm}
+            disabled={submitting || !canCancel}
+            className="rounded-xl border border-[var(--svs-border)] bg-white px-6 py-3 text-sm font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)] disabled:cursor-not-allowed disabled:opacity-60 sm:min-w-[200px]"
+          >
+            {submitting ? 'Cancelling...' : 'Confirm Cancellation'}
+          </button>
+        </div>
+      </div>
+    </PageFrame>
   );
 };
 
@@ -17187,6 +19018,11 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/orders" element={<OrdersPage orders={orders} cartItems={cartItems} onCancelOrder={onCancelOrder} />} />
     <Route path="/orders/:orderId/track" element={<TrackOrderPage orders={orders} />} />
     <Route path="/orders/track" element={<TrackOrderPage orders={orders} />} />
+    <Route path="/orders/:orderId/return" element={<ReturnOrderPage orders={orders} />} />
+    <Route path="/orders/:orderId/return/track" element={<TrackReturnPage orders={orders} />} />
+    <Route path="/orders/:orderId/exchange" element={<ExchangeOrderPage orders={orders} />} />
+    <Route path="/orders/:orderId/exchange/track" element={<TrackExchangePage orders={orders} />} />
+    <Route path="/orders/:orderId/cancel" element={<CancelOrderPage orders={orders} onCancelOrder={onCancelOrder} />} />
     <Route path="/order-confirmation" element={<OrderConfirmationPage orders={orders} />} />
     <Route path="/wishlist" element={<WishlistPage wishlistItems={wishlistItems} onAddToCart={onAddToCart} onRemoveWishlistItem={onRemoveWishlistItem} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/checkout" element={<CheckoutPage cartItems={cartItems} buyNowCheckout={buyNowCheckout} onUpdateCartQuantity={onUpdateCartQuantity} onRemoveCartItem={onRemoveCartItem} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />
@@ -18564,7 +20400,7 @@ const App = () => {
 
     setOrders((currentOrders) => currentOrders.map((order) => (
       order.id === orderId
-        ? { ...order, status: 'Cancelled by Buyer' }
+        ? { ...order, status: 'Cancelled by Buyer', cancelledAt: new Date().toISOString() }
         : order
     )));
 
