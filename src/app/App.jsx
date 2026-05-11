@@ -1130,6 +1130,114 @@ const homeHeroSlides = [
     subtitle: 'Premium wellness products for a healthier lifestyle',
     route: '/wellness',
   },
+  {
+    id: 'hero-7',
+    image:
+      'https://images.pexels.com/photos/1283219/pexels-photo-1283219.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'Sip & Celebrate',
+    title: 'Beverages & Liquors',
+    subtitle: 'Wines, spirits & refreshing drinks delivered',
+    route: '/beverages-liquors',
+  },
+  {
+    id: 'hero-8',
+    image:
+      'https://images.pexels.com/photos/1249611/pexels-photo-1249611.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'Build It Right',
+    title: 'Building & Construction Tools',
+    subtitle: 'Tools & materials for every project',
+    route: '/building-construction-tools',
+  },
+  {
+    id: 'hero-9',
+    image:
+      'https://images.pexels.com/photos/120049/pexels-photo-120049.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'On the Move',
+    title: 'Mobility & Vehicles',
+    subtitle: 'Cars, bikes & mobility solutions',
+    route: '/mobility-vehicles',
+  },
+  {
+    id: 'hero-10',
+    image:
+      'https://images.pexels.com/photos/2101137/pexels-photo-2101137.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'Raw Materials',
+    title: 'Natural Resources & Minerals',
+    subtitle: 'Quality raw materials sourced responsibly',
+    route: '/natural-resources-minerals',
+  },
+  {
+    id: 'hero-11',
+    image:
+      'https://images.pexels.com/photos/3846022/pexels-photo-3846022.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'On-Demand Help',
+    title: 'Home-Care Services',
+    subtitle: 'Trusted cleaning, laundry & home essentials',
+    route: '/home-care',
+  },
+  {
+    id: 'hero-12',
+    image:
+      'https://images.pexels.com/photos/1444416/pexels-photo-1444416.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'Shop Everything',
+    title: 'E-Commerce Marketplace',
+    subtitle: 'Lifestyle picks & tech essentials in one place',
+    route: '/e-commerce',
+  },
+  {
+    id: 'hero-13',
+    image:
+      'https://images.pexels.com/photos/906150/pexels-photo-906150.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'Natural Remedies',
+    title: 'Traditional Medicines & Herbs',
+    subtitle: 'Authentic herbs & natural wellness',
+    route: '/traditional-medicines-herbs',
+  },
+  {
+    id: 'hero-14',
+    image:
+      'https://images.pexels.com/photos/422218/pexels-photo-422218.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'Farm Trade',
+    title: 'Livestock Hub',
+    subtitle: 'Buy & sell livestock with confidence',
+    route: '/livestock-hub',
+  },
+  {
+    id: 'hero-15',
+    image:
+      'https://images.pexels.com/photos/6664248/pexels-photo-6664248.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'Play & Win',
+    title: 'Betting, Lottery & Games',
+    subtitle: 'Predict, play & win big rewards',
+    route: '/betting-lottery-games',
+  },
+  {
+    id: 'hero-16',
+    image:
+      'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'Find Your Space',
+    title: 'Property Hub',
+    subtitle: 'Homes, rentals & commercial spaces',
+    route: '/property-hub',
+  },
+  {
+    id: 'hero-17',
+    image:
+      'https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'Pre-Loved Finds',
+    title: 'Secondhand Central',
+    subtitle: 'Quality pre-loved goods at great prices',
+    route: '/secondhand-central',
+  },
+  {
+    id: 'hero-18',
+    image:
+      'https://images.pexels.com/photos/6444/pencil-typography-black-design.jpg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'Work & Study',
+    title: 'Stationery & Office',
+    subtitle: 'Office, school & creative supplies',
+    route: '/stationery-office',
+  },
 ];
 
 const featureSlides = [
