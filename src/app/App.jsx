@@ -6644,29 +6644,32 @@ const HomePage = () => {
   return (
     <>
       <section
-        className="relative overflow-hidden bg-[#000000] px-3 py-8 text-white sm:px-4 sm:py-16 lg:py-24"
+        className="relative overflow-hidden bg-[#000000] px-3 py-3 text-white sm:px-4 sm:py-16 lg:py-24"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
         <div className="absolute inset-0 bg-gradient-to-br from-black via-[#141424] to-[#0a2030]" aria-hidden="true" />
         <div className="mx-auto w-full max-w-7xl">
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 sm:rounded-3xl">
+          {/* Mobile uses the SAME structure as desktop but compressed: shorter
+              image, smaller fonts/paddings — visually a miniaturised version
+              of the full-screen desktop hero rather than a re-stacked card. */}
+          <div className="relative overflow-hidden rounded-xl border border-white/10 sm:rounded-3xl">
             <img
               src={slide.image}
               alt={slide.title}
-              className="h-[260px] w-full object-cover sm:h-[420px] md:h-[520px]"
+              className="h-[140px] w-full object-cover sm:h-[420px] md:h-[520px]"
               loading="eager"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/20" />
 
-            <div className="absolute inset-0 flex flex-col items-center justify-center px-3 text-center sm:px-4">
-              <p className="rounded-full bg-[var(--svs-primary)] px-3 py-1 text-xs font-semibold text-white sm:px-4 sm:text-sm">{slide.label}</p>
-              <h1 className="mt-3 text-2xl font-bold leading-tight text-white sm:mt-4 sm:text-4xl md:text-5xl lg:text-6xl">{slide.title}</h1>
-              <p className="mt-2 text-sm text-slate-100 sm:mt-3 sm:text-lg md:text-2xl">{slide.subtitle}</p>
+            <div className="absolute inset-0 flex flex-col items-center justify-center px-2 text-center sm:px-4">
+              <p className="rounded-full bg-[var(--svs-primary)] px-1.5 py-[1px] text-[8px] font-semibold text-white sm:px-4 sm:py-1 sm:text-sm">{slide.label}</p>
+              <h1 className="mt-1 text-[13px] font-bold leading-tight text-white sm:mt-4 sm:text-4xl md:text-5xl lg:text-6xl">{slide.title}</h1>
+              <p className="mt-0.5 text-[8px] leading-snug text-slate-100 sm:mt-3 sm:text-lg md:text-2xl">{slide.subtitle}</p>
               <button
                 type="button"
                 onClick={() => navigate(getLearnMoreRoute(slide))}
-                className={`${cudyBluePrimaryButtonClassName} mt-4 rounded-full bg-[var(--svs-primary)] px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:scale-105 hover:bg-[#33b9f2] sm:mt-6 sm:px-8 sm:py-3 sm:text-base`}
+                className={`${cudyBluePrimaryButtonClassName} mt-1.5 rounded-full bg-[var(--svs-primary)] px-2.5 py-1 text-[9px] font-semibold text-white shadow-lg transition hover:scale-105 hover:bg-[#33b9f2] sm:mt-6 sm:px-8 sm:py-3 sm:text-base`}
               >
                 {t('common.learnMore')}
               </button>
@@ -6675,27 +6678,27 @@ const HomePage = () => {
             <button
               type="button"
               onClick={() => goToSlide(activeSlide - 1)}
-              className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/35 p-2 text-white transition hover:bg-black/60"
+              className="absolute left-1.5 top-1/2 -translate-y-1/2 rounded-full bg-black/35 p-1 text-white transition hover:bg-black/60 sm:left-3 sm:p-2"
               aria-label="Previous slide"
             >
-              <ChevronLeft className="h-5 w-5" />
+              <ChevronLeft className="h-3 w-3 sm:h-5 sm:w-5" />
             </button>
             <button
               type="button"
               onClick={() => goToSlide(activeSlide + 1)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/35 p-2 text-white transition hover:bg-black/60"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-black/35 p-1 text-white transition hover:bg-black/60 sm:right-3 sm:p-2"
               aria-label="Next slide"
             >
-              <ChevronRight className="h-5 w-5" />
+              <ChevronRight className="h-3 w-3 sm:h-5 sm:w-5" />
             </button>
 
-            <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2">
+            <div className="absolute bottom-1.5 left-1/2 flex -translate-x-1/2 items-center gap-1 sm:bottom-4 sm:gap-2">
               {homeHeroSlides.map((hero, index) => (
                 <button
                   key={hero.id}
                   type="button"
                   onClick={() => goToSlide(index)}
-                  className={`h-2.5 w-2.5 rounded-full transition ${index === activeSlide ? 'bg-[var(--svs-primary)]' : 'bg-white/50'}`}
+                  className={`h-1.5 w-1.5 rounded-full transition sm:h-2.5 sm:w-2.5 ${index === activeSlide ? 'bg-[var(--svs-primary)]' : 'bg-white/50'}`}
                   aria-label={`Go to slide ${index + 1}`}
                 />
               ))}
@@ -13576,8 +13579,8 @@ const MarketsPage = () => {
             : String(index + 1).padStart(2, '0');
           const useBookingsPreset = isBookings;
           const overlayClassName = useBookingsPreset
-            ? 'absolute inset-0 bg-gradient-to-t from-[#041a26]/90 via-[#0f6f84]/55 to-[#14b8a6]/30'
-            : 'absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20';
+            ? 'absolute inset-0 bg-gradient-to-t from-[#041a26]/70 via-[#0f6f84]/35 to-[#14b8a6]/15'
+            : 'absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent';
           const marketLabelClassName = 'text-xs font-semibold uppercase tracking-wide text-[#8eeaff] drop-shadow sm:text-xs';
           const marketTitleClassName = 'text-base font-bold leading-tight text-white drop-shadow line-clamp-3 sm:text-lg sm:line-clamp-none';
           const badgeClassName = 'svs-berkshire-swash rounded-full border border-white/35 bg-white/15 px-2 py-0.5 text-xs text-white sm:px-2 sm:py-1 sm:text-sm';
@@ -13626,7 +13629,7 @@ const MarketsPage = () => {
               className="group relative aspect-[4/5] overflow-hidden rounded-xl border border-[var(--svs-border)] shadow-[0_4px_8px_rgba(0,0,0,0.1)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_12px_22px_rgba(0,168,232,0.2)] sm:aspect-auto sm:rounded-2xl"
             >
               <div
-                className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
+                className="absolute inset-0 bg-cover bg-center brightness-[1.35] saturate-110 transition-transform duration-500 group-hover:scale-110"
                 style={{ backgroundImage: `url('${heroImageUrl}')` }}
                 aria-hidden="true"
               />
@@ -13867,6 +13870,34 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
+  const [isPhoneCountryOpen, setIsPhoneCountryOpen] = useState(false);
+  const phoneCountryRef = useRef(null);
+  useEffect(() => {
+    if (!isPhoneCountryOpen) return undefined;
+    const handlePointerDown = (event) => {
+      if (phoneCountryRef.current && !phoneCountryRef.current.contains(event.target)) {
+        setIsPhoneCountryOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+    };
+  }, [isPhoneCountryOpen]);
+  const phoneCountryOptions = useMemo(() => (
+    Object.entries(CURRENCY_COUNTRY_INFO)
+      .map(([code, info]) => ({ code, ...info }))
+      .filter((entry) => entry.phoneCode && entry.phoneCode !== '+')
+      .filter((entry, index, list) => (
+        list.findIndex((other) => other.phoneCode === entry.phoneCode) === index
+      ))
+      .sort((a, b) => a.country.localeCompare(b.country))
+  ), []);
+  const selectedPhoneCountry = useMemo(() => (
+    phoneCountryOptions.find((entry) => entry.phoneCode === formState.phoneCountryCode) || phoneCountryOptions[0]
+  ), [phoneCountryOptions, formState.phoneCountryCode]);
   const isPhoneMissing = !formState.phone.trim();
   const contactEmail = String(formState.contact || '').trim();
   const hasInvalidContactEmail = Boolean(contactEmail) && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail);
@@ -14289,26 +14320,53 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
             </div>
             <div>
               <label htmlFor="checkout-phone" className={fieldLabelClassName}>Phone Number</label>
-              <div className="grid grid-cols-[108px_minmax(0,1fr)] gap-2">
-                <select
-                  value={formState.phoneCountryCode}
-                  onChange={(event) => updateField('phoneCountryCode', event.target.value)}
-                  className={inputClassName}
-                  aria-label="Phone country code"
-                >
-                  {Object.entries(CURRENCY_COUNTRY_INFO)
-                    .map(([code, info]) => ({ code, ...info }))
-                    .filter((entry) => entry.phoneCode && entry.phoneCode !== '+')
-                    .filter((entry, index, list) => (
-                      list.findIndex((other) => other.phoneCode === entry.phoneCode) === index
-                    ))
-                    .sort((a, b) => a.country.localeCompare(b.country))
-                    .map((entry) => (
-                      <option key={`${entry.code}-${entry.phoneCode}`} value={entry.phoneCode}>
-                        {entry.flag} {entry.phoneCode}
-                      </option>
-                    ))}
-                </select>
+              <div className="grid grid-cols-[120px_minmax(0,1fr)] gap-2">
+                <div className="relative" ref={phoneCountryRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsPhoneCountryOpen((prev) => !prev)}
+                    className={`${inputClassName} flex items-center justify-between gap-2 text-left`}
+                    aria-haspopup="listbox"
+                    aria-expanded={isPhoneCountryOpen}
+                    aria-label="Phone country code"
+                  >
+                    <span className="flex items-center gap-1 truncate">
+                      <span aria-hidden="true">{selectedPhoneCountry?.flag}</span>
+                      <span>{selectedPhoneCountry?.phoneCode || formState.phoneCountryCode}</span>
+                    </span>
+                    <ChevronDown className="h-4 w-4 shrink-0 opacity-60" aria-hidden="true" />
+                  </button>
+                  {isPhoneCountryOpen ? (
+                    <ul
+                      role="listbox"
+                      className="absolute left-0 right-auto top-full z-30 mt-1 max-h-72 w-[min(20rem,calc(100vw-2rem))] overflow-auto rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] py-1 shadow-2xl"
+                    >
+                      {phoneCountryOptions.map((entry) => {
+                        const isSelected = entry.phoneCode === formState.phoneCountryCode;
+                        return (
+                          <li key={`${entry.code}-${entry.phoneCode}`}>
+                            <button
+                              type="button"
+                              role="option"
+                              aria-selected={isSelected}
+                              onClick={() => {
+                                updateField('phoneCountryCode', entry.phoneCode);
+                                setIsPhoneCountryOpen(false);
+                              }}
+                              className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition hover:bg-[var(--svs-surface-soft)] ${isSelected ? 'bg-[var(--svs-surface-soft)] font-semibold' : ''}`}
+                            >
+                              <span className="flex items-center gap-2">
+                                <span aria-hidden="true">{entry.flag}</span>
+                                <span>{entry.phoneCode}</span>
+                              </span>
+                              <span className="truncate text-xs text-[var(--svs-text-muted)]">{entry.country}</span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : null}
+                </div>
                 <input
                   id="checkout-phone"
                   type="tel"
@@ -15297,7 +15355,7 @@ const TRACK_BADGE_STYLES = {
 
 const getTrackBadgeLabel = (status) => normalizeOrderStatus(status) || 'Pending';
 
-const TrackOrderPage = ({ orders }) => {
+const TrackOrderPage = ({ orders, onAdminSetOrderStatus }) => {
   const params = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -15320,19 +15378,31 @@ const TrackOrderPage = ({ orders }) => {
   }, [orders, params, orderIdFromState, referenceFromState]);
 
   const timeline = useMemo(() => buildTrackTimeline(order), [order]);
-  const isCancelledOrder = order && (order.status === 'Cancelled' || order.status === 'Cancelled by Buyer' || order.status === 'Cancelled by Seller');
+  const isCancelledOrder = order && (
+    order.status === 'Cancelled'
+    || order.status === 'Cancelled by Buyer'
+    || order.status === 'Cancelled by Seller'
+    || order.status === 'Refund Pending'
+    || order.status === 'Refund Made'
+  );
   const cancellationTimeline = useMemo(() => {
     if (!isCancelledOrder || !order) return [];
     const cancelledAt = order.cancelledAt ? new Date(order.cancelledAt) : (order.updatedAt ? new Date(order.updatedAt) : new Date());
     const wasCardPayment = order.paymentMethod === 'Card';
-    const refundInitiatedAt = new Date(cancelledAt.getTime() + 30 * 60 * 1000);
-    const refundCompletedEta = new Date(cancelledAt.getTime() + 6 * 24 * 60 * 60 * 1000);
+    const history = Array.isArray(order.statusHistory) ? order.statusHistory : [];
+    const findHistoryAt = (statusName) => {
+      const entry = history.find((h) => h?.status === statusName);
+      return entry?.at ? new Date(entry.at) : null;
+    };
+    const refundInitiated = order.status === 'Refund Pending' || order.status === 'Refund Made';
     const refundCompleted = order.status === 'Refund Made';
+    const refundInitiatedAt = refundInitiated ? (findHistoryAt('Refund Pending') || new Date()) : null;
+    const refundCompletedAt = refundCompleted ? (findHistoryAt('Refund Made') || new Date()) : null;
     return [
-      { key: 'requested', title: 'Cancellation Requested', description: 'You requested to cancel this order.', reached: true, at: cancelledAt, location: 'Account' },
-      { key: 'confirmed', title: 'Cancellation Confirmed', description: 'Order successfully cancelled and removed from fulfilment.', reached: true, at: cancelledAt, location: 'SVS' },
-      { key: 'refundInitiated', title: 'Refund Initiated', description: wasCardPayment ? 'Refund issued back to your card.' : 'Refund being processed via your original payment method.', reached: true, at: refundInitiatedAt, location: 'Payments' },
-      { key: 'refundCompleted', title: refundCompleted ? 'Refund Completed' : 'Refund Completion', description: refundCompleted ? 'Refund settled to your account.' : 'Bank reflection can take 3-7 business days.', reached: refundCompleted, at: refundCompleted ? refundCompletedEta : null, location: 'Bank', isCurrent: !refundCompleted },
+      { key: 'requested', title: 'Cancellation Requested', description: 'You requested to cancel this order.', reached: true, at: cancelledAt, location: 'Account', isCurrent: false },
+      { key: 'confirmed', title: 'Cancellation Confirmed', description: 'Order successfully cancelled and removed from fulfilment.', reached: true, at: cancelledAt, location: 'SVS', isCurrent: !refundInitiated },
+      { key: 'refundInitiated', title: 'Refund Initiated', description: wasCardPayment ? 'Refund issued back to your card.' : 'Refund being processed via your original payment method.', reached: refundInitiated, at: refundInitiatedAt, location: 'Payments', isCurrent: refundInitiated && !refundCompleted },
+      { key: 'refundCompleted', title: refundCompleted ? 'Refund Completed' : 'Refund Completion', description: refundCompleted ? 'Refund settled to your account.' : 'Bank reflection can take 3-7 business days.', reached: refundCompleted, at: refundCompletedAt, location: 'Bank', isCurrent: false },
     ];
   }, [isCancelledOrder, order]);
 
@@ -15523,11 +15593,41 @@ const TrackOrderPage = ({ orders }) => {
 
           <div className="mt-5 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-4 py-3 text-xs text-[var(--svs-text)]">
             {isCancelledOrder
-              ? (order.paymentMethod === 'Card'
-                ? 'Refund has been issued. Bank reflection can take 3-7 business days.'
-                : 'We\u2019ll keep you posted by email and SMS as the refund settles.')
+              ? (order.status === 'Refund Made'
+                ? (order.paymentMethod === 'Card'
+                  ? 'Refund has been issued. Bank reflection can take 3-7 business days.'
+                  : 'Refund has been completed via your original payment method.')
+                : order.status === 'Refund Pending'
+                  ? 'Refund has been initiated. Bank reflection can take 3-7 business days.'
+                  : 'Your cancellation is confirmed. We\u2019ll notify you once the refund is initiated.')
               : 'We\u2019ll notify you via email and SMS when your order status changes.'}
           </div>
+
+          {/* Dev-only admin simulator for advancing refund statuses */}
+          {isCancelledOrder && import.meta.env?.DEV && typeof onAdminSetOrderStatus === 'function' ? (
+            <div className="mt-3 rounded-xl border border-dashed border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+              <p className="font-bold uppercase tracking-wide">Admin Simulator (dev only)</p>
+              <p className="mt-0.5 text-[11px]">Advance refund stages for this cancelled order.</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => onAdminSetOrderStatus(order.id, 'Refund Pending')}
+                  disabled={order.status !== 'Cancelled by Buyer' && order.status !== 'Cancelled by Seller' && order.status !== 'Cancelled'}
+                  className="rounded-lg border border-amber-400 bg-white px-2.5 py-1 text-[11px] font-semibold text-amber-900 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Mark Refund Initiated
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onAdminSetOrderStatus(order.id, 'Refund Made')}
+                  disabled={order.status !== 'Refund Pending'}
+                  className="rounded-lg border border-amber-400 bg-white px-2.5 py-1 text-[11px] font-semibold text-amber-900 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Mark Refund Completed
+                </button>
+              </div>
+            </div>
+          ) : null}
         </section>
 
         {/* Delivery Details */}
@@ -19072,21 +19172,21 @@ const SiteFooter = () => {
 
   return (
     <footer className="bg-gradient-to-b from-[#0c2a32] to-[#0f6674] text-white">
-      {/* ── Main Footer Grid — stacks on mobile so each section is fully readable, then fans out to 4 columns on larger screens ── */}
-      <div className="mx-auto w-full max-w-7xl px-5 pt-10 pb-8 sm:px-6 sm:pt-[60px] sm:pb-10 sm:px-8">
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-4 sm:gap-10">
+      {/* ── Main Footer Grid — compact 4 columns on mobile so it mirrors the desktop layout, then scales up on larger screens ── */}
+      <div className="mx-auto w-full max-w-7xl px-3 pt-6 pb-5 sm:px-6 sm:pt-[60px] sm:pb-10 sm:px-8">
+        <div className="grid grid-cols-4 gap-2 sm:gap-10">
           {/* Column 1 – Brand */}
           <div>
-            <h3 className="whitespace-nowrap text-lg font-bold sm:text-xl">SVS E-Commerce</h3>
-            <p className="mt-2 text-sm leading-relaxed text-slate-200 sm:mt-3 sm:text-base">
-              {t('site.tagline', { defaultValue: 'Your one-stop marketplace for everything you need – from groceries to tickets!' })}
-            </p>
+            <h3 className="whitespace-nowrap text-[10px] font-bold sm:text-xl">SVS E-Commerce</h3>
+            <ul className="mt-1.5 space-y-1 text-[9px] leading-snug text-slate-200 sm:mt-3 sm:space-y-2 sm:text-base">
+              <li>{t('site.tagline', { defaultValue: 'Your one-stop marketplace for everything you need – from groceries to tickets!' })}</li>
+            </ul>
           </div>
 
           {/* Column 2 – Quick Links */}
           <div>
-            <h4 className="whitespace-nowrap text-xs font-bold uppercase tracking-wide sm:text-sm">{t('footer.quickLinks')}</h4>
-            <ul className="mt-2 space-y-1.5 text-sm sm:mt-4 sm:space-y-2">
+            <h4 className="whitespace-nowrap text-[10px] font-bold uppercase tracking-wide sm:text-sm">{t('footer.quickLinks')}</h4>
+            <ul className="mt-1.5 space-y-1 text-[9px] sm:mt-4 sm:space-y-2 sm:text-sm">
               {footerLinks.quick.map((item) => (
                 <li key={item.href}>
                   <Link to={item.href} className="text-slate-200 transition hover:text-white hover:underline">{t(item.labelKey)}</Link>
@@ -19097,8 +19197,8 @@ const SiteFooter = () => {
 
           {/* Column 3 – Support */}
           <div>
-            <h4 className="whitespace-nowrap text-xs font-bold uppercase tracking-wide sm:text-sm">{t('footer.support')}</h4>
-            <ul className="mt-2 space-y-1.5 text-sm sm:mt-4 sm:space-y-2">
+            <h4 className="whitespace-nowrap text-[10px] font-bold uppercase tracking-wide sm:text-sm">{t('footer.support')}</h4>
+            <ul className="mt-1.5 space-y-1 text-[9px] sm:mt-4 sm:space-y-2 sm:text-sm">
               {footerLinks.support.map((item) => (
                 <li key={item.href}>
                   <Link to={item.href} className="text-slate-200 transition hover:text-white hover:underline">{t(item.labelKey)}</Link>
@@ -19109,18 +19209,18 @@ const SiteFooter = () => {
 
           {/* Column 4 – Subscribe to Offers */}
           <div>
-            <h4 className="whitespace-nowrap text-xs font-bold uppercase tracking-wide sm:text-sm">{t('footer.subscribe')}</h4>
-            <p className="mt-2 text-sm leading-relaxed text-slate-300 sm:mt-3">{t('footer.subscribeText')}</p>
-            <div className="mt-3 flex flex-col gap-2 sm:mt-4 sm:flex-row">
+            <h4 className="whitespace-nowrap text-[10px] font-bold uppercase tracking-wide sm:text-sm">{t('footer.subscribe')}</h4>
+            <p className="mt-1.5 text-[9px] leading-snug text-slate-300 sm:mt-3 sm:text-sm">{t('footer.subscribeText')}</p>
+            <div className="mt-1.5 flex flex-col gap-1 sm:mt-4 sm:flex-row sm:gap-2">
               <input
                 type="text"
                 placeholder={t('footer.subscribePlaceholder')}
-                className="min-w-0 flex-1 rounded-full border border-white/20 bg-white/10 px-4 py-2.5 text-sm text-white placeholder:text-slate-300 focus:border-cyan-300 focus:outline-none focus:ring-1 focus:ring-cyan-300"
+                className="min-w-0 flex-1 rounded-full border border-white/20 bg-white/10 px-2 py-1 text-[9px] text-white placeholder:text-slate-300 focus:border-cyan-300 focus:outline-none focus:ring-1 focus:ring-cyan-300 sm:px-4 sm:py-2.5 sm:text-sm"
                 aria-label={t('footer.subscribeAria')}
               />
               <button
                 type="button"
-                className={`${cudyBluePrimaryButtonClassName} shrink-0 rounded-full bg-[var(--svs-primary)] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0088b8]`}
+                className={`${cudyBluePrimaryButtonClassName} shrink-0 rounded-full bg-[var(--svs-primary)] px-2 py-1 text-[9px] font-semibold text-white transition hover:bg-[#0088b8] sm:px-5 sm:py-2.5 sm:text-sm`}
               >
                 Subscribe
               </button>
@@ -19129,34 +19229,34 @@ const SiteFooter = () => {
         </div>
 
         {/* ── Unified social media row ── */}
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-3 border-t border-white/10 pt-5 sm:mt-10 sm:gap-4 sm:pt-6">
-          <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:h-11 sm:w-11">
-            <svg className="h-5 w-5 sm:h-[22px] sm:w-[22px]" fill="currentColor" viewBox="0 0 24 24"><path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" /></svg>
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5 border-t border-white/10 pt-3 sm:mt-10 sm:gap-4 sm:pt-6">
+          <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:h-11 sm:w-11">
+            <svg className="h-3.5 w-3.5 sm:h-[22px] sm:w-[22px]" fill="currentColor" viewBox="0 0 24 24"><path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" /></svg>
           </a>
-          <a href="https://x.com" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:h-11 sm:w-11">
-            <svg className="h-5 w-5 sm:h-[22px] sm:w-[22px]" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+          <a href="https://x.com" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)" className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:h-11 sm:w-11">
+            <svg className="h-3.5 w-3.5 sm:h-[22px] sm:w-[22px]" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
           </a>
-          <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:h-11 sm:w-11">
-            <svg className="h-5 w-5 sm:h-[22px] sm:w-[22px]" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
+          <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:h-11 sm:w-11">
+            <svg className="h-3.5 w-3.5 sm:h-[22px] sm:w-[22px]" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
           </a>
-          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:h-11 sm:w-11">
-            <svg className="h-5 w-5 sm:h-[22px] sm:w-[22px]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" /></svg>
+          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:h-11 sm:w-11">
+            <svg className="h-3.5 w-3.5 sm:h-[22px] sm:w-[22px]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" /></svg>
           </a>
-          <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:h-11 sm:w-11">
-            <svg className="h-5 w-5 sm:h-[22px] sm:w-[22px]" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" /></svg>
+          <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:h-11 sm:w-11">
+            <svg className="h-3.5 w-3.5 sm:h-[22px] sm:w-[22px]" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" /></svg>
           </a>
-          <a href="https://wa.me" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:h-11 sm:w-11">
-            <svg className="h-5 w-5 sm:h-[22px] sm:w-[22px]" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
+          <a href="https://wa.me" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:h-11 sm:w-11">
+            <svg className="h-3.5 w-3.5 sm:h-[22px] sm:w-[22px]" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
           </a>
         </div>
       </div>
 
       {/* ── Bottom Bar ── */}
       <div className="border-t border-white/15 bg-[#082028]">
-        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-6 py-4 text-xs text-slate-300 sm:px-8">
+        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-2 px-3 py-2 text-[9px] text-slate-300 sm:gap-3 sm:px-8 sm:py-4 sm:text-xs">
           <p>{t('footer.est')}</p>
-          <p className="flex items-center gap-1.5">
-            <ShieldCheck className="h-4 w-4" />
+          <p className="flex items-center gap-1 sm:gap-1.5">
+            <ShieldCheck className="h-3 w-3 sm:h-4 sm:w-4" />
             {t('footer.securePayments')}
           </p>
         </div>
@@ -19165,7 +19265,7 @@ const SiteFooter = () => {
   );
 };
 
-const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerItems, buyNowCheckout, productReviewSummaryMap, onAddToCart, onBuyNow, onToggleWishlist, onRemoveWishlistItem, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder, onClearBuyNowCheckout, onCancelOrder, onSellerItemCreated, onDeleteSellerItem, onUpdateSellerItem, onUpdateOrderStatus, onOpenItemDetails }) => {
+const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerItems, buyNowCheckout, productReviewSummaryMap, onAddToCart, onBuyNow, onToggleWishlist, onRemoveWishlistItem, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder, onClearBuyNowCheckout, onCancelOrder, onSellerItemCreated, onDeleteSellerItem, onUpdateSellerItem, onUpdateOrderStatus, onAdminSetOrderStatus, onOpenItemDetails }) => {
   const { t } = useTranslation();
 
   return (
@@ -19174,8 +19274,8 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/markets" element={<MarketsPage />} />
     <Route path="/offers" element={<OffersPage />} />
     <Route path="/orders" element={<OrdersPage orders={orders} cartItems={cartItems} onCancelOrder={onCancelOrder} />} />
-    <Route path="/orders/:orderId/track" element={<TrackOrderPage orders={orders} />} />
-    <Route path="/orders/track" element={<TrackOrderPage orders={orders} />} />
+    <Route path="/orders/:orderId/track" element={<TrackOrderPage orders={orders} onAdminSetOrderStatus={onAdminSetOrderStatus} />} />
+    <Route path="/orders/track" element={<TrackOrderPage orders={orders} onAdminSetOrderStatus={onAdminSetOrderStatus} />} />
     <Route path="/orders/:orderId/return" element={<ReturnOrderPage orders={orders} />} />
     <Route path="/orders/:orderId/return/track" element={<TrackReturnPage orders={orders} />} />
     <Route path="/orders/:orderId/exchange" element={<ExchangeOrderPage orders={orders} />} />
@@ -20592,6 +20692,78 @@ const App = () => {
     return { data: true };
   }, [activeUserEmail, orders, pushNotificationToUser]);
 
+  // Admin-only (dev) status setter. Bypasses seller permission checks so an
+  // admin can simulate refund progression (Refund Pending -> Refund Made)
+  // for an order that the buyer has already cancelled.
+  const handleAdminSetOrderStatus = useCallback(async (orderId, nextStatus) => {
+    if (!orderId || !REFUND_STATUS_FLOW.includes(nextStatus)) {
+      return { error: 'Invalid admin status.' };
+    }
+
+    const targetOrder = orders.find((order) => order.id === orderId);
+    if (!targetOrder) {
+      return { error: 'Order not found.' };
+    }
+
+    const updateTimestamp = new Date().toISOString();
+    const newHistoryEntry = { status: nextStatus, at: updateTimestamp, location: 'Admin' };
+    const existingHistory = Array.isArray(targetOrder.statusHistory) ? targetOrder.statusHistory : [];
+    const mergedHistory = [
+      ...existingHistory.filter((entry) => entry?.status !== nextStatus),
+      newHistoryEntry,
+    ];
+
+    if (hasSupabaseEnv && supabase) {
+      const { error } = await supabase
+        .from(ORDERS_TABLE)
+        .update({ status: nextStatus, status_history: mergedHistory })
+        .eq('order_key', orderId);
+
+      if (error) {
+        const message = String(error.message || '').toLowerCase();
+        if (message.includes('status_history')) {
+          const { error: fallbackError } = await supabase
+            .from(ORDERS_TABLE)
+            .update({ status: nextStatus })
+            .eq('order_key', orderId);
+          if (fallbackError) {
+            return { error: fallbackError.message || 'Could not update order status.' };
+          }
+        } else {
+          return { error: error.message || 'Could not update order status.' };
+        }
+      }
+    }
+
+    setOrders((currentOrders) => currentOrders.map((order) => {
+      if (order.id !== orderId) return order;
+      const history = Array.isArray(order.statusHistory) ? order.statusHistory : [];
+      const filteredHistory = history.filter((entry) => entry?.status !== nextStatus);
+      return {
+        ...order,
+        status: nextStatus,
+        statusHistory: [...filteredHistory, newHistoryEntry],
+      };
+    }));
+
+    if (targetOrder.ownerEmail) {
+      const message = nextStatus === 'Refund Made'
+        ? 'Refund has been made. Bank reflection can take 3-7 business days.'
+        : nextStatus === 'Refund Pending'
+          ? 'Your refund has been initiated.'
+          : `${targetOrder.reference || orderId} is now ${nextStatus}.`;
+      pushNotificationToUser(targetOrder.ownerEmail, {
+        type: 'status',
+        title: 'Order status updated',
+        message,
+        href: '/orders',
+        orderId,
+      });
+    }
+
+    return { data: true };
+  }, [orders, pushNotificationToUser]);
+
   const handleOpenItemDetails = useCallback((itemDetails) => {
     setReviewNotice('');
     setSelectedItemDetails(itemDetails);
@@ -20721,6 +20893,7 @@ const App = () => {
         onDeleteSellerItem={handleDeleteSellerItem}
         onUpdateSellerItem={handleUpdateSellerItem}
         onUpdateOrderStatus={handleUpdateOrderStatus}
+        onAdminSetOrderStatus={handleAdminSetOrderStatus}
         onOpenItemDetails={handleOpenItemDetails}
       />
       <ItemDetailsModal
