@@ -1126,8 +1126,8 @@ const homeHeroSlides = [
     image:
       'https://images.pexels.com/photos/3735149/pexels-photo-3735149.jpeg?auto=compress&cs=tinysrgb&w=1920',
     label: 'Self-Care',
-    title: 'Book @ Home-Care Services',
-    subtitle: 'Premium wellness products for a healthier lifestyle',
+    title: 'Wellness & Beauty',
+    subtitle: 'Premium health & beauty products for a healthier lifestyle',
     route: '/wellness',
   },
   {
@@ -4286,6 +4286,105 @@ const CURRENCY_COUNTRY_INFO = {
   YER: { country: 'Yemen', phoneCode: '+967', flag: '🇾🇪' },
   ZAR: { country: 'South Africa', phoneCode: '+27', flag: '🇿🇦' },
   ZMW: { country: 'Zambia', phoneCode: '+260', flag: '🇿🇲' },
+  // ── Additional countries (no dedicated currency listing yet) ──
+  CC_AG: { country: 'Antigua & Barbuda', phoneCode: '+1268', flag: '🇦🇬' },
+  CC_AI: { country: 'Anguilla', phoneCode: '+1264', flag: '🇦🇮' },
+  CC_AD: { country: 'Andorra', phoneCode: '+376', flag: '🇦🇩' },
+  CC_AT: { country: 'Austria', phoneCode: '+43', flag: '🇦🇹' },
+  CC_BB: { country: 'Barbados', phoneCode: '+1246', flag: '🇧🇧' },
+  CC_BE: { country: 'Belgium', phoneCode: '+32', flag: '🇧🇪' },
+  CC_BF: { country: 'Burkina Faso', phoneCode: '+226', flag: '🇧🇫' },
+  CC_BI: { country: 'Burundi', phoneCode: '+257', flag: '🇧🇮' },
+  CC_BJ: { country: 'Benin', phoneCode: '+229', flag: '🇧🇯' },
+  CC_BN: { country: 'Brunei', phoneCode: '+673', flag: '🇧🇳' },
+  CC_BS: { country: 'Bahamas', phoneCode: '+1242', flag: '🇧🇸' },
+  CC_BT: { country: 'Bhutan', phoneCode: '+975', flag: '🇧🇹' },
+  CC_BZ: { country: 'Belize', phoneCode: '+501', flag: '🇧🇿' },
+  CC_CD: { country: 'DR Congo', phoneCode: '+243', flag: '🇨🇩' },
+  CC_CF: { country: 'Central African Republic', phoneCode: '+236', flag: '🇨🇫' },
+  CC_CG: { country: 'Republic of the Congo', phoneCode: '+242', flag: '🇨🇬' },
+  CC_CI: { country: "Côte d'Ivoire", phoneCode: '+225', flag: '🇨🇮' },
+  CC_CM: { country: 'Cameroon', phoneCode: '+237', flag: '🇨🇲' },
+  CC_CR: { country: 'Costa Rica', phoneCode: '+506', flag: '🇨🇷' },
+  CC_CU: { country: 'Cuba', phoneCode: '+53', flag: '🇨🇺' },
+  CC_CV: { country: 'Cape Verde', phoneCode: '+238', flag: '🇨🇻' },
+  CC_CY: { country: 'Cyprus', phoneCode: '+357', flag: '🇨🇾' },
+  CC_DJ: { country: 'Djibouti', phoneCode: '+253', flag: '🇩🇯' },
+  CC_DM: { country: 'Dominica', phoneCode: '+1767', flag: '🇩🇲' },
+  CC_EC: { country: 'Ecuador', phoneCode: '+593', flag: '🇪🇨' },
+  CC_EE: { country: 'Estonia', phoneCode: '+372', flag: '🇪🇪' },
+  CC_ER: { country: 'Eritrea', phoneCode: '+291', flag: '🇪🇷' },
+  CC_ES: { country: 'Spain', phoneCode: '+34', flag: '🇪🇸' },
+  CC_FI: { country: 'Finland', phoneCode: '+358', flag: '🇫🇮' },
+  CC_FM: { country: 'Micronesia', phoneCode: '+691', flag: '🇫🇲' },
+  CC_FR: { country: 'France', phoneCode: '+33', flag: '🇫🇷' },
+  CC_GA: { country: 'Gabon', phoneCode: '+241', flag: '🇬🇦' },
+  CC_GD: { country: 'Grenada', phoneCode: '+1473', flag: '🇬🇩' },
+  CC_GM: { country: 'Gambia', phoneCode: '+220', flag: '🇬🇲' },
+  CC_GN: { country: 'Guinea', phoneCode: '+224', flag: '🇬🇳' },
+  CC_GQ: { country: 'Equatorial Guinea', phoneCode: '+240', flag: '🇬🇶' },
+  CC_GR: { country: 'Greece', phoneCode: '+30', flag: '🇬🇷' },
+  CC_GW: { country: 'Guinea-Bissau', phoneCode: '+245', flag: '🇬🇼' },
+  CC_GY: { country: 'Guyana', phoneCode: '+592', flag: '🇬🇾' },
+  CC_HN: { country: 'Honduras', phoneCode: '+504', flag: '🇭🇳' },
+  CC_HT: { country: 'Haiti', phoneCode: '+509', flag: '🇭🇹' },
+  CC_IE: { country: 'Ireland', phoneCode: '+353', flag: '🇮🇪' },
+  CC_IT: { country: 'Italy', phoneCode: '+39', flag: '🇮🇹' },
+  CC_KG: { country: 'Kyrgyzstan', phoneCode: '+996', flag: '🇰🇬' },
+  CC_KI: { country: 'Kiribati', phoneCode: '+686', flag: '🇰🇮' },
+  CC_KM: { country: 'Comoros', phoneCode: '+269', flag: '🇰🇲' },
+  CC_KN: { country: 'Saint Kitts & Nevis', phoneCode: '+1869', flag: '🇰🇳' },
+  CC_KP: { country: 'North Korea', phoneCode: '+850', flag: '🇰🇵' },
+  CC_LC: { country: 'Saint Lucia', phoneCode: '+1758', flag: '🇱🇨' },
+  CC_LI: { country: 'Liechtenstein', phoneCode: '+423', flag: '🇱🇮' },
+  CC_LR: { country: 'Liberia', phoneCode: '+231', flag: '🇱🇷' },
+  CC_LT: { country: 'Lithuania', phoneCode: '+370', flag: '🇱🇹' },
+  CC_LU: { country: 'Luxembourg', phoneCode: '+352', flag: '🇱🇺' },
+  CC_LV: { country: 'Latvia', phoneCode: '+371', flag: '🇱🇻' },
+  CC_LY: { country: 'Libya', phoneCode: '+218', flag: '🇱🇾' },
+  CC_MC: { country: 'Monaco', phoneCode: '+377', flag: '🇲🇨' },
+  CC_MG: { country: 'Madagascar', phoneCode: '+261', flag: '🇲🇬' },
+  CC_MH: { country: 'Marshall Islands', phoneCode: '+692', flag: '🇲🇭' },
+  CC_ML: { country: 'Mali', phoneCode: '+223', flag: '🇲🇱' },
+  CC_MR: { country: 'Mauritania', phoneCode: '+222', flag: '🇲🇷' },
+  CC_MT: { country: 'Malta', phoneCode: '+356', flag: '🇲🇹' },
+  CC_MV: { country: 'Maldives', phoneCode: '+960', flag: '🇲🇻' },
+  CC_NE: { country: 'Niger', phoneCode: '+227', flag: '🇳🇪' },
+  CC_NI: { country: 'Nicaragua', phoneCode: '+505', flag: '🇳🇮' },
+  CC_NL: { country: 'Netherlands', phoneCode: '+31', flag: '🇳🇱' },
+  CC_NR: { country: 'Nauru', phoneCode: '+674', flag: '🇳🇷' },
+  CC_PA: { country: 'Panama', phoneCode: '+507', flag: '🇵🇦' },
+  CC_PT: { country: 'Portugal', phoneCode: '+351', flag: '🇵🇹' },
+  CC_PW: { country: 'Palau', phoneCode: '+680', flag: '🇵🇼' },
+  CC_SB: { country: 'Solomon Islands', phoneCode: '+677', flag: '🇸🇧' },
+  CC_SC: { country: 'Seychelles', phoneCode: '+248', flag: '🇸🇨' },
+  CC_SD: { country: 'Sudan', phoneCode: '+249', flag: '🇸🇩' },
+  CC_SI: { country: 'Slovenia', phoneCode: '+386', flag: '🇸🇮' },
+  CC_SK: { country: 'Slovakia', phoneCode: '+421', flag: '🇸🇰' },
+  CC_SL: { country: 'Sierra Leone', phoneCode: '+232', flag: '🇸🇱' },
+  CC_SM: { country: 'San Marino', phoneCode: '+378', flag: '🇸🇲' },
+  CC_SN: { country: 'Senegal', phoneCode: '+221', flag: '🇸🇳' },
+  CC_SO: { country: 'Somalia', phoneCode: '+252', flag: '🇸🇴' },
+  CC_SR: { country: 'Suriname', phoneCode: '+597', flag: '🇸🇷' },
+  CC_SS: { country: 'South Sudan', phoneCode: '+211', flag: '🇸🇸' },
+  CC_ST: { country: 'São Tomé & Príncipe', phoneCode: '+239', flag: '🇸🇹' },
+  CC_SV: { country: 'El Salvador', phoneCode: '+503', flag: '🇸🇻' },
+  CC_TD: { country: 'Chad', phoneCode: '+235', flag: '🇹🇩' },
+  CC_TG: { country: 'Togo', phoneCode: '+228', flag: '🇹🇬' },
+  CC_TJ: { country: 'Tajikistan', phoneCode: '+992', flag: '🇹🇯' },
+  CC_TL: { country: 'Timor-Leste', phoneCode: '+670', flag: '🇹🇱' },
+  CC_TM: { country: 'Turkmenistan', phoneCode: '+993', flag: '🇹🇲' },
+  CC_TO: { country: 'Tonga', phoneCode: '+676', flag: '🇹🇴' },
+  CC_TV: { country: 'Tuvalu', phoneCode: '+688', flag: '🇹🇻' },
+  CC_VA: { country: 'Vatican City', phoneCode: '+379', flag: '🇻🇦' },
+  CC_VC: { country: 'Saint Vincent & Grenadines', phoneCode: '+1784', flag: '🇻🇨' },
+  CC_VU: { country: 'Vanuatu', phoneCode: '+678', flag: '🇻🇺' },
+  CC_WS: { country: 'Samoa', phoneCode: '+685', flag: '🇼🇸' },
+  CC_ZW: { country: 'Zimbabwe', phoneCode: '+263', flag: '🇿🇼' },
+  CC_PR: { country: 'Puerto Rico', phoneCode: '+1787', flag: '🇵🇷' },
+  CC_PS: { country: 'Palestine', phoneCode: '+970', flag: '🇵🇸' },
+  CC_ME: { country: 'Montenegro', phoneCode: '+382', flag: '🇲🇪' },
+  CC_AL2: { country: 'Kosovo', phoneCode: '+383', flag: '🇽🇰' },
 };
 
 const getCountryInfoForCurrency = (code) => (
@@ -13750,12 +13849,14 @@ const MarketsPage = () => {
                 </div>
                 {/* Center: market name perfectly centered on the image */}
                 <div className="flex flex-1 flex-col items-center justify-center px-1 text-center sm:items-start sm:px-0 sm:text-left">
-                  <p className={marketTitleClassName}>{t(market.labelKey)}</p>
-                  {marketShortDescriptions[market.href] ? (
-                    <p className="mt-1.5 text-[11px] leading-snug text-white/85 drop-shadow line-clamp-2 sm:mt-2 sm:text-xs">
-                      {marketShortDescriptions[market.href]}
-                    </p>
-                  ) : null}
+                  <div className="inline-flex flex-col items-center gap-1 rounded-xl border border-white/20 bg-black/55 px-2.5 py-1.5 backdrop-blur-sm sm:items-start sm:gap-1.5 sm:rounded-2xl sm:px-3 sm:py-2">
+                    <p className={marketTitleClassName}>{t(market.labelKey)}</p>
+                    {marketShortDescriptions[market.href] ? (
+                      <p className="text-[11px] leading-snug text-white/90 line-clamp-2 sm:text-xs">
+                        {marketShortDescriptions[market.href]}
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             </Link>
@@ -13979,9 +14080,13 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
   const [submitError, setSubmitError] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
   const [isPhoneCountryOpen, setIsPhoneCountryOpen] = useState(false);
+  const [phoneCountryQuery, setPhoneCountryQuery] = useState('');
   const phoneCountryRef = useRef(null);
   useEffect(() => {
-    if (!isPhoneCountryOpen) return undefined;
+    if (!isPhoneCountryOpen) {
+      setPhoneCountryQuery('');
+      return undefined;
+    }
     const handlePointerDown = (event) => {
       if (phoneCountryRef.current && !phoneCountryRef.current.contains(event.target)) {
         setIsPhoneCountryOpen(false);
@@ -13999,10 +14104,55 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
       .map(([code, info]) => ({ code, ...info }))
       .filter((entry) => entry.phoneCode && entry.phoneCode !== '+')
       .filter((entry, index, list) => (
-        list.findIndex((other) => other.phoneCode === entry.phoneCode) === index
+        list.findIndex((other) => other.country === entry.country) === index
       ))
       .sort((a, b) => a.country.localeCompare(b.country))
   ), []);
+  const filteredPhoneCountryOptions = useMemo(() => {
+    const query = phoneCountryQuery.trim().toLowerCase();
+    if (!query) return phoneCountryOptions;
+    return phoneCountryOptions.filter((entry) => (
+      entry.country.toLowerCase().includes(query)
+      || entry.phoneCode.toLowerCase().includes(query)
+      || entry.phoneCode.replace(/^\+/, '').includes(query.replace(/^\+/, ''))
+    ));
+  }, [phoneCountryOptions, phoneCountryQuery]);
+  const [isAddressCountryOpen, setIsAddressCountryOpen] = useState(false);
+  const [addressCountryQuery, setAddressCountryQuery] = useState('');
+  const addressCountryRef = useRef(null);
+  useEffect(() => {
+    if (!isAddressCountryOpen) {
+      setAddressCountryQuery('');
+      return undefined;
+    }
+    const handlePointerDown = (event) => {
+      if (addressCountryRef.current && !addressCountryRef.current.contains(event.target)) {
+        setIsAddressCountryOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+    };
+  }, [isAddressCountryOpen]);
+  const addressCountryOptions = useMemo(() => (
+    Object.entries(CURRENCY_COUNTRY_INFO)
+      .map(([code, info]) => ({ code, ...info }))
+      .filter((entry, index, list) => (
+        list.findIndex((other) => other.country === entry.country) === index
+      ))
+      .sort((a, b) => a.country.localeCompare(b.country))
+  ), []);
+  const filteredAddressCountryOptions = useMemo(() => {
+    const query = addressCountryQuery.trim().toLowerCase();
+    if (!query) return addressCountryOptions;
+    return addressCountryOptions.filter((entry) => entry.country.toLowerCase().includes(query));
+  }, [addressCountryOptions, addressCountryQuery]);
+  const selectedAddressCountry = useMemo(() => (
+    addressCountryOptions.find((entry) => entry.country === formState.country)
+  ), [addressCountryOptions, formState.country]);
   const selectedPhoneCountry = useMemo(() => (
     phoneCountryOptions.find((entry) => entry.phoneCode === formState.phoneCountryCode) || phoneCountryOptions[0]
   ), [phoneCountryOptions, formState.phoneCountryCode]);
@@ -14445,34 +14595,46 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
                     <ChevronDown className="h-4 w-4 shrink-0 opacity-60" aria-hidden="true" />
                   </button>
                   {isPhoneCountryOpen ? (
-                    <ul
-                      role="listbox"
-                      className="absolute left-0 right-auto top-full z-30 mt-1 max-h-72 w-[min(20rem,calc(100vw-2rem))] overflow-auto rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] py-1 shadow-2xl"
-                    >
-                      {phoneCountryOptions.map((entry) => {
-                        const isSelected = entry.phoneCode === formState.phoneCountryCode;
-                        return (
-                          <li key={`${entry.code}-${entry.phoneCode}`}>
-                            <button
-                              type="button"
-                              role="option"
-                              aria-selected={isSelected}
-                              onClick={() => {
-                                updateField('phoneCountryCode', entry.phoneCode);
-                                setIsPhoneCountryOpen(false);
-                              }}
-                              className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition hover:bg-[var(--svs-surface-soft)] ${isSelected ? 'bg-[var(--svs-surface-soft)] font-semibold' : ''}`}
-                            >
-                              <span className="flex items-center gap-2">
-                                <span aria-hidden="true">{entry.flag}</span>
-                                <span>{entry.phoneCode}</span>
-                              </span>
-                              <span className="truncate text-xs text-[var(--svs-text-muted)]">{entry.country}</span>
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
+                    <div className="absolute left-0 right-auto top-full z-30 mt-1 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-2xl">
+                      <div className="sticky top-0 border-b border-[var(--svs-border)] bg-[var(--svs-surface)] p-2">
+                        <input
+                          type="text"
+                          value={phoneCountryQuery}
+                          onChange={(event) => setPhoneCountryQuery(event.target.value)}
+                          placeholder="Search country or code"
+                          aria-label="Search phone country"
+                          autoFocus
+                          className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/20"
+                        />
+                      </div>
+                      <ul role="listbox" className="max-h-64 overflow-auto py-1">
+                        {filteredPhoneCountryOptions.length === 0 ? (
+                          <li className="px-3 py-3 text-center text-xs text-[var(--svs-text-muted)]">No countries match</li>
+                        ) : filteredPhoneCountryOptions.map((entry) => {
+                          const isSelected = entry.phoneCode === formState.phoneCountryCode;
+                          return (
+                            <li key={`${entry.code}-${entry.phoneCode}`}>
+                              <button
+                                type="button"
+                                role="option"
+                                aria-selected={isSelected}
+                                onClick={() => {
+                                  updateField('phoneCountryCode', entry.phoneCode);
+                                  setIsPhoneCountryOpen(false);
+                                }}
+                                className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition hover:bg-[var(--svs-surface-soft)] ${isSelected ? 'bg-[var(--svs-surface-soft)] font-semibold' : ''}`}
+                              >
+                                <span className="flex items-center gap-2">
+                                  <span aria-hidden="true">{entry.flag}</span>
+                                  <span>{entry.phoneCode}</span>
+                                </span>
+                                <span className="truncate text-xs text-[var(--svs-text-muted)]">{entry.country}</span>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
                   ) : null}
                 </div>
                 <input
@@ -14556,24 +14718,67 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
               </div>
               <div>
                 <label htmlFor="checkout-country" className={fieldLabelClassName}>Country</label>
-                <select
-                  id="checkout-country"
-                  value={formState.country}
-                  onChange={(event) => updateField('country', event.target.value)}
-                  className={inputClassName}
-                >
-                  {Object.entries(CURRENCY_COUNTRY_INFO)
-                    .map(([code, info]) => ({ code, ...info }))
-                    .filter((entry, index, list) => (
-                      list.findIndex((other) => other.country === entry.country) === index
-                    ))
-                    .sort((a, b) => a.country.localeCompare(b.country))
-                    .map((entry) => (
-                      <option key={entry.code} value={entry.country}>
-                        {entry.flag} {entry.country}
-                      </option>
-                    ))}
-                </select>
+                <div className="relative" ref={addressCountryRef}>
+                  <button
+                    id="checkout-country"
+                    type="button"
+                    onClick={() => setIsAddressCountryOpen((prev) => !prev)}
+                    className={`${inputClassName} flex items-center justify-between gap-2 text-left`}
+                    aria-haspopup="listbox"
+                    aria-expanded={isAddressCountryOpen}
+                  >
+                    <span className="flex items-center gap-2 truncate">
+                      {selectedAddressCountry ? (
+                        <>
+                          <span aria-hidden="true">{selectedAddressCountry.flag}</span>
+                          <span className="truncate">{selectedAddressCountry.country}</span>
+                        </>
+                      ) : (
+                        <span className="text-[var(--svs-text-muted)]">Select country</span>
+                      )}
+                    </span>
+                    <ChevronDown className="h-4 w-4 shrink-0 opacity-60" aria-hidden="true" />
+                  </button>
+                  {isAddressCountryOpen ? (
+                    <div className="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-2xl">
+                      <div className="sticky top-0 border-b border-[var(--svs-border)] bg-[var(--svs-surface)] p-2">
+                        <input
+                          type="text"
+                          value={addressCountryQuery}
+                          onChange={(event) => setAddressCountryQuery(event.target.value)}
+                          placeholder="Search country"
+                          aria-label="Search country"
+                          autoFocus
+                          className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/20"
+                        />
+                      </div>
+                      <ul role="listbox" className="max-h-64 overflow-auto py-1">
+                        {filteredAddressCountryOptions.length === 0 ? (
+                          <li className="px-3 py-3 text-center text-xs text-[var(--svs-text-muted)]">No countries match</li>
+                        ) : filteredAddressCountryOptions.map((entry) => {
+                          const isSelected = entry.country === formState.country;
+                          return (
+                            <li key={entry.code}>
+                              <button
+                                type="button"
+                                role="option"
+                                aria-selected={isSelected}
+                                onClick={() => {
+                                  updateField('country', entry.country);
+                                  setIsAddressCountryOpen(false);
+                                }}
+                                className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition hover:bg-[var(--svs-surface-soft)] ${isSelected ? 'bg-[var(--svs-surface-soft)] font-semibold' : ''}`}
+                              >
+                                <span aria-hidden="true">{entry.flag}</span>
+                                <span className="truncate">{entry.country}</span>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </div>
             <div>
@@ -19317,7 +19522,7 @@ const SiteFooter = () => {
 
           {/* Column 4 – Subscribe to Offers */}
           <div>
-            <h4 className="whitespace-nowrap text-[10px] font-bold uppercase tracking-wide sm:text-sm">{t('footer.subscribe')}</h4>
+            <h4 className="text-[10px] font-bold uppercase leading-tight tracking-wide sm:whitespace-nowrap sm:text-sm">{t('footer.subscribe')}</h4>
             <p className="mt-1.5 text-[9px] leading-snug text-slate-300 sm:mt-3 sm:text-sm">{t('footer.subscribeText')}</p>
             <div className="mt-1.5 flex flex-col gap-1 sm:mt-4 sm:flex-row sm:gap-2">
               <input
