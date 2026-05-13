@@ -52,6 +52,8 @@ import { DEFAULT_LANGUAGE_CODE, getLanguageByCode, isRtlLanguage, SUPPORTED_LANG
 import { embeddedCardCheckoutEnabled, getStripeInstance, startCardPayment, stripeCurrency } from '../lib/payments';
 import { hasSupabaseEnv, supabase } from '../lib/supabase';
 import SigninPage from '../pages/SigninPage';
+import ForgotPasswordPage from '../pages/ForgotPasswordPage';
+import ResetPasswordPage from '../pages/ResetPasswordPage';
 import SignupPage from '../pages/SignupPage';
 import SellerLandingPage from '../pages/SellerLandingPage';
 import SellerOnboardingPage from '../pages/SellerOnboardingPage';
@@ -19636,8 +19638,11 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
 
     <Route path="/signin" element={<SigninPage />} />
     <Route path="/signup" element={<SignupPage />} />
+    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+    <Route path="/reset-password" element={<ResetPasswordPage />} />
     <Route path="/sell" element={<SellerLandingPage />} />
     <Route path="/sell/signin" element={<SellerSigninPage />} />
+    <Route path="/sell/forgot-password" element={<ForgotPasswordPage />} />
     <Route path="/sell/signup" element={<SellerSignupPage />} />
     <Route path="/sell/onboarding" element={<SellerOnboardingPage />} />
 

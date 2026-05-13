@@ -180,6 +180,14 @@ const SigninPage = () => {
 								{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
 							</button>
 						</div>
+						<div className="mt-1.5 text-right">
+							<Link
+								to="/forgot-password"
+								className="text-xs font-semibold text-cyan-300 transition hover:text-cyan-200"
+							>
+								Forgot password?
+							</Link>
+						</div>
 					</div>
 
 					{message && (

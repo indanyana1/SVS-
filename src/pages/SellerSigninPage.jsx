@@ -208,6 +208,14 @@ const SellerSigninPage = () => {
 									{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
 								</button>
 							</div>
+							<div className="mt-1.5 text-right">
+								<Link
+									to="/sell/forgot-password"
+									className="text-xs font-bold text-[var(--svs-primary)] transition hover:underline"
+								>
+									Forgot password?
+								</Link>
+							</div>
 						</div>
 
 						<button
