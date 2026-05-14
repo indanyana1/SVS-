@@ -46,11 +46,17 @@ export const buildResetLink = (token) => {
 //   REACT_APP_EMAILJS_TEMPLATE_ID=template_xxxxxxx
 //   REACT_APP_EMAILJS_PUBLIC_KEY=xxxxxxxxxxxxxxx
 //
-// Your EmailJS template should accept these variables:
-//   {{to_email}}      — recipient
-//   {{to_name}}       — recipient name (optional)
-//   {{reset_link}}    — the link to click
-//   {{role_label}}    — "Seller Central" or "SVS"
+// IMPORTANT — EmailJS template configuration:
+// In the EmailJS dashboard, open your template → Settings tab, and set
+// the "To Email" field to `{{to_email}}` (NOT a hardcoded address).
+// Otherwise every reset email goes to whatever literal address you
+// typed when you created the template.
+//
+// The template body can reference any of these variables:
+//   {{to_email}} / {{user_email}} / {{email}}   — recipient (aliases)
+//   {{to_name}}  / {{user_name}} / {{name}}     — recipient name
+//   {{reset_link}}                              — the link to click
+//   {{role_label}}                              — "Seller Central" or "SVS"
 //
 // If the env vars aren't set the UI gracefully falls back to showing
 // the reset link inline so the developer / user can still complete
@@ -71,6 +77,31 @@ export const sendResetEmail = async (_supabase, { email, resetLink, role, fullNa
 	}
 
 	const roleLabel = role === 'seller' ? 'Seller Central' : 'SVS';
+	const displayName = fullName || 'there';
+
+	// Provide multiple aliases for the recipient so whichever variable
+	// the EmailJS template uses in its "To Email" setting will resolve
+	// to the registered address.
+	const templateParams = {
+		to_email: email,
+		user_email: email,
+		email,
+		recipient: email,
+		reply_to: email,
+		to_name: displayName,
+		user_name: displayName,
+		name: displayName,
+		reset_link: resetLink,
+		link: resetLink,
+		role_label: roleLabel,
+	};
+
+	// eslint-disable-next-line no-console
+	console.info('[passwordReset] Sending reset email via EmailJS', {
+		serviceId,
+		templateId,
+		to: email,
+	});
 
 	try {
 		const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
@@ -80,12 +111,7 @@ export const sendResetEmail = async (_supabase, { email, resetLink, role, fullNa
 				service_id: serviceId,
 				template_id: templateId,
 				user_id: publicKey,
-				template_params: {
-					to_email: email,
-					to_name: fullName || 'there',
-					reset_link: resetLink,
-					role_label: roleLabel,
-				},
+				template_params: templateParams,
 			}),
 		});
 
