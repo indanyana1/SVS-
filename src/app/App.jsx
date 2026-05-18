@@ -59,6 +59,13 @@ import SellerLandingPage from '../pages/SellerLandingPage';
 import SellerOnboardingPage from '../pages/SellerOnboardingPage';
 import SellerSigninPage from '../pages/SellerSigninPage';
 import SellerSignupPage from '../pages/SellerSignupPage';
+import {
+  PropertyMarketPage,
+  PropertyCategoryPage,
+  PropertyDetailPage,
+  PropertyVisitStatusPage,
+  PropertySellPage,
+} from '../features/property';
 
 // --- Beverages Seller Fields ---
 const EMPTY_BEVERAGES_LISTING_FIELDS = {
@@ -301,7 +308,7 @@ const MARKET_FIELD_SPEC = {
   },
   // Aligned with StationeryPage. Static items use category: Pens, Books, Invoice Books, Office Supplies.
   stationery: {
-    title: 'Stationery & Office Listing Details',
+    title: 'Stationery and Office Supplies Listing Details',
     helper: 'Pick a category, brand, and any colour or pack size details so buyers can filter.',
     fields: [
       { name: 'category', label: 'Category', type: 'select', required: true, options: ['Pens', 'Pencils', 'Books', 'Notebooks & Paper', 'Invoice Books', 'Office Supplies', 'Art & Craft', 'Storage & Filing', 'Printing & Toner', 'School Sets', 'Other'] },
@@ -332,7 +339,7 @@ const MARKET_FIELD_SPEC = {
   // and the filter UI checks item.condition with values:
   // 'Like New', 'Excellent', 'Good', 'Lightly Worn'.
   secondhand: {
-    title: 'Secondhand Central Listing Details',
+    title: 'SecondHand Central Listing Details',
     helper: 'Tell buyers the category, brand, and condition so it slots into the right secondhand section.',
     fields: [
       { name: 'category', label: 'Category', type: 'select', required: true, options: [
@@ -395,7 +402,7 @@ const MARKET_FIELD_SPEC = {
   // Minerals, Aggregates, Stone, Natural Resources, Mineral Products. Filterable
   // on category, volume (unit), grade, origin.
   naturalResources: {
-    title: 'Natural Resources & Minerals Listing Details',
+    title: 'Natural Resources and Minerals Exchange Listing Details',
     helper: 'Provide the resource category, unit, grade, and origin.',
     fields: [
       { name: 'category', label: 'Category', type: 'select', required: true, options: ['Minerals', 'Mineral Products', 'Aggregates', 'Stone', 'Sand', 'Timber', 'Coal', 'Metals', 'Soil & Compost', 'Water', 'Natural Resources', 'Other'] },
@@ -407,7 +414,7 @@ const MARKET_FIELD_SPEC = {
   // Aligned with TraditionalMedicinesPage. Static items use category:
   // Herbs, Traditional Supplements, Traditional Remedies, Medicinal Herbs, Botanical Remedies.
   traditionalMedicines: {
-    title: 'Traditional Medicines & Herbs Listing Details',
+    title: 'Traditional Medicines and Herbs Listing Details',
     helper: 'Pick the herb/remedy category and the form so buyers can find it.',
     fields: [
       { name: 'category', label: 'Category', type: 'select', required: true, options: ['Herbs', 'Medicinal Herbs', 'Traditional Supplements', 'Traditional Remedies', 'Botanical Remedies', 'Tonics', 'Tinctures', 'Powders', 'Teas', 'Roots', 'Oils', 'Capsules', 'Other'] },
@@ -603,20 +610,21 @@ const marketShortDescriptions = {
 
 const sellerMarketOptions = [
   { key: 'beverages', labelKey: 'markets.beverages', route: '/beverages-liquors' },
+  { key: 'homeCare', labelKey: 'markets.homeCare', route: '/home-care' },
+  { key: 'tickets', labelKey: 'markets.tickets', route: '/tickets' },
   { key: 'constructionTools', labelKey: 'markets.constructionTools', route: '/building-construction-tools' },
-  { key: 'fashionStyle', labelKey: 'markets.fashionStyle', route: '/fashion-style' },
   { key: 'hardwareSoftware', labelKey: 'markets.hardwareSoftware', route: '/hardware-software' },
-  { key: 'mobilityVehicles', labelKey: 'markets.mobilityVehicles', route: '/mobility-vehicles' },
-  { key: 'naturalResources', labelKey: 'markets.naturalResources', route: '/natural-resources-minerals' },
+  { key: 'fashionStyle', labelKey: 'markets.fashionStyle', route: '/fashion-style' },
   { key: 'fastFood', labelKey: 'markets.fastFood', route: '/fast-food' },
   { key: 'groceries', labelKey: 'markets.groceries', route: '/groceries' },
-  { key: 'homeCare', labelKey: 'markets.homeCare', route: '/home-care' },
   { key: 'ecommerce', labelKey: 'markets.ecommerce', route: '/e-commerce' },
-  { key: 'tickets', labelKey: 'markets.tickets', route: '/tickets' },
-  { key: 'traditionalMedicines', labelKey: 'markets.traditionalMedicines', route: '/traditional-medicines-herbs' },
+  { key: 'mobilityVehicles', labelKey: 'markets.mobilityVehicles', route: '/mobility-vehicles' },
+  { key: 'naturalResources', labelKey: 'markets.naturalResources', route: '/natural-resources-minerals' },
   { key: 'wellness', labelKey: 'markets.wellness', route: '/wellness' },
-  { key: 'stationery', labelKey: 'markets.stationery', route: '/stationery-office' },
+  { key: 'property', labelKey: 'markets.propertyHub', route: '/property-hub', externalSellRoute: '/property-hub/sell' },
   { key: 'secondhand', labelKey: 'markets.secondhand', route: '/secondhand-central' },
+  { key: 'stationery', labelKey: 'markets.stationery', route: '/stationery-office' },
+  { key: 'traditionalMedicines', labelKey: 'markets.traditionalMedicines', route: '/traditional-medicines-herbs' },
 ];
 
 const sellerMarketConfig = sellerMarketOptions.reduce((accumulator, option) => {
@@ -1164,7 +1172,7 @@ const homeHeroSlides = [
     image:
       'https://images.pexels.com/photos/2101137/pexels-photo-2101137.jpeg?auto=compress&cs=tinysrgb&w=1920',
     label: 'Raw Materials',
-    title: 'Natural Resources & Minerals',
+    title: 'Natural Resources and Minerals Exchange',
     subtitle: 'Quality raw materials sourced responsibly',
     route: '/natural-resources-minerals',
   },
@@ -1173,7 +1181,7 @@ const homeHeroSlides = [
     image:
       'https://images.pexels.com/photos/3846022/pexels-photo-3846022.jpeg?auto=compress&cs=tinysrgb&w=1920',
     label: 'On-Demand Help',
-    title: 'Home-Care Services',
+    title: 'Book @ Home-Care Services',
     subtitle: 'Trusted cleaning, laundry & home essentials',
     route: '/home-care',
   },
@@ -1182,7 +1190,7 @@ const homeHeroSlides = [
     image:
       'https://images.pexels.com/photos/1444416/pexels-photo-1444416.jpeg?auto=compress&cs=tinysrgb&w=1920',
     label: 'Shop Everything',
-    title: 'E-Commerce Marketplace',
+    title: 'Lifestyle and Tech Essentials',
     subtitle: 'Lifestyle picks & tech essentials in one place',
     route: '/e-commerce',
   },
@@ -1191,7 +1199,7 @@ const homeHeroSlides = [
     image:
       'https://images.pexels.com/photos/906150/pexels-photo-906150.jpeg?auto=compress&cs=tinysrgb&w=1920',
     label: 'Natural Remedies',
-    title: 'Traditional Medicines & Herbs',
+    title: 'Traditional Medicines and Herbs',
     subtitle: 'Authentic herbs & natural wellness',
     route: '/traditional-medicines-herbs',
   },
@@ -1218,7 +1226,7 @@ const homeHeroSlides = [
     image:
       'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=1920',
     label: 'Find Your Space',
-    title: 'Property Hub',
+    title: 'Property Marketplace',
     subtitle: 'Homes, rentals & commercial spaces',
     route: '/property-hub',
   },
@@ -1227,7 +1235,7 @@ const homeHeroSlides = [
     image:
       'https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=1920',
     label: 'Pre-Loved Finds',
-    title: 'Secondhand Central',
+    title: 'SecondHand Central',
     subtitle: 'Quality pre-loved goods at great prices',
     route: '/secondhand-central',
   },
@@ -1236,7 +1244,7 @@ const homeHeroSlides = [
     image:
       'https://images.pexels.com/photos/6444/pencil-typography-black-design.jpg?auto=compress&cs=tinysrgb&w=1920',
     label: 'Work & Study',
-    title: 'Stationery & Office',
+    title: 'Stationery and Office Supplies',
     subtitle: 'Office, school & creative supplies',
     route: '/stationery-office',
   },
@@ -1274,7 +1282,7 @@ const featureSlides = [
   {
     id: 'feat-5',
     image: 'https://images.pexels.com/photos/3735149/pexels-photo-3735149.jpeg?auto=compress&cs=tinysrgb&w=1600',
-    title: 'Home-Care Services',
+    title: 'Book @ Home-Care Services',
     subtitle: 'Book trusted cleaning, laundry, and home essentials professionals on demand.',
     route: '/home-care',
   },
@@ -1309,7 +1317,7 @@ const featureSlides = [
   {
     id: 'feat-10',
     image: 'https://images.pexels.com/photos/2902440/pexels-photo-2902440.jpeg?auto=compress&cs=tinysrgb&w=1600',
-    title: 'Natural Resources & Minerals',
+    title: 'Natural Resources and Minerals Exchange',
     subtitle: 'Verified suppliers of raw materials, minerals, and bulk resources.',
     route: '/natural-resources-minerals',
   },
@@ -1323,14 +1331,14 @@ const featureSlides = [
   {
     id: 'feat-12',
     image: 'https://images.pexels.com/photos/4099354/pexels-photo-4099354.jpeg?auto=compress&cs=tinysrgb&w=1600',
-    title: 'Traditional Medicines & Herbs',
+    title: 'Traditional Medicines and Herbs',
     subtitle: 'Authentic herbs and natural remedies sourced from trusted practitioners.',
     route: '/traditional-medicines-herbs',
   },
   {
     id: 'feat-13',
     image: 'https://images.pexels.com/photos/1166209/pexels-photo-1166209.jpeg?auto=compress&cs=tinysrgb&w=1600',
-    title: 'Stationery & Office',
+    title: 'Stationery and Office Supplies',
     subtitle: 'Office, school, and creative supplies to keep you productive and inspired.',
     route: '/stationery-office',
   },
@@ -1344,7 +1352,7 @@ const featureSlides = [
   {
     id: 'feat-15',
     image: 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=1600',
-    title: 'Property Hub',
+    title: 'Property Marketplace',
     subtitle: 'Homes, rentals, and commercial spaces for every lifestyle and budget.',
     route: '/property-hub',
   },
@@ -3388,7 +3396,7 @@ const searchableCatalog = [
   })),
   ...traditionalMedicinesItems.map((item) => ({
     ...item,
-    section: 'Traditional Medicines and Herbs Market',
+    section: 'Traditional Medicines and Herbs',
     sectionKey: 'markets.traditionalMedicines',
     route: '/traditional-medicines-herbs',
     searchText: buildSearchText([
@@ -3401,7 +3409,7 @@ const searchableCatalog = [
   })),
   ...stationeryItems.map((item) => ({
     ...item,
-    section: 'Stationery and Office Supplies Hub',
+    section: 'Stationery and Office Supplies',
     sectionKey: 'markets.stationery',
     route: '/stationery-office',
     searchText: buildSearchText([
@@ -3414,7 +3422,7 @@ const searchableCatalog = [
   })),
   ...constructionToolsItems.map((item) => ({
     ...item,
-    section: 'Building Materials, Construction and Engineering Hub',
+    section: 'Building Materials, Construction and Engineering Tools',
     sectionKey: 'markets.constructionTools',
     route: '/building-construction-tools',
     searchText: buildSearchText([
@@ -3427,7 +3435,8 @@ const searchableCatalog = [
   })),
   ...techItems.map((item) => ({
     ...item,
-    section: 'Hardwares & Softwares Hub',
+    section: 'Electronics and Gadgets Shop',
+    sectionKey: 'markets.hardwareSoftware',
     route: '/hardware-software',
     searchText: buildSearchText([
       item.title,
@@ -3437,7 +3446,7 @@ const searchableCatalog = [
   })),
   ...propertyListings.map((item) => ({
     ...item,
-    section: 'Property Hub',
+    section: 'Property Marketplace',
     sectionKey: 'markets.propertyHub',
     route: '/property-hub',
     searchText: buildSearchText([
@@ -3489,7 +3498,7 @@ const searchableCatalog = [
   })),
   ...fashionStyleItems.map((item) => ({
     ...item,
-    section: 'Fashion, Clothing and Footwear Market',
+    section: 'Fashion, Clothing and Footwear',
     sectionKey: 'markets.fashionStyle',
     route: '/fashion-style',
     searchText: buildSearchText([
@@ -4466,6 +4475,11 @@ const _fxState = (() => {
 const _fxSubscribers = new Set();
 const notifyCurrencyChange = () => {
   _fxSubscribers.forEach((cb) => { try { cb(); } catch (error) { /* ignore */ } });
+  // Notify feature modules (e.g. property) that read from localStorage so
+  // same-tab currency switches propagate without a reload.
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+    try { window.dispatchEvent(new CustomEvent('svs-buyer-currency-change')); } catch (_e) { /* ignore */ }
+  }
 };
 
 const setBuyerCurrency = (code) => {
@@ -6031,6 +6045,7 @@ const MarketSelectorField = ({
   ariaLabel = 'Market selector',
 }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
   const selectedOption = sellerMarketOptions.find((option) => option.key === value);
@@ -6083,8 +6098,12 @@ const MarketSelectorField = ({
                   key={option.key}
                   type="button"
                   onClick={() => {
-                    onChange(option.key);
                     setIsOpen(false);
+                    if (option.externalSellRoute) {
+                      navigate(option.externalSellRoute);
+                      return;
+                    }
+                    onChange(option.key);
                   }}
                   className={`mb-1 flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition last:mb-0 ${
                     isSelected
@@ -6094,7 +6113,7 @@ const MarketSelectorField = ({
                   aria-checked={isSelected}
                   role="menuitemradio"
                 >
-                  <span className="font-medium">{t(option.labelKey)}</span>
+                  <span className="font-medium">{t(option.labelKey)}{option.externalSellRoute ? ' →' : ''}</span>
                   <span
                     className={`h-4 w-4 rounded-full border-2 ${
                       isSelected ? 'border-[var(--svs-primary)] bg-[var(--svs-primary)]' : 'border-[var(--svs-border)] bg-transparent'
@@ -13520,33 +13539,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
   );
 };
 
-const PropertyHubPage = () => {
-  const { t } = useTranslation();
-
-  return (
-  <PageFrame title={t('markets.propertyHub')} subtitle={t('pageSubtitles.propertyHub')}>
-    <div className="mb-5 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4 text-sm text-[var(--svs-text)]">
-      {t('propertyHub.intro')}
-    </div>
-    <div className="grid gap-4 md:grid-cols-3">
-      {propertyListings.map((listing) => (
-        <article key={listing.id} className="overflow-hidden rounded-xl border border-[#eeeeee] bg-white shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
-          <img src={listing.image} alt={getTranslatedValue(t, listing.titleKey, listing.title)} className="h-44 w-full object-cover" loading="lazy" />
-          <div className="p-4">
-            <h3 className="text-lg font-bold">{getTranslatedValue(t, listing.titleKey, listing.title)}</h3>
-            <p className="mt-1 text-sm text-slate-600">{getTranslatedValue(t, listing.typeKey, listing.type)}</p>
-            <p className="mt-2 flex items-center gap-2 text-sm text-slate-600"><MapPin className="h-4 w-4" /> {getTranslatedValue(t, listing.locationKey, listing.location)}</p>
-            <p className="mt-3 text-sm text-[var(--svs-primary-strong)]"><SalePrice price={listing.price} currency={listing.currency} /></p>
-            <button type="button" className={`${cudyBluePrimaryButtonClassName} mt-4 rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
-              {t('common.viewDetails')}
-            </button>
-          </div>
-        </article>
-      ))}
-    </div>
-  </PageFrame>
-  );
-};
+const PropertyHubPage = () => <PropertyMarketPage />;
 
 const BettingLotteryGamesPage = () => {
   const { t } = useTranslation();
@@ -18925,7 +18918,7 @@ const SecondHandProductDetailPage = ({ onAddToCart, onBuyNow, onToggleWishlist, 
         <h2 className="text-2xl font-bold text-[var(--svs-text)]">Product not found</h2>
         <p className="mt-2 text-[var(--svs-muted)]">The item you're looking for doesn't exist or has been removed.</p>
         <button type="button" onClick={() => navigate('/secondhand-central')} className="rounded-full bg-[#0f766e] px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0d6357]">
-          Back to Secondhand Central
+          Back to SecondHand Central
         </button>
       </div>
     );
@@ -18942,7 +18935,7 @@ const SecondHandProductDetailPage = ({ onAddToCart, onBuyNow, onToggleWishlist, 
     image: product.images[0] || '',
     price: product.price,
     route: '/secondhand-central',
-    marketName: 'Secondhand Central',
+    marketName: 'SecondHand Central',
     details: `${product.condition} • ${product.description?.[0] || ''}`,
   });
 
@@ -18952,7 +18945,7 @@ const SecondHandProductDetailPage = ({ onAddToCart, onBuyNow, onToggleWishlist, 
     image: product.images[0] || '',
     price: product.price,
     route: '/secondhand-central',
-    marketName: 'Secondhand Central',
+    marketName: 'SecondHand Central',
     details: `${product.condition}`,
   });
 
@@ -19629,6 +19622,10 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/seller/dashboard" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onUpdateOrderStatus={onUpdateOrderStatus} initialView="listings" />} />
     <Route path="/seller/orders" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onUpdateOrderStatus={onUpdateOrderStatus} initialView="orders" />} />
     <Route path="/property-hub" element={<PropertyHubPage />} />
+    <Route path="/property-hub/sell" element={<PropertySellPage />} />
+    <Route path="/property-hub/category/:categoryKey" element={<PropertyCategoryPage />} />
+    <Route path="/property-hub/listing/:listingId" element={<PropertyDetailPage />} />
+    <Route path="/property-hub/visit/:listingId" element={<PropertyVisitStatusPage />} />
     <Route path="/betting-lottery-games" element={<BettingLotteryGamesPage />} />
     <Route path="/international-lottery-games" element={<Navigate to="/betting-lottery-games" replace />} />
     <Route path="/livestock-hub" element={<LivestockHubPage />} />

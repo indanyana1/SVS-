@@ -38,7 +38,7 @@ const marketItems = [
       id: 'secondhand-1',
       type: 'secondhand',
       title: 'Pre-loved Mountain Bike',
-      venue: 'Secondhand Central',
+      venue: 'SecondHand Central',
       date: '2025-12-25',
       country: 'South Africa',
       price: 'R1800',
@@ -191,7 +191,7 @@ const typeLabelMap = {
   liquor: 'Liquor',
   tickets: 'Tickets',
   fashion: 'Fashion, Clothing and Footwear',
-  secondhand: 'Secondhand Central',
+  secondhand: 'SecondHand Central',
 };
 
 const ticketCategoryOrder = ['all', 'food', 'groceries', 'gadgets', 'animals', 'medicines', 'liquor', 'tickets', 'fashion', 'secondhand'];
