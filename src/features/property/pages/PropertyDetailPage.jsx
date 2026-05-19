@@ -239,15 +239,16 @@ const PropertyDetailPage = () => {
 						<dl className="mt-3 divide-y divide-white/60 text-sm">
 							{[
 								['Property Type', listing.propertyType],
-								['Floor', listing.floor],
+								['Floor', listing.totalFloors ? `${listing.floor || '—'} of ${listing.totalFloors}` : listing.floor],
 								['Age', listing.age],
 								['Furnishing', listing.furnishing],
 								['Facing', listing.facing],
+								['Availability', listing.availability],
 								['Seller Type', listing.sellerType],
 							].map(([label, value]) => (
 								<div key={label} className="grid grid-cols-2 gap-3 py-2.5">
 									<dt className="text-slate-600">{label}</dt>
-									<dd className="font-medium text-[var(--svs-text)]">{value}</dd>
+									<dd className="font-medium text-[var(--svs-text)]">{value || '—'}</dd>
 								</div>
 							))}
 						</dl>
@@ -297,16 +298,58 @@ const PropertyDetailPage = () => {
 								<p className="mt-1">{listing.title}</p>
 								<p className="mt-3 font-semibold text-[var(--svs-text)]">Full Location</p>
 								<p className="mt-1 whitespace-pre-line">{listing.fullAddress}</p>
+								{listing.landmark && (
+									<>
+										<p className="mt-3 font-semibold text-[var(--svs-text)]">Nearest Landmark</p>
+										<p className="mt-1">{listing.landmark}</p>
+									</>
+								)}
+								{(listing.suburb || listing.postalCode || listing.province) && (
+									<>
+										<p className="mt-3 font-semibold text-[var(--svs-text)]">Area</p>
+										<p className="mt-1">
+											{[listing.suburb, listing.province, listing.postalCode]
+												.filter(Boolean)
+												.join(' · ')}
+										</p>
+									</>
+								)}
 							</div>
-							<div className="relative h-32 overflow-hidden rounded-lg border border-[var(--svs-border)]">
-								<img
-									src="https://images.pexels.com/photos/41949/earth-earth-at-night-night-lights-41949.jpeg?auto=compress&cs=tinysrgb&w=600"
-									alt="Map preview"
-									className="h-full w-full object-cover"
-								/>
-								<span className="absolute inset-0 flex items-center justify-center bg-black/30 text-xs font-semibold text-white">
-									Map Preview
-								</span>
+							<div className="relative h-48 overflow-hidden rounded-lg border border-[var(--svs-border)] sm:h-56">
+								{(() => {
+									const mapQuery = [
+										listing.streetAddress,
+										listing.suburb,
+										listing.location,
+										listing.city,
+										listing.province,
+										listing.postalCode,
+										listing.country,
+									]
+										.map((s) => (s || '').trim())
+										.filter(Boolean)
+										.join(', ') || listing.fullAddress || listing.title;
+									const encoded = encodeURIComponent(mapQuery);
+									return (
+										<>
+											<iframe
+												title={`Map showing ${listing.title}`}
+												src={`https://maps.google.com/maps?q=${encoded}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+												className="h-full w-full border-0"
+												loading="lazy"
+												referrerPolicy="no-referrer-when-downgrade"
+											/>
+											<a
+												href={`https://www.google.com/maps/search/?api=1&query=${encoded}`}
+												target="_blank"
+												rel="noopener noreferrer"
+												className="absolute bottom-1 right-1 rounded bg-white/90 px-2 py-0.5 text-[10px] font-semibold text-[var(--svs-primary-strong)] shadow hover:bg-white"
+											>
+												Open in Maps
+											</a>
+										</>
+									);
+								})()}
 							</div>
 						</div>
 					</section>

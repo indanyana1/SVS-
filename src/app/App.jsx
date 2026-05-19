@@ -2,6 +2,7 @@ import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-
 import CategoryFilterSidebar from '../components/market/CategoryFilterSidebar';
 import {
   Bell,
+  Building2,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -12461,6 +12462,13 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
         >
           <Plus className="h-4 w-4" />
           <span>Add Listing</span>
+        </Link>
+        <Link
+          to="/property-hub/sell"
+          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)]"
+        >
+          <Building2 className="h-4 w-4" />
+          <span>Property Listings</span>
         </Link>
       </nav>
 

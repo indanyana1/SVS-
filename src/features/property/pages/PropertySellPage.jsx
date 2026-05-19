@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, Trash2, Plus, Building2, ImagePlus, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Trash2, Plus, Building2, ImagePlus, X, Pencil, Calendar, Check } from 'lucide-react';
 import { useSmartBack } from '../hooks/useSmartBack';
 import {
 	AMENITY_OPTIONS,
+	AVAILABILITY_OPTIONS,
+	AGE_OPTIONS,
+	FACING_OPTIONS,
+	FURNISHING_OPTIONS,
 	PROPERTY_CATEGORIES,
 	PROPERTY_STATUSES,
 	SELLER_TYPES,
@@ -16,6 +20,13 @@ import {
 	saveSellerListing,
 	subscribeToSellerListings,
 } from '../data/sellerListings';
+import {
+	deleteBooking,
+	getBookings,
+	subscribeToBookings,
+	updateBookingStatus,
+	useBookingsVersion,
+} from '../data/bookings';
 import { getBuyerCurrency, useBuyerCurrency } from '../../../lib/buyerCurrency';
 import { supabase, hasSupabaseEnv } from '../../../lib/supabase';
 
@@ -50,6 +61,17 @@ const initialForm = (defaultCurrency = 'ZAR') => ({
 	location: '',
 	city: '',
 	country: '',
+	streetAddress: '',
+	suburb: '',
+	postalCode: '',
+	province: '',
+	landmark: '',
+	floor: '',
+	totalFloors: '',
+	age: 'New',
+	furnishing: 'Unfurnished',
+	facing: 'N/A',
+	availability: 'Available Now',
 	gallery: [],
 	amenities: [],
 	sellerType: 'Owner',
@@ -79,10 +101,15 @@ const PropertySellPage = () => {
 	useBuyerCurrency();
 	const [form, setForm] = useState(() => initialForm(getBuyerCurrency()));
 	const [myListings, setMyListings] = useState(() => getSellerListings());
+	const [bookings, setBookings] = useState(() => getBookings());
 	const [toast, setToast] = useState(null);
 	const [errors, setErrors] = useState({});
 	const [uploading, setUploading] = useState(false);
+	const [editingId, setEditingId] = useState(null);
 	const fileInputRef = useRef(null);
+	useBookingsVersion();
+
+	const isEditing = !!editingId;
 
 	const handleImagePick = async (event) => {
 		const files = Array.from(event.target.files || []);
@@ -159,6 +186,19 @@ const PropertySellPage = () => {
 	}, []);
 
 	useEffect(() => {
+		const unsubscribe = subscribeToBookings(() => {
+			setBookings(getBookings());
+		});
+		return unsubscribe;
+	}, []);
+
+	const myListingIds = new Set(myListings.map((l) => l.id));
+	const myBookings = bookings
+		.filter((b) => myListingIds.has(b.listingId))
+		.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+	const pendingBookingCount = myBookings.filter((b) => b.status === 'requested').length;
+
+	useEffect(() => {
 		if (!toast) return undefined;
 		const t = setTimeout(() => setToast(null), 3200);
 		return () => clearTimeout(t);
@@ -198,21 +238,76 @@ const PropertySellPage = () => {
 			sizeNumeric: form.sizeNumeric ? Number(form.sizeNumeric) : 0,
 			isRental: form.isRental || form.status === 'For Rent',
 		});
+		if (editingId) listing.id = editingId;
 		try {
 			const saved = await saveSellerListing(listing);
 			setToast({
 				kind: 'success',
-				text: 'Listing published — buyers can now see it on the property market.',
+				text: editingId
+					? 'Listing updated.'
+					: 'Listing published — buyers can now see it on the property market.',
 				listingId: saved?.id || listing.id,
 			});
 			setForm(initialForm(getBuyerCurrency()));
 			setErrors({});
+			setEditingId(null);
 			if (typeof window !== 'undefined') {
 				window.scrollTo({ top: 0, behavior: 'smooth' });
 			}
 		} catch (err) {
-			setToast({ kind: 'error', text: 'Could not publish listing. Please try again.' });
+			setToast({ kind: 'error', text: 'Could not save listing. Please try again.' });
 		}
+	};
+
+	const handleEdit = (listing) => {
+		setEditingId(listing.id);
+		setErrors({});
+		setForm({
+			title: listing.title || '',
+			propertyType: listing.propertyType || 'Apartment',
+			category: listing.category || 'apartments',
+			status: listing.status || 'For Sale',
+			priceNumeric: String(listing.priceNumeric ?? ''),
+			priceCurrency: listing.priceCurrency || getBuyerCurrency(),
+			isRental: !!listing.isRental,
+			bedrooms: String(listing.bedrooms ?? '0'),
+			sizeNumeric: String(listing.sizeNumeric ?? ''),
+			location: listing.location || '',
+			city: listing.city || '',
+			country: listing.country || '',
+			streetAddress: listing.streetAddress || '',
+			suburb: listing.suburb || '',
+			postalCode: listing.postalCode || '',
+			province: listing.province || '',
+			landmark: listing.landmark || '',
+			floor: listing.floor && listing.floor !== '—' ? listing.floor : '',
+			totalFloors: listing.totalFloors || '',
+			age: listing.age || 'New',
+			furnishing: listing.furnishing || 'Unfurnished',
+			facing: listing.facing || 'N/A',
+			availability: listing.availability || 'Available Now',
+			gallery: Array.isArray(listing.gallery) && listing.gallery.length > 0
+				? [...listing.gallery]
+				: listing.image
+					? [listing.image]
+					: [],
+			amenities: Array.isArray(listing.amenities) ? [...listing.amenities] : [],
+			sellerType: listing.sellerType || 'Owner',
+			sellerName: listing.agent?.name || '',
+			sellerEmail: listing.agent?.email || listing.sellerEmail || '',
+			sellerPhone: listing.agent?.phone || '',
+			about: listing.about || '',
+		});
+		if (typeof window !== 'undefined') {
+			window.scrollTo({ top: 0, behavior: 'smooth' });
+		}
+		setToast({ kind: 'info', text: `Editing "${listing.title}". Update the form and click Update Listing.` });
+	};
+
+	const handleCancelEdit = () => {
+		setEditingId(null);
+		setErrors({});
+		setForm(initialForm(getBuyerCurrency()));
 	};
 
 	const handleDelete = async (id) => {
@@ -250,9 +345,13 @@ const PropertySellPage = () => {
 						<div className="mb-2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
 							<Building2 className="h-5 w-5" />
 						</div>
-						<h1 className="text-2xl font-bold sm:text-3xl">List Your Property</h1>
+						<h1 className="text-2xl font-bold sm:text-3xl">
+							{isEditing ? 'Edit Your Listing' : 'List Your Property'}
+						</h1>
 						<p className="mt-2 max-w-2xl text-xs text-white/85 sm:text-sm">
-							Share the details below and your property will go live on the SVS market immediately.
+							{isEditing
+								? 'Update the details below and save to refresh your listing on the market.'
+								: 'Share the details below and your property will go live on the SVS market immediately.'}
 						</p>
 					</div>
 				</div>
@@ -262,7 +361,9 @@ const PropertySellPage = () => {
 						className={`mt-4 flex items-center gap-2 rounded-md border px-4 py-2.5 text-sm ${
 							toast.kind === 'success'
 								? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-								: 'border-red-200 bg-red-50 text-red-700'
+								: toast.kind === 'info'
+									? 'border-amber-200 bg-amber-50 text-amber-800'
+									: 'border-red-200 bg-red-50 text-red-700'
 						}`}
 					>
 						<CheckCircle2 className="h-4 w-4" />
@@ -430,6 +531,127 @@ const PropertySellPage = () => {
 								)}
 							</Field>
 
+							<Field label="Street Address" hint="House / unit number and street name">
+								<input
+									className={inputClass}
+									value={form.streetAddress}
+									onChange={(e) => update('streetAddress', e.target.value)}
+									placeholder="12 Rivonia Road"
+								/>
+							</Field>
+
+							<Field label="Suburb / Neighbourhood">
+								<input
+									className={inputClass}
+									value={form.suburb}
+									onChange={(e) => update('suburb', e.target.value)}
+									placeholder="Morningside"
+								/>
+							</Field>
+
+							<Field label="Province / State">
+								<input
+									className={inputClass}
+									value={form.province}
+									onChange={(e) => update('province', e.target.value)}
+									placeholder="Gauteng"
+								/>
+							</Field>
+
+							<Field label="Postal Code">
+								<input
+									className={inputClass}
+									value={form.postalCode}
+									onChange={(e) => update('postalCode', e.target.value)}
+									placeholder="2196"
+								/>
+							</Field>
+
+							<div className="sm:col-span-2">
+								<Field label="Nearest Landmark" hint="Helps buyers find the property easily">
+									<input
+										className={inputClass}
+										value={form.landmark}
+										onChange={(e) => update('landmark', e.target.value)}
+										placeholder="Opposite Sandton City Mall"
+									/>
+								</Field>
+							</div>
+
+							<Field label="Floor" hint="e.g. Ground, 1st, 5th">
+								<input
+									className={inputClass}
+									value={form.floor}
+									onChange={(e) => update('floor', e.target.value)}
+									placeholder="3rd"
+								/>
+							</Field>
+
+							<Field label="Total Floors in Building">
+								<input
+									className={inputClass}
+									value={form.totalFloors}
+									onChange={(e) => update('totalFloors', e.target.value)}
+									placeholder="12"
+								/>
+							</Field>
+
+							<Field label="Property Age">
+								<select
+									className={inputClass}
+									value={form.age}
+									onChange={(e) => update('age', e.target.value)}
+								>
+									{AGE_OPTIONS.map((o) => (
+										<option key={o} value={o}>
+											{o}
+										</option>
+									))}
+								</select>
+							</Field>
+
+							<Field label="Furnishing">
+								<select
+									className={inputClass}
+									value={form.furnishing}
+									onChange={(e) => update('furnishing', e.target.value)}
+								>
+									{FURNISHING_OPTIONS.map((o) => (
+										<option key={o} value={o}>
+											{o}
+										</option>
+									))}
+								</select>
+							</Field>
+
+							<Field label="Facing" hint="Direction the main entrance faces">
+								<select
+									className={inputClass}
+									value={form.facing}
+									onChange={(e) => update('facing', e.target.value)}
+								>
+									{FACING_OPTIONS.map((o) => (
+										<option key={o} value={o}>
+											{o}
+										</option>
+									))}
+								</select>
+							</Field>
+
+							<Field label="Availability">
+								<select
+									className={inputClass}
+									value={form.availability}
+									onChange={(e) => update('availability', e.target.value)}
+								>
+									{AVAILABILITY_OPTIONS.map((o) => (
+										<option key={o} value={o}>
+											{o}
+										</option>
+									))}
+								</select>
+							</Field>
+
 							<div className="sm:col-span-2">
 							<Field label="Property Images" hint="Add up to 10 photos. The first image is the cover. PNG or JPG, max 5 MB each.">
 								<input
@@ -594,8 +816,25 @@ const PropertySellPage = () => {
 								type="submit"
 								className="inline-flex items-center gap-2 rounded-md bg-[var(--svs-primary)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--svs-primary-strong)]"
 							>
-								<Plus className="h-4 w-4" /> Publish Listing
+								{isEditing ? (
+									<>
+										<Check className="h-4 w-4" /> Update Listing
+									</>
+								) : (
+									<>
+										<Plus className="h-4 w-4" /> Publish Listing
+									</>
+								)}
 							</button>
+							{isEditing && (
+								<button
+									type="button"
+									onClick={handleCancelEdit}
+									className="rounded-md border border-amber-300 bg-amber-50 px-5 py-2.5 text-sm font-semibold text-amber-700 hover:border-amber-400"
+								>
+									Cancel edit
+								</button>
+							)}
 							<button
 								type="button"
 								onClick={() => navigate('/property-hub')}
@@ -641,6 +880,15 @@ const PropertySellPage = () => {
 										</div>
 										<button
 											type="button"
+											onClick={() => handleEdit(l)}
+											className="self-start rounded-md p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600"
+											aria-label="Edit listing"
+											title="Edit"
+										>
+											<Pencil className="h-3.5 w-3.5" />
+										</button>
+										<button
+											type="button"
 											onClick={() => handleDelete(l.id)}
 											className="self-start rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500"
 											aria-label="Delete listing"
@@ -649,6 +897,130 @@ const PropertySellPage = () => {
 										</button>
 									</li>
 								))}
+							</ul>
+						)}
+					</aside>
+
+					{/* BOOKINGS & ENQUIRIES */}
+					<aside className="rounded-2xl border border-[var(--svs-border)] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.04)]">
+						<div className="mb-3 flex items-center justify-between">
+							<h2 className="text-sm font-bold text-[var(--svs-primary-strong)]">
+								Bookings & Enquiries ({myBookings.length})
+							</h2>
+							{pendingBookingCount > 0 && (
+								<span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+									{pendingBookingCount} pending
+								</span>
+							)}
+						</div>
+						{myBookings.length === 0 ? (
+							<p className="text-xs text-slate-500">
+								No bookings yet — buyers will appear here when they request a visit or enquire.
+							</p>
+						) : (
+							<ul className="space-y-3">
+								{myBookings.map((b) => {
+									const statusStyles = {
+										requested: 'bg-amber-100 text-amber-800',
+										'agent-confirmed': 'bg-blue-100 text-blue-800',
+										completed: 'bg-emerald-100 text-emerald-800',
+										declined: 'bg-red-100 text-red-700',
+										cancelled: 'bg-slate-200 text-slate-700',
+									};
+									const badgeClass =
+										statusStyles[b.status] || 'bg-slate-100 text-slate-700';
+									return (
+										<li
+											key={b.id}
+											className="rounded-lg border border-[var(--svs-border)] p-3"
+										>
+											<div className="flex gap-3">
+												{b.listingImage && (
+													<img
+														src={b.listingImage}
+														alt={b.listingTitle || 'Listing'}
+														className="h-14 w-16 flex-shrink-0 rounded-md object-cover"
+													/>
+												)}
+												<div className="min-w-0 flex-1">
+													<Link
+														to={`/property-hub/listing/${b.listingId}`}
+														className="block truncate text-xs font-semibold text-[var(--svs-text)] hover:text-[var(--svs-primary)]"
+													>
+														{b.listingTitle || 'Listing'}
+													</Link>
+													<p className="truncate text-[11px] text-slate-500">
+														{b.name || 'Anonymous buyer'}
+														{b.buyerType ? ` · ${b.buyerType}` : ''}
+													</p>
+													{b.phone && (
+														<p className="truncate text-[11px] text-slate-500">{b.phone}</p>
+													)}
+												</div>
+												<span
+													className={`self-start rounded-full px-2 py-0.5 text-[10px] font-semibold ${badgeClass}`}
+												>
+													{b.status || 'requested'}
+												</span>
+											</div>
+											{(b.date || b.time || b.reason) && (
+												<p className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-600">
+													<Calendar className="h-3 w-3" />
+													{b.date || '—'}
+													{b.time ? ` at ${b.time}` : ''}
+													{b.reason ? ` · ${b.reason}` : ''}
+												</p>
+											)}
+											{b.message && (
+												<p className="mt-1 text-[11px] italic text-slate-500">"{b.message}"</p>
+											)}
+											<div className="mt-2 flex flex-wrap gap-1.5">
+												{b.status !== 'agent-confirmed' && b.status !== 'completed' && (
+													<button
+														type="button"
+														onClick={() => updateBookingStatus(b.id, 'agent-confirmed')}
+														className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-[10px] font-semibold text-blue-700 hover:border-blue-300"
+													>
+														Confirm
+													</button>
+												)}
+												{b.status !== 'completed' && (
+													<button
+														type="button"
+														onClick={() => updateBookingStatus(b.id, 'completed')}
+														className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 hover:border-emerald-300"
+													>
+														Complete
+													</button>
+												)}
+												{b.status !== 'declined' && b.status !== 'completed' && (
+													<button
+														type="button"
+														onClick={() => updateBookingStatus(b.id, 'declined')}
+														className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-700 hover:border-red-300"
+													>
+														Decline
+													</button>
+												)}
+												<button
+													type="button"
+													onClick={() => {
+														if (
+															typeof window !== 'undefined' &&
+															!window.confirm('Remove this booking from your list?')
+														)
+															return;
+														deleteBooking(b.id);
+													}}
+													className="ml-auto rounded-md p-1 text-slate-400 hover:bg-red-50 hover:text-red-500"
+													aria-label="Remove booking"
+												>
+													<Trash2 className="h-3 w-3" />
+												</button>
+											</div>
+										</li>
+									);
+								})}
 							</ul>
 						)}
 					</aside>

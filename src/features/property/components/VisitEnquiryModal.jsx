@@ -1,12 +1,23 @@
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { saveBooking } from '../data/bookings';
 
 const BUYER_TYPES = ['Individual', 'Family', 'Investor', 'Agent / Dealer'];
 const REASONS = ['Investment', 'Self-use', 'Rental income', 'Re-sale'];
 
+const getCurrentUserEmail = () => {
+	if (typeof window === 'undefined') return '';
+	try {
+		return (window.localStorage.getItem('svs-user-email') || '').trim();
+	} catch (_err) {
+		return '';
+	}
+};
+
 const VisitEnquiryModal = ({ open, onClose, listing }) => {
 	const navigate = useNavigate();
+	const [submitting, setSubmitting] = useState(false);
 	const [form, setForm] = useState({
 		buyerType: '',
 		reason: '',
@@ -24,21 +35,38 @@ const VisitEnquiryModal = ({ open, onClose, listing }) => {
 
 	const update = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
-	const submit = (e) => {
+	const submit = async (e) => {
 		e.preventDefault();
-		// Persist a lightweight booking record so the status page has data.
+		if (submitting) return;
+		setSubmitting(true);
+		const booking = {
+			id: `booking-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+			listingId: listing?.id,
+			listingTitle: listing?.title || '',
+			listingImage: listing?.image || '',
+			listingLocation: listing?.location || listing?.city || '',
+			sellerEmail:
+				listing?.sellerEmail ||
+				listing?.agent?.email ||
+				listing?.agentEmail ||
+				'',
+			buyerEmail: getCurrentUserEmail(),
+			...form,
+			createdAt: new Date().toISOString(),
+			status: 'requested',
+		};
 		try {
-			const booking = {
-				id: `booking-${Date.now()}`,
-				listingId: listing.id,
-				...form,
-				createdAt: new Date().toISOString(),
-				status: 'agent-confirmed',
-			};
+			await saveBooking(booking);
+		} catch (_err) {
+			/* saveBooking already keeps optimistic cache; non-fatal */
+		}
+		// Keep a session copy so the visit-status page can read it instantly.
+		try {
 			window.sessionStorage.setItem(`property-visit:${listing.id}`, JSON.stringify(booking));
 		} catch (_err) {
 			/* sessionStorage unavailable — non-fatal */
 		}
+		setSubmitting(false);
 		onClose?.();
 		navigate(`/property-hub/visit/${listing.id}`);
 	};
@@ -113,9 +141,10 @@ const VisitEnquiryModal = ({ open, onClose, listing }) => {
 					</button>
 					<button
 						type="submit"
-						className="rounded-md bg-[var(--svs-primary)] px-8 py-2 text-sm font-semibold text-white hover:bg-[var(--svs-primary-strong)]"
+						disabled={submitting}
+						className="rounded-md bg-[var(--svs-primary)] px-8 py-2 text-sm font-semibold text-white hover:bg-[var(--svs-primary-strong)] disabled:opacity-60"
 					>
-						Submit
+						{submitting ? 'Submitting…' : 'Submit'}
 					</button>
 				</div>
 			</form>

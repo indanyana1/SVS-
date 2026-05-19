@@ -555,6 +555,10 @@ export const PRICE_RANGES = [
 export const BEDROOM_OPTIONS = ['1 BHK', '2 BHK', '3 BHK', '4+ BHK'];
 export const AMENITY_OPTIONS = ['Parking', 'Swimming Pool', 'Gym', 'Garden', 'Security'];
 export const SELLER_TYPES = ['Owner', 'Agent', 'Builder'];
+export const FURNISHING_OPTIONS = ['Unfurnished', 'Semi-Furnished', 'Fully Furnished'];
+export const FACING_OPTIONS = ['N/A', 'North', 'East', 'South', 'West', 'North-East', 'North-West', 'South-East', 'South-West'];
+export const AGE_OPTIONS = ['New', 'Under 1 year', '1-5 years', '5-10 years', '10+ years'];
+export const AVAILABILITY_OPTIONS = ['Available Now', 'Available from next month', 'On Request'];
 
 export const getCategory = (key) => PROPERTY_CATEGORIES.find((c) => c.key === key);
 
