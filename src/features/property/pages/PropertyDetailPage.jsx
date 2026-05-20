@@ -19,14 +19,21 @@ import { getListing, PROPERTY_LISTINGS, formatListingPrice } from '../data/prope
 import { useSellerListingsVersion } from '../data/sellerListings';
 import { useBuyerCurrency } from '../../../lib/buyerCurrency';
 import {
-	addToPropertyCart,
 	isInPropertyCart,
 	isInPropertyWishlist,
+	removeFromPropertyCart,
 	subscribeToPropertyCollections,
 	togglePropertyWishlist,
 } from '../data/collections';
+import {
+	deleteIntent,
+	getIntents,
+	subscribeToIntents,
+	useIntentsVersion,
+} from '../data/propertyIntents';
 import PropertyCard from '../components/PropertyCard';
 import VisitEnquiryModal from '../components/VisitEnquiryModal';
+import BuyerIntentModal from '../components/BuyerIntentModal';
 
 const Stat = ({ icon: Icon, label, value }) => (
 	<div className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 shadow-sm">
@@ -45,16 +52,99 @@ const PropertyDetailPage = () => {
 	const goBack = useSmartBack('/property-hub');
 	const [activeImage, setActiveImage] = useState(0);
 	const [showVisitModal, setShowVisitModal] = useState(false);
-	const [liked, setLiked] = useState(() => isInPropertyWishlist(listingId));
-	const [inCart, setInCart] = useState(() => isInPropertyCart(listingId));
+	const [intentModal, setIntentModal] = useState(null); // 'reserve' | 'buy' | null
+	const [intentToast, setIntentToast] = useState('');
 	const [contactReveal, setContactReveal] = useState(false);
 	useBuyerCurrency();
 	useSellerListingsVersion();
+	useIntentsVersion(); // re-renders when intents change → derived state below recomputes
+
+	const getCurrentBuyerEmail = () => {
+		if (typeof window === 'undefined') return '';
+		try {
+			return (window.localStorage.getItem('svs-user-email') || '').trim().toLowerCase();
+		} catch (_e) {
+			return '';
+		}
+	};
+
+	// Find the CURRENT buyer's active intent for this listing. Requires the
+	// buyer to be signed in (svs-user-email) so other people on the same device
+	// cannot withdraw a stranger's intent.
+	const findMyIntent = (type) => {
+		const email = getCurrentBuyerEmail();
+		if (!email) return null;
+		return getIntents().find(
+			(i) =>
+				i.listingId === listingId &&
+				i.intentType === type &&
+				(i.buyerEmail || '').toLowerCase() === email &&
+				i.status !== 'declined' &&
+				i.status !== 'closed',
+		);
+	};
+
+	const myReserveIntent = findMyIntent('reserve');
+	const myBuyIntent = findMyIntent('buy');
+	// Fall back to sessionStorage for guests so the visual state is still
+	// reflected on the same device immediately after submitting (the modal
+	// also mirrors into sessionStorage).
+	const liked = Boolean(myReserveIntent) || isInPropertyWishlist(listingId);
+	const inCart = Boolean(myBuyIntent) || isInPropertyCart(listingId);
+	const reserveLocked = myReserveIntent?.status === 'accepted';
+	const buyLocked = myBuyIntent?.status === 'accepted';
+
+	const withdrawIntent = async (type) => {
+		const mine = findMyIntent(type);
+		if (!mine) {
+			if (typeof window !== 'undefined') {
+				window.alert(
+					'Only the buyer who placed this request can withdraw it. Please sign in with the email used to submit it.',
+				);
+			}
+			return;
+		}
+		if (mine.status === 'accepted') {
+			if (typeof window !== 'undefined') {
+				window.alert(
+					'This request has already been accepted by the seller and can no longer be withdrawn. Please contact the seller directly.',
+				);
+			}
+			return;
+		}
+		if (
+			typeof window !== 'undefined' &&
+			!window.confirm(
+				type === 'buy'
+					? 'Withdraw your buy request? The seller will be notified.'
+					: 'Withdraw your reservation?',
+			)
+		) {
+			return;
+		}
+		try {
+			await deleteIntent(mine.id);
+		} catch (_e) {
+			/* non-fatal */
+		}
+		if (type === 'buy') {
+			removeFromPropertyCart(listingId);
+		} else if (isInPropertyWishlist(listingId)) {
+			togglePropertyWishlist(listing);
+		}
+		setIntentToast(
+			type === 'buy' ? 'Buy request withdrawn.' : 'Reservation withdrawn.',
+		);
+		setTimeout(() => setIntentToast(''), 3000);
+	};
 
 	useEffect(() => {
+		// keep guest-cache state reactive across tabs / cards
 		const unsubscribe = subscribeToPropertyCollections(() => {
-			setLiked(isInPropertyWishlist(listingId));
-			setInCart(isInPropertyCart(listingId));
+			// no-op: derived state above already re-evaluates on render,
+			// but we still need a re-render trigger when sessionStorage
+			// changes from another card/page.
+			setIntentToast((t) => t);
 		});
 		return unsubscribe;
 	}, [listingId]);
@@ -125,30 +215,49 @@ const PropertyDetailPage = () => {
 								</button>
 								<button
 									type="button"
-									onClick={() => {
-										togglePropertyWishlist(listing);
-										setLiked((v) => !v);
-									}}
+									onClick={() => (liked ? withdrawIntent('reserve') : setIntentModal('reserve'))}
 									className={`inline-flex items-center gap-2 rounded-md border px-4 py-2 text-xs font-semibold transition ${
 										liked
 											? 'border-[var(--svs-primary)] bg-[var(--svs-cyan-surface,#e6f6f8)] text-[var(--svs-primary-strong)]'
 											: 'border-[var(--svs-border)] bg-white text-[var(--svs-text)] hover:border-[var(--svs-primary)]'
 									}`}
+									title={
+										reserveLocked
+											? 'Seller accepted — reservation locked'
+											: liked
+												? 'Click to withdraw your reservation'
+												: ''
+									}
 								>
 									<Heart className={`h-3.5 w-3.5 ${liked ? 'fill-[var(--svs-primary)] text-[var(--svs-primary)]' : ''}`} />
-									{liked ? 'In Wishlist' : 'Add to Wishlist'}
+									{reserveLocked
+										? 'Reserved · Accepted'
+										: liked
+											? 'Reserved · Withdraw'
+											: 'Reserve it for me'}
 								</button>
 								<button
 									type="button"
-									onClick={() => {
-										addToPropertyCart(listing);
-										setInCart(true);
-									}}
-									disabled={inCart}
-									className="inline-flex items-center gap-2 rounded-md bg-[var(--svs-primary)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--svs-primary-strong)] disabled:cursor-default disabled:opacity-80"
+									onClick={() => (inCart ? withdrawIntent('buy') : setIntentModal('buy'))}
+									className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-xs font-semibold transition ${
+										inCart
+											? 'border border-[var(--svs-primary)] bg-white text-[var(--svs-primary-strong)] hover:bg-[var(--svs-cyan-surface,#e6f6f8)]'
+											: 'bg-[var(--svs-primary)] text-white hover:bg-[var(--svs-primary-strong)]'
+									}`}
+									title={
+										buyLocked
+											? 'Seller accepted — buy request locked'
+											: inCart
+												? 'Click to withdraw your buy request'
+												: ''
+									}
 								>
 									{inCart ? <Check className="h-3.5 w-3.5" /> : <ShoppingCart className="h-3.5 w-3.5" />}
-									{inCart ? 'Added' : 'Add to Cart'}
+									{buyLocked
+										? 'Buying · Accepted'
+										: inCart
+											? 'Buying · Withdraw'
+											: 'I shall buy it'}
 								</button>
 							</div>
 						</div>
@@ -404,6 +513,27 @@ const PropertyDetailPage = () => {
 				onClose={() => setShowVisitModal(false)}
 				listing={listing}
 			/>
+
+			<BuyerIntentModal
+				open={Boolean(intentModal)}
+				onClose={() => setIntentModal(null)}
+				listing={listing}
+				intentType={intentModal || 'reserve'}
+				onSubmitted={() => {
+					setIntentToast(
+						intentModal === 'buy'
+							? 'Buy request sent. The seller will contact you shortly.'
+							: 'Reserved. The seller will reach out to confirm.',
+					);
+					setTimeout(() => setIntentToast(''), 3500);
+				}}
+			/>
+
+			{intentToast && (
+				<div className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-[var(--svs-primary-strong)] px-4 py-2 text-xs font-semibold text-white shadow-lg">
+					{intentToast}
+				</div>
+			)}
 		</section>
 	);
 };

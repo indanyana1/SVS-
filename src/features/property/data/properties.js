@@ -10,6 +10,8 @@ import {
 	KeyRound,
 	HousePlus,
 	Users,
+	Trees,
+	MoreHorizontal,
 } from 'lucide-react';
 import { formatInBuyerCurrency } from '../../../lib/buyerCurrency';
 
@@ -107,6 +109,26 @@ export const PROPERTY_CATEGORIES = [
 			'https://images.pexels.com/photos/1454806/pexels-photo-1454806.jpeg?auto=compress&cs=tinysrgb&w=1200',
 		heroSubtitle:
 			'Modern co-living and PG accommodations for students and young professionals.',
+	},
+	{
+		key: 'farm',
+		label: 'Farm / Rural Home',
+		subtitle: 'Explore farms & rural homes',
+		icon: Trees,
+		image:
+			'https://images.pexels.com/photos/1112048/pexels-photo-1112048.jpeg?auto=compress&cs=tinysrgb&w=1200',
+		heroSubtitle:
+			'Farmhouses, smallholdings and rural properties with land, livestock potential and open skies.',
+	},
+	{
+		key: 'other',
+		label: 'Other',
+		subtitle: 'Explore other properties',
+		icon: MoreHorizontal,
+		image:
+			'https://images.pexels.com/photos/280221/pexels-photo-280221.jpeg?auto=compress&cs=tinysrgb&w=1200',
+		heroSubtitle:
+			'Unique listings that don’t fit a standard category — from studios to mixed-use spaces.',
 	},
 ];
 
@@ -544,7 +566,7 @@ PROPERTY_LISTINGS.forEach((listing) => {
 			: /\bmonth\b/i.test(String(listing.price || '')) || listing.status === 'For Rent';
 });
 
-export const PROPERTY_STATUSES = ['For Sale', 'For Rent', 'Ready to Move', 'Under Construction'];
+export const PROPERTY_STATUSES = ['For Sale', 'For Rent', 'Ready to Move', 'Under Construction', 'Other'];
 export const PRICE_RANGES = [
 	{ key: '5l-50l', label: '5L – 50L', min: 500000, max: 5000000 },
 	{ key: '50l-1cr', label: '50L – 1Cr', min: 5000000, max: 10000000 },
@@ -554,11 +576,11 @@ export const PRICE_RANGES = [
 ];
 export const BEDROOM_OPTIONS = ['1 BHK', '2 BHK', '3 BHK', '4+ BHK'];
 export const AMENITY_OPTIONS = ['Parking', 'Swimming Pool', 'Gym', 'Garden', 'Security'];
-export const SELLER_TYPES = ['Owner', 'Agent', 'Builder'];
-export const FURNISHING_OPTIONS = ['Unfurnished', 'Semi-Furnished', 'Fully Furnished'];
-export const FACING_OPTIONS = ['N/A', 'North', 'East', 'South', 'West', 'North-East', 'North-West', 'South-East', 'South-West'];
-export const AGE_OPTIONS = ['New', 'Under 1 year', '1-5 years', '5-10 years', '10+ years'];
-export const AVAILABILITY_OPTIONS = ['Available Now', 'Available from next month', 'On Request'];
+export const SELLER_TYPES = ['Owner', 'Agent', 'Builder', 'Other'];
+export const FURNISHING_OPTIONS = ['Unfurnished', 'Semi-Furnished', 'Fully Furnished', 'Unsure'];
+export const FACING_OPTIONS = ['Unsure', 'North', 'East', 'South', 'West', 'North-East', 'North-West', 'South-East', 'South-West'];
+export const AGE_OPTIONS = ['New', 'Under 1 year', '1-5 years', '5-10 years', '10+ years', 'Unsure'];
+export const AVAILABILITY_OPTIONS = ['Available Now', 'Available from next month', 'On Request', '24/7 & 365'];
 
 export const getCategory = (key) => PROPERTY_CATEGORIES.find((c) => c.key === key);
 

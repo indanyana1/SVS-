@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, Trash2, Plus, Building2, ImagePlus, X, Pencil, Calendar, Check } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Trash2, Plus, Building2, ImagePlus, X, Pencil, Calendar, Check, Search, ChevronDown, Heart, ShoppingCart, Phone, Mail } from 'lucide-react';
 import { useSmartBack } from '../hooks/useSmartBack';
 import {
 	AMENITY_OPTIONS,
@@ -27,10 +27,88 @@ import {
 	updateBookingStatus,
 	useBookingsVersion,
 } from '../data/bookings';
+import {
+	deleteIntent,
+	getIntents,
+	subscribeToIntents,
+	updateIntentStatus,
+	useIntentsVersion,
+} from '../data/propertyIntents';
 import { getBuyerCurrency, useBuyerCurrency } from '../../../lib/buyerCurrency';
 import { supabase, hasSupabaseEnv } from '../../../lib/supabase';
 
-const PRICE_CURRENCIES = ['ZAR', 'USD', 'EUR', 'GBP', 'INR', 'NGN', 'KES', 'GHS'];
+// Currencies with country code (for flag emoji) and display name. Sorted with
+// the most relevant African / global currencies first; the rest are alphabetical.
+const PRICE_CURRENCIES = [
+	{ code: 'ZAR', country: 'ZA', name: 'South African Rand' },
+	{ code: 'USD', country: 'US', name: 'US Dollar' },
+	{ code: 'EUR', country: 'EU', name: 'Euro' },
+	{ code: 'GBP', country: 'GB', name: 'British Pound' },
+	{ code: 'INR', country: 'IN', name: 'Indian Rupee' },
+	{ code: 'NGN', country: 'NG', name: 'Nigerian Naira' },
+	{ code: 'KES', country: 'KE', name: 'Kenyan Shilling' },
+	{ code: 'GHS', country: 'GH', name: 'Ghanaian Cedi' },
+	{ code: 'AED', country: 'AE', name: 'UAE Dirham' },
+	{ code: 'AUD', country: 'AU', name: 'Australian Dollar' },
+	{ code: 'BRL', country: 'BR', name: 'Brazilian Real' },
+	{ code: 'BWP', country: 'BW', name: 'Botswana Pula' },
+	{ code: 'CAD', country: 'CA', name: 'Canadian Dollar' },
+	{ code: 'CHF', country: 'CH', name: 'Swiss Franc' },
+	{ code: 'CNY', country: 'CN', name: 'Chinese Yuan' },
+	{ code: 'DKK', country: 'DK', name: 'Danish Krone' },
+	{ code: 'EGP', country: 'EG', name: 'Egyptian Pound' },
+	{ code: 'ETB', country: 'ET', name: 'Ethiopian Birr' },
+	{ code: 'HKD', country: 'HK', name: 'Hong Kong Dollar' },
+	{ code: 'IDR', country: 'ID', name: 'Indonesian Rupiah' },
+	{ code: 'ILS', country: 'IL', name: 'Israeli Shekel' },
+	{ code: 'JPY', country: 'JP', name: 'Japanese Yen' },
+	{ code: 'KRW', country: 'KR', name: 'South Korean Won' },
+	{ code: 'MAD', country: 'MA', name: 'Moroccan Dirham' },
+	{ code: 'MUR', country: 'MU', name: 'Mauritian Rupee' },
+	{ code: 'MWK', country: 'MW', name: 'Malawian Kwacha' },
+	{ code: 'MXN', country: 'MX', name: 'Mexican Peso' },
+	{ code: 'MZN', country: 'MZ', name: 'Mozambican Metical' },
+	{ code: 'NAD', country: 'NA', name: 'Namibian Dollar' },
+	{ code: 'NOK', country: 'NO', name: 'Norwegian Krone' },
+	{ code: 'NZD', country: 'NZ', name: 'New Zealand Dollar' },
+	{ code: 'PHP', country: 'PH', name: 'Philippine Peso' },
+	{ code: 'PKR', country: 'PK', name: 'Pakistani Rupee' },
+	{ code: 'PLN', country: 'PL', name: 'Polish Zloty' },
+	{ code: 'QAR', country: 'QA', name: 'Qatari Riyal' },
+	{ code: 'RUB', country: 'RU', name: 'Russian Ruble' },
+	{ code: 'RWF', country: 'RW', name: 'Rwandan Franc' },
+	{ code: 'SAR', country: 'SA', name: 'Saudi Riyal' },
+	{ code: 'SEK', country: 'SE', name: 'Swedish Krona' },
+	{ code: 'SGD', country: 'SG', name: 'Singapore Dollar' },
+	{ code: 'THB', country: 'TH', name: 'Thai Baht' },
+	{ code: 'TND', country: 'TN', name: 'Tunisian Dinar' },
+	{ code: 'TRY', country: 'TR', name: 'Turkish Lira' },
+	{ code: 'TZS', country: 'TZ', name: 'Tanzanian Shilling' },
+	{ code: 'UGX', country: 'UG', name: 'Ugandan Shilling' },
+	{ code: 'VND', country: 'VN', name: 'Vietnamese Dong' },
+	{ code: 'XAF', country: 'CM', name: 'Central African CFA' },
+	{ code: 'XOF', country: 'SN', name: 'West African CFA' },
+	{ code: 'ZMW', country: 'ZM', name: 'Zambian Kwacha' },
+	{ code: 'ZWL', country: 'ZW', name: 'Zimbabwean Dollar' },
+];
+
+// Convert a 2-letter ISO country code into its flag emoji using regional
+// indicator symbols. 'EU' falls back to a generic European flag emoji.
+const countryToFlag = (cc) => {
+	if (!cc) return '🏳️';
+	if (cc === 'EU') return '🇪🇺';
+	return cc
+		.toUpperCase()
+		.replace(/[^A-Z]/g, '')
+		.split('')
+		.map((ch) => String.fromCodePoint(0x1f1e6 + ch.charCodeAt(0) - 65))
+		.join('');
+};
+
+const CURRENCY_BY_CODE = PRICE_CURRENCIES.reduce((acc, c) => {
+	acc[c.code] = c;
+	return acc;
+}, {});
 const STORAGE_BUCKET = 'marketplace-items';
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB
 
@@ -70,7 +148,7 @@ const initialForm = (defaultCurrency = 'ZAR') => ({
 	totalFloors: '',
 	age: 'New',
 	furnishing: 'Unfurnished',
-	facing: 'N/A',
+	facing: 'Unsure',
 	availability: 'Available Now',
 	gallery: [],
 	amenities: [],
@@ -95,6 +173,107 @@ const Field = ({ label, children, required, hint }) => (
 const inputClass =
 	'w-full rounded-md border border-[var(--svs-border)] bg-white px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]';
 
+const CurrencyPicker = ({ value, onChange }) => {
+	const [open, setOpen] = useState(false);
+	const [query, setQuery] = useState('');
+	const rootRef = useRef(null);
+	const searchRef = useRef(null);
+
+	const selected = CURRENCY_BY_CODE[value] || PRICE_CURRENCIES[0];
+
+	useEffect(() => {
+		if (!open) return undefined;
+		const handleClick = (e) => {
+			if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false);
+		};
+		const handleKey = (e) => {
+			if (e.key === 'Escape') setOpen(false);
+		};
+		document.addEventListener('mousedown', handleClick);
+		document.addEventListener('keydown', handleKey);
+		// focus the search input shortly after opening
+		const t = setTimeout(() => searchRef.current?.focus(), 30);
+		return () => {
+			document.removeEventListener('mousedown', handleClick);
+			document.removeEventListener('keydown', handleKey);
+			clearTimeout(t);
+		};
+	}, [open]);
+
+	const filtered = useMemo(() => {
+		const q = query.trim().toLowerCase();
+		if (!q) return PRICE_CURRENCIES;
+		return PRICE_CURRENCIES.filter(
+			(c) =>
+				c.code.toLowerCase().includes(q) ||
+				c.name.toLowerCase().includes(q) ||
+				c.country.toLowerCase().includes(q),
+		);
+	}, [query]);
+
+	return (
+		<div ref={rootRef} className="relative max-w-[130px]">
+			<button
+				type="button"
+				onClick={() => setOpen((v) => !v)}
+				className={`${inputClass} flex items-center justify-between gap-1 text-left`}
+				aria-haspopup="listbox"
+				aria-expanded={open}
+			>
+				<span className="flex items-center gap-1.5 truncate">
+					<span className="text-base leading-none">{countryToFlag(selected.country)}</span>
+					<span className="font-medium">{selected.code}</span>
+				</span>
+				<ChevronDown size={14} className="shrink-0 text-slate-400" />
+			</button>
+			{open && (
+				<div className="absolute left-0 top-full z-30 mt-1 w-[260px] overflow-hidden rounded-lg border border-[var(--svs-border)] bg-white shadow-xl">
+					<div className="flex items-center gap-2 border-b border-[var(--svs-border)] px-2 py-1.5">
+						<Search size={14} className="text-slate-400" />
+						<input
+							ref={searchRef}
+							type="text"
+							value={query}
+							onChange={(e) => setQuery(e.target.value)}
+							placeholder="Search currency or country…"
+							className="w-full bg-transparent text-sm outline-none"
+						/>
+					</div>
+					<ul role="listbox" className="max-h-64 overflow-y-auto py-1">
+						{filtered.length === 0 ? (
+							<li className="px-3 py-2 text-xs text-slate-500">No matches</li>
+						) : (
+							filtered.map((c) => {
+								const isSel = c.code === value;
+								return (
+									<li key={c.code}>
+										<button
+											type="button"
+											onClick={() => {
+												onChange(c.code);
+												setOpen(false);
+												setQuery('');
+											}}
+											className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-slate-50 ${
+												isSel ? 'bg-[var(--svs-primary-soft)]/40 font-semibold' : ''
+											}`}
+										>
+											<span className="text-base leading-none">{countryToFlag(c.country)}</span>
+											<span className="w-12 font-medium text-[var(--svs-text)]">{c.code}</span>
+											<span className="flex-1 truncate text-xs text-slate-500">{c.name}</span>
+											{isSel && <Check size={14} className="text-[var(--svs-primary)]" />}
+										</button>
+									</li>
+								);
+							})
+						)}
+					</ul>
+				</div>
+			)}
+		</div>
+	);
+};
+
 const PropertySellPage = () => {
 	const goBack = useSmartBack('/property-hub');
 	const navigate = useNavigate();
@@ -102,12 +281,14 @@ const PropertySellPage = () => {
 	const [form, setForm] = useState(() => initialForm(getBuyerCurrency()));
 	const [myListings, setMyListings] = useState(() => getSellerListings());
 	const [bookings, setBookings] = useState(() => getBookings());
+	const [intents, setIntents] = useState(() => getIntents());
 	const [toast, setToast] = useState(null);
 	const [errors, setErrors] = useState({});
 	const [uploading, setUploading] = useState(false);
 	const [editingId, setEditingId] = useState(null);
 	const fileInputRef = useRef(null);
 	useBookingsVersion();
+	useIntentsVersion();
 
 	const isEditing = !!editingId;
 
@@ -192,11 +373,22 @@ const PropertySellPage = () => {
 		return unsubscribe;
 	}, []);
 
+	useEffect(() => {
+		const unsubscribe = subscribeToIntents(() => {
+			setIntents(getIntents());
+		});
+		return unsubscribe;
+	}, []);
+
 	const myListingIds = new Set(myListings.map((l) => l.id));
 	const myBookings = bookings
 		.filter((b) => myListingIds.has(b.listingId))
 		.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
 	const pendingBookingCount = myBookings.filter((b) => b.status === 'requested').length;
+	const myIntents = intents
+		.filter((i) => myListingIds.has(i.listingId))
+		.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+	const pendingIntentCount = myIntents.filter((i) => i.status === 'new').length;
 
 	useEffect(() => {
 		if (!toast) return undefined;
@@ -451,17 +643,10 @@ const PropertySellPage = () => {
 
 							<Field label="Price" required hint={form.isRental ? 'Per month' : 'Total asking price'}>
 								<div className="flex gap-2">
-									<select
-										className={inputClass + ' max-w-[110px]'}
+									<CurrencyPicker
 										value={form.priceCurrency}
-										onChange={(e) => update('priceCurrency', e.target.value)}
-									>
-										{PRICE_CURRENCIES.map((c) => (
-											<option key={c} value={c}>
-												{c}
-											</option>
-										))}
-									</select>
+										onChange={(code) => update('priceCurrency', code)}
+									/>
 									<input
 										className={inputClass}
 										type="number"
@@ -1014,6 +1199,143 @@ const PropertySellPage = () => {
 													}}
 													className="ml-auto rounded-md p-1 text-slate-400 hover:bg-red-50 hover:text-red-500"
 													aria-label="Remove booking"
+												>
+													<Trash2 className="h-3 w-3" />
+												</button>
+											</div>
+										</li>
+									);
+								})}
+							</ul>
+						)}
+					</aside>
+
+					{/* BUYER INTERESTS — Reserve / Buy requests */}
+					<aside className="rounded-2xl border border-[var(--svs-border)] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.04)]">
+						<div className="mb-3 flex items-center justify-between">
+							<h2 className="text-sm font-bold text-[var(--svs-primary-strong)]">
+								Buyer Interest ({myIntents.length})
+							</h2>
+							{pendingIntentCount > 0 && (
+								<span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+									{pendingIntentCount} new
+								</span>
+							)}
+						</div>
+						{myIntents.length === 0 ? (
+							<p className="text-xs text-slate-500">
+								No buyer interest yet — reservation and purchase requests will appear here.
+							</p>
+						) : (
+							<ul className="space-y-3">
+								{myIntents.map((i) => {
+									const isBuy = i.intentType === 'buy';
+									const statusStyles = {
+										new: 'bg-emerald-100 text-emerald-800',
+										contacted: 'bg-blue-100 text-blue-800',
+										accepted: 'bg-violet-100 text-violet-800',
+										declined: 'bg-red-100 text-red-700',
+										closed: 'bg-slate-200 text-slate-700',
+									};
+									const badge = statusStyles[i.status] || 'bg-slate-100 text-slate-700';
+									return (
+										<li key={i.id} className="rounded-lg border border-[var(--svs-border)] p-3">
+											<div className="flex gap-3">
+												{i.listingImage && (
+													<img
+														src={i.listingImage}
+														alt={i.listingTitle || 'Listing'}
+														className="h-14 w-16 flex-shrink-0 rounded-md object-cover"
+													/>
+												)}
+												<div className="min-w-0 flex-1">
+													<div className="flex items-center gap-1.5">
+														{isBuy ? (
+															<ShoppingCart className="h-3 w-3 text-[var(--svs-primary)]" />
+														) : (
+															<Heart className="h-3 w-3 text-[var(--svs-primary)]" />
+														)}
+														<span className="text-[10px] font-bold uppercase tracking-wide text-[var(--svs-primary-strong)]">
+															{isBuy ? 'Buy Request' : 'Reservation'}
+														</span>
+													</div>
+													<Link
+														to={`/property-hub/listing/${i.listingId}`}
+														className="block truncate text-xs font-semibold text-[var(--svs-text)] hover:text-[var(--svs-primary)]"
+													>
+														{i.listingTitle || 'Listing'}
+													</Link>
+													<p className="truncate text-[11px] text-slate-500">
+														{i.name || 'Anonymous buyer'}
+													</p>
+												</div>
+												<span className={`self-start rounded-full px-2 py-0.5 text-[10px] font-semibold ${badge}`}>
+													{i.status || 'new'}
+												</span>
+											</div>
+											<div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-600">
+												{i.phone && (
+													<a
+														href={`tel:${i.phone}`}
+														className="inline-flex items-center gap-1 rounded-md border border-[var(--svs-border)] px-2 py-0.5 hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
+													>
+														<Phone className="h-3 w-3" />
+														{i.phone}
+													</a>
+												)}
+												{i.buyerEmail && (
+													<a
+														href={`mailto:${i.buyerEmail}?subject=${encodeURIComponent('Re: ' + (i.listingTitle || 'Your property enquiry'))}`}
+														className="inline-flex items-center gap-1 rounded-md border border-[var(--svs-border)] px-2 py-0.5 hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
+													>
+														<Mail className="h-3 w-3" />
+														{i.buyerEmail}
+													</a>
+												)}
+											</div>
+											{i.message && (
+												<p className="mt-1 text-[11px] italic text-slate-500">"{i.message}"</p>
+											)}
+											<div className="mt-2 flex flex-wrap gap-1.5">
+												{i.status !== 'contacted' && i.status !== 'accepted' && i.status !== 'closed' && (
+													<button
+														type="button"
+														onClick={() => updateIntentStatus(i.id, 'contacted')}
+														className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-[10px] font-semibold text-blue-700 hover:border-blue-300"
+													>
+														Mark Contacted
+													</button>
+												)}
+												{i.status !== 'accepted' && i.status !== 'closed' && (
+													<button
+														type="button"
+														onClick={() => updateIntentStatus(i.id, 'accepted')}
+														className="rounded-md border border-violet-200 bg-violet-50 px-2 py-1 text-[10px] font-semibold text-violet-700 hover:border-violet-300"
+													>
+														Accept
+													</button>
+												)}
+												{i.status !== 'declined' && i.status !== 'closed' && (
+													<button
+														type="button"
+														onClick={() => updateIntentStatus(i.id, 'declined')}
+														className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-700 hover:border-red-300"
+													>
+														Decline
+													</button>
+												)}
+												<button
+													type="button"
+													onClick={() => {
+														if (
+															typeof window !== 'undefined' &&
+															!window.confirm('Remove this buyer interest?')
+														)
+															return;
+														deleteIntent(i.id);
+													}}
+													className="ml-auto rounded-md p-1 text-slate-400 hover:bg-red-50 hover:text-red-500"
+													aria-label="Remove buyer interest"
 												>
 													<Trash2 className="h-3 w-3" />
 												</button>
