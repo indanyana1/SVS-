@@ -13778,6 +13778,7 @@ const LivestockHubPage = ({
   const [subscribed, setSubscribed] = useState(false);
   const [sort, setSort] = useState('relevance');
   const [isSearching, setIsSearching] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
   const featuredRef = useRef(null);
 
   // Re-render whenever the buyer changes currency (header dropdown) or when
@@ -13791,6 +13792,25 @@ const LivestockHubPage = ({
   useEffect(() => {
     hydrateLivestockListings();
   }, []);
+
+  // Close detail modal on Escape; lock body scroll while open.
+  useEffect(() => {
+    if (!selectedItem) return undefined;
+    const onKey = (event) => {
+      if (event.key === 'Escape') setSelectedItem(null);
+    };
+    const previousOverflow = typeof document !== 'undefined' ? document.body.style.overflow : '';
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = 'hidden';
+      document.addEventListener('keydown', onKey);
+    }
+    return () => {
+      if (typeof document !== 'undefined') {
+        document.body.style.overflow = previousOverflow;
+        document.removeEventListener('keydown', onKey);
+      }
+    };
+  }, [selectedItem]);
 
   // Debounce search input (250ms) so we don't fire a Supabase request per keypress.
   useEffect(() => {
@@ -13834,6 +13854,10 @@ const LivestockHubPage = ({
     return formatInBuyerCurrencyLib(item.price, from, { decimals: 0 });
   };
 
+  // Stock check: legacy listings without a quantity field are treated as
+  // available; a quantity of 0 (or below) means out of stock.
+  const isInStock = (item) => item == null || item.quantity == null || Number(item.quantity) > 0;
+
   const buildSavedPayload = (item) => ({
     ...item,
     route: '/livestock-hub',
@@ -13845,6 +13869,7 @@ const LivestockHubPage = ({
   });
 
   const handleBuyNow = (item) => {
+    if (!isInStock(item)) return;
     if (typeof onBuyNow === 'function') {
       onBuyNow(createCartItem(buildSavedPayload(item)));
     } else {
@@ -14029,25 +14054,43 @@ const LivestockHubPage = ({
           ) : (
             filteredItems.map((item) => {
               const liked = wishSet.has(item.id);
+              const inStock = isInStock(item);
               return (
                 <article
                   key={item.id}
-                  className="overflow-hidden rounded-xl bg-white shadow-md transition hover:-translate-y-1 hover:shadow-lg"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSelectedItem(item)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setSelectedItem(item);
+                    }
+                  }}
+                  className="cursor-pointer overflow-hidden rounded-xl bg-white shadow-md transition hover:-translate-y-1 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[var(--svs-primary)] focus:ring-offset-2"
                 >
                   <div className="relative aspect-[4/3] w-full overflow-hidden">
                     <img
                       src={item.image}
                       alt={item.title}
-                      className="h-full w-full object-cover"
+                      className={`h-full w-full object-cover ${inStock ? '' : 'opacity-70'}`}
                       loading="lazy"
                       onError={(event) => {
                         event.currentTarget.onerror = null;
                         event.currentTarget.src = livestockImageFallback;
                       }}
                     />
+                    {!inStock ? (
+                      <span className="absolute left-3 top-3 rounded-full bg-rose-600 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow">
+                        Out of Stock
+                      </span>
+                    ) : null}
                     <button
                       type="button"
-                      onClick={() => handleToggleWishlist(item)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleToggleWishlist(item);
+                      }}
                       aria-label={liked ? 'Remove from wishlist' : 'Add to wishlist'}
                       aria-pressed={liked}
                       className={`absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full shadow transition ${
@@ -14079,10 +14122,18 @@ const LivestockHubPage = ({
                     </p>
                     <button
                       type="button"
-                      onClick={() => handleBuyNow(item)}
-                      className={`${cudyBluePrimaryButtonClassName} mt-4 w-full rounded-md bg-[var(--svs-primary)] py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}
+                      disabled={!inStock}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleBuyNow(item);
+                      }}
+                      className={`mt-4 w-full rounded-md py-2 text-sm font-semibold transition ${
+                        inStock
+                          ? `${cudyBluePrimaryButtonClassName} bg-[var(--svs-primary)] text-white hover:bg-[var(--svs-primary-strong)]`
+                          : 'cursor-not-allowed bg-slate-200 text-slate-500'
+                      }`}
                     >
-                      Buy Now
+                      {inStock ? 'Buy Now' : 'Out of Stock'}
                     </button>
                   </div>
                 </article>
@@ -14160,6 +14211,166 @@ const LivestockHubPage = ({
           ) : null}
         </div>
       </div>
+
+      {/* ── Detail modal ── */}
+      {selectedItem ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="livestock-detail-title"
+          onClick={() => setSelectedItem(null)}
+        >
+          <div
+            className="relative max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setSelectedItem(null)}
+              aria-label="Close details"
+              className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white shadow transition hover:bg-black/80"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <div className="grid max-h-[92vh] grid-cols-1 overflow-y-auto md:grid-cols-2">
+              <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100 md:aspect-auto md:h-full">
+                <img
+                  src={selectedItem.image}
+                  alt={selectedItem.title}
+                  className="h-full w-full object-cover"
+                  onError={(event) => {
+                    event.currentTarget.onerror = null;
+                    event.currentTarget.src = livestockImageFallback;
+                  }}
+                />
+              </div>
+              <div className="flex flex-col p-5 sm:p-6">
+                <h3
+                  id="livestock-detail-title"
+                  className="text-xl font-bold text-[var(--svs-primary-strong)] sm:text-2xl"
+                >
+                  {selectedItem.title}
+                </h3>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-[#e6f7fb] px-3 py-1 text-base font-semibold text-[var(--svs-primary-strong)]">
+                    {formatPrice(selectedItem)}
+                  </span>
+                  {selectedItem.category ? (
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">
+                      {selectedItem.category}
+                    </span>
+                  ) : null}
+                  {selectedItem.breed ? (
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">
+                      {selectedItem.breed}
+                    </span>
+                  ) : null}
+                </div>
+
+                <dl className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-700">
+                  {selectedItem.age ? (
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Age</dt>
+                      <dd className="mt-0.5 font-medium">{selectedItem.age}</dd>
+                    </div>
+                  ) : null}
+                  {selectedItem.weight ? (
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Weight</dt>
+                      <dd className="mt-0.5 font-medium">{selectedItem.weight}</dd>
+                    </div>
+                  ) : null}
+                  {selectedItem.location ? (
+                    <div className="col-span-2 flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-[var(--svs-primary)]" />
+                      <span>{selectedItem.location}</span>
+                    </div>
+                  ) : null}
+                  {selectedItem.rating ? (
+                    <div className="col-span-2 flex items-center gap-2">
+                      <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                      <span className="font-semibold">{selectedItem.rating}</span>
+                      <span className="text-slate-500">
+                        ({selectedItem.reviewCount || 0} reviews)
+                      </span>
+                    </div>
+                  ) : null}
+                  <div className="col-span-2">
+                    {isInStock(selectedItem) ? (
+                      selectedItem.quantity != null ? (
+                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                          In stock — {selectedItem.quantity} available
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                          In stock
+                        </span>
+                      )
+                    ) : (
+                      <span className="inline-flex items-center rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
+                        Currently Out of Stock
+                      </span>
+                    )}
+                  </div>
+                </dl>
+
+                {selectedItem.description ? (
+                  <div className="mt-4">
+                    <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      About this listing
+                    </h4>
+                    <p className="mt-1.5 text-sm leading-relaxed text-slate-700">
+                      {selectedItem.description}
+                    </p>
+                  </div>
+                ) : selectedItem.summary ? (
+                  <p className="mt-4 text-sm leading-relaxed text-slate-700">{selectedItem.summary}</p>
+                ) : null}
+
+                {selectedItem.sellerEmail ? (
+                  <p className="mt-4 text-xs text-slate-500">
+                    Seller: <span className="font-semibold text-slate-700">{selectedItem.sellerEmail}</span>
+                  </p>
+                ) : null}
+
+                <div className="mt-auto grid grid-cols-1 gap-2 pt-5 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleToggleWishlist(selectedItem);
+                    }}
+                    className="rounded-md border border-[var(--svs-primary)] bg-white py-2 text-sm font-semibold text-[var(--svs-primary)] transition hover:bg-[var(--svs-primary)]/10"
+                  >
+                    {wishSet.has(selectedItem.id) ? 'Remove from Wishlist' : 'Add to Wishlist'}
+                  </button>
+                  {isInStock(selectedItem) ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleBuyNow(selectedItem);
+                        setSelectedItem(null);
+                      }}
+                      className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}
+                    >
+                      Buy Now
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      aria-disabled="true"
+                      className="cursor-not-allowed rounded-md bg-slate-200 py-2 text-sm font-semibold text-slate-500"
+                    >
+                      Out of Stock
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 };

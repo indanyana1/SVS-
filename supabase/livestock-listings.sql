@@ -17,6 +17,7 @@ create table if not exists public.livestock_listings (
   description  text,
   price        numeric not null default 0,
   currency     text not null default 'ZAR',
+  quantity     integer,
   rating       numeric default 0,
   review_count integer default 0,
   image        text,
@@ -24,6 +25,10 @@ create table if not exists public.livestock_listings (
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now()
 );
+
+-- Backfill column for existing installations created before quantity was added.
+alter table public.livestock_listings
+  add column if not exists quantity integer;
 
 create index if not exists livestock_listings_category_id_idx
   on public.livestock_listings (category_id);

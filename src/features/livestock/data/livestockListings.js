@@ -35,6 +35,7 @@ export const LIVESTOCK_SEED_ITEMS = [
 		currency: 'ZAR',
 		rating: 4.8,
 		reviewCount: 145,
+		quantity: 1,
 		image:
 			'https://images.pexels.com/photos/735968/pexels-photo-735968.jpeg?auto=compress&cs=tinysrgb&w=1200',
 		sellerEmail: '',
@@ -56,6 +57,7 @@ export const LIVESTOCK_SEED_ITEMS = [
 		currency: 'ZAR',
 		rating: 4.8,
 		reviewCount: 145,
+		quantity: 1,
 		image:
 			'https://images.pexels.com/photos/4577392/pexels-photo-4577392.jpeg?auto=compress&cs=tinysrgb&w=1200',
 		sellerEmail: '',
@@ -77,6 +79,7 @@ export const LIVESTOCK_SEED_ITEMS = [
 		currency: 'ZAR',
 		rating: 4.8,
 		reviewCount: 145,
+		quantity: 0,
 		image:
 			'https://images.pexels.com/photos/288621/pexels-photo-288621.jpeg?auto=compress&cs=tinysrgb&w=1200',
 		sellerEmail: '',
@@ -97,6 +100,7 @@ export const LIVESTOCK_SEED_ITEMS = [
 		currency: 'ZAR',
 		rating: 4.7,
 		reviewCount: 92,
+		quantity: 5,
 		image:
 			'https://images.pexels.com/photos/144240/goat-lamb-little-grass-144240.jpeg?auto=compress&cs=tinysrgb&w=1200',
 		sellerEmail: '',
@@ -117,6 +121,7 @@ export const LIVESTOCK_SEED_ITEMS = [
 		currency: 'ZAR',
 		rating: 4.6,
 		reviewCount: 64,
+		quantity: 25,
 		image:
 			'https://images.pexels.com/photos/1300355/pexels-photo-1300355.jpeg?auto=compress&cs=tinysrgb&w=1200',
 		sellerEmail: '',
@@ -138,6 +143,7 @@ export const LIVESTOCK_SEED_ITEMS = [
 		currency: 'ZAR',
 		rating: 4.9,
 		reviewCount: 38,
+		quantity: 1,
 		image:
 			'https://images.pexels.com/photos/52500/horse-herd-fog-nature-52500.jpeg?auto=compress&cs=tinysrgb&w=1200',
 		sellerEmail: '',
@@ -185,6 +191,7 @@ const rowToListing = (row) => ({
 	currency: row.currency || 'ZAR',
 	rating: Number(row.rating) || 0,
 	reviewCount: Number(row.review_count) || 0,
+	quantity: row.quantity == null ? null : Number(row.quantity) || 0,
 	image: row.image || '',
 	sellerEmail: row.seller_email || '',
 	createdAt: row.created_at,
