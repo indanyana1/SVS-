@@ -67,6 +67,15 @@ import {
   PropertyVisitStatusPage,
   PropertySellPage,
 } from '../features/property';
+import {
+  getListings as getLivestockListings,
+  hydrateListings as hydrateLivestockListings,
+  remoteSearchListings as remoteSearchLivestockListings,
+  searchListings as searchLivestockListings,
+  useListingsVersion as useLivestockListingsVersion,
+} from '../features/livestock/data/livestockListings';
+import { formatInBuyerCurrency as formatInBuyerCurrencyLib } from '../lib/buyerCurrency';
+import { searchItems as searchItemsPowerful } from '../lib/powerSearch';
 
 // --- Beverages Seller Fields ---
 const EMPTY_BEVERAGES_LISTING_FIELDS = {
@@ -3092,41 +3101,150 @@ const lotteryGames = [
   },
 ];
 
+const livestockCategories = [
+  {
+    id: 'cattles',
+    title: 'Cattles',
+    subtitle: 'Dairy & Beef',
+    image: 'https://images.pexels.com/photos/735968/pexels-photo-735968.jpeg?auto=compress&cs=tinysrgb&w=800',
+  },
+  {
+    id: 'buffalos',
+    title: 'Buffalos',
+    subtitle: 'Dairy & Farm',
+    image: 'https://images.pexels.com/photos/4577392/pexels-photo-4577392.jpeg?auto=compress&cs=tinysrgb&w=800',
+  },
+  {
+    id: 'goats',
+    title: 'Goats',
+    subtitle: 'Dairy & Breeding',
+    image: 'https://images.pexels.com/photos/144240/goat-lamb-little-grass-144240.jpeg?auto=compress&cs=tinysrgb&w=800',
+  },
+  {
+    id: 'sheeps',
+    title: 'Sheeps',
+    subtitle: 'Wool & Meat',
+    image: 'https://images.pexels.com/photos/288621/pexels-photo-288621.jpeg?auto=compress&cs=tinysrgb&w=800',
+  },
+  {
+    id: 'poultry',
+    title: 'Poultry',
+    subtitle: 'Chicken & Ducks',
+    image: 'https://images.pexels.com/photos/1300355/pexels-photo-1300355.jpeg?auto=compress&cs=tinysrgb&w=800',
+  },
+  {
+    id: 'horses',
+    title: 'Horses',
+    subtitle: 'Racing & Farm',
+    image: 'https://images.pexels.com/photos/52500/horse-herd-fog-nature-52500.jpeg?auto=compress&cs=tinysrgb&w=800',
+  },
+  {
+    id: 'camels',
+    title: 'Camels',
+    subtitle: 'Dairy & Farming',
+    image: 'https://images.pexels.com/photos/110820/pexels-photo-110820.jpeg?auto=compress&cs=tinysrgb&w=800',
+  },
+  {
+    id: 'exotic',
+    title: 'Exotic Livestock',
+    subtitle: 'Mixed Livestock',
+    image: 'https://images.pexels.com/photos/45911/peacock-plumage-bird-peafowl-45911.jpeg?auto=compress&cs=tinysrgb&w=800',
+  },
+];
+
 const livestockItems = [
   {
     id: 'ls1',
-    title: 'Brahman Breeding Bull',
+    title: 'Holstein Friesian Cow',
     titleKey: 'livestockHub.items.ls1.title',
-    location: 'Free State, South Africa',
+    categoryId: 'cattles',
+    category: 'Cattle',
+    age: '3 years',
+    weight: '550 kg',
+    location: 'Gauteng',
     locationKey: 'livestockHub.items.ls1.location',
-    summary: '22 months • Vaccinated • Auction-ready',
+    summary: 'Age: 3 years • Weight: 550 kg',
     summaryKey: 'livestockHub.items.ls1.summary',
-    price: '28,000',
-    image: livestockImageFallback,
+    price: '85,000',
+    rating: 4.8,
+    reviewCount: 145,
+    image: 'https://images.pexels.com/photos/735968/pexels-photo-735968.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
   {
     id: 'ls2',
-    title: 'Dorper Sheep Trio',
+    title: 'Murrah Buffalo',
     titleKey: 'livestockHub.items.ls2.title',
-    location: 'Lesotho Highlands',
+    categoryId: 'buffalos',
+    category: 'Buffalo',
+    age: '4 years',
+    weight: '650 kg',
+    location: 'Northern Cape',
     locationKey: 'livestockHub.items.ls2.location',
-    summary: 'Healthy ewes • Ready for breeding season',
+    summary: 'Age: 4 years • Weight: 650 kg',
     summaryKey: 'livestockHub.items.ls2.summary',
-    price: '9,800',
-    image:
-      'https://images.pexels.com/photos/751689/pexels-photo-751689.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    price: '95,000',
+    rating: 4.8,
+    reviewCount: 145,
+    image: 'https://images.pexels.com/photos/4577392/pexels-photo-4577392.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
   {
     id: 'ls3',
-    title: 'Boer Goat Starter Herd',
+    title: 'Deccani Sheep',
     titleKey: 'livestockHub.items.ls3.title',
-    location: 'Limpopo Farm Belt',
+    categoryId: 'sheeps',
+    category: 'Sheep',
+    age: '1.5 years',
+    weight: '35 kg',
+    location: 'KwaZulu-Natal',
     locationKey: 'livestockHub.items.ls3.location',
-    summary: '5 goats • Tagged • Delivery support available',
+    summary: 'Age: 1.5 years • Weight: 35 kg',
     summaryKey: 'livestockHub.items.ls3.summary',
+    price: '12,000',
+    rating: 4.8,
+    reviewCount: 145,
+    image: 'https://images.pexels.com/photos/162801/sheep-flock-of-sheep-sheep-cheese-shepherd-162801.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ls4',
+    title: 'Boer Goat Starter Herd',
+    categoryId: 'goats',
+    category: 'Goat',
+    age: '2 years',
+    weight: '45 kg',
+    location: 'Limpopo Farm Belt',
+    summary: 'Age: 2 years • Weight: 45 kg',
     price: '14,500',
-    image:
-      'https://images.pexels.com/photos/144240/goat-lamb-little-grass-144240.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    rating: 4.7,
+    reviewCount: 92,
+    image: 'https://images.pexels.com/photos/144240/goat-lamb-little-grass-144240.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ls5',
+    title: 'Free-Range Layer Hens',
+    categoryId: 'poultry',
+    category: 'Poultry',
+    age: '6 months',
+    weight: '2 kg',
+    location: 'Western Cape',
+    summary: 'Age: 6 months • Weight: 2 kg',
+    price: '180',
+    rating: 4.6,
+    reviewCount: 64,
+    image: 'https://images.pexels.com/photos/1300355/pexels-photo-1300355.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ls6',
+    title: 'Arabian Riding Horse',
+    categoryId: 'horses',
+    category: 'Horse',
+    age: '5 years',
+    weight: '450 kg',
+    location: 'Mpumalanga',
+    summary: 'Age: 5 years • Weight: 450 kg',
+    price: '180,000',
+    rating: 4.9,
+    reviewCount: 38,
+    image: 'https://images.pexels.com/photos/52500/horse-herd-fog-nature-52500.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
 ];
 
@@ -6375,13 +6493,26 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
   }, [isLanguageModalOpen]);
 
   const quickResults = useMemo(() => {
-    const needle = query.trim().toLowerCase();
+    const needle = query.trim();
 
     if (!needle) {
       return [];
     }
 
-    return searchableCatalog.filter((item) => item.searchText.includes(needle)).slice(0, 6);
+    // Powerful cross-market search: multi-token AND, weighted field scoring,
+    // diacritic-insensitive, with typo-tolerant fuzzy matching.
+    return searchItemsPowerful(searchableCatalog, needle, {
+      fields: [
+        { key: 'title', weight: 10 },
+        { key: 'subtitle', weight: 6 },
+        { key: 'category', weight: 6 },
+        { key: 'type', weight: 6 },
+        { key: 'location', weight: 6 },
+        { key: 'section', weight: 4 },
+      ],
+      haystackField: 'searchText',
+      limit: 6,
+    });
   }, [query]);
 
   const handleSearchSubmit = (event) => {
@@ -13622,40 +13753,414 @@ const BettingLotteryGamesPage = () => {
   );
 };
 
-const LivestockHubPage = () => {
+const LIVESTOCK_HERO_IMAGES = [
+  'https://images.pexels.com/photos/735968/pexels-photo-735968.jpeg?auto=compress&cs=tinysrgb&w=600',
+  'https://images.pexels.com/photos/4577392/pexels-photo-4577392.jpeg?auto=compress&cs=tinysrgb&w=600',
+  'https://images.pexels.com/photos/144240/goat-lamb-little-grass-144240.jpeg?auto=compress&cs=tinysrgb&w=600',
+  'https://images.pexels.com/photos/162801/sheep-flock-of-sheep-sheep-cheese-shepherd-162801.jpeg?auto=compress&cs=tinysrgb&w=600',
+  'https://images.pexels.com/photos/1300355/pexels-photo-1300355.jpeg?auto=compress&cs=tinysrgb&w=600',
+];
+
+const LIVESTOCK_TRUST_BG = 'https://images.pexels.com/photos/162801/sheep-flock-of-sheep-sheep-cheese-shepherd-162801.jpeg?auto=compress&cs=tinysrgb&w=1600';
+
+const LivestockHubPage = ({
+  onAddToCart,
+  onBuyNow,
+  onToggleWishlist,
+  wishlistItemIds = [],
+}) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState(null);
+  const [subscribeEmail, setSubscribeEmail] = useState('');
+  const [subscribed, setSubscribed] = useState(false);
+  const [sort, setSort] = useState('relevance');
+  const [isSearching, setIsSearching] = useState(false);
+  const featuredRef = useRef(null);
+
+  // Re-render whenever the buyer changes currency (header dropdown) or when
+  // the local livestock cache is updated.
+  const { code: buyerCurrencyCode } = useBuyerCurrency();
+  const listingsVersion = useLivestockListingsVersion();
+
+  const wishSet = useMemo(() => new Set(wishlistItemIds || []), [wishlistItemIds]);
+
+  // Hydrate Supabase cache on mount.
+  useEffect(() => {
+    hydrateLivestockListings();
+  }, []);
+
+  // Debounce search input (250ms) so we don't fire a Supabase request per keypress.
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedQuery(searchQuery.trim()), 250);
+    return () => clearTimeout(id);
+  }, [searchQuery]);
+
+  // Remote search fan-out — pull any matching listings that aren't cached yet.
+  useEffect(() => {
+    if (!debouncedQuery) {
+      setIsSearching(false);
+      return undefined;
+    }
+    let cancelled = false;
+    setIsSearching(true);
+    remoteSearchLivestockListings(debouncedQuery).finally(() => {
+      if (!cancelled) setIsSearching(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedQuery]);
+
+  // All available items (seed + cache + remote-merged), keyed by listingsVersion.
+  // listingsVersion is intentionally the trigger even though it isn't read in
+  // the factory — it's incremented by subscribeToListings on every cache write.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const allItems = useMemo(() => getLivestockListings(), [listingsVersion]);
+
+  const filteredItems = useMemo(
+    () => searchLivestockListings(allItems, debouncedQuery, { categoryId: activeCategory, sort }),
+    [allItems, debouncedQuery, activeCategory, sort],
+  );
+
+  // Format a price expressed in the listing's source currency into the
+  // buyer's currently-selected currency (falls back to ZAR if none on the
+  // listing). buyerCurrencyCode is referenced so changes trigger a re-render.
+  const formatPrice = (item) => {
+    const from = item.currency || 'ZAR';
+    void buyerCurrencyCode;
+    return formatInBuyerCurrencyLib(item.price, from, { decimals: 0 });
+  };
+
+  const buildSavedPayload = (item) => ({
+    ...item,
+    route: '/livestock-hub',
+    marketName: t('markets.livestockHub'),
+    details: item.summary || `${item.category || ''} • ${item.location || ''}`.trim(),
+    price: formatPrice(item),
+    unitPrice: Number(item.price) || 0,
+    currency: item.currency || 'ZAR',
+  });
+
+  const handleBuyNow = (item) => {
+    if (typeof onBuyNow === 'function') {
+      onBuyNow(createCartItem(buildSavedPayload(item)));
+    } else {
+      navigate('/checkout');
+    }
+  };
+  const handleToggleWishlist = (item) => {
+    if (typeof onToggleWishlist === 'function') {
+      onToggleWishlist(createWishlistItem(buildSavedPayload(item)));
+    }
+  };
+
+  const handleCategoryClick = (categoryId) => {
+    setActiveCategory((current) => (current === categoryId ? null : categoryId));
+    if (featuredRef.current) {
+      featuredRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const handleSubscribe = (event) => {
+    event.preventDefault();
+    if (!subscribeEmail.trim()) return;
+    setSubscribed(true);
+    setSubscribeEmail('');
+    setTimeout(() => setSubscribed(false), 3500);
+  };
 
   return (
-  <PageFrame title={t('markets.livestockHub')} subtitle={t('pageSubtitles.livestockHub')}>
-    <div className="mb-5 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4 text-sm text-[var(--svs-text)]">
-      {t('livestockHub.intro')}
-    </div>
-    <div className="grid gap-4 md:grid-cols-3">
-      {livestockItems.map((item) => (
-        <article key={item.id} className="overflow-hidden rounded-xl border border-[#eeeeee] bg-white shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
-          <img
-            src={item.image}
-            alt={getTranslatedValue(t, item.titleKey, item.title)}
-            className="h-44 w-full object-cover"
-            loading="lazy"
-            onError={(event) => {
-              event.currentTarget.onerror = null;
-              event.currentTarget.src = livestockImageFallback;
-            }}
-          />
-          <div className="p-4">
-            <h3 className="text-lg font-bold">{getTranslatedValue(t, item.titleKey, item.title)}</h3>
-            <p className="mt-2 flex items-center gap-2 text-sm text-slate-600"><MapPin className="h-4 w-4" /> {getTranslatedValue(t, item.locationKey, item.location)}</p>
-            <p className="mt-2 text-sm text-slate-600">{getTranslatedValue(t, item.summaryKey, item.summary)}</p>
-            <p className="mt-3 text-sm text-[var(--svs-primary-strong)]"><SalePrice price={item.price} currency={item.currency} /></p>
-            <button type="button" className={`${cudyBluePrimaryButtonClassName} mt-4 rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
-              {t('common.viewDetails')}
-            </button>
+    <section className="bg-white">
+      {/* ── Hero ── */}
+      <div className="relative overflow-hidden">
+        <div className="grid h-[260px] grid-cols-5 sm:h-[320px] md:h-[380px]">
+          {LIVESTOCK_HERO_IMAGES.map((src, idx) => (
+            <div
+              key={src}
+              className="relative h-full w-full overflow-hidden"
+              style={{ transform: `skewX(-6deg)`, marginLeft: idx === 0 ? '-12px' : '-8px' }}
+            >
+              <img
+                src={src}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover"
+                style={{ transform: 'skewX(6deg) scale(1.15)' }}
+                loading="lazy"
+              />
+            </div>
+          ))}
+        </div>
+        <div className="absolute inset-0 bg-black/35" aria-hidden="true" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
+          <h1 className="text-2xl font-bold text-white drop-shadow sm:text-3xl md:text-4xl">
+            Livestock Online Selling &amp; Buying Market
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm text-white/90 drop-shadow sm:text-base">
+            Explore healthy, verified livestock listings from trusted farmers and sellers.
+          </p>
+        </div>
+      </div>
+
+      {/* ── Search bar ── */}
+      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex flex-1 items-center gap-3 rounded-full border border-[var(--svs-primary)]/40 bg-white px-5 py-3 shadow-sm focus-within:border-[var(--svs-primary)]">
+            <Search className="h-4 w-4 shrink-0 text-[var(--svs-primary)]" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search livestock, breeds, or locations..."
+              className="w-full bg-transparent text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
+              aria-label="Search livestock, breeds, or locations"
+            />
+            {isSearching ? (
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--svs-primary)]">
+                Searching…
+              </span>
+            ) : null}
+            {searchQuery ? (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="text-xs font-semibold text-[var(--svs-primary)] hover:underline"
+              >
+                Clear
+              </button>
+            ) : null}
           </div>
-        </article>
-      ))}
-    </div>
-  </PageFrame>
+          <div className="flex items-center gap-2">
+            <label htmlFor="livestock-sort" className="text-xs font-semibold text-slate-600">
+              Sort:
+            </label>
+            <select
+              id="livestock-sort"
+              value={sort}
+              onChange={(event) => setSort(event.target.value)}
+              className="rounded-full border border-[var(--svs-border)] bg-white px-3 py-2 text-xs text-slate-700 focus:border-[var(--svs-primary)] focus:outline-none"
+            >
+              <option value="relevance">Relevance</option>
+              <option value="price-asc">Price: Low to High</option>
+              <option value="price-desc">Price: High to Low</option>
+              <option value="newest">Newest first</option>
+            </select>
+          </div>
+        </div>
+        {debouncedQuery ? (
+          <p className="mt-2 text-xs text-slate-500">
+            {filteredItems.length} {filteredItems.length === 1 ? 'result' : 'results'} for
+            {' '}<span className="font-semibold text-[var(--svs-primary-strong)]">&ldquo;{debouncedQuery}&rdquo;</span>
+          </p>
+        ) : null}
+      </div>
+
+      {/* ── Categories ── */}
+      <div className="mx-auto w-full max-w-6xl px-4 pb-8 sm:px-6">
+        <div className="flex items-center gap-3">
+          <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-[var(--svs-primary)] text-white shadow">
+            <ShoppingCart className="h-6 w-6" />
+          </span>
+          <div>
+            <h2 className="text-xl font-bold text-[var(--svs-primary-strong)] sm:text-2xl">Explore Livestock Categories</h2>
+            <p className="text-sm text-[var(--svs-primary-strong)]/80">Find the perfect livestock that matches your needs</p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4">
+          {livestockCategories.map((category) => {
+            const isActive = activeCategory === category.id;
+            return (
+              <button
+                key={category.id}
+                type="button"
+                onClick={() => handleCategoryClick(category.id)}
+                className={`group flex flex-col overflow-hidden rounded-xl bg-white text-left shadow-md transition hover:-translate-y-1 hover:shadow-lg ${
+                  isActive ? 'ring-2 ring-[var(--svs-primary)] ring-offset-2' : ''
+                }`}
+              >
+                <div className="aspect-[4/3] w-full overflow-hidden">
+                  <img
+                    src={category.image}
+                    alt={category.title}
+                    className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                    loading="lazy"
+                    onError={(event) => {
+                      event.currentTarget.onerror = null;
+                      event.currentTarget.src = livestockImageFallback;
+                    }}
+                  />
+                </div>
+                <div className="bg-[var(--svs-primary)] px-3 py-3 text-center text-white">
+                  <p className="text-base font-bold">{category.title}</p>
+                  <p className="mt-0.5 text-xs text-white/85">{category.subtitle}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Featured Livestock ── */}
+      <div ref={featuredRef} className="mx-auto w-full max-w-6xl px-4 pb-8 sm:px-6">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-[var(--svs-primary-strong)] sm:text-3xl">Featured Livestock</h2>
+          <p className="mt-2 text-sm text-[var(--svs-primary-strong)]/85 sm:text-base">
+            Explore popular and recently added livestock from verified sellers
+          </p>
+          {activeCategory ? (
+            <button
+              type="button"
+              onClick={() => setActiveCategory(null)}
+              className="mt-2 text-xs font-semibold text-[var(--svs-primary)] hover:underline"
+            >
+              Clear category filter
+            </button>
+          ) : null}
+        </div>
+
+        <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredItems.length === 0 ? (
+            <div className="col-span-full rounded-xl border border-dashed border-[var(--svs-border)] bg-white px-5 py-10 text-center text-sm text-[var(--svs-muted)]">
+              No livestock matches your current search or filter. Try adjusting your search.
+            </div>
+          ) : (
+            filteredItems.map((item) => {
+              const liked = wishSet.has(item.id);
+              return (
+                <article
+                  key={item.id}
+                  className="overflow-hidden rounded-xl bg-white shadow-md transition hover:-translate-y-1 hover:shadow-lg"
+                >
+                  <div className="relative aspect-[4/3] w-full overflow-hidden">
+                    <img
+                      src={item.image}
+                      alt={item.title}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                      onError={(event) => {
+                        event.currentTarget.onerror = null;
+                        event.currentTarget.src = livestockImageFallback;
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleToggleWishlist(item)}
+                      aria-label={liked ? 'Remove from wishlist' : 'Add to wishlist'}
+                      aria-pressed={liked}
+                      className={`absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full shadow transition ${
+                        liked ? 'bg-rose-500 text-white' : 'bg-black/55 text-white hover:bg-black/75'
+                      }`}
+                    >
+                      <Heart className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
+                    </button>
+                  </div>
+                  <div className="p-4">
+                    <h3 className="text-base font-bold text-[var(--svs-primary-strong)]">{item.title}</h3>
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="rounded-full bg-[#e6f7fb] px-3 py-1 text-sm font-semibold text-[var(--svs-primary-strong)]">
+                        {formatPrice(item)}
+                      </span>
+                      <span className="text-sm font-semibold text-[var(--svs-primary-strong)]">{item.category}</span>
+                    </div>
+                    <p className="mt-2 flex items-center gap-2 text-sm text-[var(--svs-primary-strong)]/85">
+                      <DollarSign className="h-4 w-4" />
+                      Age: {item.age} • Weight: {item.weight}
+                    </p>
+                    <p className="mt-1 flex items-center gap-2 text-sm text-[var(--svs-primary-strong)]/85">
+                      <MapPin className="h-4 w-4" /> {item.location}
+                    </p>
+                    <p className="mt-1 flex items-center gap-2 text-sm text-[var(--svs-primary-strong)]/85">
+                      <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                      <span className="font-semibold">{item.rating}</span>
+                      <span className="text-[var(--svs-muted)]">({item.reviewCount} reviews)</span>
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => handleBuyNow(item)}
+                      className={`${cudyBluePrimaryButtonClassName} mt-4 w-full rounded-md bg-[var(--svs-primary)] py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}
+                    >
+                      Buy Now
+                    </button>
+                  </div>
+                </article>
+              );
+            })
+          )}
+        </div>
+
+        <div className="mt-6 flex justify-center">
+          <button
+            type="button"
+            onClick={() => navigate('/markets')}
+            className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-10 py-3 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}
+          >
+            View All
+          </button>
+        </div>
+      </div>
+
+      {/* ── Why Shop With Us? — trust badges over grass background ── */}
+      <div
+        className="relative mt-2 bg-cover bg-center py-12"
+        style={{ backgroundImage: `url('${LIVESTOCK_TRUST_BG}')` }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/25 to-black/45" aria-hidden="true" />
+        <div className="relative mx-auto w-full max-w-6xl px-4 sm:px-6">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-white drop-shadow sm:text-3xl">Why Shop With Us?</h2>
+            <p className="mx-auto mt-2 max-w-3xl text-sm text-white/90 drop-shadow sm:text-base">
+              Trust, safety, and quality are at the core of our marketplace, ensuring secure transactions, verified listings, and reliable livestock trading.
+            </p>
+          </div>
+          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { icon: ShieldCheck, title: 'Verified Sellers', body: 'All sellers are verified with proper documentation and credentials for your peace of mind.' },
+              { icon: ClipboardList, title: 'Health Assurance', body: 'Every livestock listing includes health certificates and veterinary check reports.' },
+              { icon: Truck, title: 'Transport Assistance', body: 'We help coordinate safe and reliable transportation for your livestock purchase.' },
+              { icon: HelpCircle, title: 'Customer Support', body: '24/7 dedicated support team to assist you with queries and transactions.' },
+            ].map(({ icon: Icon, title, body }) => (
+              <div key={title} className="rounded-xl bg-[#eaf6f9] px-4 py-6 text-center shadow-md">
+                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-[var(--svs-primary)] text-white">
+                  <Icon className="h-6 w-6" />
+                </span>
+                <h3 className="mt-3 text-base font-bold text-[var(--svs-primary-strong)]">{title}</h3>
+                <p className="mt-2 text-sm text-[var(--svs-primary-strong)]/85">{body}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Inline subscribe — mirrors prototype's "Subscribe to Offers" footer column on this page */}
+          <form
+            onSubmit={handleSubscribe}
+            className="mx-auto mt-10 flex w-full max-w-xl items-center gap-2 rounded-full bg-white/95 px-2 py-2 shadow-md"
+          >
+            <input
+              type="email"
+              required
+              value={subscribeEmail}
+              onChange={(event) => setSubscribeEmail(event.target.value)}
+              placeholder="Your Email or Mobile Number"
+              className="min-w-0 flex-1 rounded-full bg-transparent px-4 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
+              aria-label="Email or mobile number to subscribe"
+            />
+            <button
+              type="submit"
+              className={`${cudyBluePrimaryButtonClassName} rounded-full bg-[var(--svs-primary)] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}
+            >
+              Subscribe
+            </button>
+          </form>
+          {subscribed ? (
+            <p className="mt-3 text-center text-sm font-semibold text-white drop-shadow">
+              Thanks! You'll be the first to hear about new livestock offers.
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </section>
   );
 };
 
@@ -13899,14 +14404,24 @@ const MarketsPage = () => {
 const SearchResultsPage = () => {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
-  const query = (searchParams.get('query') || '').trim().toLowerCase();
+  const query = (searchParams.get('query') || '').trim();
 
   const results = useMemo(() => {
     if (!query) {
       return [];
     }
 
-    return searchableCatalog.filter((item) => item.searchText.includes(query));
+    return searchItemsPowerful(searchableCatalog, query, {
+      fields: [
+        { key: 'title', weight: 10 },
+        { key: 'subtitle', weight: 6 },
+        { key: 'category', weight: 6 },
+        { key: 'type', weight: 6 },
+        { key: 'location', weight: 6 },
+        { key: 'section', weight: 4 },
+      ],
+      haystackField: 'searchText',
+    });
   }, [query]);
 
   return (
@@ -19636,7 +20151,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/property-hub/visit/:listingId" element={<PropertyVisitStatusPage />} />
     <Route path="/betting-lottery-games" element={<BettingLotteryGamesPage />} />
     <Route path="/international-lottery-games" element={<Navigate to="/betting-lottery-games" replace />} />
-    <Route path="/livestock-hub" element={<LivestockHubPage />} />
+    <Route path="/livestock-hub" element={<LivestockHubPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} />} />
     <Route path="/betting-hub" element={<Navigate to="/betting-lottery-games" replace />} />
     <Route path="/betting-voting" element={<Navigate to="/betting-lottery-games" replace />} />
     <Route path="/safety" element={<SafetyPage />} />
