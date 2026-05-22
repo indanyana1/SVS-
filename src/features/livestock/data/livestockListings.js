@@ -59,7 +59,7 @@ export const LIVESTOCK_SEED_ITEMS = [
 		reviewCount: 145,
 		quantity: 1,
 		image:
-			'https://images.pexels.com/photos/4577392/pexels-photo-4577392.jpeg?auto=compress&cs=tinysrgb&w=1200',
+			'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Murrah_buffalo.JPG/1200px-Murrah_buffalo.JPG',
 		sellerEmail: '',
 		createdAt: '2025-01-14T00:00:00Z',
 	},

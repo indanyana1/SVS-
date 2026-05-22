@@ -43,6 +43,7 @@ import {
   Pencil,
   Trash2,
   Info,
+  ExternalLink,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -591,6 +592,7 @@ const marketLinks = [
   { labelKey: 'markets.propertyHub', href: '/property-hub' },
   { labelKey: 'markets.secondhand', href: '/secondhand-central' },
   { labelKey: 'markets.stationery', href: '/stationery-office' },
+  { labelKey: 'markets.directLinks', href: '/retailer-direct-links' },
 ];
 
 // Short marketing taglines shown beneath the market name on the Markets page cards.
@@ -598,13 +600,13 @@ const marketShortDescriptions = {
   '/beverages-liquors': 'Wines, spirits & refreshing drinks',
   '/building-construction-tools': 'Tools & materials for every build',
   '/fashion-style': 'Trending clothing, shoes & accessories',
-  '/voting-clients': 'Vote for your favourite service clients',
-  '/safety': 'Safety gear & protective equipment',
+  '/voting-clients': 'Beauty, fitness & sports essentials',
+  '/safety': 'Toys, games & kids essentials',
   '/hardware-software': 'Latest tech, gadgets & software',
   '/mobility-vehicles': 'Cars, bikes & mobility solutions',
   '/natural-resources-minerals': 'Quality raw materials & minerals',
   '/tickets': 'Events, travel & experience bookings',
-  '/voting-providers': 'Vote for your favourite service providers',
+  '/voting-providers': 'Jewellery & accessories from trusted sellers',
   '/fast-food': 'Hot meals delivered fast & fresh',
   '/groceries': 'Fresh produce & everyday essentials',
   '/home-care': 'Cleaning, laundry & home essentials',
@@ -616,6 +618,7 @@ const marketShortDescriptions = {
   '/property-hub': 'Homes, rentals & commercial space',
   '/secondhand-central': 'Quality pre-loved goods at great prices',
   '/stationery-office': 'Office, school & creative supplies',
+  '/retailer-direct-links': 'Quick links to top global retailers & brands',
 };
 
 const sellerMarketOptions = [
@@ -635,6 +638,9 @@ const sellerMarketOptions = [
   { key: 'secondhand', labelKey: 'markets.secondhand', route: '/secondhand-central' },
   { key: 'stationery', labelKey: 'markets.stationery', route: '/stationery-office' },
   { key: 'traditionalMedicines', labelKey: 'markets.traditionalMedicines', route: '/traditional-medicines-herbs' },
+  { key: 'beautyFitnessSports', labelKey: 'markets.votingClients', route: '/voting-clients' },
+  { key: 'toysKids', labelKey: 'markets.safety', route: '/safety' },
+  { key: 'jewelleryAccessories', labelKey: 'markets.votingProviders', route: '/voting-providers' },
 ];
 
 const sellerMarketConfig = sellerMarketOptions.reduce((accumulator, option) => {
@@ -3112,7 +3118,7 @@ const livestockCategories = [
     id: 'buffalos',
     title: 'Buffalos',
     subtitle: 'Dairy & Farm',
-    image: 'https://images.pexels.com/photos/4577392/pexels-photo-4577392.jpeg?auto=compress&cs=tinysrgb&w=800',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Murrah_buffalo.JPG/960px-Murrah_buffalo.JPG',
   },
   {
     id: 'goats',
@@ -3293,6 +3299,285 @@ const mobilityVehiclesItems = [
     price: '42000',
     image:
       'https://images.pexels.com/photos/100582/pexels-photo-100582.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+];
+
+const beautyFitnessSportsItems = [
+  {
+    id: 'bfs1',
+    title: 'Luxe Matte Lipstick Set',
+    category: 'Beauty',
+    description: 'Long-wear matte lipsticks in 6 trending shades for everyday glamour.',
+    price: '24.99',
+    image:
+      'https://images.pexels.com/photos/2533266/pexels-photo-2533266.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'bfs2',
+    title: 'Radiance Skincare Bundle',
+    category: 'Beauty',
+    description: 'Cleanser, toner, serum, and moisturiser for a complete daily routine.',
+    price: '59.00',
+    image:
+      'https://images.pexels.com/photos/3735619/pexels-photo-3735619.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'bfs3',
+    title: 'Floral Eau de Parfum 100ml',
+    category: 'Beauty',
+    description: 'Premium fragrance with notes of jasmine, rose, and vanilla.',
+    price: '79.50',
+    image:
+      'https://images.pexels.com/photos/965989/pexels-photo-965989.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'bfs4',
+    title: 'Adjustable Dumbbell Set 20kg',
+    category: 'Fitness',
+    description: 'Compact home-gym dumbbells with quick-lock weight adjustment.',
+    price: '189.00',
+    image:
+      'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'bfs5',
+    title: 'Premium Yoga Mat 6mm',
+    category: 'Fitness',
+    description: 'Non-slip eco-friendly mat with carry strap for studio and home.',
+    price: '34.99',
+    image:
+      'https://images.pexels.com/photos/4056723/pexels-photo-4056723.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'bfs6',
+    title: 'Resistance Bands Pro Kit',
+    category: 'Fitness',
+    description: '5-level latex bands with handles, anchor, and storage bag.',
+    price: '22.50',
+    image:
+      'https://images.pexels.com/photos/4498152/pexels-photo-4498152.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'bfs7',
+    title: 'AeroFlex Running Shoes',
+    category: 'Sports',
+    description: 'Lightweight cushioned trainers for road running and gym sessions.',
+    price: '89.00',
+    image:
+      'https://images.pexels.com/photos/2529148/pexels-photo-2529148.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'bfs8',
+    title: 'Pro-Match Football',
+    category: 'Sports',
+    description: 'FIFA-approved size 5 ball with hand-stitched durable panels.',
+    price: '29.99',
+    image:
+      'https://images.pexels.com/photos/47730/the-ball-stadion-football-the-pitch-47730.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'bfs9',
+    title: 'Carbon Tennis Racket',
+    category: 'Sports',
+    description: 'Graphite frame racket with grip tape and protective cover.',
+    price: '119.00',
+    image:
+      'https://images.pexels.com/photos/342361/pexels-photo-342361.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'bfs10',
+    title: 'Smart Fitness Tracker Watch',
+    category: 'Fitness',
+    description: 'Heart rate, sleep, and step tracking with 7-day battery life.',
+    price: '69.99',
+    image:
+      'https://images.pexels.com/photos/437037/pexels-photo-437037.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+];
+
+const toysKidsItems = [
+  {
+    id: 'tk1',
+    title: 'Wooden Building Blocks Set',
+    category: 'Educational Toys',
+    description: '100-piece set of colourful blocks for creative construction play.',
+    price: '34.99',
+    image:
+      'https://images.pexels.com/photos/3661193/pexels-photo-3661193.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'tk2',
+    title: 'Plush Teddy Bear 60cm',
+    category: 'Soft Toys',
+    description: 'Extra-soft hypoallergenic teddy bear perfect for cuddles and naps.',
+    price: '19.99',
+    image:
+      'https://images.pexels.com/photos/1648376/pexels-photo-1648376.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'tk3',
+    title: 'Remote Control Sports Car',
+    category: 'Action Toys',
+    description: 'High-speed RC car with rechargeable battery and easy controls.',
+    price: '45.00',
+    image:
+      'https://images.pexels.com/photos/35619/capri-ford-oldtimer-automotive.jpg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'tk4',
+    title: 'Princess Doll Playset',
+    category: 'Dolls',
+    description: 'Fashion doll with multiple outfits, accessories, and styling kit.',
+    price: '29.99',
+    image:
+      'https://images.pexels.com/photos/5905857/pexels-photo-5905857.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'tk5',
+    title: 'Educational Board Game Bundle',
+    category: 'Board Games',
+    description: 'Pack of 3 classic family board games for ages 6 and up.',
+    price: '39.50',
+    image:
+      'https://images.pexels.com/photos/4691567/pexels-photo-4691567.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'tk6',
+    title: 'Baby Walker with Music',
+    category: 'Baby Gear',
+    description: 'Sturdy walker with adjustable height, toys, and music tray.',
+    price: '69.00',
+    image:
+      'https://images.pexels.com/photos/207891/pexels-photo-207891.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'tk7',
+    title: 'Kids School Backpack',
+    category: 'Kids Accessories',
+    description: 'Ergonomic padded backpack with reflective strips and bottle pocket.',
+    price: '24.99',
+    image:
+      'https://images.pexels.com/photos/207697/pexels-photo-207697.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'tk8',
+    title: 'Art & Craft Supplies Kit',
+    category: 'Educational Toys',
+    description: 'Crayons, markers, glitter, glue, and craft paper in one big pack.',
+    price: '27.50',
+    image:
+      'https://images.pexels.com/photos/159579/crayons-coloring-book-coloring-book-159579.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'tk9',
+    title: 'Ride-On Push Tricycle',
+    category: 'Outdoor Play',
+    description: 'Safe push-and-ride trike for toddlers with parent handle.',
+    price: '79.00',
+    image:
+      'https://images.pexels.com/photos/1648387/pexels-photo-1648387.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'tk10',
+    title: 'STEM Robot Building Kit',
+    category: 'Educational Toys',
+    description: 'Hands-on robotics kit teaching coding basics for ages 8+.',
+    price: '89.00',
+    image:
+      'https://images.pexels.com/photos/8566472/pexels-photo-8566472.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+];
+
+const jewelleryAccessoriesItems = [
+  {
+    id: 'ja1',
+    title: '18K Gold Pendant Necklace',
+    category: 'Necklaces',
+    description: 'Elegant gold-plated pendant on a delicate chain — gift-ready box included.',
+    price: '149.00',
+    image:
+      'https://images.pexels.com/photos/691046/pexels-photo-691046.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ja2',
+    title: 'Diamond Solitaire Ring',
+    category: 'Rings',
+    description: 'Certified 0.5ct diamond in a classic four-prong setting.',
+    price: '1299.00',
+    image:
+      'https://images.pexels.com/photos/265906/pexels-photo-265906.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ja3',
+    title: 'Sterling Silver Bracelet',
+    category: 'Bracelets',
+    description: 'Hand-finished 925 sterling silver chain bracelet with secure clasp.',
+    price: '79.00',
+    image:
+      'https://images.pexels.com/photos/1191531/pexels-photo-1191531.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ja4',
+    title: 'Pearl Drop Earrings',
+    category: 'Earrings',
+    description: 'Freshwater pearl earrings on hypoallergenic gold-tone hooks.',
+    price: '54.50',
+    image:
+      'https://images.pexels.com/photos/177332/pexels-photo-177332.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ja5',
+    title: 'Classic Leather Watch',
+    category: 'Watches',
+    description: 'Minimalist analog watch with genuine leather strap and sapphire glass.',
+    price: '189.00',
+    image:
+      'https://images.pexels.com/photos/190819/pexels-photo-190819.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ja6',
+    title: 'Designer Sunglasses',
+    category: 'Sunglasses',
+    description: 'UV400 polarised lenses in a stylish metal frame with case.',
+    price: '99.00',
+    image:
+      'https://images.pexels.com/photos/701877/pexels-photo-701877.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ja7',
+    title: 'Genuine Leather Handbag',
+    category: 'Handbags',
+    description: 'Spacious tote in soft full-grain leather with gold hardware.',
+    price: '219.00',
+    image:
+      'https://images.pexels.com/photos/1152077/pexels-photo-1152077.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ja8',
+    title: 'Slim Bifold Wallet',
+    category: 'Wallets',
+    description: 'RFID-blocking leather wallet with 8 card slots and bill pocket.',
+    price: '49.99',
+    image:
+      'https://images.pexels.com/photos/2079438/pexels-photo-2079438.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ja9',
+    title: 'Silk Scarf Collection',
+    category: 'Scarves',
+    description: 'Hand-printed 100% mulberry silk scarf with luxe gift wrap.',
+    price: '89.00',
+    image:
+      'https://images.pexels.com/photos/1306248/pexels-photo-1306248.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'ja10',
+    title: 'Rose Gold Charm Bracelet',
+    category: 'Bracelets',
+    description: 'Adjustable charm bracelet with interchangeable beads and charms.',
+    price: '64.00',
+    image:
+      'https://images.pexels.com/photos/1454171/pexels-photo-1454171.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
 ];
 
@@ -7152,13 +7437,6 @@ const HomePage = () => {
   );
 };
 
-const KpiCard = ({ label, value }) => (
-  <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4">
-    <p className="text-sm text-[var(--svs-muted)]">{label}</p>
-    <p className="text-2xl font-bold text-[var(--svs-primary-strong)]">{value}</p>
-  </div>
-);
-
 const GroceriesSellerFields = ({ formData, onFieldChange, prefix = 'seller-grocery', isCompact = false }) => {
   const containerClassName = isCompact
     ? 'rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3'
@@ -8442,115 +8720,128 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
   );
 };
 
-const VotingClientsPage = () => {
+const VotingClientsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
-  const [submittedVote, setSubmittedVote] = useState(null);
-  const [hasVoted, setHasVoted] = useState(false);
+  const marketItems = useMemo(
+    () => [...getSellerItemsForMarket(sellerItems, 'beautyFitnessSports'), ...beautyFitnessSportsItems],
+    [sellerItems],
+  );
+  const buildCartItem = (item) => createCartItem({
+    ...item,
+    route: '/voting-clients',
+    marketName: t('markets.votingClients'),
+    details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Beauty, fitness & sports'}`,
+  });
+  const buildWishlistItem = (item) => createWishlistItem({
+    ...item,
+    route: '/voting-clients',
+    marketName: t('markets.votingClients'),
+    details: `${item.category || 'Seller item'} • ${item.sellerName || 'Beauty, fitness & sports'}`,
+  });
 
   return (
     <PageFrame
       title={t('markets.votingClients')}
       subtitle={t('pageSubtitles.votingClients')}
+      heroImage="https://images.pexels.com/photos/2533266/pexels-photo-2533266.jpeg?auto=compress&cs=tinysrgb&w=1600"
+      heroMediaClassName="scale-105 blur-[2px]"
+      heroOverlayClassName="bg-gradient-to-r from-black/75 via-black/65 to-black/55"
+      sectionClassName="px-0 pt-0 pb-8 sm:pt-0 sm:pb-10"
+      heroWrapperClassName="w-full max-w-none"
+      contentWrapperClassName="mx-auto w-full max-w-7xl px-4"
+      heroContainerClassName="rounded-none border-x-0 border-t-0 p-0 shadow-none"
+      heroContentClassName="flex min-h-[220px] flex-col items-center justify-center px-6 py-8 text-center sm:min-h-[260px] sm:px-8 sm:py-10"
+      titleClassName="text-xl text-white sm:text-2xl"
+      subtitleClassName="mt-2 text-xs text-white/90 sm:text-sm"
     >
-      <div className="mb-5 rounded-xl border border-[#f44336] bg-[#fff4f4] p-3 text-sm text-[#b91c1c]">
-        18+ Only. Play Responsibly. Help Line: +1-800-522-4700.
-      </div>
-
-      <div className="space-y-4">
-        {matchSeed.map((match) => (
-          <article key={match.id} className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
-            <h3 className="text-lg font-bold">{match.match}</h3>
-            <p className="mt-1 text-sm text-slate-600">Man City Win? {match.split}</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {match.options.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => {
-                    setSubmittedVote({ match: match.match, option });
-                    setHasVoted(true);
-                  }}
-                  className="rounded-md border border-[#b2ebf2] bg-white px-3 py-2 text-sm font-semibold transition hover:bg-[#e0f7fa]"
-                >
-                  Vote: {option}
-                </button>
-              ))}
-            </div>
-          </article>
-        ))}
-      </div>
-
-      {hasVoted ? (
-        <section className="mt-6">
-          <h3 className="text-xl font-bold">Post-Vote Live Stats</h3>
-          <div className="mt-3 grid gap-3 sm:grid-cols-3">
-            <KpiCard label="Total Votes" value="10,000+" />
-            <KpiCard label="Verified Experts" value="500+" />
-            <KpiCard label="High Accuracy" value="88%" />
-          </div>
-        </section>
-      ) : null}
-
-      {submittedVote ? <VoteSuccessModal vote={submittedVote} onClose={() => setSubmittedVote(null)} /> : null}
+      <CardGrid
+        items={marketItems}
+        buttonLabel={t('common.addToCart')}
+        secondaryButtonLabel={t('common.viewDetails')}
+        reviewSummaryMap={productReviewSummaryMap}
+        getItemReviewKey={(item) => getCollectionItemId('/voting-clients', item.id)}
+        onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+        onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
+        onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+        onOpenItemDetails={(item) => {
+          const wishlistItem = buildWishlistItem(item);
+          onOpenItemDetails?.({
+            title: getTranslatedValue(t, item.titleKey, item.title),
+            image: item.image,
+            images: item.images || (item.image ? [item.image] : []),
+            marketName: t('markets.votingClients'),
+            details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Beauty, fitness & sports'}`,
+            priceLabel: getSalePrices(item.price).nowPrice,
+            cartItem: buildCartItem(item),
+            wishlistItem,
+          });
+        }}
+        isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/voting-clients', item.id))}
+        metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • <SalePrice price={item.price} currency={item.currency} /></p>}
+      />
     </PageFrame>
   );
 };
 
-const VoteSuccessModal = ({ vote, onClose }) => {
+const VotingProvidersPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
-
-  return (
-  <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 px-4">
-    <div className="w-full max-w-md rounded-2xl border border-[#b2ebf2] bg-white p-5 shadow-2xl animate-[fadeIn_0.2s_ease-out]">
-      <p className="text-sm font-semibold text-[#4caf50]">Vote Submitted Successfully!</p>
-      <h3 className="mt-1 text-xl font-bold">{vote.match}</h3>
-      <p className="mt-2 text-sm text-slate-600">You selected: {vote.option}</p>
-      <div className="mt-4 grid grid-cols-3 gap-2 text-center text-sm">
-        <div className="rounded-md bg-[#e0f7fa] p-2">
-          <p className="text-xs text-slate-500">Accuracy</p>
-          <p className="font-bold">82%</p>
-        </div>
-        <div className="rounded-md bg-[#e0f7fa] p-2">
-          <p className="text-xs text-slate-500">Rank</p>
-          <p className="font-bold">#3</p>
-        </div>
-        <div className="rounded-md bg-[#e0f7fa] p-2">
-          <p className="text-xs text-slate-500">Votes</p>
-          <p className="font-bold">10,000+</p>
-        </div>
-      </div>
-      <button type="button" onClick={onClose} className={`${cudyBluePrimaryButtonClassName} mt-4 w-full rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white`}>
-        {t('common.continue')}
-      </button>
-    </div>
-  </div>
+  const marketItems = useMemo(
+    () => [...getSellerItemsForMarket(sellerItems, 'jewelleryAccessories'), ...jewelleryAccessoriesItems],
+    [sellerItems],
   );
-};
+  const buildCartItem = (item) => createCartItem({
+    ...item,
+    route: '/voting-providers',
+    marketName: t('markets.votingProviders'),
+    details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Jewellery & accessories'}`,
+  });
+  const buildWishlistItem = (item) => createWishlistItem({
+    ...item,
+    route: '/voting-providers',
+    marketName: t('markets.votingProviders'),
+    details: `${item.category || 'Seller item'} • ${item.sellerName || 'Jewellery & accessories'}`,
+  });
 
-const VotingProvidersPage = () => {
-  const { t } = useTranslation();
   return (
     <PageFrame
       title={t('markets.votingProviders')}
       subtitle={t('pageSubtitles.votingProviders')}
+      heroImage="https://images.pexels.com/photos/691046/pexels-photo-691046.jpeg?auto=compress&cs=tinysrgb&w=1600"
+      heroMediaClassName="scale-105 blur-[2px]"
+      heroOverlayClassName="bg-gradient-to-r from-black/75 via-black/65 to-black/55"
+      sectionClassName="px-0 pt-0 pb-8 sm:pt-0 sm:pb-10"
+      heroWrapperClassName="w-full max-w-none"
+      contentWrapperClassName="mx-auto w-full max-w-7xl px-4"
+      heroContainerClassName="rounded-none border-x-0 border-t-0 p-0 shadow-none"
+      heroContentClassName="flex min-h-[220px] flex-col items-center justify-center px-6 py-8 text-center sm:min-h-[260px] sm:px-8 sm:py-10"
+      titleClassName="text-xl text-white sm:text-2xl"
+      subtitleClassName="mt-2 text-xs text-white/90 sm:text-sm"
     >
-      <div className="space-y-4">
-        {leaderboardSeed.map((expert) => (
-          <article key={expert.id} className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-lg font-bold">#{expert.rank} {expert.name}</h3>
-              <button type="button" className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-1.5 text-sm font-semibold text-white`}>
-                {t('common.voteNow')}
-              </button>
-            </div>
-            <p className="mt-1 text-sm text-slate-600">{expert.votes.toLocaleString()} total votes</p>
-            <div className="mt-3 h-2 rounded-full bg-slate-200">
-              <div className="h-2 rounded-full bg-[var(--svs-primary)]" style={{ width: `${expert.accuracy}%` }} aria-label={`Accuracy ${expert.accuracy}%`} />
-            </div>
-            <p className="mt-1 text-sm text-[var(--svs-primary-strong)]">{expert.accuracy}% accuracy</p>
-          </article>
-        ))}
-      </div>
+      <CardGrid
+        items={marketItems}
+        buttonLabel={t('common.addToCart')}
+        secondaryButtonLabel={t('common.viewDetails')}
+        reviewSummaryMap={productReviewSummaryMap}
+        getItemReviewKey={(item) => getCollectionItemId('/voting-providers', item.id)}
+        onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+        onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
+        onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+        onOpenItemDetails={(item) => {
+          const wishlistItem = buildWishlistItem(item);
+          onOpenItemDetails?.({
+            title: getTranslatedValue(t, item.titleKey, item.title),
+            image: item.image,
+            images: item.images || (item.image ? [item.image] : []),
+            marketName: t('markets.votingProviders'),
+            details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Jewellery & accessories'}`,
+            priceLabel: getSalePrices(item.price).nowPrice,
+            cartItem: buildCartItem(item),
+            wishlistItem,
+          });
+        }}
+        isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/voting-providers', item.id))}
+        metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • <SalePrice price={item.price} currency={item.currency} /></p>}
+      />
     </PageFrame>
   );
 };
@@ -10040,6 +10331,75 @@ const StationeryPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
       metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • <SalePrice price={item.price} currency={item.currency} /></p>}
     />
   </PageFrame>
+  );
+};
+
+const RETAILER_DIRECT_LINKS = [
+  { name: 'Amazon', url: 'https://www.amazon.com', tagline: 'Global marketplace — everything from A to Z', image: 'https://images.pexels.com/photos/4498152/pexels-photo-4498152.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { name: 'eBay', url: 'https://www.ebay.com', tagline: 'Auctions, deals & rare finds worldwide', image: 'https://images.pexels.com/photos/5632402/pexels-photo-5632402.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { name: 'Walmart', url: 'https://www.walmart.com', tagline: 'Everyday low prices on groceries & more', image: 'https://images.pexels.com/photos/1005638/pexels-photo-1005638.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { name: 'Target', url: 'https://www.target.com', tagline: 'Style, home & essentials in one stop', image: 'https://images.pexels.com/photos/1488463/pexels-photo-1488463.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { name: 'AliExpress', url: 'https://www.aliexpress.com', tagline: 'Worldwide shipping at wholesale prices', image: 'https://images.pexels.com/photos/1170686/pexels-photo-1170686.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { name: 'Shein', url: 'https://www.shein.com', tagline: 'Trending fashion at affordable prices', image: 'https://images.pexels.com/photos/2983464/pexels-photo-2983464.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { name: 'Temu', url: 'https://www.temu.com', tagline: 'Shop like a billionaire — daily deals', image: 'https://images.pexels.com/photos/4968391/pexels-photo-4968391.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { name: 'Best Buy', url: 'https://www.bestbuy.com', tagline: 'Electronics, appliances & tech support', image: 'https://images.pexels.com/photos/356056/pexels-photo-356056.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { name: 'Shoprite', url: 'https://www.shoprite.co.za', tagline: 'Africa\u2019s largest grocery retailer', image: 'https://images.pexels.com/photos/1435904/pexels-photo-1435904.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { name: 'Takealot', url: 'https://www.takealot.com', tagline: 'South Africa\u2019s leading online store', image: 'https://images.pexels.com/photos/4498140/pexels-photo-4498140.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { name: 'Jumia', url: 'https://www.jumia.com', tagline: 'Pan-African online marketplace', image: 'https://images.pexels.com/photos/5632379/pexels-photo-5632379.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { name: 'Alibaba', url: 'https://www.alibaba.com', tagline: 'Source products direct from manufacturers', image: 'https://images.pexels.com/photos/4481259/pexels-photo-4481259.jpeg?auto=compress&cs=tinysrgb&w=800' },
+];
+
+const RetailerDirectLinksPage = () => {
+  const { t } = useTranslation();
+  return (
+    <PageFrame
+      title={t('markets.directLinks')}
+      subtitle={t('pageSubtitles.directLinks')}
+      heroImage="https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg?auto=compress&cs=tinysrgb&w=1600"
+      heroMediaClassName="scale-105 blur-[2px]"
+      heroOverlayClassName="bg-gradient-to-r from-black/75 via-black/65 to-black/55"
+      sectionClassName="px-0 pt-0 pb-8 sm:pt-0 sm:pb-10"
+      heroWrapperClassName="w-full max-w-none"
+      contentWrapperClassName="mx-auto w-full max-w-7xl px-4"
+      heroContainerClassName="rounded-none border-x-0 border-t-0 p-0 shadow-none"
+      heroContentClassName="flex min-h-[220px] flex-col items-center justify-center px-6 py-8 text-center sm:min-h-[260px] sm:px-8 sm:py-10"
+      titleClassName="text-xl text-white sm:text-2xl"
+      subtitleClassName="mt-2 text-xs text-white/90 sm:text-sm"
+    >
+      <div className="grid grid-cols-2 gap-3 py-4 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+        {RETAILER_DIRECT_LINKS.map((retailer) => (
+          <a
+            key={retailer.name}
+            href={retailer.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group relative flex aspect-[4/5] flex-col overflow-hidden rounded-xl border border-[var(--svs-border)] shadow-[0_4px_8px_rgba(0,0,0,0.1)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_12px_22px_rgba(0,168,232,0.2)] sm:rounded-2xl"
+          >
+            <div
+              className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
+              style={{ backgroundImage: `url('${retailer.image}')` }}
+              aria-hidden="true"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/35 to-transparent" aria-hidden="true" />
+            <div className="relative z-10 flex h-full flex-col justify-between p-3 sm:p-4">
+              <div className="flex items-start justify-between">
+                <span className="rounded-full border border-white/35 bg-black/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm sm:text-xs">
+                  External link
+                </span>
+                <ExternalLink className="h-4 w-4 text-white/90 drop-shadow" aria-hidden="true" />
+              </div>
+              <div className="rounded-xl border border-white/20 bg-black/55 px-2.5 py-2 backdrop-blur-sm sm:px-3">
+                <p className="text-base font-bold leading-tight text-white drop-shadow sm:text-lg">{retailer.name}</p>
+                <p className="mt-1 text-[11px] leading-snug text-white/90 line-clamp-2 sm:text-xs">{retailer.tagline}</p>
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+      <p className="mt-4 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4 text-xs text-[var(--svs-text)] sm:text-sm">
+        Links open in a new tab. SVS E-Commerce is not affiliated with these retailers; we provide convenient shortcuts to compare prices and brands.
+      </p>
+    </PageFrame>
   );
 };
 
@@ -14375,18 +14735,66 @@ const LivestockHubPage = ({
   );
 };
 
-const SafetyPage = () => {
+const SafetyPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
+  const marketItems = useMemo(
+    () => [...getSellerItemsForMarket(sellerItems, 'toysKids'), ...toysKidsItems],
+    [sellerItems],
+  );
+  const buildCartItem = (item) => createCartItem({
+    ...item,
+    route: '/safety',
+    marketName: t('markets.safety'),
+    details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Toys & kids'}`,
+  });
+  const buildWishlistItem = (item) => createWishlistItem({
+    ...item,
+    route: '/safety',
+    marketName: t('markets.safety'),
+    details: `${item.category || 'Seller item'} • ${item.sellerName || 'Toys & kids'}`,
+  });
 
   return (
-  <PageFrame title={t('markets.safety')} subtitle={t('pageSubtitles.safety')}>
-    <ul className="space-y-3 text-sm text-slate-700">
-      <li className="rounded-lg border border-[#b2ebf2] bg-white p-3">18+ age verification is required for betting and voting-adjacent features.</li>
-      <li className="rounded-lg border border-[#b2ebf2] bg-white p-3">All transactions are encrypted and verified before processing.</li>
-      <li className="rounded-lg border border-[#b2ebf2] bg-white p-3">Responsible play notices are shown in relevant routes and checkout points.</li>
-      <li className="rounded-lg border border-[#b2ebf2] bg-white p-3">Help Line: +1-800-522-4700.</li>
-    </ul>
-  </PageFrame>
+    <PageFrame
+      title={t('markets.safety')}
+      subtitle={t('pageSubtitles.safety')}
+      heroImage="https://images.pexels.com/photos/3661193/pexels-photo-3661193.jpeg?auto=compress&cs=tinysrgb&w=1600"
+      heroMediaClassName="scale-105 blur-[2px]"
+      heroOverlayClassName="bg-gradient-to-r from-black/75 via-black/65 to-black/55"
+      sectionClassName="px-0 pt-0 pb-8 sm:pt-0 sm:pb-10"
+      heroWrapperClassName="w-full max-w-none"
+      contentWrapperClassName="mx-auto w-full max-w-7xl px-4"
+      heroContainerClassName="rounded-none border-x-0 border-t-0 p-0 shadow-none"
+      heroContentClassName="flex min-h-[220px] flex-col items-center justify-center px-6 py-8 text-center sm:min-h-[260px] sm:px-8 sm:py-10"
+      titleClassName="text-xl text-white sm:text-2xl"
+      subtitleClassName="mt-2 text-xs text-white/90 sm:text-sm"
+    >
+      <CardGrid
+        items={marketItems}
+        buttonLabel={t('common.addToCart')}
+        secondaryButtonLabel={t('common.viewDetails')}
+        reviewSummaryMap={productReviewSummaryMap}
+        getItemReviewKey={(item) => getCollectionItemId('/safety', item.id)}
+        onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+        onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
+        onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+        onOpenItemDetails={(item) => {
+          const wishlistItem = buildWishlistItem(item);
+          onOpenItemDetails?.({
+            title: getTranslatedValue(t, item.titleKey, item.title),
+            image: item.image,
+            images: item.images || (item.image ? [item.image] : []),
+            marketName: t('markets.safety'),
+            details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Toys & kids'}`,
+            priceLabel: getSalePrices(item.price).nowPrice,
+            cartItem: buildCartItem(item),
+            wishlistItem,
+          });
+        }}
+        isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/safety', item.id))}
+        metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • <SalePrice price={item.price} currency={item.currency} /></p>}
+      />
+    </PageFrame>
   );
 };
 
@@ -14500,6 +14908,10 @@ const MarketsPage = () => {
           const isProperty = market.href === '/property-hub';
           const isHerbs = market.href === '/traditional-medicines-herbs';
           const isSecondhand = market.href === '/secondhand-central';
+          const isBeautyFitnessSports = market.href === '/voting-clients';
+          const isToysKids = market.href === '/safety';
+          const isJewelleryAccessories = market.href === '/voting-providers';
+          const isDirectLinks = market.href === '/retailer-direct-links';
           const marketDisplayNumber = market.href === '/tickets'
             ? '09'
             : String(index + 1).padStart(2, '0');
@@ -14510,7 +14922,7 @@ const MarketsPage = () => {
           const marketLabelClassName = 'text-xs font-semibold uppercase tracking-wide text-[#8eeaff] drop-shadow sm:text-xs';
           const marketTitleClassName = 'text-base font-bold leading-tight text-white drop-shadow line-clamp-3 sm:text-lg sm:line-clamp-none';
           const badgeClassName = 'svs-berkshire-swash rounded-full border border-white/35 bg-white/15 px-2 py-0.5 text-xs text-white sm:px-2 sm:py-1 sm:text-sm';
-          const hasHeroImage = isFastFood || isFashion || isBookings || isBeverages || isGroceries || isMobility || isEcommerce || isElectronics || isBetting || isConstruction || isLivestock || isHomeCare || isNaturalResources || isWellness || isStationery || isProperty || isHerbs || isSecondhand;
+          const hasHeroImage = isFastFood || isFashion || isBookings || isBeverages || isGroceries || isMobility || isEcommerce || isElectronics || isBetting || isConstruction || isLivestock || isHomeCare || isNaturalResources || isWellness || isStationery || isProperty || isHerbs || isSecondhand || isBeautyFitnessSports || isToysKids || isJewelleryAccessories || isDirectLinks;
           const heroImageUrl = isFastFood
             ? 'https://images.pexels.com/photos/2983101/pexels-photo-2983101.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isFashion
@@ -14547,6 +14959,14 @@ const MarketsPage = () => {
             ? 'https://images.pexels.com/photos/906150/pexels-photo-906150.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isSecondhand
             ? 'https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            : isBeautyFitnessSports
+            ? 'https://images.pexels.com/photos/2533266/pexels-photo-2533266.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            : isToysKids
+            ? 'https://images.pexels.com/photos/3661193/pexels-photo-3661193.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            : isJewelleryAccessories
+            ? 'https://images.pexels.com/photos/691046/pexels-photo-691046.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            : isDirectLinks
+            ? 'https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : '';
           return hasHeroImage ? (
             <Link
@@ -20333,8 +20753,8 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/tickets" element={<TicketsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/bookings-tickets" element={<BookingsTicketsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/movie/:movieId" element={<MovieDetailsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} />} />
-    <Route path="/voting-clients" element={<VotingClientsPage />} />
-    <Route path="/voting-providers" element={<VotingProvidersPage />} />
+    <Route path="/voting-clients" element={<VotingClientsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
+    <Route path="/voting-providers" element={<VotingProvidersPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/groceries" element={<GroceriesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/groceries/:categoryKey" element={<GroceriesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/fast-food" element={<FastFoodPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
@@ -20344,6 +20764,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/traditional-medicines-herbs" element={<TraditionalMedicinesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/wellness" element={<WellnessPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/stationery-office" element={<StationeryPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
+    <Route path="/retailer-direct-links" element={<RetailerDirectLinksPage />} />
     <Route path="/secondhand-central" element={<SecondHandPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/secondhand-central/product/:itemId" element={<SecondHandProductDetailPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} />} />
     <Route path="/secondhand-central/:categoryKey" element={<SecondHandPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
@@ -20365,7 +20786,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/livestock-hub" element={<LivestockHubPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} />} />
     <Route path="/betting-hub" element={<Navigate to="/betting-lottery-games" replace />} />
     <Route path="/betting-voting" element={<Navigate to="/betting-lottery-games" replace />} />
-    <Route path="/safety" element={<SafetyPage />} />
+    <Route path="/safety" element={<SafetyPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
 
     <Route path="/signin" element={<SigninPage />} />
     <Route path="/signup" element={<SignupPage />} />
