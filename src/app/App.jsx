@@ -44,6 +44,7 @@ import {
   Trash2,
   Info,
   ExternalLink,
+  Check,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -6454,6 +6455,120 @@ const AddressAutocompleteField = ({
               </button>
             ))}
           </div>
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+// Searchable currency picker shown next to the seller's price input.
+// Mirrors the look used on the property listing page (flag + code button
+// that opens a searchable dropdown). The onChange callback receives a
+// synthetic event ({ target: { name, value } }) so it can be plugged
+// straight into the existing handleChange / handleEditChange handlers
+// without any wrapper code.
+const CurrencyPickerField = ({
+  id,
+  name = 'currency',
+  value,
+  onChange,
+  ariaLabel = 'Listing currency',
+  className = '',
+}) => {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const rootRef = useRef(null);
+  const searchRef = useRef(null);
+
+  const selected = useMemo(() => (
+    SUPPORTED_CURRENCIES.find((entry) => entry.code === value) || SUPPORTED_CURRENCIES.find((entry) => entry.code === 'USD') || SUPPORTED_CURRENCIES[0]
+  ), [value]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const handleDocClick = (event) => {
+      if (rootRef.current && !rootRef.current.contains(event.target)) setOpen(false);
+    };
+    const handleKey = (event) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', handleDocClick);
+    document.addEventListener('keydown', handleKey);
+    const focusTimer = setTimeout(() => searchRef.current?.focus(), 30);
+    return () => {
+      document.removeEventListener('mousedown', handleDocClick);
+      document.removeEventListener('keydown', handleKey);
+      clearTimeout(focusTimer);
+    };
+  }, [open]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return SUPPORTED_CURRENCIES;
+    return SUPPORTED_CURRENCIES.filter((entry) => (
+      entry.code.toLowerCase().includes(q)
+      || entry.name.toLowerCase().includes(q)
+      || (entry.symbol || '').toLowerCase().includes(q)
+    ));
+  }, [query]);
+
+  const selectCode = (code) => {
+    setOpen(false);
+    setQuery('');
+    onChange?.({ target: { name, value: code } });
+  };
+
+  return (
+    <div ref={rootRef} className={`relative ${className}`.trim()}>
+      <button
+        type="button"
+        id={id}
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex items-center gap-1.5 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2.5 py-2.5 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={ariaLabel}
+      >
+        <span className="text-base leading-none">{selected?.flag || '🏳️'}</span>
+        <span className="font-medium">{selected?.code || 'USD'}</span>
+        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[var(--svs-muted)]" />
+      </button>
+      {open ? (
+        <div className="absolute left-0 top-full z-40 mt-1 w-[280px] overflow-hidden rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-xl">
+          <div className="flex items-center gap-2 border-b border-[var(--svs-border)] px-2 py-1.5">
+            <Search className="h-3.5 w-3.5 text-[var(--svs-muted)]" />
+            <input
+              ref={searchRef}
+              type="text"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search currency or country…"
+              className="w-full bg-transparent text-sm text-[var(--svs-text)] outline-none"
+            />
+          </div>
+          <ul role="listbox" className="max-h-64 overflow-y-auto py-1">
+            {filtered.length === 0 ? (
+              <li className="px-3 py-2 text-xs text-[var(--svs-muted)]">No matches</li>
+            ) : (
+              filtered.map((entry) => {
+                const isSel = entry.code === selected?.code;
+                return (
+                  <li key={entry.code}>
+                    <button
+                      type="button"
+                      onClick={() => selectCode(entry.code)}
+                      className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--svs-surface-soft)] ${isSel ? 'bg-[var(--svs-cyan-surface)] font-semibold' : ''}`}
+                    >
+                      <span className="text-base leading-none">{entry.flag}</span>
+                      <span className="w-14 font-medium text-[var(--svs-text)]">{entry.code}</span>
+                      <span className="flex-1 truncate text-xs text-[var(--svs-muted)]">{entry.name}</span>
+                      {isSel ? <Check className="h-3.5 w-3.5 text-[var(--svs-primary)]" /> : null}
+                    </button>
+                  </li>
+                );
+              })
+            )}
+          </ul>
         </div>
       ) : null}
     </div>
@@ -13508,17 +13623,12 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                 <div>
                   <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Price</label>
                   <div className="flex gap-2">
-                    <select
+                    <CurrencyPickerField
                       name="currency"
                       value={editForm.currency || 'USD'}
                       onChange={handleEditChange}
-                      className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-2 text-sm text-[var(--svs-text)] outline-none"
-                      aria-label="Listing currency"
-                    >
-                      {SUPPORTED_CURRENCIES.map((entry) => (
-                        <option key={entry.code} value={entry.code}>{entry.code}</option>
-                      ))}
-                    </select>
+                      ariaLabel="Listing currency"
+                    />
                     <input name="price" value={editForm.price} onChange={handleEditChange} placeholder="e.g. 29.99" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
                   </div>
                 </div>
@@ -13922,18 +14032,13 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
               <div>
                 <label htmlFor="seller-price" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Price</label>
                 <div className="flex gap-2">
-                  <select
+                  <CurrencyPickerField
                     id="seller-currency"
                     name="currency"
                     value={formData.currency || 'USD'}
                     onChange={handleChange}
-                    className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-2.5 text-sm text-[var(--svs-text)] outline-none"
-                    aria-label="Listing currency"
-                  >
-                    {SUPPORTED_CURRENCIES.map((entry) => (
-                      <option key={entry.code} value={entry.code}>{entry.code}</option>
-                    ))}
-                  </select>
+                    ariaLabel="Listing currency"
+                  />
                   <input id="seller-price" name="price" value={formData.price} onChange={handleChange} required placeholder="129.99" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
                 </div>
                 <p className="mt-1 text-[11px] text-[var(--svs-muted)]">You will always be paid in your listing currency. Buyers see prices auto-converted to their selected currency.</p>
