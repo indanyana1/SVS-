@@ -434,6 +434,24 @@ const MARKET_FIELD_SPEC = {
       { name: 'origin', label: 'Origin', type: 'text', placeholder: 'e.g. Eastern Cape' },
     ],
   },
+  // Aligned with LivestockHubPage filter (item.categoryId derived from
+  // category title) and card display (item.breed, item.age, item.weight,
+  // item.location). Field names map onto livestock item attributes via
+  // mapSellerItemRecord's rawDetailsJson spread.
+  livestock: {
+    title: 'Livestock Listing Details',
+    helper: 'Tell buyers the livestock type, breed, age, weight, and farm location so they can filter and find your animal quickly.',
+    fields: [
+      { name: 'category', label: 'Livestock type', type: 'select', required: true, options: ['Cattles', 'Buffalos', 'Goats', 'Sheeps', 'Poultry', 'Horses', 'Camels', 'Exotic Livestock'] },
+      { name: 'breed', label: 'Breed', type: 'text', required: true, placeholder: 'e.g. Holstein Friesian, Boer, Murrah' },
+      { name: 'age', label: 'Age', type: 'text', required: true, placeholder: 'e.g. 3 years, 6 months' },
+      { name: 'weight', label: 'Weight', type: 'text', required: true, placeholder: 'e.g. 550 kg, 45 kg' },
+      { name: 'location', label: 'Farm location', type: 'text', required: true, placeholder: 'e.g. Gauteng, Limpopo Farm Belt' },
+      { name: 'gender', label: 'Gender', type: 'select', options: ['Male', 'Female', 'Mixed Herd'] },
+      { name: 'healthStatus', label: 'Health status', type: 'select', options: ['Vaccinated', 'Health Certificate Available', 'Pending Vet Check', 'Other'] },
+      { name: 'purpose', label: 'Purpose', type: 'select', options: ['Dairy', 'Beef / Meat', 'Breeding', 'Wool', 'Eggs', 'Riding / Racing', 'Mixed Use'] },
+    ],
+  },
 };
 
 // All distinct field names across the spec, used to seed empty form state
@@ -641,6 +659,7 @@ const sellerMarketOptions = [
   { key: 'beautyFitnessSports', labelKey: 'markets.votingClients', route: '/voting-clients' },
   { key: 'toysKids', labelKey: 'markets.safety', route: '/safety' },
   { key: 'jewelleryAccessories', labelKey: 'markets.votingProviders', route: '/voting-providers' },
+  { key: 'livestock', labelKey: 'markets.livestockHub', route: '/livestock-hub' },
 ];
 
 const sellerMarketConfig = sellerMarketOptions.reduce((accumulator, option) => {
@@ -13762,7 +13781,13 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
 
     const trimmedTitle = formData.title.trim();
     const trimmedDescription = formData.description.trim();
-    const trimmedPrice = formData.price.trim();
+    // Strip any currency symbol/letters and thousand separators (spaces,
+    // commas, non-breaking spaces) the seller may have typed (e.g.
+    // "R85000", "$ 1,200", "1 600 000") and keep just the numeric portion.
+    // The currency itself is captured separately by the currency dropdown.
+    const rawPrice = formData.price.trim();
+    const cleanedPrice = rawPrice.replace(/[^\d.]/g, '');
+    const trimmedPrice = cleanedPrice || rawPrice;
     const normalizedQuantity = normalizeListingQuantity(formData.quantity, NaN);
 
     if (!isAuthenticated) {
@@ -14128,6 +14153,7 @@ const LivestockHubPage = ({
   onBuyNow,
   onToggleWishlist,
   wishlistItemIds = [],
+  sellerItems = [],
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -14197,8 +14223,43 @@ const LivestockHubPage = ({
   // All available items (seed + cache + remote-merged), keyed by listingsVersion.
   // listingsVersion is intentionally the trigger even though it isn't read in
   // the factory — it's incremented by subscribeToListings on every cache write.
+  // Seller-listed livestock (uploaded via the Sellers dashboard with
+  // market_key='livestock') is merged in so new uploads appear immediately.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const allItems = useMemo(() => getLivestockListings(), [listingsVersion]);
+  const baseItems = useMemo(() => getLivestockListings(), [listingsVersion]);
+  const sellerLivestockItems = useMemo(() => {
+    const livestockSellerItems = getSellerItemsForMarket(sellerItems, 'livestock');
+    const categoryIdByTitle = livestockCategories.reduce((acc, entry) => {
+      acc[entry.title] = entry.id;
+      return acc;
+    }, {});
+    return livestockSellerItems.map((item) => {
+      const categoryTitle = item.category || '';
+      const categoryId = item.categoryId || categoryIdByTitle[categoryTitle] || '';
+      const summary = item.summary
+        || [item.age ? `Age: ${item.age}` : null, item.weight ? `Weight: ${item.weight}` : null]
+            .filter(Boolean)
+            .join(' \u2022 ');
+      return {
+        ...item,
+        category: categoryTitle,
+        categoryId,
+        breed: item.breed || '',
+        age: item.age || '',
+        weight: item.weight || '',
+        location: item.location || '',
+        summary,
+        rating: typeof item.rating === 'number' ? item.rating : 0,
+        reviewCount: typeof item.reviewCount === 'number' ? item.reviewCount : 0,
+        quantity: typeof item.availableQuantity === 'number' ? item.availableQuantity : item.quantity,
+        currency: item.currency || 'ZAR',
+      };
+    });
+  }, [sellerItems]);
+  const allItems = useMemo(
+    () => [...sellerLivestockItems, ...baseItems],
+    [sellerLivestockItems, baseItems],
+  );
 
   const filteredItems = useMemo(
     () => searchLivestockListings(allItems, debouncedQuery, { categoryId: activeCategory, sort }),
@@ -14208,10 +14269,19 @@ const LivestockHubPage = ({
   // Format a price expressed in the listing's source currency into the
   // buyer's currently-selected currency (falls back to ZAR if none on the
   // listing). buyerCurrencyCode is referenced so changes trigger a re-render.
+  // Strip any leading currency symbol/letters (e.g. "R85000", "$ 1,200") so
+  // seller-entered prices that include a symbol still parse to the numeric
+  // amount — the currency itself comes from item.currency.
   const formatPrice = (item) => {
     const from = item.currency || 'ZAR';
     void buyerCurrencyCode;
-    return formatInBuyerCurrencyLib(item.price, from, { decimals: 0 });
+    const raw = String(item.price ?? '').trim();
+    // Strip every character that isn't a digit or decimal point so prices
+    // like "R1 600 000", "$ 1,200.50" or "ZAR\u00a01600000" all parse cleanly.
+    const cleaned = raw.replace(/[^\d.]/g, '');
+    const numeric = cleaned ? Number(cleaned) : Number(raw);
+    const safe = Number.isFinite(numeric) ? numeric : 0;
+    return formatInBuyerCurrencyLib(safe, from, { decimals: 0 });
   };
 
   // Stock check: legacy listings without a quantity field are treated as
@@ -20783,7 +20853,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/property-hub/visit/:listingId" element={<PropertyVisitStatusPage />} />
     <Route path="/betting-lottery-games" element={<BettingLotteryGamesPage />} />
     <Route path="/international-lottery-games" element={<Navigate to="/betting-lottery-games" replace />} />
-    <Route path="/livestock-hub" element={<LivestockHubPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} />} />
+    <Route path="/livestock-hub" element={<LivestockHubPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} />} />
     <Route path="/betting-hub" element={<Navigate to="/betting-lottery-games" replace />} />
     <Route path="/betting-voting" element={<Navigate to="/betting-lottery-games" replace />} />
     <Route path="/safety" element={<SafetyPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />

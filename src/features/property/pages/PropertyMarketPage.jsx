@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { Search, ShoppingCart, Plus } from 'lucide-react';
+import { Search, ShoppingCart } from 'lucide-react';
 import {
 	PROPERTY_CATEGORIES,
 	getTrending,
@@ -43,12 +43,6 @@ const PropertyMarketPage = () => {
 							Explore verified properties for buying, renting, or investing across prime locations, ensuring safe and reliable transactions every time.
 						</p>
 					</div>
-					<Link
-						to="/property-hub/sell"
-						className="absolute right-4 top-4 z-10 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-3.5 py-2 text-xs font-semibold text-[var(--svs-primary-strong)] shadow-md backdrop-blur transition hover:bg-white"
-					>
-						<Plus className="h-3.5 w-3.5" /> List Your Property
-					</Link>
 				</div>
 
 				{/* SEARCH BAR */}
