@@ -45,6 +45,9 @@ import {
   Info,
   ExternalLink,
   Check,
+  Ticket,
+  Globe,
+  Hash,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -1413,20 +1416,6 @@ const featureSlides = [
     subtitle: 'Lifestyle picks, tech essentials, and everyday must-haves all in one place.',
     route: '/e-commerce',
   },
-];
-
-const leaderboardSeed = [
-  { id: 'e1', name: 'Mina Sports Lab', accuracy: 88.5, votes: 10200, rank: 1 },
-  { id: 'e2', name: 'Odds Insight Pro', accuracy: 86.1, votes: 9340, rank: 2 },
-  { id: 'e3', name: 'Goal Tracker TV', accuracy: 82, votes: 8805, rank: 3 },
-  { id: 'e4', name: 'Prime Match Picks', accuracy: 79.9, votes: 8102, rank: 4 },
-  { id: 'e5', name: 'Stat Vision Africa', accuracy: 77.3, votes: 7720, rank: 5 },
-];
-
-const matchSeed = [
-  { id: 'm1', match: 'Man City vs Arsenal', options: ['Man City Win', 'Draw', 'Arsenal Win'], split: '56%' },
-  { id: 'm2', match: 'PSG vs Inter Milan', options: ['PSG Win', 'Draw', 'Inter Win'], split: '51%' },
-  { id: 'm3', match: 'Barcelona vs Atletico', options: ['Barcelona Win', 'Draw', 'Atletico Win'], split: '62%' },
 ];
 
 const groceriesCategoryCards = [
@@ -14170,76 +14159,683 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
 
 const PropertyHubPage = () => <PropertyMarketPage />;
 
-const BettingLotteryGamesPage = () => {
+const LOTTERY_TICKET_PRICE = 500;
+const LOTTERY_DELIVERY_FEE = 25;
+const LOTTERY_MAIN_BALL_COUNT = 5;
+const LOTTERY_MAIN_BALL_MAX = 70;
+const LOTTERY_POWER_BALL_MAX = 30;
+const LOTTERY_DRAW_DATE_LABEL = 'May 3, 2026, 10:59 PM EST';
+const LOTTERY_DRAW_TIME_LABEL = '10:59 PM';
+
+const generateLotteryQuickPick = () => {
+  const picks = new Set();
+  while (picks.size < LOTTERY_MAIN_BALL_COUNT) {
+    picks.add(Math.floor(Math.random() * LOTTERY_MAIN_BALL_MAX) + 1);
+  }
+  return {
+    main: [...picks].sort((a, b) => a - b),
+    powerball: Math.floor(Math.random() * LOTTERY_POWER_BALL_MAX) + 1,
+  };
+};
+
+const createEmptyManualTicket = (id) => ({
+  id: id || `t-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  mode: 'manual',
+  main: [],
+  powerball: null,
+});
+
+const isTicketComplete = (ticket) => (
+  Array.isArray(ticket.main)
+  && ticket.main.length === LOTTERY_MAIN_BALL_COUNT
+  && Number.isFinite(ticket.powerball)
+);
+
+const BettingLotteryGamesPage = ({ onBuyNow }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  useBuyerCurrency();
+  const [gameId, setGameId] = useState(lotteryGames[0].id);
+  const [gameMenuOpen, setGameMenuOpen] = useState(false);
+  const gameMenuRef = useRef(null);
+  const [tickets, setTickets] = useState(() => [createEmptyManualTicket('t1')]);
+  const [player, setPlayer] = useState({
+    name: '',
+    email: '',
+    country: '',
+    phone: '',
+  });
+  const [playerLoading, setPlayerLoading] = useState(true);
+  const [editingPlayer, setEditingPlayer] = useState(false);
+
+  const selectedGame = lotteryGames.find((g) => g.id === gameId) || lotteryGames[0];
+  const totalPrice = tickets.length * LOTTERY_TICKET_PRICE;
+  const allTicketsComplete = tickets.length > 0 && tickets.every(isTicketComplete);
+  const playerReady = Boolean(player.name && player.email && player.country && player.phone);
+  const canPay = allTicketsComplete && playerReady;
+
+  // Load player info from localStorage + Supabase account_users
+  useEffect(() => {
+    let cancelled = false;
+    const loadPlayer = async () => {
+      if (typeof window === 'undefined') {
+        setPlayerLoading(false);
+        return;
+      }
+      const cachedEmail = (window.localStorage.getItem('svs-user-email') || '').trim();
+      const cachedName = (window.localStorage.getItem('svs-user-name') || '').trim();
+      const cachedPhone = (window.localStorage.getItem('svs-user-contact') || '').trim();
+      const cachedCountry = (window.localStorage.getItem('svs-user-country') || '').trim();
+      if (!cancelled) {
+        setPlayer((prev) => ({
+          name: cachedName || prev.name,
+          email: cachedEmail || prev.email,
+          phone: cachedPhone || prev.phone,
+          country: cachedCountry || prev.country,
+        }));
+      }
+      if (!hasSupabaseEnv || !supabase || !cachedEmail) {
+        if (!cancelled) setPlayerLoading(false);
+        return;
+      }
+      try {
+        const { data } = await supabase
+          .from('account_users')
+          .select('full_name, email_address, contact_number')
+          .eq('email_address', cachedEmail)
+          .maybeSingle();
+        if (!cancelled && data) {
+          setPlayer((prev) => ({
+            name: data.full_name || prev.name,
+            email: data.email_address || prev.email,
+            phone: data.contact_number || prev.phone,
+            country: prev.country,
+          }));
+          if (data.full_name) window.localStorage.setItem('svs-user-name', data.full_name);
+          if (data.contact_number) window.localStorage.setItem('svs-user-contact', data.contact_number);
+        }
+      } catch (_err) {
+        /* ignore */
+      } finally {
+        if (!cancelled) setPlayerLoading(false);
+      }
+    };
+    loadPlayer();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!gameMenuOpen) return undefined;
+    const handleClick = (event) => {
+      if (gameMenuRef.current && !gameMenuRef.current.contains(event.target)) setGameMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [gameMenuOpen]);
+
+  const handleAddTicket = () => {
+    setTickets((prev) => [...prev, createEmptyManualTicket()]);
+  };
+
+  const handleSetMode = (ticketId, mode) => {
+    setTickets((prev) => prev.map((ticket) => {
+      if (ticket.id !== ticketId) return ticket;
+      if (mode === 'quick') {
+        return { ...ticket, mode: 'quick', ...generateLotteryQuickPick() };
+      }
+      return { ...ticket, mode: 'manual', main: [], powerball: null };
+    }));
+  };
+
+  const handleQuickPickReroll = (ticketId) => {
+    setTickets((prev) => prev.map((ticket) => (
+      ticket.id === ticketId ? { ...ticket, mode: 'quick', ...generateLotteryQuickPick() } : ticket
+    )));
+  };
+
+  const handleToggleMainNumber = (ticketId, number) => {
+    setTickets((prev) => prev.map((ticket) => {
+      if (ticket.id !== ticketId) return ticket;
+      const exists = ticket.main.includes(number);
+      let nextMain;
+      if (exists) {
+        nextMain = ticket.main.filter((value) => value !== number);
+      } else if (ticket.main.length >= LOTTERY_MAIN_BALL_COUNT) {
+        return ticket;
+      } else {
+        nextMain = [...ticket.main, number].sort((a, b) => a - b);
+      }
+      return { ...ticket, main: nextMain };
+    }));
+  };
+
+  const handleSetPowerball = (ticketId, number) => {
+    setTickets((prev) => prev.map((ticket) => {
+      if (ticket.id !== ticketId) return ticket;
+      return { ...ticket, powerball: ticket.powerball === number ? null : number };
+    }));
+  };
+
+  const handleClearTicket = (ticketId) => {
+    setTickets((prev) => prev.map((ticket) => (
+      ticket.id === ticketId ? { ...ticket, mode: 'manual', main: [], powerball: null } : ticket
+    )));
+  };
+
+  const handleRemoveTicket = (ticketId) => {
+    setTickets((prev) => (prev.length > 1 ? prev.filter((ticket) => ticket.id !== ticketId) : prev));
+  };
+
+  const handlePay = () => {
+    if (!canPay) return;
+    setEditingPlayer(false);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('svs-user-country', player.country);
+      window.localStorage.setItem('svs-user-name', player.name);
+      window.localStorage.setItem('svs-user-email', player.email);
+      window.localStorage.setItem('svs-user-contact', player.phone);
+    }
+    navigate('/betting-lottery-games/confirm', {
+      state: {
+        tickets,
+        player,
+        gameId: selectedGame.id,
+        totalPrice,
+      },
+    });
+  };
+
+  const playerFields = [
+    { key: 'name', label: 'Registered Name', type: 'text', autoComplete: 'name' },
+    { key: 'email', label: 'Email Address', type: 'email', autoComplete: 'email' },
+    { key: 'country', label: 'Country', type: 'text', autoComplete: 'country-name' },
+    { key: 'phone', label: 'Phone Number', type: 'tel', autoComplete: 'tel' },
+  ];
+
+  const mainNumbers = Array.from({ length: LOTTERY_MAIN_BALL_MAX }, (_, i) => i + 1);
+  const powerNumbers = Array.from({ length: LOTTERY_POWER_BALL_MAX }, (_, i) => i + 1);
 
   return (
-  <PageFrame title={t('markets.bettingLotteryGames')} subtitle={t('pageSubtitles.bettingLotteryGames')}>
-    <div className="mb-5 rounded-xl border border-[#fcd34d] bg-[#fffbeb] p-4 text-sm text-[#92400e]">
-      {t('internationalLotteryHub.notice')}
-    </div>
-    <div className="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
-      <section className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
-        <h3 className="text-lg font-bold text-[var(--svs-text)]">Lottery Games</h3>
-        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {lotteryGames.map((game) => (
-            <article key={game.id} className="overflow-hidden rounded-xl border border-[#eeeeee] bg-white shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
-              <img src={game.image} alt={getTranslatedValue(t, game.titleKey, game.title)} className="h-40 w-full object-cover" loading="lazy" />
-              <div className="p-4">
-                <h4 className="text-base font-bold">{getTranslatedValue(t, game.titleKey, game.title)}</h4>
-                <p className="mt-2 text-sm text-slate-600">{t('internationalLotteryHub.regionLabel')}: {getTranslatedValue(t, game.regionKey, game.region)}</p>
-                <p className="mt-1 text-sm text-slate-600">{t('internationalLotteryHub.drawDayLabel')}: {getTranslatedValue(t, game.drawDayKey, game.drawDay)}</p>
-                <div className="mt-3 text-sm text-[var(--svs-primary-strong)]">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('internationalLotteryHub.jackpotLabel')}</p>
-                  <SalePrice price={game.jackpot} currency={game.currency} />
+    <PageFrame title="Select Your Ticket">
+      {/* Game info chips */}
+      <div className="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-[#eeeeee] bg-white p-3 shadow-[0_4px_8px_rgba(0,0,0,0.04)]">
+        <div className="relative" ref={gameMenuRef}>
+          <button
+            type="button"
+            onClick={() => setGameMenuOpen((open) => !open)}
+            className="inline-flex items-center gap-1.5 rounded-md border border-[#eeeeee] bg-white px-3 py-1.5 text-sm font-medium text-[var(--svs-text)] hover:bg-[#f8fdff]"
+            aria-haspopup="listbox"
+            aria-expanded={gameMenuOpen}
+          >
+            <Ticket className="h-3.5 w-3.5 text-[var(--svs-primary)]" />
+            {getTranslatedValue(t, selectedGame.titleKey, selectedGame.title)}
+            <ChevronDown className="h-3 w-3 text-slate-500" />
+          </button>
+          {gameMenuOpen ? (
+            <ul role="listbox" className="absolute left-0 top-full z-30 mt-1 w-64 overflow-hidden rounded-lg border border-[#eeeeee] bg-white py-1 shadow-xl">
+              {lotteryGames.map((game) => (
+                <li key={game.id}>
+                  <button
+                    type="button"
+                    onClick={() => { setGameId(game.id); setGameMenuOpen(false); }}
+                    className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-[#f8fdff] ${game.id === gameId ? 'bg-[var(--svs-cyan-surface)] font-semibold' : ''}`}
+                  >
+                    <span>{getTranslatedValue(t, game.titleKey, game.title)}</span>
+                    {game.id === gameId ? <Check className="h-3.5 w-3.5 text-[var(--svs-primary)]" /> : null}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+        <span className="inline-flex items-center gap-1.5 rounded-md border border-[#eeeeee] bg-white px-3 py-1.5 text-sm text-[var(--svs-text)]"><Globe className="h-3.5 w-3.5 text-[var(--svs-primary)]" />Global Lotteries</span>
+        <span className="inline-flex items-center gap-1.5 rounded-md border border-[#eeeeee] bg-white px-3 py-1.5 text-sm text-[var(--svs-text)]"><Hash className="h-3.5 w-3.5 text-[var(--svs-primary)]" />Number Draw</span>
+        <span className="inline-flex items-center gap-1.5 rounded-md border border-[#eeeeee] bg-white px-3 py-1.5 text-sm text-[var(--svs-text)]"><CalendarDays className="h-3.5 w-3.5 text-[var(--svs-primary)]" />Today</span>
+        <span className="inline-flex items-center gap-1.5 rounded-md border border-[#eeeeee] bg-white px-3 py-1.5 text-sm text-[var(--svs-text)]"><Clock className="h-3.5 w-3.5 text-[var(--svs-primary)]" />{LOTTERY_DRAW_TIME_LABEL}</span>
+      </div>
+
+      {/* Select Ticket card */}
+      <section className="mb-4 rounded-2xl border border-[#eeeeee] bg-white p-5 shadow-[0_4px_8px_rgba(0,0,0,0.05)]">
+        <h2 className="mb-5 text-center text-lg font-bold text-[var(--svs-text)]">Select Ticket</h2>
+        <h3 className="mb-3 text-sm font-bold text-[var(--svs-text)]">Select Numbers</h3>
+        <div className="space-y-3">
+          {tickets.map((ticket, idx) => {
+            const mainSelected = ticket.main;
+            const complete = isTicketComplete(ticket);
+            return (
+              <div key={ticket.id} className="rounded-xl bg-[#f4fbfd] p-3">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-[var(--svs-text)]">
+                    Ticket #{idx + 1}
+                    {ticket.mode === 'manual' && !complete ? (
+                      <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                        {mainSelected.length}/{LOTTERY_MAIN_BALL_COUNT} + {ticket.powerball ? '1' : '0'}/1
+                      </span>
+                    ) : null}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <div className="inline-flex overflow-hidden rounded-md border border-[var(--svs-primary-strong)]">
+                      <button
+                        type="button"
+                        onClick={() => handleSetMode(ticket.id, 'manual')}
+                        className={`px-2.5 py-1 text-[11px] font-semibold ${ticket.mode === 'manual' ? 'bg-[var(--svs-primary-strong)] text-white' : 'bg-white text-[var(--svs-primary-strong)]'}`}
+                      >
+                        Manual
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => (ticket.mode === 'quick' ? handleQuickPickReroll(ticket.id) : handleSetMode(ticket.id, 'quick'))}
+                        className={`px-2.5 py-1 text-[11px] font-semibold ${ticket.mode === 'quick' ? 'bg-[var(--svs-primary-strong)] text-white' : 'bg-white text-[var(--svs-primary-strong)]'}`}
+                      >
+                        Quick Pick
+                      </button>
+                    </div>
+                    {ticket.mode === 'manual' && (mainSelected.length > 0 || ticket.powerball) ? (
+                      <button
+                        type="button"
+                        onClick={() => handleClearTicket(ticket.id)}
+                        className="rounded-md px-2 py-1 text-[11px] font-semibold text-slate-500 hover:bg-white hover:text-[var(--svs-primary-strong)]"
+                      >
+                        Clear
+                      </button>
+                    ) : null}
+                    {tickets.length > 1 ? (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTicket(ticket.id)}
+                        aria-label="Remove ticket"
+                        className="rounded-md p-1 text-slate-400 hover:bg-white hover:text-red-500"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
-                <button type="button" className={`${cudyBluePrimaryButtonClassName} mt-4 rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
-                  {t('common.playNow')}
-                </button>
+
+                {/* Selected balls preview */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {Array.from({ length: LOTTERY_MAIN_BALL_COUNT }).map((_, ballIdx) => {
+                    const value = mainSelected[ballIdx];
+                    return value != null ? (
+                      <span key={`${ticket.id}-m-${ballIdx}`} className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#d6f0f5] text-sm font-bold text-[var(--svs-primary-strong)]">{value}</span>
+                    ) : (
+                      <span key={`${ticket.id}-m-${ballIdx}`} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-dashed border-[var(--svs-primary)] bg-white text-sm font-bold text-slate-300">?</span>
+                    );
+                  })}
+                  {ticket.powerball != null ? (
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--svs-primary-strong)] text-sm font-bold text-white">{ticket.powerball}</span>
+                  ) : (
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-dashed border-[var(--svs-primary-strong)] bg-white text-sm font-bold text-slate-300">?</span>
+                  )}
+                </div>
+
+                {/* Manual picker grids */}
+                {ticket.mode === 'manual' ? (
+                  <div className="mt-3 space-y-3">
+                    <div>
+                      <p className="mb-1.5 text-[11px] font-semibold text-slate-500">
+                        Pick {LOTTERY_MAIN_BALL_COUNT} numbers (1 – {LOTTERY_MAIN_BALL_MAX})
+                      </p>
+                      <div className="grid grid-cols-10 gap-1.5">
+                        {mainNumbers.map((number) => {
+                          const isPicked = mainSelected.includes(number);
+                          const isFull = mainSelected.length >= LOTTERY_MAIN_BALL_COUNT && !isPicked;
+                          return (
+                            <button
+                              type="button"
+                              key={`${ticket.id}-pick-m-${number}`}
+                              onClick={() => handleToggleMainNumber(ticket.id, number)}
+                              disabled={isFull}
+                              className={`h-8 w-8 rounded-full text-[11px] font-bold transition ${
+                                isPicked
+                                  ? 'bg-[var(--svs-primary-strong)] text-white shadow'
+                                  : isFull
+                                  ? 'bg-white text-slate-300 ring-1 ring-[#eeeeee] cursor-not-allowed'
+                                  : 'bg-white text-[var(--svs-primary-strong)] ring-1 ring-[#d6f0f5] hover:bg-[#d6f0f5]'
+                              }`}
+                            >
+                              {number}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-1.5 text-[11px] font-semibold text-slate-500">
+                        Pick 1 Powerball (1 – {LOTTERY_POWER_BALL_MAX})
+                      </p>
+                      <div className="grid grid-cols-10 gap-1.5">
+                        {powerNumbers.map((number) => {
+                          const isPicked = ticket.powerball === number;
+                          return (
+                            <button
+                              type="button"
+                              key={`${ticket.id}-pick-p-${number}`}
+                              onClick={() => handleSetPowerball(ticket.id, number)}
+                              className={`h-8 w-8 rounded-full text-[11px] font-bold transition ${
+                                isPicked
+                                  ? 'bg-[var(--svs-primary-strong)] text-white shadow'
+                                  : 'bg-white text-[var(--svs-primary-strong)] ring-1 ring-[#d6f0f5] hover:bg-[#d6f0f5]'
+                              }`}
+                            >
+                              {number}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
               </div>
-            </article>
-          ))}
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          onClick={handleAddTicket}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--svs-primary)] bg-white px-4 py-3 text-sm font-semibold text-[var(--svs-primary)] hover:bg-[#f4fbfd]"
+        >
+          <Plus className="h-4 w-4" />
+          Add More Tickets
+        </button>
+      </section>
+
+      {/* Draw Participation Details */}
+      <section className="mb-4 rounded-2xl border border-[#eeeeee] bg-white p-5 shadow-[0_4px_8px_rgba(0,0,0,0.05)]">
+        <h3 className="mb-4 text-base font-bold text-[var(--svs-text)]">Draw Participation Details</h3>
+        <div className="grid grid-cols-2 gap-y-4">
+          <div>
+            <p className="text-xs text-slate-500">Draw Date</p>
+            <p className="mt-0.5 text-sm font-semibold text-[var(--svs-text)]">{LOTTERY_DRAW_DATE_LABEL}</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Ticket Quantity</p>
+            <p className="mt-0.5 text-sm font-semibold text-[var(--svs-text)]">{tickets.length} Tickets</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Total Entries</p>
+            <p className="mt-0.5 text-sm font-semibold text-[var(--svs-text)]">{tickets.length} Entries</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Estimated Win</p>
+            <p className="mt-0.5 text-sm font-semibold text-[var(--svs-text)]">Up to {selectedGame.jackpot}</p>
+          </div>
         </div>
       </section>
 
-      <div className="space-y-4">
-        <section className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
-          <h3 className="text-lg font-bold">Popular Matches</h3>
-          <ul className="mt-3 space-y-2 text-sm">
-            {matchSeed.map((match) => (
-              <li key={`hub-${match.id}`} className="rounded-md bg-[#f8fdff] px-3 py-2">
-                {match.match} • Split: {match.split}
-              </li>
+      {/* Player Information */}
+      <section className="mb-4 rounded-2xl border border-[#eeeeee] bg-white p-5 shadow-[0_4px_8px_rgba(0,0,0,0.05)]">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-base font-bold text-[var(--svs-text)]">Player Information</h3>
+          <button
+            type="button"
+            onClick={() => setEditingPlayer((open) => !open)}
+            aria-label={editingPlayer ? 'Done editing player information' : 'Edit player information'}
+            className="rounded-md p-1.5 text-[var(--svs-primary)] hover:bg-[#f4fbfd]"
+          >
+            {editingPlayer ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+          </button>
+        </div>
+        {playerLoading ? (
+          <p className="text-sm text-slate-500">Loading your profile…</p>
+        ) : editingPlayer ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {playerFields.map((field) => (
+              <label key={field.key} className="block">
+                <span className="mb-1 block text-xs text-slate-500">{field.label}</span>
+                <input
+                  type={field.type}
+                  autoComplete={field.autoComplete}
+                  value={player[field.key]}
+                  onChange={(event) => setPlayer((prev) => ({ ...prev, [field.key]: event.target.value }))}
+                  className="w-full rounded-md border border-[#eeeeee] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--svs-primary)]"
+                />
+              </label>
             ))}
-          </ul>
-        </section>
-        <section className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
-          <h3 className="text-lg font-bold">Live Leaderboard</h3>
-          <div className="mt-3 space-y-3">
-            {leaderboardSeed.slice(0, 3).map((expert) => (
-              <div key={`lv-${expert.id}`} className="rounded-md bg-[#f8fdff] p-3">
-                <p className="font-semibold">{expert.name}</p>
-                <p className="text-sm text-slate-600">{expert.accuracy}% accuracy</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-y-4">
+            {playerFields.map((field) => (
+              <div key={field.key}>
+                <p className="text-xs text-slate-500">{field.label}</p>
+                <p className="mt-0.5 text-sm font-semibold text-[var(--svs-text)]">
+                  {player[field.key] || <span className="italic text-amber-600">Required</span>}
+                </p>
               </div>
             ))}
           </div>
-          <Link to="/voting-clients" className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
-            {t('common.voteNow')}
-          </Link>
-        </section>
-        <section className="rounded-xl border border-[#eeeeee] bg-white p-4 shadow-[0_4px_8px_rgba(0,0,0,0.1)]">
-          <h3 className="text-lg font-bold">Hot Travel Deals</h3>
-          <ul className="mt-3 space-y-2 text-sm">
-            {ticketEvents.filter((event) => event.type === 'Travel').map((event) => (
-              <li key={`travel-${event.id}`} className="rounded-md bg-[#f8fdff] px-3 py-2">
-                {event.title} • <SalePrice price={event.price} currency={event.currency} />
-              </li>
+        )}
+        {!playerLoading && !playerReady && !editingPlayer ? (
+          <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            Complete every field above before paying.
+          </p>
+        ) : null}
+      </section>
+
+      <button
+        type="button"
+        onClick={handlePay}
+        disabled={!canPay}
+        className="w-full rounded-xl bg-[var(--svs-primary-strong)] px-6 py-3.5 text-base font-bold text-white shadow-lg hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {allTicketsComplete
+          ? (playerReady ? `Pay ${formatCheckoutAmount(totalPrice, 'ZAR')}` : 'Complete player info to pay')
+          : 'Pick all numbers to continue'}
+      </button>
+    </PageFrame>
+  );
+};
+
+const LotteryConfirmPage = () => {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const location = useLocation();
+  useBuyerCurrency();
+  const stateData = location.state || {};
+  const { tickets, player, gameId, totalPrice } = stateData;
+
+  const selectedGame = (gameId && lotteryGames.find((g) => g.id === gameId)) || lotteryGames[0];
+
+  useEffect(() => {
+    if (!tickets || !player) {
+      navigate('/betting-lottery-games', { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (!tickets || !player) return null;
+
+  const ticketCount = tickets.length;
+  const ticketPriceTotal = Number(totalPrice) || ticketCount * LOTTERY_TICKET_PRICE;
+  const processingFee = LOTTERY_DELIVERY_FEE;
+  const taxAmount = Number((processingFee * 0.15).toFixed(2));
+  const finalAmount = Number((ticketPriceTotal + processingFee + taxAmount).toFixed(2));
+
+  const summary = tickets
+    .map((ticket, idx) => `T${idx + 1}: ${ticket.main.join('-')} | PB${ticket.powerball}`)
+    .join(' • ');
+
+  const allSelectedNumbers = tickets.flatMap((ticket) => [...ticket.main, ticket.powerball]);
+
+  const handleProceedToCheckout = () => {
+    const now = Date.now();
+    const itemId = `lottery-${selectedGame.id}-${now}`;
+    const lotteryCartItem = createCartItem({
+      id: itemId,
+      title: `${getTranslatedValue(t, selectedGame.titleKey, selectedGame.title)} · ${ticketCount} ticket${ticketCount === 1 ? '' : 's'}`,
+      price: ticketPriceTotal,
+      currency: 'ZAR',
+      route: '/betting-lottery-games',
+      marketName: t('markets.bettingLotteryGames'),
+      details: summary,
+      image: selectedGame.image,
+    });
+
+    const fullName = String(player?.name || '').trim();
+    const [firstName = '', ...lastNameParts] = fullName.split(/\s+/).filter(Boolean);
+    const lastName = lastNameParts.join(' ');
+    const normalizedEmail = normalizeEmail(String(player?.email || '').trim()) || 'guest@svs.app';
+    const composedPhone = String(player?.phone || '').trim();
+    const feeTotal = Number((processingFee + taxAmount).toFixed(2));
+
+    const payfastSession = {
+      id: `payfast-${now}`,
+      createdAt: new Date().toISOString(),
+      mode: 'buy-now',
+      checkoutMode: 'buy-now',
+      customer: {
+        fullName,
+        firstName,
+        lastName,
+        email: normalizedEmail,
+        contact: normalizedEmail,
+        phone: composedPhone,
+        company: '',
+        address: player?.country || 'N/A',
+        country: player?.country || '',
+        province: '',
+        postalCode: '',
+        shippingAddress: {
+          country: player?.country || '',
+          firstName,
+          lastName,
+          company: '',
+          address1: 'N/A',
+          address2: '',
+          city: 'N/A',
+          province: '',
+          postalCode: '',
+          phone: composedPhone,
+          deliveryInstructions: 'Digital lottery ticket - no physical delivery required.',
+        },
+        billingAddress: {
+          country: player?.country || '',
+          firstName,
+          lastName,
+          company: '',
+          address1: 'N/A',
+          address2: '',
+          city: 'N/A',
+          province: '',
+          postalCode: '',
+        },
+        billingAddressMode: 'same',
+        shippingMethod: 'Digital delivery',
+        shippingFee: 0,
+        saveInformation: false,
+        marketingOptIn: false,
+        paymentMethod: PAYFAST_METHOD_OPTIONS[0].label,
+      },
+      checkoutOptions: {
+        items: [lotteryCartItem],
+        mode: 'buy-now',
+        feeTotal,
+        total: finalAmount,
+      },
+      prefillCheckout: null,
+      totals: {
+        subtotal: ticketPriceTotal,
+        serviceFee: feeTotal,
+        shippingFee: 0,
+        feeTotal,
+        total: finalAmount,
+      },
+      contactEmail: normalizedEmail,
+    };
+
+    writePendingPayfastSession(payfastSession);
+    navigate('/checkout/payfast', {
+      state: {
+        payfastSession,
+        checkoutMode: 'buy-now',
+      },
+    });
+  };
+
+  return (
+    <PageFrame>
+      <section className="mx-auto w-full max-w-4xl rounded-2xl bg-white shadow-sm ring-1 ring-[#e6edf3]">
+        <div className="border-b border-[#d8e6ef] px-4 py-3 sm:px-6">
+          <button
+            type="button"
+            onClick={() => navigate('/betting-lottery-games')}
+            className="text-sm text-slate-500 hover:text-[var(--svs-primary-strong)]"
+          >
+            ←
+          </button>
+          <h1 className="-mt-4 text-center text-3xl font-black text-[var(--svs-primary-strong)]">Booking Summary</h1>
+        </div>
+
+        <div className="border-b border-[#d8e6ef] px-4 py-4 sm:px-6">
+          <div className="grid grid-cols-1 gap-2 rounded-lg border border-[#9fc5d9] bg-[#f8fcff] px-3 py-2 text-xs font-semibold text-[var(--svs-primary-strong)] sm:grid-cols-5 sm:gap-0 sm:divide-x sm:divide-[#c7dce9] sm:text-sm">
+            <span className="flex items-center justify-center gap-1.5"><Ticket className="h-3.5 w-3.5" />{getTranslatedValue(t, selectedGame.titleKey, selectedGame.title)}</span>
+            <span className="flex items-center justify-center gap-1.5"><Globe className="h-3.5 w-3.5" />Global Lotteries</span>
+            <span className="flex items-center justify-center gap-1.5"><Hash className="h-3.5 w-3.5" />Number Draw</span>
+            <span className="flex items-center justify-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" />Today</span>
+            <span className="flex items-center justify-center gap-1.5"><Clock className="h-3.5 w-3.5" />{LOTTERY_DRAW_TIME_LABEL}</span>
+          </div>
+        </div>
+
+        <div className="px-4 py-8 sm:px-6">
+          <h2 className="text-center text-2xl font-black text-[var(--svs-primary-strong)]">Selected Ticket</h2>
+
+          <div className="mx-auto mt-5 flex max-w-xl flex-wrap items-center justify-center gap-2">
+            {allSelectedNumbers.map((value, idx) => (
+              <span
+                key={`selected-${idx}-${value}`}
+                className="inline-flex h-10 min-w-10 items-center justify-center rounded-md bg-[var(--svs-primary-strong)] px-3 text-base font-bold text-white shadow"
+              >
+                {value}
+              </span>
             ))}
-          </ul>
-        </section>
-      </div>
-    </div>
-  </PageFrame>
+          </div>
+
+          <div className="mx-auto mt-8 w-full max-w-md border-t border-[#c9dce8] pt-4 text-sm text-[var(--svs-primary-strong)]">
+            <div className="flex items-center justify-between font-semibold">
+              <span>Total Ticket:</span>
+              <span>{ticketCount}</span>
+            </div>
+
+            <div className="mt-4 border-t border-[#c9dce8] pt-3">
+              <h3 className="text-sm font-bold text-[var(--svs-primary-strong)]">Price Details</h3>
+              <div className="mt-3 space-y-1.5 text-xs sm:text-sm">
+                <div className="flex items-center justify-between">
+                  <span>Ticket Price (x{ticketCount})</span>
+                  <span>{formatCheckoutAmount(ticketPriceTotal, 'ZAR')}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Processing Fee</span>
+                  <span>{formatCheckoutAmount(processingFee, 'ZAR')}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Tax (15%)</span>
+                  <span>{formatCheckoutAmount(taxAmount, 'ZAR')}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 border-t border-[#c9dce8] pt-3">
+              <div className="flex items-center justify-between text-base font-black text-[var(--svs-primary-strong)]">
+                <span>Total Amount</span>
+                <span>{formatCheckoutAmount(finalAmount, 'ZAR')}</span>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleProceedToCheckout}
+            className="mx-auto mt-8 block w-full max-w-sm rounded-xl bg-[var(--svs-primary-strong)] px-6 py-3.5 text-lg font-bold text-white shadow-lg hover:opacity-90"
+          >
+            Proceed to Checkout
+          </button>
+
+          <p className="mx-auto mt-5 max-w-xl text-center text-sm text-[var(--svs-primary-strong)]">
+            Lottery tickets once purchased cannot be canceled, changed, or refunded as per the lottery provider's policy.
+          </p>
+        </div>
+      </section>
+    </PageFrame>
   );
 };
 
@@ -16326,6 +16922,12 @@ const StripeCardPaymentPanel = ({
   );
 };
 
+const isBettingLotteryOrder = (order) => Boolean(
+  order
+  && Array.isArray(order.items)
+  && order.items.some((item) => item?.route === '/betting-lottery-games' || item?.marketName === 'Betting and Lottery Games'),
+);
+
 const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowCheckout }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -16479,7 +17081,7 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
     }
 
     setIsSubmitting(false);
-    navigate('/order-confirmation', {
+    navigate(isBettingLotteryOrder(order) ? '/betting-order-confirmation' : '/order-confirmation', {
       state: {
         order,
         guestCheckout: !getAuthState(),
@@ -16507,7 +17109,7 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
       onClearBuyNowCheckout?.();
     }
 
-    navigate('/order-confirmation', {
+    navigate(isBettingLotteryOrder(order) ? '/betting-order-confirmation' : '/order-confirmation', {
       state: {
         order,
         guestCheckout: !getAuthState(),
@@ -16630,6 +17232,203 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
   );
 };
 
+const BettingOrderConfirmationPage = ({ orders }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const stateOrder = location.state?.order || null;
+  const guestCheckout = Boolean(location.state?.guestCheckout);
+  const fallbackOrder = useMemo(() => {
+    if (stateOrder) return null;
+    if (!Array.isArray(orders) || !orders.length) return null;
+    return orders.find((candidate) => isBettingLotteryOrder(candidate)) || null;
+  }, [stateOrder, orders]);
+  const order = stateOrder || fallbackOrder;
+
+  useEffect(() => {
+    if (!order) {
+      navigate('/orders', { replace: true });
+    }
+  }, [order, navigate]);
+
+  if (!order) return null;
+
+  const customer = order.customer || {};
+  const shipping = customer.shippingAddress || {};
+  const fullName = customer.fullName
+    || [shipping.firstName, shipping.lastName].filter(Boolean).join(' ').trim()
+    || [customer.firstName, customer.lastName].filter(Boolean).join(' ').trim()
+    || 'Customer';
+  const contactEmail = customer.email || customer.contact || '';
+  const ticketItems = Array.isArray(order.items) ? order.items : [];
+  const quantity = ticketItems.reduce((sum, item) => sum + Math.max(Number(item?.quantity) || 1, 1), 0);
+
+  const estimatedDeliveryDate = (() => {
+    const base = order?.createdAt ? new Date(order.createdAt) : new Date();
+    base.setDate(base.getDate() + 3);
+    return base;
+  })();
+  const deliveryShort = estimatedDeliveryDate.toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric',
+  });
+  const deliveryLabel = estimatedDeliveryDate.toLocaleDateString('en-US', {
+    year: 'numeric', month: 'long', day: 'numeric',
+  });
+
+  const primaryAddressLine = [shipping.address1, shipping.address2].filter(Boolean).join(' ').trim() || 'N/A';
+  const secondaryAddressLine = [shipping.city, shipping.province, shipping.postalCode].filter(Boolean).join(', ') || 'N/A';
+  const countryLine = shipping.country || customer.country || 'N/A';
+  const deliveryNote = shipping.deliveryInstructions || 'Digital lottery ticket - no physical delivery required.';
+
+  const handleDownloadInvoice = () => {
+    if (typeof window === 'undefined') return;
+    const html = `<!doctype html><html><head><meta charset="utf-8"/><title>Invoice ${order.reference}</title>
+      <style>body{font-family:Arial,sans-serif;color:#1f1f1f;padding:40px;max-width:760px;margin:auto}h1{color:#0f9fb2;margin:0 0 4px}h2{font-size:16px;margin:24px 0 8px;color:#1f1f1f}table{width:100%;border-collapse:collapse;margin-top:8px}th,td{text-align:left;padding:8px;border-bottom:1px solid #e2dbd0;font-size:13px}.right{text-align:right}.muted{color:#6b6258;font-size:12px}.box{border:1px solid #ddd5c8;border-radius:12px;padding:16px;margin-top:16px}</style>
+      </head><body>
+      <h1>SVS E-Commerce</h1>
+      <p class="muted">Lottery Invoice • ${order.reference}</p>
+      <p class="muted">Placed: ${new Date(order.createdAt || Date.now()).toLocaleString()}</p>
+      <h2>Confirmed Order</h2>
+      <div class="box">
+        ${(ticketItems.map((it) => `<div><strong>${it.title || 'Lottery Ticket'}</strong></div>`).join(''))}
+        <div class="muted">Betting and Lottery Games</div>
+        <div class="muted">Quantity: ${quantity}</div>
+      </div>
+      <h2>Delivery Information</h2>
+      <div class="box">
+        <strong>${fullName}</strong><br/>
+        ${primaryAddressLine}<br/>
+        ${secondaryAddressLine}<br/>
+        ${countryLine}<br/>
+        <em>Note: ${deliveryNote}</em>
+      </div>
+      <h2>Payment</h2>
+      <table>
+        <tr><td>Total Amount Paid</td><td class="right"><strong>${formatCheckoutAmount(order.total)}</strong></td></tr>
+        <tr><td>Order ID</td><td class="right">${order.reference}</td></tr>
+        <tr><td>Payment ID</td><td class="right">${order.paymentReference || order.id}</td></tr>
+      </table>
+      <p class="muted" style="margin-top:32px">You will receive your Invoice via SMS and Email.</p>
+      <script>window.print();</script>
+      </body></html>`;
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank');
+    if (!win) {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `betting-invoice-${order.reference}.html`;
+      a.click();
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  };
+
+  return (
+    <section className="bg-[var(--svs-bg)] px-4 py-8 sm:py-12">
+      <div className="mx-auto w-full max-w-3xl space-y-6">
+        <div className="flex flex-col items-center text-center">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--svs-primary-strong)] text-white">
+            <CheckCircle2 className="h-12 w-12" strokeWidth={2.2} />
+          </div>
+          <h1 className="mt-5 text-3xl font-extrabold text-[var(--svs-primary-strong)] sm:text-4xl">Order Placed Successfully!</h1>
+          <p className="mt-3 text-sm text-[var(--svs-muted)] sm:text-base">Thank you for your purchase. Your order has been confirmed.</p>
+        </div>
+
+        <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.05)] sm:p-7">
+          <h2 className="text-lg font-bold text-[var(--svs-primary-strong)]">Confirmed Order</h2>
+          <div className="mt-3 space-y-1">
+            {ticketItems.map((item, idx) => (
+              <p key={`betting-confirmed-${idx}-${item?.id || item?.title || idx}`} className="text-base font-semibold text-[var(--svs-primary-strong)]">
+                {item?.title || 'Lottery Ticket'}
+              </p>
+            ))}
+            <p className="text-sm font-semibold text-[var(--svs-primary-strong)]">Betting and Lottery Games</p>
+            <p className="text-sm text-[var(--svs-muted)]">Quantity: {quantity}</p>
+            <p className="mt-2 flex items-center gap-2 text-sm text-[var(--svs-primary-strong)]">
+              <CalendarDays className="h-4 w-4" /> Delivery {deliveryShort}
+            </p>
+          </div>
+
+          <div className="mt-6 space-y-3 border-t border-[var(--svs-border)] pt-5 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-[var(--svs-muted)]">Total Amount Paid</span>
+              <span className="font-bold text-[var(--svs-text)]">{formatCheckoutAmount(order.total)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[var(--svs-muted)]">Order ID:</span>
+              <span className="font-semibold text-[var(--svs-text)]">{order.reference}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[var(--svs-muted)]">Payment ID:</span>
+              <span className="font-semibold text-[var(--svs-text)]">{order.paymentReference || order.id}</span>
+            </div>
+          </div>
+
+          {contactEmail ? (
+            <p className="mt-5 border-t border-[var(--svs-border)] pt-4 text-sm text-[var(--svs-muted)]">
+              Order confirmation has been sent to <span className="font-semibold text-[var(--svs-primary-strong)] underline">{contactEmail}</span>
+            </p>
+          ) : null}
+        </div>
+
+        <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.05)] sm:p-7">
+          <h2 className="text-base font-bold text-[var(--svs-primary-strong)]">Delivery Information</h2>
+          <div className="mt-4 space-y-1 text-sm">
+            <p className="text-[var(--svs-muted)]">Estimated Delivery</p>
+            <div className="rounded-xl bg-[var(--svs-cyan-surface)] px-4 py-3 font-semibold text-[var(--svs-text)]">{deliveryLabel}</div>
+          </div>
+          <div className="mt-4 space-y-1 text-sm">
+            <p className="text-[var(--svs-muted)]">Delivery Address</p>
+            <div className="rounded-xl bg-[var(--svs-cyan-surface)] px-4 py-3 text-[var(--svs-text)]">
+              <p className="font-semibold">{fullName}</p>
+              <p>{primaryAddressLine}</p>
+              <p>{secondaryAddressLine}</p>
+              <p>{countryLine}</p>
+              <p className="mt-2 text-xs italic text-[var(--svs-muted)]">Note: {deliveryNote}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Link
+            to={`/orders/${order.id}/track`}
+            state={{ orderId: order.id, reference: order.reference }}
+            className={`${cudyBluePrimaryButtonClassName} inline-flex items-center justify-center rounded-xl bg-[var(--svs-primary-strong)] px-5 py-3 text-sm font-bold text-white`}
+          >
+            Track Your order
+          </Link>
+          <Link
+            to="/orders"
+            className={`${cudyBluePrimaryButtonClassName} inline-flex items-center justify-center rounded-xl bg-[var(--svs-primary-strong)] px-5 py-3 text-sm font-bold text-white`}
+          >
+            View All Orders
+          </Link>
+          <Link
+            to="/"
+            className="inline-flex items-center justify-center rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 py-3 text-sm font-bold text-[var(--svs-text)] transition hover:border-[var(--svs-primary-strong)] hover:text-[var(--svs-primary-strong)]"
+          >
+            Continue Shopping
+          </Link>
+          <button
+            type="button"
+            onClick={handleDownloadInvoice}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 py-3 text-sm font-bold text-[var(--svs-text)] transition hover:border-[var(--svs-primary-strong)] hover:text-[var(--svs-primary-strong)]"
+          >
+            <Download className="h-4 w-4" /> Download Invoice
+          </button>
+        </div>
+
+        <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 py-4 text-center text-sm text-[var(--svs-muted)]">
+          <p>You will receive your Invoice via SMS and Email{guestCheckout ? ' (guest checkout)' : ''}</p>
+          <p className="mt-1">
+            For support, contact <Link to="/help-center" className="font-semibold text-[var(--svs-primary-strong)] underline">customer care</Link>
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+};
+
 const OrderConfirmationPage = ({ orders }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -16665,6 +17464,11 @@ const OrderConfirmationPage = ({ orders }) => {
   const contactEmail = customer.email || customer.contact || '';
   const itemCount = order.items?.length || 0;
   const headlineItem = order.items?.[0] || null;
+  const isLotteryOrder = Boolean(
+    Array.isArray(order.items)
+    && order.items.some((item) => item?.route === '/betting-lottery-games' || item?.marketName === 'Betting and Lottery Games'),
+  );
+  const confirmationItems = Array.isArray(order.items) ? order.items : [];
 
   const deliveryLabel = estimatedDeliveryDate.toLocaleDateString('en-US', {
     year: 'numeric', month: 'long', day: 'numeric',
@@ -16679,6 +17483,8 @@ const OrderConfirmationPage = ({ orders }) => {
     [shipping.city, shipping.province, shipping.postalCode].filter(Boolean).join(', '),
     shipping.country,
   ].filter(Boolean);
+  const deliveryNote = shipping.deliveryInstructions
+    || (isLotteryOrder ? 'Digital lottery ticket - no physical delivery required.' : '');
 
   const handleDownloadInvoice = () => {
     if (typeof window === 'undefined') return;
@@ -16759,19 +17565,35 @@ const OrderConfirmationPage = ({ orders }) => {
                 </div>
               )}
               <div className="flex-1 space-y-2">
-                <h3 className="text-lg font-bold text-[var(--svs-primary-strong)]">{headlineItem.title}</h3>
-                {headlineItem.category || headlineItem.marketName ? (
-                  <span className="inline-block rounded-full bg-[var(--svs-primary-strong)] px-3 py-1 text-xs font-semibold text-white">
-                    {headlineItem.category || headlineItem.marketName}
-                  </span>
-                ) : null}
+                {isLotteryOrder ? (
+                  <>
+                    {confirmationItems.map((item, idx) => (
+                      <p key={`confirmed-item-${idx}-${item?.id || item?.title || idx}`} className="text-lg font-bold text-[var(--svs-primary-strong)]">
+                        {item?.title || 'Lottery Ticket'}
+                      </p>
+                    ))}
+                    <p className="text-sm font-semibold text-[var(--svs-primary-strong)]">{headlineItem.marketName || 'Betting and Lottery Games'}</p>
+                    <p className="text-sm text-[var(--svs-muted)]">Quantity: {headlineItem.quantity || 1}</p>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="text-lg font-bold text-[var(--svs-primary-strong)]">{headlineItem.title}</h3>
+                    {headlineItem.category || headlineItem.marketName ? (
+                      <span className="inline-block rounded-full bg-[var(--svs-primary-strong)] px-3 py-1 text-xs font-semibold text-white">
+                        {headlineItem.category || headlineItem.marketName}
+                      </span>
+                    ) : null}
+                  </>
+                )}
                 {Number(headlineItem.rating) ? (
                   <p className="flex items-center gap-1 text-sm text-[var(--svs-text)]">
                     <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
                     <span className="font-semibold">{Number(headlineItem.rating).toFixed(1)}/5.0</span>
                   </p>
                 ) : null}
-                <p className="text-sm text-[var(--svs-muted)]">Quantity: {headlineItem.quantity || 1}{itemCount > 1 ? ` (+${itemCount - 1} more item${itemCount - 1 === 1 ? '' : 's'})` : ''}</p>
+                {!isLotteryOrder ? (
+                  <p className="text-sm text-[var(--svs-muted)]">Quantity: {headlineItem.quantity || 1}{itemCount > 1 ? ` (+${itemCount - 1} more item${itemCount - 1 === 1 ? '' : 's'})` : ''}</p>
+                ) : null}
                 <p className="flex items-center gap-2 text-sm text-[var(--svs-primary-strong)]">
                   <CalendarDays className="h-4 w-4" />
                   Delivery {itemDeliveryShort}
@@ -16820,8 +17642,8 @@ const OrderConfirmationPage = ({ orders }) => {
               {addressLines.map((line, idx) => (
                 <p key={idx} className="text-sm">{line}</p>
               ))}
-              {shipping.deliveryInstructions ? (
-                <p className="mt-2 text-xs italic text-[var(--svs-muted)]">Note: {shipping.deliveryInstructions}</p>
+              {deliveryNote ? (
+                <p className="mt-2 text-xs italic text-[var(--svs-muted)]">Note: {deliveryNote}</p>
               ) : null}
             </div>
           </div>
@@ -20919,6 +21741,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/orders/:orderId/exchange/track" element={<TrackExchangePage orders={orders} />} />
     <Route path="/orders/:orderId/cancel" element={<CancelOrderPage orders={orders} onCancelOrder={onCancelOrder} />} />
     <Route path="/order-confirmation" element={<OrderConfirmationPage orders={orders} />} />
+    <Route path="/betting-order-confirmation" element={<BettingOrderConfirmationPage orders={orders} />} />
     <Route path="/wishlist" element={<WishlistPage wishlistItems={wishlistItems} onAddToCart={onAddToCart} onRemoveWishlistItem={onRemoveWishlistItem} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/checkout" element={<CheckoutPage cartItems={cartItems} buyNowCheckout={buyNowCheckout} onUpdateCartQuantity={onUpdateCartQuantity} onRemoveCartItem={onRemoveCartItem} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />
     <Route path="/checkout/payfast" element={<PayfastCheckoutPage buyNowCheckout={buyNowCheckout} onPlaceOrder={onPlaceOrder} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />
@@ -20956,7 +21779,8 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/property-hub/category/:categoryKey" element={<PropertyCategoryPage />} />
     <Route path="/property-hub/listing/:listingId" element={<PropertyDetailPage />} />
     <Route path="/property-hub/visit/:listingId" element={<PropertyVisitStatusPage />} />
-    <Route path="/betting-lottery-games" element={<BettingLotteryGamesPage />} />
+    <Route path="/betting-lottery-games" element={<BettingLotteryGamesPage onBuyNow={onBuyNow} />} />
+    <Route path="/betting-lottery-games/confirm" element={<LotteryConfirmPage onBuyNow={onBuyNow} />} />
     <Route path="/international-lottery-games" element={<Navigate to="/betting-lottery-games" replace />} />
     <Route path="/livestock-hub" element={<LivestockHubPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} />} />
     <Route path="/betting-hub" element={<Navigate to="/betting-lottery-games" replace />} />
