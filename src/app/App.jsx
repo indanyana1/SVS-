@@ -17613,7 +17613,6 @@ const SupportChatPage = ({ orders = [] }) => {
     const { data: threadRows, error: threadError } = await supabase
       .from(SUPPORT_CHAT_THREADS_TABLE)
       .select('thread_key, participants, participant_names, issue_type, order_id, order_reference, created_at, updated_at, last_message')
-      .contains('participants', [currentUserEmail])
       .order('updated_at', { ascending: false })
       .limit(200);
 
@@ -17623,7 +17622,9 @@ const SupportChatPage = ({ orders = [] }) => {
       return false;
     }
 
-    const mappedThreads = (threadRows || []).map(mapSupportChatThreadRecord);
+    const mappedThreads = (threadRows || [])
+      .map(mapSupportChatThreadRecord)
+      .filter((thread) => Array.isArray(thread.participants) && thread.participants.includes(currentUserEmail));
     const threadKeys = mappedThreads.map((thread) => thread.id).filter(Boolean);
     let mappedMessages = [];
 
@@ -17723,12 +17724,33 @@ const SupportChatPage = ({ orders = [] }) => {
       });
     };
 
+    const registerSellerFromCandidate = (candidate, fallbackName = 'Seller') => {
+      if (!candidate || typeof candidate !== 'object') {
+        return;
+      }
+
+      const sellerEmail = candidate.sellerEmail
+        || candidate.seller_email
+        || candidate.seller?.email
+        || candidate.seller?.sellerEmail
+        || '';
+      const sellerName = candidate.sellerName
+        || candidate.seller_name
+        || candidate.seller?.name
+        || candidate.seller?.sellerName
+        || candidate.provider
+        || fallbackName;
+
+      registerOption(sellerEmail, sellerName, 'seller');
+    };
+
     registerOption(SUPPORT_ADMIN_EMAIL, SUPPORT_ADMIN_NAME, 'admin');
 
     if (currentRole === 'client') {
       (orders || []).forEach((order) => {
+        registerSellerFromCandidate(order, 'Seller');
         (order.items || []).forEach((item) => {
-          registerOption(item?.sellerEmail || '', item?.sellerName || item?.sellerEmail || 'Seller', 'seller');
+          registerSellerFromCandidate(item, 'Seller');
         });
       });
     } else {
@@ -17742,8 +17764,9 @@ const SupportChatPage = ({ orders = [] }) => {
 
       if (currentRole === 'admin') {
         (orders || []).forEach((order) => {
+          registerSellerFromCandidate(order, 'Seller');
           (order.items || []).forEach((item) => {
-            registerOption(item?.sellerEmail || '', item?.sellerName || item?.sellerEmail || 'Seller', 'seller');
+            registerSellerFromCandidate(item, 'Seller');
           });
         });
       }
