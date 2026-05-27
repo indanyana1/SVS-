@@ -3727,7 +3727,7 @@ const footerLinks = {
     { labelKey: 'footer.blog', href: '/blog' },
   ],
   support: [
-    { labelKey: 'footer.help', href: '/help' },
+    { labelKey: 'footer.help', href: '/support/chat' },
     { labelKey: 'footer.contact', href: '/contact' },
     { labelKey: 'footer.terms', href: '/terms' },
     { labelKey: 'footer.privacy', href: '/privacy' },
@@ -3962,6 +3962,8 @@ const CART_STORAGE_KEY = 'svs-cart-items';
 const WISHLIST_STORAGE_KEY = 'svs-wishlist-items';
 const ORDERS_STORAGE_KEY = 'svs-orders';
 const NOTIFICATIONS_STORAGE_KEY = 'svs-notifications';
+const SUPPORT_CHAT_THREADS_STORAGE_KEY = 'svs-support-chat-threads';
+const SUPPORT_CHAT_MESSAGES_STORAGE_KEY = 'svs-support-chat-messages';
 const PRODUCT_REVIEWS_STORAGE_KEY = 'svs-product-reviews';
 const SELLER_ACCESS_STORAGE_KEY = 'svs-has-seller-access';
 const SELLER_HOME_PATH_STORAGE_KEY = 'svs-seller-home-path';
@@ -3992,6 +3994,8 @@ const CART_ITEMS_TABLE = 'cart_items';
 const WISHLIST_ITEMS_TABLE = 'wishlist_items';
 const PRODUCT_REVIEWS_TABLE = 'product_reviews';
 const NOTIFICATIONS_TABLE = 'notifications';
+const SUPPORT_CHAT_THREADS_TABLE = 'support_chat_threads';
+const SUPPORT_CHAT_MESSAGES_TABLE = 'support_chat_messages';
 const SELLER_IMAGES_BUCKET = 'marketplace-items';
 const HARSH_REVIEW_TERMS = ['idiot', 'stupid', 'trash', 'garbage', 'useless', 'scam'];
 
@@ -4054,6 +4058,10 @@ const getStoredOrders = (userEmail = getCurrentUserEmail()) =>
   getStoredCollection(getUserScopedStorageKey(ORDERS_STORAGE_KEY, userEmail));
 const getStoredNotifications = (userEmail = getCurrentUserEmail()) =>
   getStoredCollection(getUserScopedStorageKey(NOTIFICATIONS_STORAGE_KEY, userEmail));
+const getStoredSupportChatThreads = (userEmail = getCurrentUserEmail()) =>
+  getStoredCollection(getUserScopedStorageKey(SUPPORT_CHAT_THREADS_STORAGE_KEY, userEmail));
+const getStoredSupportChatMessages = (userEmail = getCurrentUserEmail()) =>
+  getStoredCollection(getUserScopedStorageKey(SUPPORT_CHAT_MESSAGES_STORAGE_KEY, userEmail));
 const getStoredProductReviews = () => getStoredCollection(PRODUCT_REVIEWS_STORAGE_KEY);
 
 const createNotificationRecord = ({ title, message, href, orderId, type = 'info' }) => ({
@@ -4088,6 +4096,57 @@ const toNotificationRecord = (userEmail, notification) => ({
   order_id: notification.orderId || null,
   is_read: Boolean(notification.read),
   created_at: notification.createdAt,
+});
+
+const mapSupportChatThreadRecord = (record) => ({
+  id: String(record.thread_key || record.id || `chat-${Date.now()}`),
+  participants: Array.isArray(record.participants)
+    ? record.participants.map((entry) => normalizeEmail(entry)).filter(Boolean)
+    : [],
+  participantNames: record.participant_names && typeof record.participant_names === 'object'
+    ? Object.entries(record.participant_names).reduce((accumulator, [key, value]) => {
+      accumulator[normalizeEmail(key)] = String(value || '').trim();
+      return accumulator;
+    }, {})
+    : {},
+  issueType: String(record.issue_type || 'General Support'),
+  orderId: String(record.order_id || ''),
+  orderReference: String(record.order_reference || ''),
+  createdAt: record.created_at || new Date().toISOString(),
+  updatedAt: record.updated_at || record.created_at || new Date().toISOString(),
+  lastMessage: String(record.last_message || ''),
+});
+
+const toSupportChatThreadRecord = (thread) => ({
+  thread_key: thread.id,
+  participants: Array.from(new Set((thread.participants || []).map((entry) => normalizeEmail(entry)).filter(Boolean))).sort(),
+  participant_names: thread.participantNames || {},
+  issue_type: thread.issueType || 'General Support',
+  order_id: thread.orderId || null,
+  order_reference: thread.orderReference || null,
+  created_at: thread.createdAt || new Date().toISOString(),
+  updated_at: thread.updatedAt || thread.createdAt || new Date().toISOString(),
+  last_message: thread.lastMessage || '',
+});
+
+const mapSupportChatMessageRecord = (record) => ({
+  id: String(record.message_key || record.id || `msg-${Date.now()}`),
+  threadId: String(record.thread_key || ''),
+  senderEmail: normalizeEmail(record.sender_email || ''),
+  senderName: String(record.sender_name || ''),
+  senderRole: String(record.sender_role || 'client'),
+  body: String(record.body || ''),
+  createdAt: record.created_at || new Date().toISOString(),
+});
+
+const toSupportChatMessageRecord = (message) => ({
+  message_key: message.id,
+  thread_key: message.threadId,
+  sender_email: normalizeEmail(message.senderEmail || ''),
+  sender_name: message.senderName || null,
+  sender_role: message.senderRole || 'client',
+  body: message.body || '',
+  created_at: message.createdAt || new Date().toISOString(),
 });
 
 const pushNotificationToStorage = (userEmail, notification) => {
@@ -5236,6 +5295,8 @@ const getCartSubtotal = (cartItems) => cartItems.reduce((total, item) => {
 }, 0);
 const getServiceFee = (subtotal) => subtotal * 0.03;
 const GUEST_ORDER_EMAIL = 'guest@svs.app';
+const SUPPORT_ADMIN_EMAIL = 'support@svs.app';
+const SUPPORT_ADMIN_NAME = 'SVS Admin Support';
 const STANDARD_SHIPPING_FEE = 150;
 const SOUTH_AFRICA_PROVINCES = [
   'Eastern Cape',
@@ -7213,6 +7274,16 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                   <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{profileName}</p>
                   <button
                     type="button"
+                    onClick={() => {
+                      setProfileOpen(false);
+                      navigate('/support/chat');
+                    }}
+                    className="mt-3 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-3 py-2 text-sm font-semibold text-[var(--svs-primary-strong)] transition hover:border-[var(--svs-primary-strong)]"
+                  >
+                    Support Chat
+                  </button>
+                  <button
+                    type="button"
                     onClick={handleLogout}
                     className="mt-3 w-full rounded-md border border-[#fca5a5] bg-[#fff1f2] px-3 py-2 text-sm font-semibold text-[#b91c1c] transition hover:bg-[#ffe4e6]"
                   >
@@ -8980,8 +9051,9 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
   // Compute dynamic filter options based on items in the current category
   const categoryItems = useMemo(
     () => marketItems.filter((item) => resolveGroceriesCategoryKey(item) === activeCategory?.key),
-    [marketItems, activeCategory]
-  );  const brandOptions = useMemo(() => {
+    [marketItems, activeCategory],
+  );
+  const brandOptions = useMemo(() => {
     const brands = new Set();
     categoryItems.forEach((item) => {
       if (item.brand) brands.add(item.brand);
@@ -8995,31 +9067,25 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
     });
     return Array.from(types).sort();
   }, [categoryItems]);
-  // Dynamic price max so seller listings priced above the static catalog
-  // (or in different currencies) still fit inside the slider bounds.
   const priceMax = useMemo(() => {
-    const max = categoryItems.reduce((m, i) => {
-      const n = parseFloat(i.price);
-      return Number.isFinite(n) && n > m ? n : m;
-    }, 1000);
-    return Math.max(1000, Math.ceil(max));
+    const highest = categoryItems.reduce((maxValue, item) => {
+      const nextPrice = getNumericPriceValue(item.price, 0, item.currency || null);
+      return Math.max(maxValue, nextPrice);
+    }, 0);
+    return Math.max(1000, Math.ceil(highest));
   }, [categoryItems]);
-  // Auto-expand the active filter range so newly-listed items above the
-  // previous max remain visible until the user narrows the range manually.
-  useEffect(() => {
-    setFilters((prev) => (prev.price?.[1] < priceMax ? { ...prev, price: [prev.price[0], priceMax] } : prev));
-  }, [priceMax]);
+
   const filteredMarketItems = useMemo(() => {
     return marketItems.filter((item) => {
-      if (resolveGroceriesCategoryKey(item) !== activeCategory?.key) return false;
-      // Brand filter
-      if (filters.brand.length > 0 && item.brand && !filters.brand.includes(item.brand)) return false;
-      // Product type filter
-      if (filters.productType.length > 0 && item.productType && !filters.productType.includes(item.productType)) return false;
-      // Price filter
-      const price = parseFloat(item.price);
-      if (filters.price && (price < filters.price[0] || price > filters.price[1])) return false;
-      // Availability filter (example: if item.availability exists)
+      if (activeCategory && resolveGroceriesCategoryKey(item) !== activeCategory.key) return false;
+      if (filters.category.length > 0 && item.category && !filters.category.some((c) => item.category === c)) return false;
+      if (filters.brand.length > 0 && item.brand && !filters.brand.some((b) => item.brand === b)) return false;
+      if (filters.productType.length > 0 && item.productType && !filters.productType.some((p) => item.productType === p)) return false;
+
+      const itemPrice = getNumericPriceValue(item.price, 0, item.currency || null);
+      const [minPrice, maxPrice] = filters.price || [0, 1000];
+      if (itemPrice < Number(minPrice || 0) || itemPrice > Number(maxPrice || 1000)) return false;
+
       if (filters.availability.length > 0 && item.availability && !filters.availability.some((a) => item.availability === a)) return false;
       return true;
     });
@@ -17081,7 +17147,7 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
     }
 
     setIsSubmitting(false);
-    navigate(isBettingLotteryOrder(order) ? '/betting-order-confirmation' : '/order-confirmation', {
+    navigate(isBettingLotteryOrder(order) ? '/betting-ticket-tracking' : '/order-confirmation', {
       state: {
         order,
         guestCheckout: !getAuthState(),
@@ -17109,7 +17175,7 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
       onClearBuyNowCheckout?.();
     }
 
-    navigate(isBettingLotteryOrder(order) ? '/betting-order-confirmation' : '/order-confirmation', {
+    navigate(isBettingLotteryOrder(order) ? '/betting-ticket-tracking' : '/order-confirmation', {
       state: {
         order,
         guestCheckout: !getAuthState(),
@@ -17232,18 +17298,23 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
   );
 };
 
-const BettingOrderConfirmationPage = ({ orders }) => {
+const BettingTicketTrackingPage = ({ orders }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  useBuyerCurrency();
 
   const stateOrder = location.state?.order || null;
-  const guestCheckout = Boolean(location.state?.guestCheckout);
   const fallbackOrder = useMemo(() => {
     if (stateOrder) return null;
     if (!Array.isArray(orders) || !orders.length) return null;
     return orders.find((candidate) => isBettingLotteryOrder(candidate)) || null;
   }, [stateOrder, orders]);
-  const order = stateOrder || fallbackOrder;
+  const baseOrder = stateOrder || fallbackOrder;
+  const order = useMemo(() => {
+    if (!baseOrder) return null;
+    if (!Array.isArray(orders) || !orders.length) return baseOrder;
+    return orders.find((candidate) => candidate.id === baseOrder.id) || baseOrder;
+  }, [baseOrder, orders]);
 
   useEffect(() => {
     if (!order) {
@@ -17251,181 +17322,794 @@ const BettingOrderConfirmationPage = ({ orders }) => {
     }
   }, [order, navigate]);
 
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 30000);
+    return () => clearInterval(intervalId);
+  }, []);
+
   if (!order) return null;
 
-  const customer = order.customer || {};
-  const shipping = customer.shippingAddress || {};
-  const fullName = customer.fullName
-    || [shipping.firstName, shipping.lastName].filter(Boolean).join(' ').trim()
-    || [customer.firstName, customer.lastName].filter(Boolean).join(' ').trim()
-    || 'Customer';
-  const contactEmail = customer.email || customer.contact || '';
   const ticketItems = Array.isArray(order.items) ? order.items : [];
-  const quantity = ticketItems.reduce((sum, item) => sum + Math.max(Number(item?.quantity) || 1, 1), 0);
+  const ticketCount = ticketItems.reduce((sum, item) => sum + Math.max(Number(item?.quantity) || 1, 1), 0) || 1;
 
-  const estimatedDeliveryDate = (() => {
-    const base = order?.createdAt ? new Date(order.createdAt) : new Date();
-    base.setDate(base.getDate() + 3);
-    return base;
-  })();
-  const deliveryShort = estimatedDeliveryDate.toLocaleDateString('en-US', {
-    weekday: 'short', month: 'short', day: 'numeric',
-  });
-  const deliveryLabel = estimatedDeliveryDate.toLocaleDateString('en-US', {
-    year: 'numeric', month: 'long', day: 'numeric',
-  });
+  const lotteryItem = ticketItems[0] || {};
+  const ticketDetailText = String(lotteryItem?.details || '');
+  const firstTicketMatch = ticketDetailText.match(/T1:\s*([0-9-]+)\s*\|\s*PB\s*([0-9]+)/i);
+  const parsedMainNumbers = firstTicketMatch
+    ? firstTicketMatch[1].split('-').map((value) => Number(value)).filter((value) => Number.isFinite(value))
+    : [];
+  const parsedPowerball = firstTicketMatch ? Number(firstTicketMatch[2]) : null;
+  const selectedNumbers = [
+    ...parsedMainNumbers,
+    ...(Number.isFinite(parsedPowerball) ? [parsedPowerball] : []),
+  ];
 
-  const primaryAddressLine = [shipping.address1, shipping.address2].filter(Boolean).join(' ').trim() || 'N/A';
-  const secondaryAddressLine = [shipping.city, shipping.province, shipping.postalCode].filter(Boolean).join(', ') || 'N/A';
-  const countryLine = shipping.country || customer.country || 'N/A';
-  const deliveryNote = shipping.deliveryInstructions || 'Digital lottery ticket - no physical delivery required.';
+  const ticketPriceTotal = Number(order?.subtotal) || ticketCount * LOTTERY_TICKET_PRICE;
+  const processingFee = LOTTERY_DELIVERY_FEE;
+  const taxAmount = Number((processingFee * 0.15).toFixed(2));
+  const totalAmount = Number(order?.total) || Number((ticketPriceTotal + processingFee + taxAmount).toFixed(2));
+  const orderPlacedAt = new Date(order.createdAt || Date.now());
 
-  const handleDownloadInvoice = () => {
-    if (typeof window === 'undefined') return;
-    const html = `<!doctype html><html><head><meta charset="utf-8"/><title>Invoice ${order.reference}</title>
-      <style>body{font-family:Arial,sans-serif;color:#1f1f1f;padding:40px;max-width:760px;margin:auto}h1{color:#0f9fb2;margin:0 0 4px}h2{font-size:16px;margin:24px 0 8px;color:#1f1f1f}table{width:100%;border-collapse:collapse;margin-top:8px}th,td{text-align:left;padding:8px;border-bottom:1px solid #e2dbd0;font-size:13px}.right{text-align:right}.muted{color:#6b6258;font-size:12px}.box{border:1px solid #ddd5c8;border-radius:12px;padding:16px;margin-top:16px}</style>
-      </head><body>
-      <h1>SVS E-Commerce</h1>
-      <p class="muted">Lottery Invoice • ${order.reference}</p>
-      <p class="muted">Placed: ${new Date(order.createdAt || Date.now()).toLocaleString()}</p>
-      <h2>Confirmed Order</h2>
-      <div class="box">
-        ${(ticketItems.map((it) => `<div><strong>${it.title || 'Lottery Ticket'}</strong></div>`).join(''))}
-        <div class="muted">Betting and Lottery Games</div>
-        <div class="muted">Quantity: ${quantity}</div>
-      </div>
-      <h2>Delivery Information</h2>
-      <div class="box">
-        <strong>${fullName}</strong><br/>
-        ${primaryAddressLine}<br/>
-        ${secondaryAddressLine}<br/>
-        ${countryLine}<br/>
-        <em>Note: ${deliveryNote}</em>
-      </div>
-      <h2>Payment</h2>
-      <table>
-        <tr><td>Total Amount Paid</td><td class="right"><strong>${formatCheckoutAmount(order.total)}</strong></td></tr>
-        <tr><td>Order ID</td><td class="right">${order.reference}</td></tr>
-        <tr><td>Payment ID</td><td class="right">${order.paymentReference || order.id}</td></tr>
-      </table>
-      <p class="muted" style="margin-top:32px">You will receive your Invoice via SMS and Email.</p>
-      <script>window.print();</script>
-      </body></html>`;
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const win = window.open(url, '_blank');
-    if (!win) {
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `betting-invoice-${order.reference}.html`;
-      a.click();
-    }
-    setTimeout(() => URL.revokeObjectURL(url), 30000);
-  };
+  const drawTimeMatch = String(LOTTERY_DRAW_TIME_LABEL || '').match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  const drawHoursRaw = drawTimeMatch ? Number(drawTimeMatch[1]) : 10;
+  const drawMinutes = drawTimeMatch ? Number(drawTimeMatch[2]) : 59;
+  const drawMeridiem = drawTimeMatch ? String(drawTimeMatch[3]).toUpperCase() : 'PM';
+  const drawHours24 = ((drawHoursRaw % 12) + (drawMeridiem === 'PM' ? 12 : 0));
+  const drawDate = new Date(orderPlacedAt);
+  drawDate.setHours(drawHours24, drawMinutes, 0, 0);
+
+  const paymentVerified = Boolean(
+    normalizeOrderStatus(order.status) === 'Order Confirmed'
+    || normalizeOrderStatus(order.status) === 'Order Processing'
+    || String(order.paymentStatus || '').toLowerCase() === 'paid'
+    || order.paymentReference,
+  );
+  const ticketGenerated = paymentVerified && Boolean(selectedNumbers.length || ticketDetailText);
+  const ticketRegistered = ticketGenerated && Boolean(order.reference);
+  const readyForDraw = ticketRegistered && nowMs < drawDate.getTime();
+  const drawClosed = ticketRegistered && nowMs >= drawDate.getTime();
+
+  const liveStatusLabel = drawClosed
+    ? 'Draw closed - awaiting result'
+    : (readyForDraw ? 'Ready for draw' : (ticketRegistered ? 'Ticket registered' : (ticketGenerated ? 'Ticket generated' : 'Payment pending')));
+  const liveStatusColor = drawClosed
+    ? 'text-cyan-700'
+    : (readyForDraw ? 'text-emerald-600' : 'text-amber-600');
+
+  const trackingStages = [
+    {
+      key: 'payment',
+      reached: paymentVerified,
+      title: 'Payment verified',
+      detail: paymentVerified
+        ? 'Your payment was captured successfully.'
+        : 'Waiting for payment gateway confirmation.',
+    },
+    {
+      key: 'generated',
+      reached: ticketGenerated,
+      title: 'Ticket generated',
+      detail: ticketGenerated
+        ? 'Your ticket has been generated in our secure system.'
+        : 'Ticket payload is still being generated.',
+    },
+    {
+      key: 'registered',
+      reached: ticketRegistered,
+      title: 'Ticket registered',
+      detail: ticketRegistered
+        ? 'Entry registered for the next EuroMillions Global Draw.'
+        : 'Ticket registration is still pending.',
+    },
+    {
+      key: 'draw',
+      reached: readyForDraw || drawClosed,
+      title: 'Ready for draw',
+      detail: drawClosed
+        ? `Draw time (${LOTTERY_DRAW_TIME_LABEL}) has passed. Awaiting published results.`
+        : `Ticket is active for today's ${LOTTERY_DRAW_TIME_LABEL} draw.`,
+    },
+  ];
+  const currentStageIndex = trackingStages.findIndex((stage) => !stage.reached);
+  const activeStageIndex = currentStageIndex === -1 ? (trackingStages.length - 1) : currentStageIndex;
 
   return (
-    <section className="bg-[var(--svs-bg)] px-4 py-8 sm:py-12">
-      <div className="mx-auto w-full max-w-3xl space-y-6">
-        <div className="flex flex-col items-center text-center">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--svs-primary-strong)] text-white">
-            <CheckCircle2 className="h-12 w-12" strokeWidth={2.2} />
-          </div>
-          <h1 className="mt-5 text-3xl font-extrabold text-[var(--svs-primary-strong)] sm:text-4xl">Order Placed Successfully!</h1>
-          <p className="mt-3 text-sm text-[var(--svs-muted)] sm:text-base">Thank you for your purchase. Your order has been confirmed.</p>
-        </div>
+    <section className="relative overflow-hidden bg-[#061722] px-4 py-8 sm:py-12">
+      <div className="pointer-events-none absolute -left-16 top-8 h-48 w-48 rounded-full bg-[#08b3c7]/25 blur-3xl" />
+      <div className="pointer-events-none absolute -right-16 bottom-10 h-56 w-56 rounded-full bg-[#14e4d4]/20 blur-3xl" />
 
-        <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.05)] sm:p-7">
-          <h2 className="text-lg font-bold text-[var(--svs-primary-strong)]">Confirmed Order</h2>
-          <div className="mt-3 space-y-1">
-            {ticketItems.map((item, idx) => (
-              <p key={`betting-confirmed-${idx}-${item?.id || item?.title || idx}`} className="text-base font-semibold text-[var(--svs-primary-strong)]">
-                {item?.title || 'Lottery Ticket'}
+      <div className="relative mx-auto w-full max-w-6xl space-y-6">
+        <div className="rounded-3xl border border-cyan-200/20 bg-gradient-to-r from-[#0d2a3e] via-[#113a56] to-[#0d2a3e] px-5 py-6 text-white shadow-[0_20px_45px_rgba(1,12,20,0.35)] sm:px-8">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200/90">Live Ticket Tracking</p>
+              <h1 className="mt-2 text-2xl font-black sm:text-4xl">EuroMillions Global Draw</h1>
+              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-cyan-100 sm:text-sm">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1"><Globe className="h-3.5 w-3.5" />Global Lotteries</span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1"><Hash className="h-3.5 w-3.5" />Number Draw</span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1"><CalendarDays className="h-3.5 w-3.5" />Today</span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1"><Clock className="h-3.5 w-3.5" />{LOTTERY_DRAW_TIME_LABEL}</span>
+              </div>
+            </div>
+            <div className="min-w-[220px] rounded-2xl border border-cyan-100/30 bg-white/10 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-100">Ticket Status</p>
+              <p className={`mt-2 flex items-center gap-2 text-lg font-bold ${liveStatusColor}`}>
+                <Circle className="h-3.5 w-3.5 animate-pulse fill-current" /> {liveStatusLabel}
               </p>
-            ))}
-            <p className="text-sm font-semibold text-[var(--svs-primary-strong)]">Betting and Lottery Games</p>
-            <p className="text-sm text-[var(--svs-muted)]">Quantity: {quantity}</p>
-            <p className="mt-2 flex items-center gap-2 text-sm text-[var(--svs-primary-strong)]">
-              <CalendarDays className="h-4 w-4" /> Delivery {deliveryShort}
-            </p>
-          </div>
-
-          <div className="mt-6 space-y-3 border-t border-[var(--svs-border)] pt-5 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-[var(--svs-muted)]">Total Amount Paid</span>
-              <span className="font-bold text-[var(--svs-text)]">{formatCheckoutAmount(order.total)}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[var(--svs-muted)]">Order ID:</span>
-              <span className="font-semibold text-[var(--svs-text)]">{order.reference}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[var(--svs-muted)]">Payment ID:</span>
-              <span className="font-semibold text-[var(--svs-text)]">{order.paymentReference || order.id}</span>
-            </div>
-          </div>
-
-          {contactEmail ? (
-            <p className="mt-5 border-t border-[var(--svs-border)] pt-4 text-sm text-[var(--svs-muted)]">
-              Order confirmation has been sent to <span className="font-semibold text-[var(--svs-primary-strong)] underline">{contactEmail}</span>
-            </p>
-          ) : null}
-        </div>
-
-        <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.05)] sm:p-7">
-          <h2 className="text-base font-bold text-[var(--svs-primary-strong)]">Delivery Information</h2>
-          <div className="mt-4 space-y-1 text-sm">
-            <p className="text-[var(--svs-muted)]">Estimated Delivery</p>
-            <div className="rounded-xl bg-[var(--svs-cyan-surface)] px-4 py-3 font-semibold text-[var(--svs-text)]">{deliveryLabel}</div>
-          </div>
-          <div className="mt-4 space-y-1 text-sm">
-            <p className="text-[var(--svs-muted)]">Delivery Address</p>
-            <div className="rounded-xl bg-[var(--svs-cyan-surface)] px-4 py-3 text-[var(--svs-text)]">
-              <p className="font-semibold">{fullName}</p>
-              <p>{primaryAddressLine}</p>
-              <p>{secondaryAddressLine}</p>
-              <p>{countryLine}</p>
-              <p className="mt-2 text-xs italic text-[var(--svs-muted)]">Note: {deliveryNote}</p>
+              <p className="mt-1 text-xs text-cyan-50/90">Order ID: {order.reference}</p>
+              <p className="text-xs text-cyan-50/90">Purchased: {orderPlacedAt.toLocaleString()}</p>
             </div>
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Link
-            to={`/orders/${order.id}/track`}
-            state={{ orderId: order.id, reference: order.reference }}
-            className={`${cudyBluePrimaryButtonClassName} inline-flex items-center justify-center rounded-xl bg-[var(--svs-primary-strong)] px-5 py-3 text-sm font-bold text-white`}
-          >
-            Track Your order
-          </Link>
-          <Link
-            to="/orders"
-            className={`${cudyBluePrimaryButtonClassName} inline-flex items-center justify-center rounded-xl bg-[var(--svs-primary-strong)] px-5 py-3 text-sm font-bold text-white`}
-          >
-            View All Orders
-          </Link>
-          <Link
-            to="/"
-            className="inline-flex items-center justify-center rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 py-3 text-sm font-bold text-[var(--svs-text)] transition hover:border-[var(--svs-primary-strong)] hover:text-[var(--svs-primary-strong)]"
-          >
-            Continue Shopping
-          </Link>
-          <button
-            type="button"
-            onClick={handleDownloadInvoice}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 py-3 text-sm font-bold text-[var(--svs-text)] transition hover:border-[var(--svs-primary-strong)] hover:text-[var(--svs-primary-strong)]"
-          >
-            <Download className="h-4 w-4" /> Download Invoice
-          </button>
-        </div>
+        <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="rounded-3xl border border-cyan-100/20 bg-white p-5 shadow-[0_18px_36px_rgba(2,12,25,0.18)] sm:p-7">
+            <h2 className="text-center text-3xl font-black text-[#0e3850]">Booking Summary</h2>
 
-        <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 py-4 text-center text-sm text-[var(--svs-muted)]">
-          <p>You will receive your Invoice via SMS and Email{guestCheckout ? ' (guest checkout)' : ''}</p>
-          <p className="mt-1">
-            For support, contact <Link to="/help-center" className="font-semibold text-[var(--svs-primary-strong)] underline">customer care</Link>
-          </p>
+            <div className="mt-6">
+              <h3 className="text-center text-xl font-black text-[#0e3850]">Selected Ticket</h3>
+              <div className="mx-auto mt-4 flex max-w-xl flex-wrap items-center justify-center gap-2">
+                {selectedNumbers.length ? selectedNumbers.map((value, idx) => (
+                  <span
+                    key={`ticket-number-${idx}-${value}`}
+                    className="inline-flex h-11 min-w-11 items-center justify-center rounded-lg bg-[#0f5d86] px-3 text-base font-bold text-white shadow"
+                  >
+                    {value}
+                  </span>
+                )) : (
+                  <span className="rounded-lg bg-[#e9f4fb] px-4 py-2 text-sm font-semibold text-[#0f5d86]">
+                    Syncing ticket numbers from the confirmed order...
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="mx-auto mt-8 w-full max-w-md border-t border-[#d8e6ef] pt-4 text-[#0e3850]">
+              <div className="flex items-center justify-between text-sm font-semibold">
+                <span>Total Ticket:</span>
+                <span>{ticketCount}</span>
+              </div>
+
+              <div className="mt-4 border-t border-[#d8e6ef] pt-4">
+                <h4 className="text-sm font-black">Price Details</h4>
+                <div className="mt-3 space-y-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span>Ticket Price (x{ticketCount})</span>
+                    <span>{formatCheckoutAmount(ticketPriceTotal, 'ZAR')}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Processing Fee</span>
+                    <span>{formatCheckoutAmount(processingFee, 'ZAR')}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Tax (15%)</span>
+                    <span>{formatCheckoutAmount(taxAmount, 'ZAR')}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 border-t border-[#d8e6ef] pt-4">
+                <div className="flex items-center justify-between text-lg font-black">
+                  <span>Total Amount</span>
+                  <span>{formatCheckoutAmount(totalAmount, 'ZAR')}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => setNowMs(Date.now())}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#0f5d86] px-5 py-3 text-sm font-bold text-white transition hover:opacity-90"
+              >
+                <RefreshCw className="h-4 w-4" /> Refresh Live Status
+              </button>
+              <Link
+                to="/betting-lottery-games"
+                className="inline-flex items-center gap-2 rounded-xl border border-[#b9d7e8] bg-white px-5 py-3 text-sm font-bold text-[#0f5d86] transition hover:border-[#0f5d86]"
+              >
+                <Ticket className="h-4 w-4" /> Play Again
+              </Link>
+            </div>
+          </div>
+
+          <aside className="rounded-3xl border border-cyan-100/20 bg-[#0d1d2a] p-5 text-white shadow-[0_18px_36px_rgba(2,12,25,0.24)] sm:p-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-black">Ticket Journey</h2>
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold">
+                <Circle className="h-2.5 w-2.5 animate-pulse fill-emerald-400 text-emerald-400" /> LIVE
+              </span>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              {trackingStages.map((stage, index) => {
+                const reached = stage.reached;
+                const isCurrent = index === activeStageIndex;
+                return (
+                  <div key={`stage-${stage.key}`} className={`rounded-xl border px-4 py-3 transition ${reached ? 'border-emerald-400/40 bg-emerald-400/10' : 'border-white/15 bg-white/5'}`}>
+                    <div className="flex items-start gap-3">
+                      <span className={`mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full ${reached ? 'bg-emerald-400 text-emerald-950' : 'bg-white/20 text-white/80'}`}>
+                        {reached ? <Check className="h-3.5 w-3.5" /> : <Circle className="h-2.5 w-2.5" />}
+                      </span>
+                      <div>
+                        <p className="text-sm font-bold">{stage.title}</p>
+                        <p className="mt-1 text-xs text-cyan-50/80">{stage.detail}</p>
+                        {isCurrent && !reached ? (
+                          <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-300">Updating...</p>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-5 rounded-xl border border-cyan-100/20 bg-white/5 p-4 text-sm">
+              <p className="font-semibold text-cyan-100">Payment reference</p>
+              <p className="mt-1 text-white">{order.paymentReference || 'Pending confirmation from gateway'}</p>
+              <p className="mt-3 font-semibold text-cyan-100">Ticket line</p>
+              <p className="mt-1 text-cyan-50/90">{ticketDetailText || 'Ticket line is being synced from your placed order.'}</p>
+            </div>
+          </aside>
         </div>
       </div>
     </section>
+  );
+};
+
+const SupportChatPage = ({ orders = [] }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const currentUserEmail = normalizeEmail(getCurrentUserEmail()) || GUEST_ORDER_EMAIL;
+  const currentUserName = (() => {
+    if (typeof window === 'undefined') return 'Client';
+    const storedName = String(window.localStorage.getItem('svs-user-name') || '').trim();
+    if (storedName) return storedName;
+    return currentUserEmail.split('@')[0] || 'Client';
+  })();
+  const isAdmin = currentUserEmail === SUPPORT_ADMIN_EMAIL;
+  const hasSellerAccess = getSellerAccessState();
+  const currentRole = isAdmin ? 'admin' : (hasSellerAccess ? 'seller' : 'client');
+  const [threads, setThreads] = useState(() => getStoredSupportChatThreads(currentUserEmail));
+  const [messages, setMessages] = useState(() => getStoredSupportChatMessages(currentUserEmail));
+  const [selectedThreadId, setSelectedThreadId] = useState('');
+  const [draftMessage, setDraftMessage] = useState('');
+  const [issueType, setIssueType] = useState('General Support');
+  const [recipientEmail, setRecipientEmail] = useState(SUPPORT_ADMIN_EMAIL);
+  const [selectedOrderId, setSelectedOrderId] = useState('');
+  const [isRemoteChatEnabled, setIsRemoteChatEnabled] = useState(false);
+  const [remoteChatStatusMessage, setRemoteChatStatusMessage] = useState('Checking chat sync...');
+
+  useEffect(() => {
+    window.localStorage.setItem(getUserScopedStorageKey(SUPPORT_CHAT_THREADS_STORAGE_KEY, currentUserEmail), JSON.stringify(threads));
+  }, [currentUserEmail, threads]);
+
+  useEffect(() => {
+    window.localStorage.setItem(getUserScopedStorageKey(SUPPORT_CHAT_MESSAGES_STORAGE_KEY, currentUserEmail), JSON.stringify(messages));
+  }, [currentUserEmail, messages]);
+
+  const loadRemoteChat = useCallback(async () => {
+    if (!getAuthState()) {
+      setIsRemoteChatEnabled(false);
+      setRemoteChatStatusMessage('You are not signed in. Chat is saved only on this device.');
+      return false;
+    }
+
+    if (!currentUserEmail) {
+      setIsRemoteChatEnabled(false);
+      setRemoteChatStatusMessage('No user email found for this session.');
+      return false;
+    }
+
+    if (!hasSupabaseEnv || !supabase) {
+      setIsRemoteChatEnabled(false);
+      setRemoteChatStatusMessage('Supabase is not configured. Add REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_ANON_KEY.');
+      return false;
+    }
+
+    const { data: threadRows, error: threadError } = await supabase
+      .from(SUPPORT_CHAT_THREADS_TABLE)
+      .select('thread_key, participants, participant_names, issue_type, order_id, order_reference, created_at, updated_at, last_message')
+      .contains('participants', [currentUserEmail])
+      .order('updated_at', { ascending: false })
+      .limit(200);
+
+    if (threadError) {
+      setIsRemoteChatEnabled(false);
+      setRemoteChatStatusMessage(`Supabase chat sync failed: ${threadError.message || 'apply support-chat.sql and check policies.'}`);
+      return false;
+    }
+
+    const mappedThreads = (threadRows || []).map(mapSupportChatThreadRecord);
+    const threadKeys = mappedThreads.map((thread) => thread.id).filter(Boolean);
+    let mappedMessages = [];
+
+    if (threadKeys.length) {
+      const { data: messageRows, error: messageError } = await supabase
+        .from(SUPPORT_CHAT_MESSAGES_TABLE)
+        .select('message_key, thread_key, sender_email, sender_name, sender_role, body, created_at')
+        .in('thread_key', threadKeys)
+        .order('created_at', { ascending: true })
+        .limit(3000);
+
+      if (!messageError) {
+        mappedMessages = (messageRows || []).map(mapSupportChatMessageRecord);
+      }
+    }
+
+    setThreads(mappedThreads);
+    setMessages(mappedMessages);
+    setIsRemoteChatEnabled(true);
+    setRemoteChatStatusMessage('Realtime chat is connected.');
+    return true;
+  }, [currentUserEmail]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const localThreads = getStoredSupportChatThreads(currentUserEmail);
+    const localMessages = getStoredSupportChatMessages(currentUserEmail);
+    setThreads(localThreads);
+    setMessages(localMessages);
+
+    const sync = async () => {
+      const synced = await loadRemoteChat();
+      if (cancelled || synced) {
+        return;
+      }
+      setThreads(localThreads);
+      setMessages(localMessages);
+    };
+
+    sync();
+
+    if (!getAuthState() || !currentUserEmail || !hasSupabaseEnv || !supabase) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const handleRemoteChange = () => {
+      if (!cancelled) {
+        loadRemoteChat();
+      }
+    };
+
+    const threadsChannel = supabase
+      .channel(`svs-chat-threads-${currentUserEmail}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: SUPPORT_CHAT_THREADS_TABLE },
+        handleRemoteChange,
+      )
+      .subscribe();
+
+    const messagesChannel = supabase
+      .channel(`svs-chat-messages-${currentUserEmail}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: SUPPORT_CHAT_MESSAGES_TABLE },
+        handleRemoteChange,
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(threadsChannel);
+      supabase.removeChannel(messagesChannel);
+    };
+  }, [currentUserEmail, loadRemoteChat]);
+
+  const orderOptions = useMemo(() => {
+    if (!Array.isArray(orders)) return [];
+    return orders.map((order) => ({
+      id: String(order.id || ''),
+      reference: String(order.reference || order.id || '').trim(),
+    })).filter((entry) => entry.id);
+  }, [orders]);
+
+  const recipientOptions = useMemo(() => {
+    const optionMap = new Map();
+    const registerOption = (email, name, role) => {
+      const normalized = normalizeEmail(email);
+      if (!normalized || normalized === currentUserEmail) return;
+      optionMap.set(normalized, {
+        email: normalized,
+        name: String(name || normalized),
+        role,
+      });
+    };
+
+    registerOption(SUPPORT_ADMIN_EMAIL, SUPPORT_ADMIN_NAME, 'admin');
+
+    if (currentRole === 'client') {
+      (orders || []).forEach((order) => {
+        (order.items || []).forEach((item) => {
+          registerOption(item?.sellerEmail || '', item?.sellerName || item?.sellerEmail || 'Seller', 'seller');
+        });
+      });
+    } else {
+      (orders || []).forEach((order) => {
+        registerOption(
+          order?.ownerEmail || order?.customer?.email || order?.customer?.contact || '',
+          order?.customer?.fullName || order?.customer?.firstName || order?.ownerEmail || 'Client',
+          'client',
+        );
+      });
+
+      if (currentRole === 'admin') {
+        (orders || []).forEach((order) => {
+          (order.items || []).forEach((item) => {
+            registerOption(item?.sellerEmail || '', item?.sellerName || item?.sellerEmail || 'Seller', 'seller');
+          });
+        });
+      }
+    }
+
+    return Array.from(optionMap.values()).sort((left, right) => (
+      left.role.localeCompare(right.role) || left.name.localeCompare(right.name)
+    ));
+  }, [currentRole, currentUserEmail, orders]);
+
+  useEffect(() => {
+    if (!recipientOptions.length) {
+      setRecipientEmail('');
+      return;
+    }
+
+    if (!recipientOptions.some((option) => option.email === normalizeEmail(recipientEmail))) {
+      setRecipientEmail(recipientOptions[0].email);
+    }
+  }, [recipientEmail, recipientOptions]);
+
+  const startChatCardTitle = currentRole === 'client' ? 'Start New Chat' : 'Start Conversation';
+  const startChatRecipientLabel = currentRole === 'client' ? 'Who do you need?' : 'Who do you want to message?';
+  const startChatButtonLabel = currentRole === 'client' ? 'Open Conversation' : 'Start Chat';
+
+  const createThread = useCallback(() => {
+    const normalizedRecipient = normalizeEmail(recipientEmail);
+    if (!normalizedRecipient || normalizedRecipient === currentUserEmail) {
+      return null;
+    }
+
+    const orderReference = (orderOptions.find((entry) => entry.id === selectedOrderId)?.reference || '').trim();
+    const nowIso = new Date().toISOString();
+    const participants = Array.from(new Set([currentUserEmail, normalizedRecipient])).sort();
+
+    const existing = threads.find((thread) => {
+      if (!Array.isArray(thread.participants)) {
+        return false;
+      }
+      const candidateParticipants = [...thread.participants].sort();
+      return candidateParticipants.join('|') === participants.join('|')
+        && String(thread.orderId || '') === String(selectedOrderId || '');
+    });
+
+    if (existing) {
+      setSelectedThreadId(existing.id);
+      return existing;
+    }
+
+    const recipientName = recipientOptions.find((option) => option.email === normalizedRecipient)?.name || normalizedRecipient;
+    const nextThread = {
+      id: `chat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      participants,
+      participantNames: {
+        [currentUserEmail]: currentUserName,
+        [normalizedRecipient]: recipientName,
+      },
+      issueType,
+      orderId: selectedOrderId || '',
+      orderReference,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+      lastMessage: '',
+    };
+
+    setThreads((current) => [nextThread, ...current]);
+    setSelectedThreadId(nextThread.id);
+
+    if (getAuthState() && currentUserEmail && hasSupabaseEnv && supabase) {
+      supabase
+        .from(SUPPORT_CHAT_THREADS_TABLE)
+        .upsert([toSupportChatThreadRecord(nextThread)], { onConflict: 'thread_key' })
+        .then(() => {
+          loadRemoteChat();
+        });
+    }
+
+    return nextThread;
+  }, [currentUserEmail, currentUserName, issueType, loadRemoteChat, orderOptions, recipientEmail, recipientOptions, selectedOrderId, threads]);
+
+  useEffect(() => {
+    const prefillOrderId = String(location.state?.orderId || '').trim();
+    if (!prefillOrderId) return;
+    setSelectedOrderId(prefillOrderId);
+  }, [location.state]);
+
+  const visibleThreads = useMemo(() => {
+    const filtered = threads.filter((thread) => Array.isArray(thread?.participants) && thread.participants.includes(currentUserEmail));
+    return filtered.sort((left, right) => Date.parse(right.updatedAt || '') - Date.parse(left.updatedAt || ''));
+  }, [currentUserEmail, threads]);
+
+  useEffect(() => {
+    if (!visibleThreads.length) {
+      setSelectedThreadId('');
+      return;
+    }
+
+    if (selectedThreadId && visibleThreads.some((thread) => thread.id === selectedThreadId)) {
+      return;
+    }
+
+    setSelectedThreadId(visibleThreads[0].id);
+  }, [selectedThreadId, visibleThreads]);
+
+  const activeThread = useMemo(
+    () => visibleThreads.find((thread) => thread.id === selectedThreadId) || null,
+    [selectedThreadId, visibleThreads],
+  );
+
+  const activeMessages = useMemo(() => {
+    if (!activeThread) return [];
+    return messages
+      .filter((message) => message.threadId === activeThread.id)
+      .sort((left, right) => Date.parse(left.createdAt || '') - Date.parse(right.createdAt || ''));
+  }, [activeThread, messages]);
+
+  const resolveCounterparty = useCallback((thread) => {
+    if (!thread || !Array.isArray(thread.participants)) {
+      return { email: SUPPORT_ADMIN_EMAIL, name: SUPPORT_ADMIN_NAME };
+    }
+
+    const counterpartEmail = thread.participants.find((participant) => participant !== currentUserEmail) || currentUserEmail;
+    const participantNames = thread.participantNames || {};
+    const displayName = participantNames[counterpartEmail]
+      || (counterpartEmail === SUPPORT_ADMIN_EMAIL ? SUPPORT_ADMIN_NAME : counterpartEmail);
+
+    return {
+      email: counterpartEmail,
+      name: displayName,
+    };
+  }, [currentUserEmail]);
+
+
+  const handleSendMessage = useCallback(() => {
+    const body = String(draftMessage || '').trim();
+    if (!body) {
+      return;
+    }
+
+    const thread = activeThread || createThread();
+
+    if (!thread) {
+      return;
+    }
+
+    const nowIso = new Date().toISOString();
+    const nextMessage = {
+      id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      threadId: thread.id,
+      senderEmail: currentUserEmail,
+      senderName: currentUserName,
+      senderRole: currentRole,
+      body,
+      createdAt: nowIso,
+    };
+
+    setMessages((current) => [...current, nextMessage]);
+    setThreads((current) => current.map((candidate) => (
+      candidate.id === thread.id
+        ? {
+          ...candidate,
+          updatedAt: nowIso,
+          lastMessage: body,
+        }
+        : candidate
+    )));
+
+    const updatedThread = {
+      ...(thread || {}),
+      updatedAt: nowIso,
+      lastMessage: body,
+    };
+
+    if (getAuthState() && currentUserEmail && hasSupabaseEnv && supabase) {
+      supabase
+        .from(SUPPORT_CHAT_THREADS_TABLE)
+        .upsert([toSupportChatThreadRecord(updatedThread)], { onConflict: 'thread_key' })
+        .then(() => {
+          return supabase
+            .from(SUPPORT_CHAT_MESSAGES_TABLE)
+            .upsert([toSupportChatMessageRecord(nextMessage)], { onConflict: 'message_key' });
+        })
+        .then(() => {
+          loadRemoteChat();
+        });
+    }
+
+    setDraftMessage('');
+  }, [activeThread, createThread, currentRole, currentUserEmail, currentUserName, draftMessage, loadRemoteChat]);
+
+  return (
+    <PageFrame>
+      <section className="mx-auto w-full max-w-6xl rounded-3xl border border-[#d4e3f1] bg-white shadow-[0_20px_40px_rgba(2,32,71,0.08)]">
+        <div className="border-b border-[#e5eef8] bg-gradient-to-r from-[#0f6674] via-[#0f889a] to-[#0f6674] px-5 py-5 text-white sm:px-7">
+          <h1 className="text-2xl font-black sm:text-3xl">Support Chat</h1>
+          <p className="mt-1 text-sm text-cyan-50">
+            Chat directly with sellers or admin support when you need help with orders, payments, or delivery issues.
+          </p>
+        </div>
+
+        <div className="grid min-h-[560px] grid-cols-1 lg:grid-cols-[320px_1fr]">
+          <aside className="border-b border-[#e5eef8] bg-[#f8fbff] p-4 lg:border-b-0 lg:border-r lg:p-5">
+            <div className="rounded-2xl border border-[#d6e6f5] bg-white p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0f6674]">{startChatCardTitle}</p>
+              <p className={`mt-1 text-[11px] font-semibold ${isRemoteChatEnabled ? 'text-emerald-700' : 'text-amber-700'}`}>
+                {isRemoteChatEnabled ? 'Live sync: ON' : 'Live sync: OFF (local fallback)'}
+              </p>
+              <p className={`mt-1 text-[11px] ${isRemoteChatEnabled ? 'text-emerald-700/90' : 'text-amber-700/90'}`}>
+                {remoteChatStatusMessage}
+              </p>
+              {recipientOptions.length ? (
+                <>
+                <label className="mt-3 block text-xs font-semibold text-slate-600">
+                  {startChatRecipientLabel}
+                  <select
+                    value={recipientEmail}
+                    onChange={(event) => setRecipientEmail(event.target.value)}
+                    className="mt-1 w-full rounded-lg border border-[#d6e6f5] bg-white px-3 py-2 text-sm text-slate-700"
+                  >
+                    {recipientOptions.map((option) => (
+                      <option key={`recipient-${option.email}`} value={option.email}>
+                        {option.name} ({option.role})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="mt-3 block text-xs font-semibold text-slate-600">
+                  Issue type
+                  <select
+                    value={issueType}
+                    onChange={(event) => setIssueType(event.target.value)}
+                    className="mt-1 w-full rounded-lg border border-[#d6e6f5] bg-white px-3 py-2 text-sm text-slate-700"
+                  >
+                    <option value="General Support">General Support</option>
+                    <option value="Order Issue">Order Issue</option>
+                    <option value="Payment Issue">Payment Issue</option>
+                    <option value="Delivery Issue">Delivery Issue</option>
+                    <option value="Refund Issue">Refund Issue</option>
+                  </select>
+                </label>
+
+                <label className="mt-3 block text-xs font-semibold text-slate-600">
+                  Related order (optional)
+                  <select
+                    value={selectedOrderId}
+                    onChange={(event) => setSelectedOrderId(event.target.value)}
+                    className="mt-1 w-full rounded-lg border border-[#d6e6f5] bg-white px-3 py-2 text-sm text-slate-700"
+                  >
+                    <option value="">No specific order</option>
+                    {orderOptions.map((entry) => (
+                      <option key={`order-choice-${entry.id}`} value={entry.id}>
+                        {entry.reference}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <button
+                  type="button"
+                  onClick={createThread}
+                  className="mt-3 w-full rounded-xl bg-[#0f6674] px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
+                >
+                  {startChatButtonLabel}
+                </button>
+                </>
+              ) : (
+                <div className="mt-3 rounded-xl border border-dashed border-[#c8dff0] bg-[#f8fbff] px-3 py-3 text-xs text-slate-500">
+                  No available recipients yet. Complete or receive an order first to open a direct support conversation.
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 space-y-2">
+              {visibleThreads.length ? visibleThreads.map((thread) => {
+                const isActive = thread.id === selectedThreadId;
+                const counterpart = resolveCounterparty(thread);
+                return (
+                  <button
+                    key={thread.id}
+                    type="button"
+                    onClick={() => setSelectedThreadId(thread.id)}
+                    className={`w-full rounded-xl border px-3 py-3 text-left transition ${isActive ? 'border-[#0f6674] bg-[#e8f7fb]' : 'border-[#d6e6f5] bg-white hover:border-[#0f6674]'}`}
+                  >
+                    <p className="truncate text-sm font-bold text-[#0f6674]">{counterpart.name}</p>
+                    <p className="mt-0.5 truncate text-xs text-slate-500">{thread.issueType || 'General Support'}{thread.orderReference ? ` • ${thread.orderReference}` : ''}</p>
+                    <p className="mt-1 truncate text-xs text-slate-600">{thread.lastMessage || 'No messages yet'}</p>
+                  </button>
+                );
+              }) : (
+                <div className="rounded-xl border border-dashed border-[#c8dff0] bg-white px-3 py-5 text-center text-xs text-slate-500">
+                  No conversations yet.
+                </div>
+              )}
+            </div>
+          </aside>
+
+          <div className="flex min-h-[560px] flex-col bg-white">
+            {activeThread ? (
+              <>
+                <div className="border-b border-[#e5eef8] px-5 py-4 sm:px-6">
+                  <p className="text-lg font-bold text-[#0f6674]">{resolveCounterparty(activeThread).name}</p>
+                  <p className="text-xs text-slate-500">
+                    {activeThread.issueType || 'General Support'}{activeThread.orderReference ? ` • ${activeThread.orderReference}` : ''}
+                  </p>
+                </div>
+
+                <div className="flex-1 space-y-3 overflow-y-auto bg-[#f7fbff] px-4 py-4 sm:px-6">
+                  {activeMessages.length ? activeMessages.map((message) => {
+                    const mine = normalizeEmail(message.senderEmail || '') === currentUserEmail;
+                    return (
+                      <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+                        <article className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm ${mine ? 'bg-[#0f6674] text-white' : 'border border-[#d6e6f5] bg-white text-slate-700'}`}>
+                          <p className="text-xs font-semibold opacity-90">{mine ? 'You' : (message.senderName || message.senderEmail)}</p>
+                          <p className="mt-1 whitespace-pre-wrap text-sm">{message.body}</p>
+                          <p className={`mt-1 text-[11px] ${mine ? 'text-cyan-100' : 'text-slate-400'}`}>
+                            {new Date(message.createdAt || Date.now()).toLocaleString()}
+                          </p>
+                        </article>
+                      </div>
+                    );
+                  }) : (
+                    <div className="rounded-xl border border-dashed border-[#c8dff0] bg-white px-4 py-6 text-center text-sm text-slate-500">
+                      Conversation created. Send your first message.
+                    </div>
+                  )}
+                </div>
+
+                <div className="border-t border-[#e5eef8] bg-white px-4 py-4 sm:px-6">
+                  <div className="flex items-end gap-2">
+                    <textarea
+                      value={draftMessage}
+                      onChange={(event) => setDraftMessage(event.target.value)}
+                      rows={2}
+                      placeholder="Type your message..."
+                      className="min-h-[82px] flex-1 rounded-xl border border-[#d6e6f5] bg-[#f9fcff] px-3 py-2 text-sm text-slate-700 outline-none focus:border-[#0f6674]"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSendMessage}
+                      className="inline-flex h-11 items-center justify-center rounded-xl bg-[#0f6674] px-4 text-sm font-bold text-white transition hover:opacity-90"
+                    >
+                      Send
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex h-full items-center justify-center px-6 text-center">
+                <div>
+                  <p className="text-lg font-bold text-[#0f6674]">No active support conversation</p>
+                  <p className="mt-2 text-sm text-slate-600">Create a new chat on the left to contact a seller or admin support.</p>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/orders')}
+                    className="mt-4 rounded-xl border border-[#d6e6f5] bg-white px-4 py-2 text-sm font-semibold text-[#0f6674]"
+                  >
+                    Go to orders
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+    </PageFrame>
   );
 };
 
@@ -17685,7 +18369,7 @@ const OrderConfirmationPage = ({ orders }) => {
           <p>You will receive your Invoice via SMS and Email{guestCheckout ? ' (guest checkout)' : ''}</p>
           <p className="mt-1">
             For support, contact{' '}
-            <Link to="/help-center" className="font-semibold text-[var(--svs-primary-strong)] underline">customer care</Link>
+            <Link to="/support/chat" className="font-semibold text-[var(--svs-primary-strong)] underline">customer care</Link>
           </p>
         </div>
       </div>
@@ -18108,7 +18792,7 @@ const TrackOrderPage = ({ orders, onAdminSetOrderStatus }) => {
 
             <div className="mt-4 rounded-xl border border-rose-200 bg-white px-4 py-3 text-xs text-[var(--svs-text)]">
               Need assistance?{' '}
-              <Link to="/help-center" className="font-semibold text-[var(--svs-primary-strong)] underline">
+              <Link to="/support/chat" className="font-semibold text-[var(--svs-primary-strong)] underline">
                 Contact Support
               </Link>
             </div>
@@ -18158,7 +18842,7 @@ const TrackOrderPage = ({ orders, onAdminSetOrderStatus }) => {
 
           <div className="mt-5 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-4 py-3 text-xs text-[var(--svs-text)]">
             Need assistance?{' '}
-            <Link to="/help-center" className="font-semibold text-[var(--svs-primary-strong)] underline">
+            <Link to="/support/chat" className="font-semibold text-[var(--svs-primary-strong)] underline">
               Contact Support
             </Link>
           </div>
@@ -19288,7 +19972,7 @@ const TrackReturnPage = ({ orders }) => {
             View All Orders
           </Link>
           <Link
-            to="/help-center"
+            to="/support/chat"
             className="inline-flex items-center justify-center rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 py-3 text-sm font-bold text-[var(--svs-text)] transition hover:border-[var(--svs-primary-strong)] hover:text-[var(--svs-primary-strong)]"
           >
             Contact Support
@@ -19838,7 +20522,7 @@ const TrackExchangePage = ({ orders }) => {
           <Link to="/orders" className={`${cudyBluePrimaryButtonClassName} inline-flex items-center justify-center rounded-xl bg-[var(--svs-primary-strong)] px-5 py-3 text-sm font-bold text-white`}>
             View All Orders
           </Link>
-          <Link to="/help-center" className="inline-flex items-center justify-center rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 py-3 text-sm font-bold text-[var(--svs-text)] transition hover:border-[var(--svs-primary-strong)] hover:text-[var(--svs-primary-strong)]">
+          <Link to="/support/chat" className="inline-flex items-center justify-center rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 py-3 text-sm font-bold text-[var(--svs-text)] transition hover:border-[var(--svs-primary-strong)] hover:text-[var(--svs-primary-strong)]">
             Contact Support
           </Link>
         </div>
@@ -21741,10 +22425,12 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/orders/:orderId/exchange/track" element={<TrackExchangePage orders={orders} />} />
     <Route path="/orders/:orderId/cancel" element={<CancelOrderPage orders={orders} onCancelOrder={onCancelOrder} />} />
     <Route path="/order-confirmation" element={<OrderConfirmationPage orders={orders} />} />
-    <Route path="/betting-order-confirmation" element={<BettingOrderConfirmationPage orders={orders} />} />
+    <Route path="/betting-order-confirmation" element={<Navigate to="/betting-ticket-tracking" replace />} />
+    <Route path="/betting-ticket-tracking" element={<BettingTicketTrackingPage orders={orders} />} />
     <Route path="/wishlist" element={<WishlistPage wishlistItems={wishlistItems} onAddToCart={onAddToCart} onRemoveWishlistItem={onRemoveWishlistItem} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/checkout" element={<CheckoutPage cartItems={cartItems} buyNowCheckout={buyNowCheckout} onUpdateCartQuantity={onUpdateCartQuantity} onRemoveCartItem={onRemoveCartItem} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />
     <Route path="/checkout/payfast" element={<PayfastCheckoutPage buyNowCheckout={buyNowCheckout} onPlaceOrder={onPlaceOrder} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />
+    <Route path="/support/chat" element={<SupportChatPage orders={orders} />} />
     <Route path="/search" element={<SearchResultsPage />} />
 
     <Route path="/e-commerce" element={<ECommercePage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
