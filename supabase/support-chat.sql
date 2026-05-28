@@ -8,6 +8,7 @@ create table if not exists public.support_chat_threads (
   issue_type text not null default 'General Support',
   order_id text,
   order_reference text,
+  item_details jsonb,
   last_message text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

@@ -4045,6 +4045,33 @@ const getCurrentUserEmail = () => {
 
 const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
 
+const getDisplayNameFromEmail = (email) => {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail || !normalizedEmail.includes('@')) return '';
+  const localPart = normalizedEmail.split('@')[0] || '';
+  return localPart
+    .replace(/[._-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+};
+
+const getSellerDisplayName = ({ sellerName = '', sellerEmail = '', businessName = '', providerName = '' } = {}) => {
+  const normalizedSellerName = String(sellerName || '').trim();
+  if (normalizedSellerName) return normalizedSellerName;
+
+  const normalizedBusinessName = String(businessName || '').trim();
+  if (normalizedBusinessName) return normalizedBusinessName;
+
+  const normalizedProviderName = String(providerName || '').trim();
+  if (normalizedProviderName) return normalizedProviderName;
+
+  const emailDisplayName = getDisplayNameFromEmail(sellerEmail);
+  if (emailDisplayName) return emailDisplayName;
+
+  return 'Seller';
+};
+
 const getUserScopedStorageKey = (storageKey, userEmail = getCurrentUserEmail()) => {
   const normalizedEmail = normalizeEmail(userEmail);
   return `${storageKey}:${normalizedEmail || 'guest'}`;
@@ -4112,6 +4139,14 @@ const mapSupportChatThreadRecord = (record) => ({
   issueType: String(record.issue_type || 'General Support'),
   orderId: String(record.order_id || ''),
   orderReference: String(record.order_reference || ''),
+  itemDetails: record.item_details && typeof record.item_details === 'object'
+    ? {
+      itemKey: String(record.item_details.item_key || '').trim(),
+      itemTitle: String(record.item_details.item_title || '').trim(),
+      itemImage: String(record.item_details.item_image || '').trim(),
+      itemLink: String(record.item_details.item_link || '').trim(),
+    }
+    : null,
   createdAt: record.created_at || new Date().toISOString(),
   updatedAt: record.updated_at || record.created_at || new Date().toISOString(),
   lastMessage: String(record.last_message || ''),
@@ -4124,6 +4159,12 @@ const toSupportChatThreadRecord = (thread) => ({
   issue_type: thread.issueType || 'General Support',
   order_id: thread.orderId || null,
   order_reference: thread.orderReference || null,
+  item_details: thread.itemDetails ? {
+    item_key: thread.itemDetails.itemKey || null,
+    item_title: thread.itemDetails.itemTitle || null,
+    item_image: thread.itemDetails.itemImage || null,
+    item_link: thread.itemDetails.itemLink || null,
+  } : null,
   created_at: thread.createdAt || new Date().toISOString(),
   updated_at: thread.updatedAt || thread.createdAt || new Date().toISOString(),
   last_message: thread.lastMessage || '',
@@ -5296,7 +5337,7 @@ const getCartSubtotal = (cartItems) => cartItems.reduce((total, item) => {
 const getServiceFee = (subtotal) => subtotal * 0.03;
 const GUEST_ORDER_EMAIL = 'guest@svs.app';
 const SUPPORT_ADMIN_EMAIL = 'support@svs.app';
-const SUPPORT_ADMIN_NAME = 'SVS Admin Support';
+const SUPPORT_ADMIN_NAME = 'SVS Agent';
 const STANDARD_SHIPPING_FEE = 150;
 const SOUTH_AFRICA_PROVINCES = [
   'Eastern Cape',
@@ -5835,6 +5876,12 @@ const mapSellerItemRecord = (record) => {
   const rawDetailsJson = record.details_json && typeof record.details_json === 'object' && !Array.isArray(record.details_json)
     ? record.details_json
     : {};
+  const resolvedSellerName = getSellerDisplayName({
+    sellerName: record.seller_name,
+    sellerEmail: record.seller_email,
+    businessName: rawDetailsJson.businessName || rawDetailsJson.storeName || rawDetailsJson.shopName || rawDetailsJson.outletName,
+    providerName: rawDetailsJson.provider,
+  });
   const resolvedCategoryKey = String(rawDetailsJson.categoryKey || '').trim()
     || (record.market_key === 'groceries'
       ? resolveGroceriesCategoryKey({
@@ -5871,7 +5918,7 @@ const mapSellerItemRecord = (record) => {
     images: imageList.length ? imageList : (primaryImage ? [primaryImage] : []),
     marketKey: record.market_key,
     route: marketConfig.route,
-    sellerName: record.seller_name || record.seller_email || 'Seller',
+    sellerName: resolvedSellerName,
     sellerEmail: record.seller_email || '',
     // Spread spec-driven attributes first so the explicit fields below win
     // for groceries / beverages / tickets, but generic markets get every
@@ -6718,7 +6765,7 @@ const MarketSelectorField = ({
   );
 };
 
-const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notifications = [], onMarkNotificationsRead, onClearNotifications }) => {
+const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notifications = [], onMarkNotificationsRead, onMarkNotificationRead, onClearNotifications }) => {
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -7193,12 +7240,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                 type="button"
                 aria-label="Notifications"
                 onClick={() => {
-                  const willOpen = !isNotificationsOpen;
-                  setIsNotificationsOpen(willOpen);
-
-                  if (willOpen && unreadNotificationsCount > 0) {
-                    onMarkNotificationsRead?.();
-                  }
+                  setIsNotificationsOpen((prev) => !prev);
                 }}
                 className="relative rounded-full p-1.5 transition hover:bg-[var(--svs-cyan-surface)]"
               >
@@ -7215,7 +7257,16 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                   <div className="flex items-center justify-between border-b border-[var(--svs-border)] px-2 py-2 sm:px-4 sm:py-3">
                     <p className="text-xs font-bold text-[var(--svs-text)] sm:text-sm">Notifications</p>
                     <div className="flex items-center gap-2 sm:gap-3">
-                      <p className="text-[10px] text-[var(--svs-muted)] sm:text-xs">{notifications.length} total</p>
+                      <p className="text-[10px] text-[var(--svs-muted)] sm:text-xs">{unreadNotificationsCount} unread</p>
+                      {unreadNotificationsCount > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => onMarkNotificationsRead?.()}
+                          className="text-[10px] font-semibold text-[var(--svs-primary-strong)] transition hover:underline sm:text-xs"
+                        >
+                          Mark all read
+                        </button>
+                      ) : null}
                       {notifications.length > 0 ? (
                         <button
                           type="button"
@@ -7237,12 +7288,26 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                       <Link
                         key={notification.id}
                         to={notification.href || '/orders'}
-                        onClick={() => setIsNotificationsOpen(false)}
-                        className="mb-1 block rounded-lg border border-transparent bg-[var(--svs-surface-soft)] px-2 py-1.5 text-left transition last:mb-0 hover:border-[var(--svs-primary)] sm:rounded-xl sm:px-3 sm:py-2.5"
+                        onClick={() => {
+                          onMarkNotificationRead?.(notification.id);
+                          setIsNotificationsOpen(false);
+                        }}
+                        className={`mb-1 block rounded-lg border px-2 py-1.5 text-left transition last:mb-0 sm:rounded-xl sm:px-3 sm:py-2.5 ${
+                          notification.read
+                            ? 'border-transparent bg-[var(--svs-surface-soft)] hover:border-[var(--svs-primary)]'
+                            : 'border-[var(--svs-primary)]/35 bg-[var(--svs-cyan-surface)]/70 hover:border-[var(--svs-primary)]'
+                        }`}
                       >
-                        <p className="text-xs font-semibold text-[var(--svs-text)] sm:text-sm">{notification.title}</p>
-                        {notification.message ? <p className="mt-0.5 text-[10px] text-[var(--svs-muted)] sm:text-xs">{notification.message}</p> : null}
-                        <p className="mt-1 text-[10px] text-[var(--svs-muted)] sm:text-[11px]">{formatDate(notification.createdAt)}</p>
+                        <div className="flex items-start gap-2">
+                          {!notification.read ? (
+                            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[var(--svs-primary)]" aria-label="Unread notification" />
+                          ) : null}
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-semibold text-[var(--svs-text)] sm:text-sm">{notification.title}</p>
+                            {notification.message ? <p className="mt-0.5 text-[10px] text-[var(--svs-muted)] sm:text-xs">{notification.message}</p> : null}
+                            <p className="mt-1 text-[10px] text-[var(--svs-muted)] sm:text-[11px]">{formatDate(notification.createdAt)}</p>
+                          </div>
+                        </div>
                       </Link>
                     )) : (
                       <p className="px-2 py-2 text-xs text-[var(--svs-muted)] sm:py-3 sm:text-sm">No notifications yet.</p>
@@ -15526,9 +15591,32 @@ const LivestockHubPage = ({
                 ) : null}
 
                 {selectedItem.sellerEmail ? (
-                  <p className="mt-4 text-xs text-slate-500">
-                    Seller: <span className="font-semibold text-slate-700">{selectedItem.sellerEmail}</span>
-                  </p>
+                  <div className="mt-4 space-y-2">
+                    <p className="text-xs text-slate-500">
+                      Seller: <span className="font-semibold text-slate-700">{selectedItem.sellerEmail}</span>
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedItem(null);
+                        navigate('/support/chat', {
+                          state: {
+                            recipientEmail: normalizeEmail(selectedItem.sellerEmail),
+                            recipientName: selectedItem.sellerName || selectedItem.sellerEmail,
+                            recipientRole: 'seller',
+                            issueType: 'Item Enquiry',
+                            itemKey: selectedItem.key,
+                            itemTitle: selectedItem.title,
+                            itemImage: selectedItem.image || selectedItem.images?.[0] || '',
+                            itemLink: selectedItem.link || `/e-commerce?item=${selectedItem.key}`,
+                          },
+                        });
+                      }}
+                      className="rounded-md border border-[#0f6674] bg-[#e8f7fb] px-3 py-1.5 text-xs font-semibold text-[#0f6674] transition hover:bg-[#d7f0f8]"
+                    >
+                      Chat Seller
+                    </button>
+                  </div>
                 ) : null}
 
                 <div className="mt-auto grid grid-cols-1 gap-2 pt-5 sm:grid-cols-2">
@@ -17560,9 +17648,18 @@ const BettingTicketTrackingPage = ({ orders }) => {
   );
 };
 
-const SupportChatPage = ({ orders = [] }) => {
+const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const prefillOrderIdFromState = String(location.state?.orderId || '').trim();
+  const prefillRecipientEmailFromState = normalizeEmail(location.state?.recipientEmail || '');
+  const prefillRecipientNameFromState = String(location.state?.recipientName || '').trim();
+  const prefillRecipientRoleFromState = String(location.state?.recipientRole || '').trim().toLowerCase();
+  const prefillIssueTypeFromState = String(location.state?.issueType || '').trim();
+  const prefillItemKeyFromState = String(location.state?.itemKey || '').trim();
+  const prefillItemTitleFromState = String(location.state?.itemTitle || '').trim();
+  const prefillItemImageFromState = String(location.state?.itemImage || '').trim();
+  const prefillItemLinkFromState = String(location.state?.itemLink || '').trim();
   const currentUserEmail = normalizeEmail(getCurrentUserEmail()) || GUEST_ORDER_EMAIL;
   const currentUserName = (() => {
     if (typeof window === 'undefined') return 'Client';
@@ -17577,11 +17674,14 @@ const SupportChatPage = ({ orders = [] }) => {
   const [messages, setMessages] = useState(() => getStoredSupportChatMessages(currentUserEmail));
   const [selectedThreadId, setSelectedThreadId] = useState('');
   const [draftMessage, setDraftMessage] = useState('');
-  const [issueType, setIssueType] = useState('General Support');
-  const [recipientEmail, setRecipientEmail] = useState(SUPPORT_ADMIN_EMAIL);
-  const [selectedOrderId, setSelectedOrderId] = useState('');
+  const [issueType, setIssueType] = useState(prefillIssueTypeFromState || 'General Support');
+  const [recipientEmail, setRecipientEmail] = useState(prefillRecipientEmailFromState || SUPPORT_ADMIN_EMAIL);
+  const [recipientSearchQuery, setRecipientSearchQuery] = useState(prefillRecipientNameFromState || prefillRecipientEmailFromState || '');
+  const [mobilePanel, setMobilePanel] = useState('contacts');
+  const [selectedOrderId, setSelectedOrderId] = useState(prefillOrderIdFromState);
   const [isRemoteChatEnabled, setIsRemoteChatEnabled] = useState(false);
   const [remoteChatStatusMessage, setRemoteChatStatusMessage] = useState('Checking chat sync...');
+  const prefilledThreadBootstrapRef = useRef('');
 
   useEffect(() => {
     window.localStorage.setItem(getUserScopedStorageKey(SUPPORT_CHAT_THREADS_STORAGE_KEY, currentUserEmail), JSON.stringify(threads));
@@ -17612,7 +17712,7 @@ const SupportChatPage = ({ orders = [] }) => {
 
     const { data: threadRows, error: threadError } = await supabase
       .from(SUPPORT_CHAT_THREADS_TABLE)
-      .select('thread_key, participants, participant_names, issue_type, order_id, order_reference, created_at, updated_at, last_message')
+      .select('thread_key, participants, participant_names, issue_type, order_id, order_reference, item_details, created_at, updated_at, last_message')
       .order('updated_at', { ascending: false })
       .limit(200);
 
@@ -17746,6 +17846,17 @@ const SupportChatPage = ({ orders = [] }) => {
 
     registerOption(SUPPORT_ADMIN_EMAIL, SUPPORT_ADMIN_NAME, 'admin');
 
+    if (prefillRecipientEmailFromState) {
+      const prefillRole = ['admin', 'seller', 'client'].includes(prefillRecipientRoleFromState)
+        ? prefillRecipientRoleFromState
+        : 'seller';
+      registerOption(
+        prefillRecipientEmailFromState,
+        prefillRecipientNameFromState || prefillRecipientEmailFromState,
+        prefillRole,
+      );
+    }
+
     if (currentRole === 'client') {
       (orders || []).forEach((order) => {
         registerSellerFromCandidate(order, 'Seller');
@@ -17775,7 +17886,7 @@ const SupportChatPage = ({ orders = [] }) => {
     return Array.from(optionMap.values()).sort((left, right) => (
       left.role.localeCompare(right.role) || left.name.localeCompare(right.name)
     ));
-  }, [currentRole, currentUserEmail, orders]);
+  }, [currentRole, currentUserEmail, orders, prefillRecipientEmailFromState, prefillRecipientNameFromState, prefillRecipientRoleFromState]);
 
   useEffect(() => {
     if (!recipientOptions.length) {
@@ -17789,16 +17900,73 @@ const SupportChatPage = ({ orders = [] }) => {
   }, [recipientEmail, recipientOptions]);
 
   const startChatCardTitle = currentRole === 'client' ? 'Start New Chat' : 'Start Conversation';
-  const startChatRecipientLabel = currentRole === 'client' ? 'Who do you need?' : 'Who do you want to message?';
-  const startChatButtonLabel = currentRole === 'client' ? 'Open Conversation' : 'Start Chat';
+  const startChatRecipientLabel = 'Who do you want to contact?';
+  const getRecipientRoleLabel = useCallback((role) => {
+    if (role === 'admin') return 'Agent';
+    if (role === 'seller') return 'Seller';
+    if (role === 'client') return 'Buyer';
+    return 'Contact';
+  }, []);
 
-  const createThread = useCallback(() => {
-    const normalizedRecipient = normalizeEmail(recipientEmail);
+  const filteredRecipientOptions = useMemo(() => {
+    const searchTerm = String(recipientSearchQuery || '').trim().toLowerCase();
+    if (!searchTerm) {
+      return recipientOptions;
+    }
+
+    return recipientOptions.filter((option) => {
+      const roleLabel = option.role === 'admin'
+        ? 'agent'
+        : option.role === 'seller'
+          ? 'seller'
+          : option.role === 'client'
+            ? 'buyer'
+            : 'contact';
+      const haystack = [option.name, option.email, option.role, roleLabel]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(searchTerm);
+    });
+  }, [recipientOptions, recipientSearchQuery]);
+
+  const preferredRecipientEmail = normalizeEmail(recipientEmail || prefillRecipientEmailFromState || '');
+  const selectedRecipientName = useMemo(() => {
+    if (!preferredRecipientEmail) {
+      return '';
+    }
+
+    const recipientFromOptions = recipientOptions.find((option) => option.email === preferredRecipientEmail);
+    if (recipientFromOptions?.name) {
+      return recipientFromOptions.name;
+    }
+
+    if (preferredRecipientEmail === prefillRecipientEmailFromState && prefillRecipientNameFromState) {
+      return prefillRecipientNameFromState;
+    }
+
+    return getDisplayNameFromEmail(preferredRecipientEmail) || preferredRecipientEmail;
+  }, [prefillRecipientEmailFromState, prefillRecipientNameFromState, preferredRecipientEmail, recipientOptions]);
+
+  const createThread = useCallback((recipientOverride = '', options = {}) => {
+    const normalizedRecipient = normalizeEmail(recipientOverride || recipientEmail);
     if (!normalizedRecipient || normalizedRecipient === currentUserEmail) {
       return null;
     }
 
-    const orderReference = (orderOptions.find((entry) => entry.id === selectedOrderId)?.reference || '').trim();
+    const targetIssueType = String(options.issueType || issueType || 'General Support').trim() || 'General Support';
+    const targetOrderId = String(options.orderId ?? selectedOrderId ?? '').trim();
+    const prefillItemDetails = prefillItemKeyFromState ? {
+      itemKey: prefillItemKeyFromState,
+      itemTitle: prefillItemTitleFromState,
+      itemImage: prefillItemImageFromState,
+      itemLink: prefillItemLinkFromState,
+    } : null;
+    const targetItemDetails = options.itemDetails || prefillItemDetails;
+    const recipientName = recipientOptions.find((option) => option.email === normalizedRecipient)?.name
+      || (normalizedRecipient === prefillRecipientEmailFromState ? prefillRecipientNameFromState : '')
+      || normalizedRecipient;
+    const orderReference = (orderOptions.find((entry) => entry.id === targetOrderId)?.reference || '').trim();
     const nowIso = new Date().toISOString();
     const participants = Array.from(new Set([currentUserEmail, normalizedRecipient])).sort();
 
@@ -17808,15 +17976,41 @@ const SupportChatPage = ({ orders = [] }) => {
       }
       const candidateParticipants = [...thread.participants].sort();
       return candidateParticipants.join('|') === participants.join('|')
-        && String(thread.orderId || '') === String(selectedOrderId || '');
+        && String(thread.orderId || '') === targetOrderId;
     });
 
     if (existing) {
+      const updatedExisting = {
+        ...existing,
+        participantNames: {
+          ...(existing.participantNames || {}),
+          [currentUserEmail]: currentUserName,
+          [normalizedRecipient]: recipientName,
+        },
+        issueType: targetIssueType,
+        orderId: targetOrderId,
+        orderReference,
+        itemDetails: targetItemDetails || existing.itemDetails,
+      };
+
+      setThreads((current) => current.map((candidate) => (
+        candidate.id === existing.id ? updatedExisting : candidate
+      )));
       setSelectedThreadId(existing.id);
+      setMobilePanel('chat');
+
+      if (getAuthState() && currentUserEmail && hasSupabaseEnv && supabase) {
+        supabase
+          .from(SUPPORT_CHAT_THREADS_TABLE)
+          .upsert([toSupportChatThreadRecord(updatedExisting)], { onConflict: 'thread_key' })
+          .then(() => {
+            loadRemoteChat();
+          });
+      }
+
       return existing;
     }
 
-    const recipientName = recipientOptions.find((option) => option.email === normalizedRecipient)?.name || normalizedRecipient;
     const nextThread = {
       id: `chat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       participants,
@@ -17824,9 +18018,10 @@ const SupportChatPage = ({ orders = [] }) => {
         [currentUserEmail]: currentUserName,
         [normalizedRecipient]: recipientName,
       },
-      issueType,
-      orderId: selectedOrderId || '',
+      issueType: targetIssueType,
+      orderId: targetOrderId,
       orderReference,
+      itemDetails: targetItemDetails || null,
       createdAt: nowIso,
       updatedAt: nowIso,
       lastMessage: '',
@@ -17834,6 +18029,7 @@ const SupportChatPage = ({ orders = [] }) => {
 
     setThreads((current) => [nextThread, ...current]);
     setSelectedThreadId(nextThread.id);
+    setMobilePanel('chat');
 
     if (getAuthState() && currentUserEmail && hasSupabaseEnv && supabase) {
       supabase
@@ -17845,13 +18041,39 @@ const SupportChatPage = ({ orders = [] }) => {
     }
 
     return nextThread;
-  }, [currentUserEmail, currentUserName, issueType, loadRemoteChat, orderOptions, recipientEmail, recipientOptions, selectedOrderId, threads]);
+  }, [currentUserEmail, currentUserName, issueType, loadRemoteChat, orderOptions, prefillRecipientEmailFromState, prefillRecipientNameFromState, prefillItemKeyFromState, prefillItemTitleFromState, prefillItemImageFromState, prefillItemLinkFromState, recipientEmail, recipientOptions, selectedOrderId, threads]);
 
   useEffect(() => {
-    const prefillOrderId = String(location.state?.orderId || '').trim();
-    if (!prefillOrderId) return;
-    setSelectedOrderId(prefillOrderId);
-  }, [location.state]);
+    if (prefillOrderIdFromState) {
+      setSelectedOrderId(prefillOrderIdFromState);
+    }
+    if (prefillIssueTypeFromState) {
+      setIssueType(prefillIssueTypeFromState);
+    }
+  }, [prefillIssueTypeFromState, prefillOrderIdFromState]);
+
+  useEffect(() => {
+    if (!prefillRecipientEmailFromState) {
+      return;
+    }
+
+    const prefillKey = [
+      prefillRecipientEmailFromState,
+      prefillOrderIdFromState,
+      prefillIssueTypeFromState,
+    ].join('|');
+
+    if (prefilledThreadBootstrapRef.current === prefillKey) {
+      return;
+    }
+
+    setRecipientEmail(prefillRecipientEmailFromState);
+    createThread(prefillRecipientEmailFromState, {
+      issueType: prefillIssueTypeFromState || 'Item Enquiry',
+      orderId: prefillOrderIdFromState,
+    });
+    prefilledThreadBootstrapRef.current = prefillKey;
+  }, [createThread, prefillIssueTypeFromState, prefillOrderIdFromState, prefillRecipientEmailFromState]);
 
   const visibleThreads = useMemo(() => {
     const filtered = threads.filter((thread) => Array.isArray(thread?.participants) && thread.participants.includes(currentUserEmail));
@@ -17864,12 +18086,39 @@ const SupportChatPage = ({ orders = [] }) => {
       return;
     }
 
+    const preferredThread = preferredRecipientEmail
+      ? visibleThreads.find((thread) => {
+        if (!Array.isArray(thread?.participants)) {
+          return false;
+        }
+
+        const counterpartEmail = normalizeEmail(
+          thread.participants.find((participant) => normalizeEmail(participant) !== currentUserEmail) || ''
+        );
+
+        if (counterpartEmail !== preferredRecipientEmail) {
+          return false;
+        }
+
+        if (!selectedOrderId) {
+          return true;
+        }
+
+        return String(thread.orderId || '') === String(selectedOrderId || '');
+      })
+      : null;
+
+    if (preferredThread && preferredThread.id !== selectedThreadId) {
+      setSelectedThreadId(preferredThread.id);
+      return;
+    }
+
     if (selectedThreadId && visibleThreads.some((thread) => thread.id === selectedThreadId)) {
       return;
     }
 
     setSelectedThreadId(visibleThreads[0].id);
-  }, [selectedThreadId, visibleThreads]);
+  }, [currentUserEmail, preferredRecipientEmail, selectedOrderId, selectedThreadId, visibleThreads]);
 
   const activeThread = useMemo(
     () => visibleThreads.find((thread) => thread.id === selectedThreadId) || null,
@@ -17940,6 +18189,20 @@ const SupportChatPage = ({ orders = [] }) => {
       lastMessage: body,
     };
 
+    const recipientEmail = normalizeEmail(
+      (updatedThread.participants || []).find((participant) => normalizeEmail(participant) !== currentUserEmail) || ''
+    );
+    if (recipientEmail) {
+      const messagePreview = body.length > 120 ? `${body.slice(0, 117)}...` : body;
+      onPushNotificationToUser?.(recipientEmail, {
+        type: 'chat',
+        title: `New message from ${currentUserName || 'SVS user'}`,
+        message: messagePreview,
+        href: '/support/chat',
+        orderId: updatedThread.orderId || null,
+      });
+    }
+
     if (getAuthState() && currentUserEmail && hasSupabaseEnv && supabase) {
       supabase
         .from(SUPPORT_CHAT_THREADS_TABLE)
@@ -17955,20 +18218,41 @@ const SupportChatPage = ({ orders = [] }) => {
     }
 
     setDraftMessage('');
-  }, [activeThread, createThread, currentRole, currentUserEmail, currentUserName, draftMessage, loadRemoteChat]);
+  }, [activeThread, createThread, currentRole, currentUserEmail, currentUserName, draftMessage, loadRemoteChat, onPushNotificationToUser]);
 
   return (
     <PageFrame>
-      <section className="mx-auto w-full max-w-6xl rounded-3xl border border-[#d4e3f1] bg-white shadow-[0_20px_40px_rgba(2,32,71,0.08)]">
-        <div className="border-b border-[#e5eef8] bg-gradient-to-r from-[#0f6674] via-[#0f889a] to-[#0f6674] px-5 py-5 text-white sm:px-7">
+      <section className="mx-auto w-full max-w-6xl overflow-hidden rounded-2xl border border-[#d4e3f1] bg-white shadow-[0_20px_40px_rgba(2,32,71,0.08)] sm:rounded-3xl">
+        <div className="border-b border-[#e5eef8] bg-gradient-to-r from-[#0f6674] via-[#0f889a] to-[#0f6674] px-4 py-4 text-white sm:px-7 sm:py-5">
           <h1 className="text-2xl font-black sm:text-3xl">Support Chat</h1>
           <p className="mt-1 text-sm text-cyan-50">
             Chat directly with sellers or admin support when you need help with orders, payments, or delivery issues.
           </p>
+          {selectedRecipientName ? (
+            <p className="mt-2 inline-flex items-center rounded-full border border-cyan-100/30 bg-white/15 px-3 py-1 text-xs font-semibold text-cyan-50">
+              Contact: {selectedRecipientName}
+            </p>
+          ) : null}
+          <div className="mt-3 grid grid-cols-2 gap-2 lg:hidden">
+            <button
+              type="button"
+              onClick={() => setMobilePanel('contacts')}
+              className={`rounded-lg border px-3 py-2 text-xs font-bold transition ${mobilePanel === 'contacts' ? 'border-white/80 bg-white text-[#0f6674]' : 'border-white/40 bg-white/10 text-white'}`}
+            >
+              Contacts
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobilePanel('chat')}
+              className={`rounded-lg border px-3 py-2 text-xs font-bold transition ${mobilePanel === 'chat' ? 'border-white/80 bg-white text-[#0f6674]' : 'border-white/40 bg-white/10 text-white'}`}
+            >
+              Conversation
+            </button>
+          </div>
         </div>
 
         <div className="grid min-h-[560px] grid-cols-1 lg:grid-cols-[320px_1fr]">
-          <aside className="border-b border-[#e5eef8] bg-[#f8fbff] p-4 lg:border-b-0 lg:border-r lg:p-5">
+          <aside className={`${mobilePanel === 'chat' ? 'hidden lg:block' : 'block'} border-b border-[#e5eef8] bg-[#f8fbff] p-3 sm:p-4 lg:border-b-0 lg:border-r lg:p-5`}>
             <div className="rounded-2xl border border-[#d6e6f5] bg-white p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0f6674]">{startChatCardTitle}</p>
               <p className={`mt-1 text-[11px] font-semibold ${isRemoteChatEnabled ? 'text-emerald-700' : 'text-amber-700'}`}>
@@ -17980,19 +18264,44 @@ const SupportChatPage = ({ orders = [] }) => {
               {recipientOptions.length ? (
                 <>
                 <label className="mt-3 block text-xs font-semibold text-slate-600">
-                  {startChatRecipientLabel}
-                  <select
-                    value={recipientEmail}
-                    onChange={(event) => setRecipientEmail(event.target.value)}
-                    className="mt-1 w-full rounded-lg border border-[#d6e6f5] bg-white px-3 py-2 text-sm text-slate-700"
-                  >
-                    {recipientOptions.map((option) => (
-                      <option key={`recipient-${option.email}`} value={option.email}>
-                        {option.name} ({option.role})
-                      </option>
-                    ))}
-                  </select>
+                  Search contact
+                  <input
+                    type="text"
+                    value={recipientSearchQuery}
+                    onChange={(event) => setRecipientSearchQuery(event.target.value)}
+                    placeholder="Search by name, email, role"
+                    className="mt-1 w-full rounded-lg border border-[#d6e6f5] bg-white px-3 py-2 text-sm font-medium text-slate-700"
+                  />
                 </label>
+
+                <div className="mt-3">
+                  <p className="text-xs font-semibold text-slate-600">{startChatRecipientLabel}</p>
+                  {filteredRecipientOptions.length ? (
+                    <div className="mt-1 max-h-52 space-y-1.5 overflow-y-auto rounded-lg border border-[#d6e6f5] bg-white p-2">
+                      {filteredRecipientOptions.map((option) => {
+                        const isSelected = normalizeEmail(recipientEmail) === option.email;
+                        return (
+                          <button
+                            key={`recipient-${option.email}`}
+                            type="button"
+                            onClick={() => {
+                              setRecipientEmail(option.email);
+                              createThread(option.email);
+                            }}
+                            className={`w-full rounded-lg border px-3 py-2.5 text-left text-sm transition ${isSelected ? 'border-[#0f6674] bg-[#e8f7fb]' : 'border-[#d6e6f5] bg-white hover:border-[#0f6674]'}`}
+                          >
+                            <p className="truncate font-semibold text-[#0f6674]">{option.name}</p>
+                            <p className="truncate text-xs text-slate-500">{option.email} • {getRecipientRoleLabel(option.role)}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-[11px] font-semibold text-amber-700">
+                      No contacts found for "{recipientSearchQuery}".
+                    </p>
+                  )}
+                </div>
 
                 <label className="mt-3 block text-xs font-semibold text-slate-600">
                   Issue type
@@ -18002,6 +18311,7 @@ const SupportChatPage = ({ orders = [] }) => {
                     className="mt-1 w-full rounded-lg border border-[#d6e6f5] bg-white px-3 py-2 text-sm text-slate-700"
                   >
                     <option value="General Support">General Support</option>
+                    <option value="Item Enquiry">Item Enquiry</option>
                     <option value="Order Issue">Order Issue</option>
                     <option value="Payment Issue">Payment Issue</option>
                     <option value="Delivery Issue">Delivery Issue</option>
@@ -18025,13 +18335,6 @@ const SupportChatPage = ({ orders = [] }) => {
                   </select>
                 </label>
 
-                <button
-                  type="button"
-                  onClick={createThread}
-                  className="mt-3 w-full rounded-xl bg-[#0f6674] px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
-                >
-                  {startChatButtonLabel}
-                </button>
                 </>
               ) : (
                 <div className="mt-3 rounded-xl border border-dashed border-[#c8dff0] bg-[#f8fbff] px-3 py-3 text-xs text-slate-500">
@@ -18048,7 +18351,10 @@ const SupportChatPage = ({ orders = [] }) => {
                   <button
                     key={thread.id}
                     type="button"
-                    onClick={() => setSelectedThreadId(thread.id)}
+                    onClick={() => {
+                      setSelectedThreadId(thread.id);
+                      setMobilePanel('chat');
+                    }}
                     className={`w-full rounded-xl border px-3 py-3 text-left transition ${isActive ? 'border-[#0f6674] bg-[#e8f7fb]' : 'border-[#d6e6f5] bg-white hover:border-[#0f6674]'}`}
                   >
                     <p className="truncate text-sm font-bold text-[#0f6674]">{counterpart.name}</p>
@@ -18064,22 +18370,58 @@ const SupportChatPage = ({ orders = [] }) => {
             </div>
           </aside>
 
-          <div className="flex min-h-[560px] flex-col bg-white">
+          <div className={`${mobilePanel === 'contacts' ? 'hidden lg:flex' : 'flex'} min-h-[560px] flex-col bg-white`}>
             {activeThread ? (
               <>
-                <div className="border-b border-[#e5eef8] px-5 py-4 sm:px-6">
-                  <p className="text-lg font-bold text-[#0f6674]">{resolveCounterparty(activeThread).name}</p>
-                  <p className="text-xs text-slate-500">
-                    {activeThread.issueType || 'General Support'}{activeThread.orderReference ? ` • ${activeThread.orderReference}` : ''}
-                  </p>
+                <div className="border-b border-[#e5eef8] px-4 py-3 sm:px-6 sm:py-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-base font-bold text-[#0f6674] sm:text-lg">{resolveCounterparty(activeThread).name}</p>
+                      <p className="truncate text-xs text-slate-500">
+                        {activeThread.issueType || 'General Support'}{activeThread.orderReference ? ` • ${activeThread.orderReference}` : ''}
+                      </p>
+                      {activeThread.itemDetails ? (
+                        <div className="mt-2 flex items-center gap-2 rounded-lg bg-[#e8f7fb] px-2.5 py-1.5">
+                          {activeThread.itemDetails.itemImage ? (
+                            <img src={activeThread.itemDetails.itemImage} alt={activeThread.itemDetails.itemTitle} className="h-6 w-6 rounded object-cover" />
+                          ) : null}
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[11px] font-semibold text-[#0f6674]">{activeThread.itemDetails.itemTitle}</p>
+                          </div>
+                          <a href={activeThread.itemDetails.itemLink} target="_blank" rel="noopener noreferrer" className="shrink-0 text-[11px] font-semibold text-[#33b9f2] hover:underline">Link →</a>
+                        </div>
+                      ) : null}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setMobilePanel('contacts')}
+                      className="rounded-lg border border-[#d6e6f5] bg-white px-2.5 py-1.5 text-[11px] font-bold text-[#0f6674] lg:hidden"
+                    >
+                      Contacts
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex-1 space-y-3 overflow-y-auto bg-[#f7fbff] px-4 py-4 sm:px-6">
+                <div className="flex-1 space-y-3 overflow-y-auto bg-[#f7fbff] px-3 py-3 pb-24 sm:px-6 sm:py-4 sm:pb-6">
+                  {activeThread?.itemDetails ? (
+                    <div className="sticky top-0 mx-0 sm:-mx-6 bg-gradient-to-b from-[#e8f7fb] to-[#f7fbff] px-3 py-3 sm:px-6 sm:py-4 border-b border-[#d6e6f5]">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-[#0f6674]">📦 Item Being Discussed</p>
+                      <div className="mt-2 flex gap-3 items-start rounded-lg border border-[#d6e6f5] bg-white p-3">
+                        {activeThread.itemDetails.itemImage ? (
+                          <img src={activeThread.itemDetails.itemImage} alt={activeThread.itemDetails.itemTitle} className="h-14 w-14 rounded-lg object-cover shrink-0" />
+                        ) : null}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-[#0f6674] truncate text-sm">{activeThread.itemDetails.itemTitle}</p>
+                          <a href={activeThread.itemDetails.itemLink} target="_blank" rel="noopener noreferrer" className="inline-block mt-1 text-xs font-semibold text-[#33b9f2] hover:underline">View Item →</a>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
                   {activeMessages.length ? activeMessages.map((message) => {
                     const mine = normalizeEmail(message.senderEmail || '') === currentUserEmail;
                     return (
                       <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                        <article className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm ${mine ? 'bg-[#0f6674] text-white' : 'border border-[#d6e6f5] bg-white text-slate-700'}`}>
+                        <article className={`max-w-[92%] rounded-2xl px-3 py-2.5 shadow-sm sm:max-w-[85%] sm:px-4 sm:py-3 ${mine ? 'bg-[#0f6674] text-white' : 'border border-[#d6e6f5] bg-white text-slate-700'}`}>
                           <p className="text-xs font-semibold opacity-90">{mine ? 'You' : (message.senderName || message.senderEmail)}</p>
                           <p className="mt-1 whitespace-pre-wrap text-sm">{message.body}</p>
                           <p className={`mt-1 text-[11px] ${mine ? 'text-cyan-100' : 'text-slate-400'}`}>
@@ -18095,14 +18437,14 @@ const SupportChatPage = ({ orders = [] }) => {
                   )}
                 </div>
 
-                <div className="border-t border-[#e5eef8] bg-white px-4 py-4 sm:px-6">
+                <div className="sticky bottom-0 border-t border-[#e5eef8] bg-white/95 px-3 py-3 backdrop-blur-sm sm:static sm:bg-white sm:px-6 sm:py-4">
                   <div className="flex items-end gap-2">
                     <textarea
                       value={draftMessage}
                       onChange={(event) => setDraftMessage(event.target.value)}
                       rows={2}
                       placeholder="Type your message..."
-                      className="min-h-[82px] flex-1 rounded-xl border border-[#d6e6f5] bg-[#f9fcff] px-3 py-2 text-sm text-slate-700 outline-none focus:border-[#0f6674]"
+                      className="min-h-[74px] flex-1 rounded-xl border border-[#d6e6f5] bg-[#f9fcff] px-3 py-2 text-sm text-slate-700 outline-none focus:border-[#0f6674] sm:min-h-[82px]"
                     />
                     <button
                       type="button"
@@ -18115,10 +18457,17 @@ const SupportChatPage = ({ orders = [] }) => {
                 </div>
               </>
             ) : (
-              <div className="flex h-full items-center justify-center px-6 text-center">
+              <div className="flex h-full items-center justify-center px-4 py-10 text-center sm:px-6">
                 <div>
                   <p className="text-lg font-bold text-[#0f6674]">No active support conversation</p>
                   <p className="mt-2 text-sm text-slate-600">Create a new chat on the left to contact a seller or admin support.</p>
+                  <button
+                    type="button"
+                    onClick={() => setMobilePanel('contacts')}
+                    className="mt-4 rounded-xl border border-[#d6e6f5] bg-white px-4 py-2 text-sm font-semibold text-[#0f6674] lg:hidden"
+                  >
+                    Browse contacts
+                  </button>
                   <button
                     type="button"
                     onClick={() => navigate('/orders')}
@@ -21069,6 +21418,7 @@ const ItemDetailsModal = ({
   currentReviewerEmail = '',
   reviewNotice = '',
 }) => {
+  const navigate = useNavigate();
   const itemImages = useMemo(() => {
     const rawImages = Array.isArray(item?.images) ? item.images : [];
     const cleanImages = rawImages.filter((url) => typeof url === 'string' && url.trim());
@@ -21134,6 +21484,46 @@ const ItemDetailsModal = ({
     };
   })();
   const actionWishlistItem = item.wishlistItem || item;
+  const rawSellerName = String(
+    actionCartItem?.sellerName
+    || item?.sellerName
+    || item?.seller?.name
+    || ''
+  ).trim();
+  const sellerChatEmail = (() => {
+    const email = normalizeEmail(
+      actionCartItem?.sellerEmail
+      || item?.sellerEmail
+      || item?.seller?.email
+      || ''
+    );
+    if (email) return email;
+    // Generate email from seller name if no email exists
+    if (rawSellerName) {
+      const sanitized = rawSellerName.toLowerCase().replace(/[^a-z0-9]/g, '');
+      return `${sanitized}@seller.marketplace.local`;
+    }
+    return '';
+  })();
+  const sellerChatName = rawSellerName || sellerChatEmail || 'Seller';
+  const sellerDisplayName = getSellerDisplayName({
+    sellerName: sellerChatName,
+    sellerEmail: sellerChatEmail,
+    businessName: actionCartItem?.businessName
+      || item?.businessName
+      || actionCartItem?.storeName
+      || item?.storeName
+      || item?.seller?.businessName,
+    providerName: actionCartItem?.provider || item?.provider,
+  });
+  const hasSellerIdentity = Boolean(
+    sellerChatEmail
+    || String(item?.sellerName || '').trim()
+    || String(item?.businessName || '').trim()
+    || String(item?.storeName || '').trim()
+    || String(item?.seller?.name || '').trim()
+  );
+  const canChatSeller = Boolean(hasSellerIdentity);
 
   const showPreviousImage = () => {
     if (!itemImages.length) {
@@ -21315,6 +21705,12 @@ const ItemDetailsModal = ({
                 </span>
                 <span>{reviews.length ? `${reviews.length} public review${reviews.length === 1 ? '' : 's'}` : 'No public reviews yet'}</span>
               </div>
+              {hasSellerIdentity ? (
+                <div className="mt-3 rounded-lg border border-[#d6e6f5] bg-[#f8fbff] px-3 py-2 text-xs text-slate-600">
+                  <p className="font-semibold text-[#0f6674]">Listed by: {sellerDisplayName}</p>
+                  {sellerChatEmail ? <p className="mt-0.5 truncate">{sellerChatEmail}</p> : null}
+                </div>
+              ) : null}
             </div>
             {/* Highlights */}
             {item.highlights?.length ? (
@@ -21408,6 +21804,29 @@ const ItemDetailsModal = ({
                 {isWishlisted ? 'Wishlisted' : 'Add to Wishlist'}
               </button>
             </div>
+            {canChatSeller ? (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose?.();
+                  navigate('/support/chat', {
+                    state: {
+                      recipientEmail: sellerChatEmail,
+                      recipientName: sellerChatName,
+                      recipientRole: 'seller',
+                      issueType: 'Item Enquiry',
+                      itemKey: item.key,
+                      itemTitle: item.title,
+                      itemImage: item.image || item.images?.[0] || '',
+                      itemLink: `/e-commerce?item=${item.key}`,
+                    },
+                  });
+                }}
+                className="mt-3 w-full rounded-lg border border-[#0f6674] bg-[#e8f7fb] px-4 py-2.5 text-sm font-semibold text-[#0f6674] transition hover:bg-[#d7f0f8]"
+              >
+                Chat Seller About This Item
+              </button>
+            ) : null}
           </div>
         </div>
         {/* Electronics & Gadgets rich detail sections */}
@@ -22153,6 +22572,7 @@ const SecondHandProductDetailPage = ({ onAddToCart, onBuyNow, onToggleWishlist, 
 
 const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaRenderer, onPrimaryAction, onBuyNowAction, onToggleWishlist, isItemWishlisted, onOpenItemDetails, reviewSummaryMap = {}, getItemReviewKey }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [selectedSizesByItem, setSelectedSizesByItem] = useState({});
   useListingFocusFromQuery(items, onOpenItemDetails);
   const {
@@ -22205,6 +22625,24 @@ const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaR
         const itemSizeOptions = getItemSizeOptions(item);
         const selectedSize = selectedSizesByItem[item.id] || item.selectedSize || itemSizeOptions[0] || '';
         const actionItem = selectedSize ? { ...item, selectedSize } : item;
+        const rawSellerName = String(actionItem?.sellerName || item?.sellerName || '').trim();
+        const sellerEmail = (() => {
+          const email = normalizeEmail(actionItem?.sellerEmail || item?.sellerEmail || '');
+          if (email) return email;
+          // Generate email from seller name if no email exists
+          if (rawSellerName) {
+            const sanitized = rawSellerName.toLowerCase().replace(/[^a-z0-9]/g, '');
+            return `${sanitized}@seller.marketplace.local`;
+          }
+          return '';
+        })();
+        const sellerDisplayName = getSellerDisplayName({
+          sellerName: rawSellerName,
+          sellerEmail,
+          businessName: actionItem?.businessName || item?.businessName || actionItem?.storeName || item?.storeName,
+          providerName: actionItem?.provider || item?.provider,
+        });
+        const canChatSeller = Boolean(sellerEmail);
         const itemReviewKey = getItemReviewKey?.(item);
         const reviewSummary = getProductReviewSummary(reviewSummaryMap, itemReviewKey);
         const averageRatingLabel = reviewSummary.reviewCount ? reviewSummary.averageRating.toFixed(1) : '0.0';
@@ -22244,6 +22682,34 @@ const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaR
             </div>
             <div className="flex flex-1 flex-col p-3 sm:p-5">
               <h3 className="mb-1 text-sm font-bold leading-tight text-[#0f6674] group-hover:text-[#33b9f2] sm:text-xl">{itemTitle}</h3>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="truncate text-[11px] font-semibold text-[#0f6674]/85 sm:text-xs">
+                  Seller: <span className="text-[#0f6674]">{sellerDisplayName}</span>
+                </p>
+                {canChatSeller ? (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      navigate('/support/chat', {
+                        state: {
+                          recipientEmail: sellerEmail,
+                          recipientName: sellerDisplayName,
+                          recipientRole: 'seller',
+                          issueType: 'Item Enquiry',
+                          itemKey: item.key,
+                          itemTitle: itemTitle,
+                          itemImage: item.image || item.images?.[0] || '',
+                          itemLink: item.link || `/e-commerce?item=${item.key}`,
+                        },
+                      });
+                    }}
+                    className="rounded-full border border-[#0f6674] bg-[#e8f7fb] px-2.5 py-1 text-[10px] font-semibold text-[#0f6674] transition hover:bg-[#d7f0f8] sm:text-[11px]"
+                  >
+                    Chat Seller
+                  </button>
+                ) : null}
+              </div>
               {/* Meta (volume, brand, etc.) — hidden on mobile to keep cards compact. */}
               <div className="mb-2 hidden text-base font-medium text-[#374151] sm:block">{metaRenderer(item)}</div>
               {/* Description intentionally hidden in main listing. Only show in details modal. */}
@@ -22431,7 +22897,7 @@ const SiteFooter = () => {
   );
 };
 
-const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerItems, buyNowCheckout, productReviewSummaryMap, onAddToCart, onBuyNow, onToggleWishlist, onRemoveWishlistItem, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder, onClearBuyNowCheckout, onCancelOrder, onSellerItemCreated, onDeleteSellerItem, onUpdateSellerItem, onUpdateOrderStatus, onAdminSetOrderStatus, onOpenItemDetails }) => {
+const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerItems, buyNowCheckout, productReviewSummaryMap, onAddToCart, onBuyNow, onToggleWishlist, onRemoveWishlistItem, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder, onClearBuyNowCheckout, onCancelOrder, onSellerItemCreated, onDeleteSellerItem, onUpdateSellerItem, onUpdateOrderStatus, onAdminSetOrderStatus, onOpenItemDetails, onPushNotificationToUser }) => {
   const { t } = useTranslation();
 
   return (
@@ -22453,7 +22919,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/wishlist" element={<WishlistPage wishlistItems={wishlistItems} onAddToCart={onAddToCart} onRemoveWishlistItem={onRemoveWishlistItem} onOpenItemDetails={onOpenItemDetails} />} />
     <Route path="/checkout" element={<CheckoutPage cartItems={cartItems} buyNowCheckout={buyNowCheckout} onUpdateCartQuantity={onUpdateCartQuantity} onRemoveCartItem={onRemoveCartItem} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />
     <Route path="/checkout/payfast" element={<PayfastCheckoutPage buyNowCheckout={buyNowCheckout} onPlaceOrder={onPlaceOrder} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />
-    <Route path="/support/chat" element={<SupportChatPage orders={orders} />} />
+    <Route path="/support/chat" element={<SupportChatPage orders={orders} onPushNotificationToUser={onPushNotificationToUser} />} />
     <Route path="/search" element={<SearchResultsPage />} />
 
     <Route path="/e-commerce" element={<ECommercePage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
@@ -22736,6 +23202,32 @@ const App = () => {
         .update({ is_read: true })
         .eq('user_email', normalizeEmail(activeUserEmail))
         .in('notification_key', unreadIds);
+    }
+  }, [activeUserEmail, notifications]);
+
+  const markNotificationAsRead = useCallback((notificationId) => {
+    const normalizedNotificationId = String(notificationId || '').trim();
+
+    if (!normalizedNotificationId) {
+      return;
+    }
+
+    const targetNotification = notifications.find((notification) => notification.id === normalizedNotificationId);
+
+    if (!targetNotification || targetNotification.read) {
+      return;
+    }
+
+    setNotifications((currentNotifications) => currentNotifications.map((notification) => (
+      notification.id === normalizedNotificationId ? { ...notification, read: true } : notification
+    )));
+
+    if (getAuthState() && activeUserEmail && hasSupabaseEnv && supabase) {
+      supabase
+        .from(NOTIFICATIONS_TABLE)
+        .update({ is_read: true })
+        .eq('user_email', normalizeEmail(activeUserEmail))
+        .eq('notification_key', normalizedNotificationId);
     }
   }, [activeUserEmail, notifications]);
 
@@ -23943,8 +24435,57 @@ const App = () => {
   }, [orders, pushNotificationToUser]);
 
   const handleOpenItemDetails = useCallback((itemDetails) => {
+    const normalizedSellerEmail = normalizeEmail(
+      itemDetails?.sellerEmail
+      || itemDetails?.cartItem?.sellerEmail
+      || itemDetails?.cartItemBase?.sellerEmail
+      || itemDetails?.wishlistItem?.sellerEmail
+      || itemDetails?.seller?.email
+      || ''
+    );
+    const resolvedSellerName = getSellerDisplayName({
+      sellerName: itemDetails?.sellerName
+        || itemDetails?.cartItem?.sellerName
+        || itemDetails?.cartItemBase?.sellerName
+        || itemDetails?.wishlistItem?.sellerName
+        || itemDetails?.seller?.name,
+      sellerEmail: normalizedSellerEmail,
+      businessName: itemDetails?.businessName
+        || itemDetails?.storeName
+        || itemDetails?.shopName
+        || itemDetails?.outletName,
+      providerName: itemDetails?.provider,
+    });
+
+    const withSellerIdentity = {
+      ...(itemDetails || {}),
+      sellerEmail: normalizedSellerEmail,
+      sellerName: resolvedSellerName,
+      cartItem: itemDetails?.cartItem
+        ? {
+          ...itemDetails.cartItem,
+          sellerEmail: normalizeEmail(itemDetails.cartItem.sellerEmail || normalizedSellerEmail),
+          sellerName: itemDetails.cartItem.sellerName || resolvedSellerName,
+        }
+        : itemDetails?.cartItem,
+      cartItemBase: itemDetails?.cartItemBase
+        ? {
+          ...itemDetails.cartItemBase,
+          sellerEmail: normalizeEmail(itemDetails.cartItemBase.sellerEmail || normalizedSellerEmail),
+          sellerName: itemDetails.cartItemBase.sellerName || resolvedSellerName,
+        }
+        : itemDetails?.cartItemBase,
+      wishlistItem: itemDetails?.wishlistItem
+        ? {
+          ...itemDetails.wishlistItem,
+          sellerEmail: normalizeEmail(itemDetails.wishlistItem.sellerEmail || normalizedSellerEmail),
+          sellerName: itemDetails.wishlistItem.sellerName || resolvedSellerName,
+        }
+        : itemDetails?.wishlistItem,
+    };
+
     setReviewNotice('');
-    setSelectedItemDetails(itemDetails);
+    setSelectedItemDetails(withSellerIdentity);
   }, []);
 
   const handleCloseItemDetails = useCallback(() => {
@@ -24073,6 +24614,7 @@ const App = () => {
         onUpdateOrderStatus={handleUpdateOrderStatus}
         onAdminSetOrderStatus={handleAdminSetOrderStatus}
         onOpenItemDetails={handleOpenItemDetails}
+        onPushNotificationToUser={pushNotificationToUser}
       />
       <ItemDetailsModal
         item={selectedItemDetails}
@@ -24106,6 +24648,7 @@ const App = () => {
       wishlistItemCount={wishlistItems.length}
       notifications={notifications}
       onMarkNotificationsRead={markNotificationsAsRead}
+      onMarkNotificationRead={markNotificationAsRead}
       onClearNotifications={handleClearNotifications}
     >
       {appContent}
