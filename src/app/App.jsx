@@ -15598,6 +15598,7 @@ const LivestockHubPage = ({
                     <button
                       type="button"
                       onClick={() => {
+                        const selectedItemKey = selectedItem.key || selectedItem.id;
                         setSelectedItem(null);
                         navigate('/support/chat', {
                           state: {
@@ -15605,10 +15606,10 @@ const LivestockHubPage = ({
                             recipientName: selectedItem.sellerName || selectedItem.sellerEmail,
                             recipientRole: 'seller',
                             issueType: 'Item Enquiry',
-                            itemKey: selectedItem.key,
+                            itemKey: selectedItemKey,
                             itemTitle: selectedItem.title,
                             itemImage: selectedItem.image || selectedItem.images?.[0] || '',
-                            itemLink: selectedItem.link || `/e-commerce?item=${selectedItem.key}`,
+                            itemLink: selectedItem.link || `/e-commerce?item=${selectedItemKey}`,
                           },
                         });
                       }}
@@ -17956,13 +17957,21 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
 
     const targetIssueType = String(options.issueType || issueType || 'General Support').trim() || 'General Support';
     const targetOrderId = String(options.orderId ?? selectedOrderId ?? '').trim();
-    const prefillItemDetails = prefillItemKeyFromState ? {
+    const hasPrefillItemDetails = Boolean(
+      prefillItemKeyFromState
+      || prefillItemTitleFromState
+      || prefillItemImageFromState
+      || prefillItemLinkFromState
+    );
+    const prefillItemDetails = hasPrefillItemDetails ? {
       itemKey: prefillItemKeyFromState,
       itemTitle: prefillItemTitleFromState,
       itemImage: prefillItemImageFromState,
       itemLink: prefillItemLinkFromState,
     } : null;
     const targetItemDetails = options.itemDetails || prefillItemDetails;
+    const targetItemKey = String(targetItemDetails?.itemKey || '').trim();
+    const targetItemLink = String(targetItemDetails?.itemLink || '').trim();
     const recipientName = recipientOptions.find((option) => option.email === normalizedRecipient)?.name
       || (normalizedRecipient === prefillRecipientEmailFromState ? prefillRecipientNameFromState : '')
       || normalizedRecipient;
@@ -17976,7 +17985,9 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       }
       const candidateParticipants = [...thread.participants].sort();
       return candidateParticipants.join('|') === participants.join('|')
-        && String(thread.orderId || '') === targetOrderId;
+        && String(thread.orderId || '') === targetOrderId
+        && (targetItemKey ? String(thread?.itemDetails?.itemKey || '').trim() === targetItemKey : true)
+        && (targetItemLink ? String(thread?.itemDetails?.itemLink || '').trim() === targetItemLink : true);
     });
 
     if (existing) {
@@ -18008,7 +18019,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
           });
       }
 
-      return existing;
+      return updatedExisting;
     }
 
     const nextThread = {
@@ -18061,6 +18072,9 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       prefillRecipientEmailFromState,
       prefillOrderIdFromState,
       prefillIssueTypeFromState,
+      prefillItemKeyFromState,
+      prefillItemLinkFromState,
+      prefillItemTitleFromState,
     ].join('|');
 
     if (prefilledThreadBootstrapRef.current === prefillKey) {
@@ -18073,7 +18087,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       orderId: prefillOrderIdFromState,
     });
     prefilledThreadBootstrapRef.current = prefillKey;
-  }, [createThread, prefillIssueTypeFromState, prefillOrderIdFromState, prefillRecipientEmailFromState]);
+  }, [createThread, prefillIssueTypeFromState, prefillOrderIdFromState, prefillRecipientEmailFromState, prefillItemKeyFromState, prefillItemLinkFromState, prefillItemTitleFromState]);
 
   const visibleThreads = useMemo(() => {
     const filtered = threads.filter((thread) => Array.isArray(thread?.participants) && thread.participants.includes(currentUserEmail));
@@ -21808,6 +21822,7 @@ const ItemDetailsModal = ({
               <button
                 type="button"
                 onClick={() => {
+                  const itemKey = item.key || item.id;
                   onClose?.();
                   navigate('/support/chat', {
                     state: {
@@ -21815,10 +21830,10 @@ const ItemDetailsModal = ({
                       recipientName: sellerChatName,
                       recipientRole: 'seller',
                       issueType: 'Item Enquiry',
-                      itemKey: item.key,
+                      itemKey,
                       itemTitle: item.title,
                       itemImage: item.image || item.images?.[0] || '',
-                      itemLink: `/e-commerce?item=${item.key}`,
+                      itemLink: `/e-commerce?item=${itemKey}`,
                     },
                   });
                 }}
@@ -22691,16 +22706,17 @@ const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaR
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
+                      const itemKey = item.key || item.id;
                       navigate('/support/chat', {
                         state: {
                           recipientEmail: sellerEmail,
                           recipientName: sellerDisplayName,
                           recipientRole: 'seller',
                           issueType: 'Item Enquiry',
-                          itemKey: item.key,
+                          itemKey,
                           itemTitle: itemTitle,
                           itemImage: item.image || item.images?.[0] || '',
-                          itemLink: item.link || `/e-commerce?item=${item.key}`,
+                          itemLink: item.link || `/e-commerce?item=${itemKey}`,
                         },
                       });
                     }}
