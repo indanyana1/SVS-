@@ -10588,71 +10588,708 @@ const StationeryPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
   );
 };
 
-const RETAILER_DIRECT_LINKS = [
-  { name: 'Amazon', url: 'https://www.amazon.com', tagline: 'Global marketplace — everything from A to Z', image: 'https://images.pexels.com/photos/4498152/pexels-photo-4498152.jpeg?auto=compress&cs=tinysrgb&w=800' },
-  { name: 'eBay', url: 'https://www.ebay.com', tagline: 'Auctions, deals & rare finds worldwide', image: 'https://images.pexels.com/photos/5632402/pexels-photo-5632402.jpeg?auto=compress&cs=tinysrgb&w=800' },
-  { name: 'Walmart', url: 'https://www.walmart.com', tagline: 'Everyday low prices on groceries & more', image: 'https://images.pexels.com/photos/1005638/pexels-photo-1005638.jpeg?auto=compress&cs=tinysrgb&w=800' },
-  { name: 'Target', url: 'https://www.target.com', tagline: 'Style, home & essentials in one stop', image: 'https://images.pexels.com/photos/1488463/pexels-photo-1488463.jpeg?auto=compress&cs=tinysrgb&w=800' },
-  { name: 'AliExpress', url: 'https://www.aliexpress.com', tagline: 'Worldwide shipping at wholesale prices', image: 'https://images.pexels.com/photos/1170686/pexels-photo-1170686.jpeg?auto=compress&cs=tinysrgb&w=800' },
-  { name: 'Shein', url: 'https://www.shein.com', tagline: 'Trending fashion at affordable prices', image: 'https://images.pexels.com/photos/2983464/pexels-photo-2983464.jpeg?auto=compress&cs=tinysrgb&w=800' },
-  { name: 'Temu', url: 'https://www.temu.com', tagline: 'Shop like a billionaire — daily deals', image: 'https://images.pexels.com/photos/4968391/pexels-photo-4968391.jpeg?auto=compress&cs=tinysrgb&w=800' },
-  { name: 'Best Buy', url: 'https://www.bestbuy.com', tagline: 'Electronics, appliances & tech support', image: 'https://images.pexels.com/photos/356056/pexels-photo-356056.jpeg?auto=compress&cs=tinysrgb&w=800' },
-  { name: 'Shoprite', url: 'https://www.shoprite.co.za', tagline: 'Africa\u2019s largest grocery retailer', image: 'https://images.pexels.com/photos/1435904/pexels-photo-1435904.jpeg?auto=compress&cs=tinysrgb&w=800' },
-  { name: 'Takealot', url: 'https://www.takealot.com', tagline: 'South Africa\u2019s leading online store', image: 'https://images.pexels.com/photos/4498140/pexels-photo-4498140.jpeg?auto=compress&cs=tinysrgb&w=800' },
-  { name: 'Jumia', url: 'https://www.jumia.com', tagline: 'Pan-African online marketplace', image: 'https://images.pexels.com/photos/5632379/pexels-photo-5632379.jpeg?auto=compress&cs=tinysrgb&w=800' },
-  { name: 'Alibaba', url: 'https://www.alibaba.com', tagline: 'Source products direct from manufacturers', image: 'https://images.pexels.com/photos/4481259/pexels-photo-4481259.jpeg?auto=compress&cs=tinysrgb&w=800' },
+const RETAILER_CATEGORIES = [
+  { slug: 'food',          name: 'Food Stores',                 description: 'Groceries, fresh food and daily essentials',                  image: 'https://images.pexels.com/photos/1435904/pexels-photo-1435904.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { slug: 'hardware',      name: 'Hardware Stores',             description: 'Hardware, tools and home improvement solutions',              image: 'https://images.pexels.com/photos/1249611/pexels-photo-1249611.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { slug: 'clothing',      name: 'Clothing Stores',             description: 'Fashion, clothing and lifestyle brands',                       image: 'https://images.pexels.com/photos/2983464/pexels-photo-2983464.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { slug: 'multi-purpose', name: 'Multi-purpose Stores',        description: 'One-stop stores for groceries, electronics, appliances & more', image: 'https://images.pexels.com/photos/4498152/pexels-photo-4498152.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { slug: 'home',          name: 'Home & Living Store',         description: 'Furniture, home decor and living essentials',                  image: 'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { slug: 'beauty',        name: 'Beauty & Care Store',         description: 'Beauty, skincare and personal care products',                  image: 'https://images.pexels.com/photos/3373736/pexels-photo-3373736.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { slug: 'sports',        name: 'Sports & Fitness Store',      description: 'Sportswear, fitness gear and outdoor essentials',              image: 'https://images.pexels.com/photos/116078/pexels-photo-116078.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { slug: 'stationery',    name: 'Books & Stationery Store',    description: 'Books, school supplies and office essentials',                 image: 'https://images.pexels.com/photos/256541/pexels-photo-256541.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { slug: 'toys',          name: 'Toys & Kids Store',           description: 'Toys, baby products and kids fashion',                         image: 'https://images.pexels.com/photos/207891/pexels-photo-207891.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { slug: 'jewelry',       name: 'Jewelry & Accessories Store', description: 'Jewelry, watches and fashion accessories',                     image: 'https://images.pexels.com/photos/691046/pexels-photo-691046.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { slug: 'electronics',   name: 'Electronics Stores',          description: 'Electronics, gadgets and appliances',                          image: 'https://images.pexels.com/photos/356056/pexels-photo-356056.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { slug: 'all',           name: 'All Stores',                  description: 'Explore all categories and find your favorite stores',         image: 'https://images.pexels.com/photos/5632379/pexels-photo-5632379.jpeg?auto=compress&cs=tinysrgb&w=800' },
 ];
 
+// Brand styling: each retailer carries gradient colors + an optional Simple
+// Icons slug. When a slug is provided we render the official white SVG logo
+// from cdn.simpleicons.org on top of the brand gradient. When it's not we
+// render a custom styled wordmark using the same gradient — both look
+// premium and consistent.
+const simpleIconWhite = (slug) => `https://cdn.simpleicons.org/${slug}/ffffff`;
+
+// Default wordmark style — applied if a retailer doesn't override it.
+const DEFAULT_WORDMARK_FONT = 'font-black tracking-tight';
+
+const RETAILER_DIRECT_LINKS = [
+  // ─── Featured SA retailers (local logo PNG + wordmark fallback) ───
+  { name: 'Makro',       country: '🇿🇦', category: 'multi-purpose', domain: 'makro.co.za',         url: 'https://www.makro.co.za',         tagline: 'Electronics, appliances & bulk shopping', description: 'Thousands of quality products at competitive prices', localLogo: '/images/retailers/makro.png',    wordmark: 'MAKRO',      wordmarkFont: 'font-black italic tracking-tight', colors: { from: '#fde047', to: '#f59e0b', accent: '#dc2626' } },
+  { name: 'Pick n Pay',  featured: true, country: '🇿🇦', category: 'food',          domain: 'pnp.co.za',           url: 'https://www.pnp.co.za',           tagline: 'Groceries, household items & exclusive deals', description: 'Trusted by millions of South African shoppers', localLogo: '/images/retailers/picknpay.png', wordmark: 'Pick n Pay', colors: { from: '#1e3a8a', to: '#1d4ed8', accent: '#dc2626' } },
+  { name: 'Takealot',    featured: true, country: '🇿🇦', category: 'multi-purpose', domain: 'takealot.com',        url: 'https://www.takealot.com',        tagline: "South Africa's #1 online shopping destination", description: 'Fast nationwide delivery on millions of products', localLogo: '/images/retailers/takealot.png', wordmark: 'takealot', colors: { from: '#0ea5e9', to: '#0369a1', accent: '#fbbf24' } },
+  { name: 'Woolworths',  country: '🇿🇦', category: 'food',          domain: 'woolworths.co.za',    url: 'https://www.woolworths.co.za',    tagline: 'Premium food, fashion & home essentials', description: 'Quality you can trust, every day', wordmark: 'WOOLWORTHS', colors: { from: '#000000', to: '#1f2937', accent: '#ffffff' } },
+
+  // ─── Global marketplaces ───
+  { name: 'Amazon',         featured: true, country: '🇺🇸', category: 'multi-purpose', domain: 'amazon.com',       url: 'https://www.amazon.com',       tagline: 'Global marketplace — everything from A to Z', description: "The world's largest online retailer — trusted by 300M+ shoppers worldwide", iconSlug: 'amazon',        wordmark: 'amazon',      wordmarkFont: 'font-black italic tracking-tight', colors: { from: '#232f3e', to: '#131a22', accent: '#ff9900' } },
+  { name: 'eBay',           country: '🇺🇸', category: 'multi-purpose', domain: 'ebay.com',         url: 'https://www.ebay.com',         tagline: 'Auctions, deals & rare finds worldwide',       iconSlug: 'ebay',          wordmark: 'ebay',        wordmarkFont: 'font-black italic tracking-tight', colors: { from: '#e53238', to: '#0064d2', accent: '#f5af02' } },
+  { name: 'Walmart',        country: '🇺🇸', category: 'multi-purpose', domain: 'walmart.com',      url: 'https://www.walmart.com',      tagline: 'Everyday low prices on groceries & more',      iconSlug: 'walmart',       wordmark: 'Walmart',     colors: { from: '#0071ce', to: '#004f9a', accent: '#ffc220' } },
+  { name: 'Target',         country: '🇺🇸', category: 'multi-purpose', domain: 'target.com',       url: 'https://www.target.com',       tagline: 'Style, home & essentials in one stop',         iconSlug: 'target',        wordmark: 'TARGET',      colors: { from: '#cc0000', to: '#7a0000', accent: '#ffffff' } },
+  { name: 'Costco',         country: '🇺🇸', category: 'multi-purpose', domain: 'costco.com',       url: 'https://www.costco.com',       tagline: 'Bulk savings on warehouse essentials',          iconSlug: 'costco',        wordmark: 'COSTCO',      colors: { from: '#005daa', to: '#003d72', accent: '#e31837' } },
+  { name: 'AliExpress',     country: '🇨🇳', category: 'multi-purpose', domain: 'aliexpress.com',   url: 'https://www.aliexpress.com',   tagline: 'Worldwide shipping at wholesale prices',        iconSlug: 'aliexpress',    wordmark: 'AliExpress',  colors: { from: '#ff4747', to: '#e62117', accent: '#ffffff' } },
+  { name: 'Alibaba',        country: '🇨🇳', category: 'multi-purpose', domain: 'alibaba.com',      url: 'https://www.alibaba.com',      tagline: 'Source products direct from manufacturers',     iconSlug: 'alibabadotcom', wordmark: 'Alibaba',     colors: { from: '#ff6a00', to: '#e6571f', accent: '#ffffff' } },
+  { name: 'Temu',           country: '🇨🇳', category: 'multi-purpose', domain: 'temu.com',         url: 'https://www.temu.com',         tagline: 'Shop like a billionaire — daily deals',         iconSlug: 'temu',          wordmark: 'Temu',        wordmarkFont: 'font-black italic tracking-tight', colors: { from: '#fb923c', to: '#ea580c', accent: '#ffffff' } },
+  { name: 'Jumia',          country: '🇳🇬', category: 'multi-purpose', domain: 'jumia.com',        url: 'https://www.jumia.com',        tagline: 'Pan-African online marketplace',                iconSlug: 'jumia',         wordmark: 'JUMIA',       colors: { from: '#f97316', to: '#c2410c', accent: '#ffffff' } },
+  { name: 'Etsy',           country: '🇺🇸', category: 'multi-purpose', domain: 'etsy.com',         url: 'https://www.etsy.com',         tagline: 'Handmade, vintage & unique goods',              iconSlug: 'etsy',          wordmark: 'Etsy',        wordmarkFont: 'font-black italic tracking-tight', colors: { from: '#f56400', to: '#c44900', accent: '#ffffff' } },
+  { name: 'Rakuten',        country: '🇯🇵', category: 'multi-purpose', domain: 'rakuten.com',      url: 'https://www.rakuten.com',      tagline: 'Cashback & deals on top brands',                iconSlug: 'rakuten',       wordmark: 'Rakuten',     colors: { from: '#bf0000', to: '#7a0000', accent: '#ffffff' } },
+  { name: 'Flipkart',       country: '🇮🇳', category: 'multi-purpose', domain: 'flipkart.com',     url: 'https://www.flipkart.com',     tagline: "India's leading online shopping site",          iconSlug: 'flipkart',      wordmark: 'Flipkart',    colors: { from: '#2874f0', to: '#1a4fa3', accent: '#fbb800' } },
+  { name: 'Mercado Libre',  country: '🇦🇷', category: 'multi-purpose', domain: 'mercadolibre.com', url: 'https://www.mercadolibre.com', tagline: "Latin America's largest e-commerce platform",   iconSlug: 'mercadopago',   wordmark: 'Mercado Libre', colors: { from: '#fff159', to: '#ffe600', accent: '#3483fa' } },
+  { name: 'OneDayOnly',     country: '🇿🇦', category: 'multi-purpose', domain: 'onedayonly.co.za', url: 'https://www.onedayonly.co.za', tagline: 'One deal a day for 24 hours only',              wordmark: 'ONEDAYONLY',  colors: { from: '#0ea5e9', to: '#0369a1', accent: '#facc15' } },
+  { name: 'bidorbuy',       country: '🇿🇦', category: 'multi-purpose', domain: 'bidorbuy.co.za',   url: 'https://www.bidorbuy.co.za',   tagline: 'Online auction marketplace in SA',              wordmark: 'bidorbuy',    wordmarkFont: 'font-black italic tracking-tight', colors: { from: '#1e40af', to: '#1e3a8a', accent: '#fbbf24' } },
+  { name: 'Loot',           country: '🇿🇦', category: 'multi-purpose', domain: 'loot.co.za',       url: 'https://www.loot.co.za',       tagline: 'Books, gadgets & gifts for SA',                 wordmark: 'Loot',        wordmarkFont: 'font-black italic tracking-tight', colors: { from: '#ea580c', to: '#9a3412', accent: '#ffffff' } },
+
+  // ─── Food & grocery ───
+  { name: 'Shoprite',          featured: true, country: '🇿🇦', category: 'food', domain: 'shoprite.co.za',         url: 'https://www.shoprite.co.za',         tagline: "Africa's largest grocery retailer",                description: 'Lowest prices on groceries across the continent', localLogo: '/images/retailers/shoprite.png', wordmark: 'Shoprite',     colors: { from: '#dc2626', to: '#991b1b', accent: '#fde047' } },
+  { name: 'Checkers',          country: '🇿🇦', category: 'food', domain: 'checkers.co.za',         url: 'https://www.checkers.co.za',         tagline: 'Better and better, every day',                        wordmark: 'Checkers',     colors: { from: '#dc2626', to: '#7f1d1d', accent: '#fde047' } },
+  { name: 'SPAR',              country: '🇿🇦', category: 'food', domain: 'spar.co.za',             url: 'https://www.spar.co.za',             tagline: 'Your neighbourhood grocer',                           wordmark: 'SPAR',         colors: { from: '#dc2626', to: '#7f1d1d', accent: '#15803d' } },
+  { name: "Food Lover's Market", country: '🇿🇦', category: 'food', domain: 'foodloversmarket.co.za', url: 'https://www.foodloversmarket.co.za', tagline: 'Fresh produce & gourmet finds',                       wordmark: "Food Lover's", colors: { from: '#15803d', to: '#14532d', accent: '#fde047' } },
+  { name: 'Tesco',             country: '🇬🇧', category: 'food', domain: 'tesco.com',              url: 'https://www.tesco.com',              tagline: "UK's leading supermarket",                            iconSlug: 'tesco',           wordmark: 'TESCO',        colors: { from: '#005eb8', to: '#003a7a', accent: '#ee1c2e' } },
+  { name: "Sainsbury's",       country: '🇬🇧', category: 'food', domain: 'sainsburys.co.uk',       url: 'https://www.sainsburys.co.uk',       tagline: 'Quality groceries at fair prices',                    iconSlug: 'sainsburys',      wordmark: "Sainsbury's",  colors: { from: '#ff8200', to: '#cc6800', accent: '#ffffff' } },
+  { name: 'ASDA',              country: '🇬🇧', category: 'food', domain: 'asda.com',               url: 'https://www.asda.com',               tagline: 'Save money. Live better.',                            iconSlug: 'asda',            wordmark: 'ASDA',         colors: { from: '#7dc242', to: '#5a9430', accent: '#ffffff' } },
+  { name: 'Lidl',              country: '🇩🇪', category: 'food', domain: 'lidl.com',               url: 'https://www.lidl.com',               tagline: 'Quality groceries at low prices',                     iconSlug: 'lidl',            wordmark: 'Lidl',         colors: { from: '#0050aa', to: '#003a7a', accent: '#fff000' } },
+  { name: 'Aldi',              country: '🇩🇪', category: 'food', domain: 'aldi.com',               url: 'https://www.aldi.com',               tagline: 'Smart shopping for smart savings',                    iconSlug: 'aldinord',        wordmark: 'ALDI',         colors: { from: '#00549f', to: '#003a7a', accent: '#ff7f00' } },
+  { name: 'Carrefour',         country: '🇫🇷', category: 'food', domain: 'carrefour.com',          url: 'https://www.carrefour.com',          tagline: 'Global hypermarket chain',                            iconSlug: 'carrefour',       wordmark: 'Carrefour',    colors: { from: '#004e9e', to: '#003366', accent: '#ee1d23' } },
+  { name: 'Kroger',            country: '🇺🇸', category: 'food', domain: 'kroger.com',             url: 'https://www.kroger.com',             tagline: 'Fresh for everyone',                                   iconSlug: 'kroger',          wordmark: 'Kroger',       colors: { from: '#1565c0', to: '#0d47a1', accent: '#ffffff' } },
+  { name: 'Whole Foods',       country: '🇺🇸', category: 'food', domain: 'wholefoodsmarket.com',   url: 'https://www.wholefoodsmarket.com',   tagline: 'Natural & organic groceries',                          wordmark: 'WHOLE FOODS',  colors: { from: '#00674b', to: '#003f2c', accent: '#ffffff' } },
+
+  // ─── Clothing & fashion ───
+  { name: 'Shein',           country: '🇨🇳', category: 'clothing', domain: 'shein.com',         url: 'https://www.shein.com',         tagline: 'Trending fashion at affordable prices', iconSlug: 'shein',          wordmark: 'SHEIN',     colors: { from: '#1f1f1f', to: '#000000', accent: '#ffffff' } },
+  { name: 'Zara',            country: '🇪🇸', category: 'clothing', domain: 'zara.com',          url: 'https://www.zara.com',          tagline: 'Fast fashion straight from the runway', iconSlug: 'zara',           wordmark: 'ZARA',      colors: { from: '#000000', to: '#1f1f1f', accent: '#ffffff' } },
+  { name: 'H&M',             country: '🇸🇪', category: 'clothing', domain: 'hm.com',            url: 'https://www.hm.com',            tagline: 'Fashion & quality at the best price',   iconSlug: 'hm',             wordmark: 'H&M',       colors: { from: '#e50010', to: '#a8000c', accent: '#ffffff' } },
+  { name: 'Uniqlo',          country: '🇯🇵', category: 'clothing', domain: 'uniqlo.com',        url: 'https://www.uniqlo.com',        tagline: 'LifeWear for everyday',                  iconSlug: 'uniqlo',         wordmark: 'UNIQLO',    colors: { from: '#ff0000', to: '#a80000', accent: '#ffffff' } },
+  { name: 'ASOS',            country: '🇬🇧', category: 'clothing', domain: 'asos.com',          url: 'https://www.asos.com',          tagline: 'Trendy fashion for 20-somethings',       iconSlug: 'asos',           wordmark: 'ASOS',      colors: { from: '#000000', to: '#1f1f1f', accent: '#ffffff' } },
+  { name: 'Nike',            featured: true, country: '🇺🇸', category: 'clothing', domain: 'nike.com',          url: 'https://www.nike.com',          tagline: 'Just Do It — sport & lifestyle',         description: "The world's most valuable sports brand — sneakers, apparel & gear", iconSlug: 'nike',           wordmark: 'NIKE',      colors: { from: '#000000', to: '#1f1f1f', accent: '#fa5400' } },
+  { name: 'Adidas',          country: '🇩🇪', category: 'clothing', domain: 'adidas.com',        url: 'https://www.adidas.com',        tagline: 'Impossible is nothing',                  iconSlug: 'adidas',         wordmark: 'adidas',    colors: { from: '#000000', to: '#1f1f1f', accent: '#ffffff' } },
+  { name: 'Gap',             country: '🇺🇸', category: 'clothing', domain: 'gap.com',           url: 'https://www.gap.com',           tagline: 'Modern American style',                   iconSlug: 'gap',            wordmark: 'GAP',       colors: { from: '#002868', to: '#001f4d', accent: '#ffffff' } },
+  { name: "Levi's",          country: '🇺🇸', category: 'clothing', domain: 'levi.com',          url: 'https://www.levi.com',          tagline: 'Original denim since 1853',              iconSlug: 'levis',          wordmark: "LEVI'S",    colors: { from: '#dc1e34', to: '#9b1525', accent: '#ffffff' } },
+  { name: 'Mango',           country: '🇪🇸', category: 'clothing', domain: 'mango.com',         url: 'https://shop.mango.com',        tagline: 'Contemporary Mediterranean fashion',     iconSlug: 'mango',          wordmark: 'MANGO',     colors: { from: '#000000', to: '#1f1f1f', accent: '#ffffff' } },
+  { name: 'Tommy Hilfiger',  country: '🇺🇸', category: 'clothing', domain: 'tommy.com',         url: 'https://www.tommy.com',         tagline: 'Classic American cool',                   iconSlug: 'tommyhilfiger',  wordmark: 'TOMMY',     colors: { from: '#002868', to: '#001f4d', accent: '#dc1e34' } },
+  { name: 'Burberry',        country: '🇬🇧', category: 'clothing', domain: 'burberry.com',      url: 'https://www.burberry.com',      tagline: 'British luxury heritage',                 iconSlug: 'burberry',       wordmark: 'BURBERRY',  colors: { from: '#000000', to: '#3f3f46', accent: '#d4af37' } },
+  { name: 'Mr Price',        country: '🇿🇦', category: 'clothing', domain: 'mrp.com',           url: 'https://www.mrp.com',           tagline: 'Fashion for the whole family',           wordmark: 'Mr Price',    wordmarkFont: 'font-black italic tracking-tight', colors: { from: '#dc2626', to: '#7f1d1d', accent: '#ffffff' } },
+  { name: 'Edgars',          country: '🇿🇦', category: 'clothing', domain: 'edgars.co.za',      url: 'https://www.edgars.co.za',      tagline: 'Premium fashion & beauty',                wordmark: 'Edgars',      colors: { from: '#1e293b', to: '#0f172a', accent: '#dc2626' } },
+  { name: 'Truworths',       country: '🇿🇦', category: 'clothing', domain: 'truworths.co.za',   url: 'https://www.truworths.co.za',   tagline: 'Fashion-forward lifestyle brand',         wordmark: 'Truworths',   colors: { from: '#000000', to: '#1f1f1f', accent: '#dc2626' } },
+  { name: 'Foschini',        country: '🇿🇦', category: 'clothing', domain: 'foschini.co.za',    url: 'https://www.foschini.co.za',    tagline: "Trendy women's fashion",                  wordmark: 'FOSCHINI',    colors: { from: '#be185d', to: '#831843', accent: '#ffffff' } },
+  { name: 'Superbalist',     country: '🇿🇦', category: 'clothing', domain: 'superbalist.com',   url: 'https://superbalist.com',       tagline: 'Online fashion destination for SA',       wordmark: 'superbalist', colors: { from: '#000000', to: '#1f1f1f', accent: '#fbbf24' } },
+  { name: 'Zando',           country: '🇿🇦', category: 'clothing', domain: 'zando.co.za',       url: 'https://www.zando.co.za',       tagline: "SA's biggest online fashion store",        wordmark: 'zando',       colors: { from: '#f97316', to: '#c2410c', accent: '#ffffff' } },
+  { name: 'Cotton On',       country: '🇦🇺', category: 'clothing', domain: 'cottonon.com',      url: 'https://cottonon.com',          tagline: 'Affordable everyday essentials',          wordmark: 'COTTON:ON',   colors: { from: '#000000', to: '#1f1f1f', accent: '#ffffff' } },
+  { name: 'Markham',         country: '🇿🇦', category: 'clothing', domain: 'markham.co.za',     url: 'https://www.markham.co.za',     tagline: "Modern men's fashion",                    wordmark: 'MARKHAM',     colors: { from: '#1e293b', to: '#0f172a', accent: '#ffffff' } },
+  { name: 'Sportscene',      country: '🇿🇦', category: 'clothing', domain: 'sportscene.co.za',  url: 'https://www.sportscene.co.za',  tagline: 'Sneakers, streetwear & sport',            wordmark: 'SPORTSCENE',  colors: { from: '#dc2626', to: '#991b1b', accent: '#000000' } },
+
+  // ─── Electronics & tech ───
+  { name: 'Best Buy',              country: '🇺🇸', category: 'electronics', domain: 'bestbuy.com',         url: 'https://www.bestbuy.com',         tagline: 'Electronics, appliances & tech support',  iconSlug: 'bestbuy',   wordmark: 'BEST BUY',  colors: { from: '#0046be', to: '#003087', accent: '#fff200' } },
+  { name: 'Apple',                 featured: true, country: '🇺🇸', category: 'electronics', domain: 'apple.com',           url: 'https://www.apple.com',           tagline: 'iPhone, Mac, iPad & more',                 description: "The world's most valuable brand — premium consumer electronics", iconSlug: 'apple',     wordmark: 'Apple',     colors: { from: '#1f1f1f', to: '#000000', accent: '#ffffff' } },
+  { name: 'Samsung',               country: '🇰🇷', category: 'electronics', domain: 'samsung.com',         url: 'https://www.samsung.com',         tagline: 'Galaxy phones, TVs & appliances',          iconSlug: 'samsung',   wordmark: 'SAMSUNG',   colors: { from: '#1428a0', to: '#0a1556', accent: '#ffffff' } },
+  { name: 'Microsoft',             country: '🇺🇸', category: 'electronics', domain: 'microsoft.com',       url: 'https://www.microsoft.com',       tagline: 'Surface, Xbox & software',                 iconSlug: 'microsoft', wordmark: 'Microsoft', colors: { from: '#0078d4', to: '#005a9e', accent: '#ffffff' } },
+  { name: 'Sony',                  country: '🇯🇵', category: 'electronics', domain: 'sony.com',            url: 'https://www.sony.com',            tagline: 'PlayStation, cameras & audio',             iconSlug: 'sony',      wordmark: 'SONY',      colors: { from: '#000000', to: '#1f1f1f', accent: '#ffffff' } },
+  { name: 'Dell',                  country: '🇺🇸', category: 'electronics', domain: 'dell.com',            url: 'https://www.dell.com',            tagline: 'Laptops, desktops & enterprise tech',      iconSlug: 'dell',      wordmark: 'DELL',      colors: { from: '#007db8', to: '#005a8a', accent: '#ffffff' } },
+  { name: 'HP',                    country: '🇺🇸', category: 'electronics', domain: 'hp.com',              url: 'https://www.hp.com',              tagline: 'PCs, printers & innovation',               iconSlug: 'hp',        wordmark: 'HP',        colors: { from: '#0096d6', to: '#006b9b', accent: '#ffffff' } },
+  { name: 'Lenovo',                country: '🇨🇳', category: 'electronics', domain: 'lenovo.com',          url: 'https://www.lenovo.com',          tagline: 'ThinkPad, Yoga & gaming PCs',              iconSlug: 'lenovo',    wordmark: 'Lenovo',    colors: { from: '#e2231a', to: '#a01612', accent: '#ffffff' } },
+  { name: 'Newegg',                country: '🇺🇸', category: 'electronics', domain: 'newegg.com',          url: 'https://www.newegg.com',          tagline: 'PC components, parts & gaming gear',       iconSlug: 'newegg',    wordmark: 'newegg', wordmarkFont: 'font-black italic tracking-tight', colors: { from: '#f9a01b', to: '#c47a00', accent: '#000000' } },
+  { name: 'Incredible Connection', country: '🇿🇦', category: 'electronics', domain: 'incredible.co.za',    url: 'https://www.incredible.co.za',    tagline: "SA's tech specialist",                      wordmark: 'Incredible', wordmarkFont: 'font-black italic tracking-tight', colors: { from: '#dc2626', to: '#7f1d1d', accent: '#fbbf24' } },
+  { name: 'HiFi Corp',             country: '🇿🇦', category: 'electronics', domain: 'hificorp.co.za',      url: 'https://www.hificorp.co.za',      tagline: 'Audio, TV & home appliances',              wordmark: 'HiFi Corp',  colors: { from: '#dc2626', to: '#7f1d1d', accent: '#000000' } },
+  { name: 'iStore',                country: '🇿🇦', category: 'electronics', domain: 'istore.co.za',        url: 'https://www.istore.co.za',        tagline: 'Authorised Apple reseller in SA',           wordmark: 'iStore',     wordmarkFont: 'font-light tracking-tight', colors: { from: '#1f1f1f', to: '#000000', accent: '#ffffff' } },
+  { name: 'Vodacom',               country: '🇿🇦', category: 'electronics', domain: 'vodacom.co.za',       url: 'https://www.vodacom.co.za',       tagline: 'Mobile, data & smartphones',                wordmark: 'Vodacom',    colors: { from: '#dc2626', to: '#991b1b', accent: '#ffffff' } },
+  { name: 'MTN',                   country: '🇿🇦', category: 'electronics', domain: 'mtn.co.za',           url: 'https://www.mtn.co.za',           tagline: 'Phones, data & contracts',                  wordmark: 'MTN',        colors: { from: '#facc15', to: '#ca8a04', accent: '#000000' } },
+  { name: 'Telkom',                country: '🇿🇦', category: 'electronics', domain: 'telkom.co.za',        url: 'https://www.telkom.co.za',        tagline: 'Mobile, fibre & devices',                   wordmark: 'Telkom',     colors: { from: '#0ea5e9', to: '#0369a1', accent: '#ffffff' } },
+
+  // ─── Home & living ───
+  { name: 'IKEA',           country: '🇸🇪', category: 'home', domain: 'ikea.com',         url: 'https://www.ikea.com',         tagline: 'Affordable Scandinavian furniture', iconSlug: 'ikea',     wordmark: 'IKEA',        colors: { from: '#0058a3', to: '#003d72', accent: '#ffdb00' } },
+  { name: 'Wayfair',        country: '🇺🇸', category: 'home', domain: 'wayfair.com',      url: 'https://www.wayfair.com',      tagline: 'Everything home — millions of items', iconSlug: 'wayfair',  wordmark: 'wayfair', wordmarkFont: 'font-black italic tracking-tight', colors: { from: '#7b189f', to: '#5b1175', accent: '#ffffff' } },
+  { name: 'Home Depot',     country: '🇺🇸', category: 'home', domain: 'homedepot.com',    url: 'https://www.homedepot.com',    tagline: 'Tools, building materials & garden',  iconSlug: 'homedepot', wordmark: 'HOME DEPOT', colors: { from: '#f96302', to: '#c44e02', accent: '#ffffff' } },
+  { name: "Lowe's",         country: '🇺🇸', category: 'home', domain: 'lowes.com',        url: 'https://www.lowes.com',        tagline: 'Home improvement made easy',          iconSlug: 'lowes',     wordmark: "LOWE'S",     colors: { from: '#004990', to: '#003366', accent: '#ffffff' } },
+  { name: '@Home',          country: '🇿🇦', category: 'home', domain: 'home.co.za',       url: 'https://www.home.co.za',       tagline: 'Modern home decor & furniture',       wordmark: '@home',   wordmarkFont: 'font-black italic tracking-tight', colors: { from: '#1f1f1f', to: '#000000', accent: '#fbbf24' } },
+  { name: 'Mr Price Home',  country: '🇿🇦', category: 'home', domain: 'mrphome.com',      url: 'https://www.mrphome.com',      tagline: 'Stylish home essentials at low prices', wordmark: 'MRP Home', wordmarkFont: 'font-black italic tracking-tight', colors: { from: '#dc2626', to: '#7f1d1d', accent: '#ffffff' } },
+  { name: 'Sheet Street',   country: '🇿🇦', category: 'home', domain: 'sheetstreet.com',  url: 'https://www.sheetstreet.com',  tagline: 'Bedroom, bath & home textiles',       wordmark: 'Sheet Street', colors: { from: '#0ea5e9', to: '#0369a1', accent: '#ffffff' } },
+  { name: 'Coricraft',      country: '🇿🇦', category: 'home', domain: 'coricraft.co.za',  url: 'https://www.coricraft.co.za',  tagline: 'Custom furniture & couches',           wordmark: 'Coricraft',    wordmarkFont: 'font-serif font-bold tracking-tight', colors: { from: '#78350f', to: '#451a03', accent: '#fbbf24' } },
+  { name: 'Wetherlys',      country: '🇿🇦', category: 'home', domain: 'wetherlys.co.za',  url: 'https://www.wetherlys.co.za',  tagline: 'Premium home furniture',               wordmark: 'Wetherlys',    wordmarkFont: 'font-serif font-bold tracking-tight', colors: { from: '#1f1f1f', to: '#000000', accent: '#fbbf24' } },
+  { name: 'Tile Africa',    country: '🇿🇦', category: 'home', domain: 'tileafrica.co.za', url: 'https://www.tileafrica.co.za', tagline: 'Tiles, bathrooms & sanitaryware',      wordmark: 'Tile Africa',  colors: { from: '#0ea5e9', to: '#0369a1', accent: '#ffffff' } },
+
+  // ─── Hardware ───
+  { name: 'Builders Warehouse', country: '🇿🇦', category: 'hardware', domain: 'builders.co.za',     url: 'https://www.builders.co.za',     tagline: 'Tools, building & garden supplies',     wordmark: 'Builders',    colors: { from: '#dc2626', to: '#7f1d1d', accent: '#facc15' } },
+  { name: 'Cashbuild',          country: '🇿🇦', category: 'hardware', domain: 'cashbuild.co.za',    url: 'https://www.cashbuild.co.za',    tagline: 'Building materials at low prices',      wordmark: 'Cashbuild',   colors: { from: '#ea580c', to: '#9a3412', accent: '#ffffff' } },
+  { name: 'Build It',           country: '🇿🇦', category: 'hardware', domain: 'buildit.co.za',      url: 'https://www.buildit.co.za',      tagline: "SA's favourite building supply store", wordmark: 'Build it',    wordmarkFont: 'font-black italic tracking-tight', colors: { from: '#facc15', to: '#ca8a04', accent: '#1e3a8a' } },
+  { name: 'BUCO',               country: '🇿🇦', category: 'hardware', domain: 'buco.co.za',         url: 'https://www.buco.co.za',         tagline: 'Building & hardware specialists',       wordmark: 'BUCO',        colors: { from: '#dc2626', to: '#7f1d1d', accent: '#facc15' } },
+  { name: 'Leroy Merlin',       country: '🇫🇷', category: 'hardware', domain: 'leroymerlin.co.za',  url: 'https://www.leroymerlin.co.za',  tagline: 'DIY, home improvement & garden',        iconSlug: 'leroymerlin', wordmark: 'LEROY MERLIN', colors: { from: '#78bc1f', to: '#5a8c17', accent: '#ffffff' } },
+  { name: 'Mica',               country: '🇿🇦', category: 'hardware', domain: 'mica.co.za',         url: 'https://www.mica.co.za',         tagline: 'Hardware & home improvement',            wordmark: 'MICA',        colors: { from: '#dc2626', to: '#7f1d1d', accent: '#ffffff' } },
+  { name: 'Ace Hardware',       country: '🇺🇸', category: 'hardware', domain: 'acehardware.com',    url: 'https://www.acehardware.com',    tagline: 'The helpful place since 1924',           iconSlug: 'acehardware', wordmark: 'ACE',         colors: { from: '#e4002b', to: '#a8001f', accent: '#ffffff' } },
+  { name: 'B&Q',                country: '🇬🇧', category: 'hardware', domain: 'diy.com',            url: 'https://www.diy.com',            tagline: "UK's leading DIY retailer",              wordmark: 'B&Q',         colors: { from: '#ff6600', to: '#cc5200', accent: '#ffffff' } },
+
+  // ─── Beauty & personal care ───
+  { name: 'Sephora',        country: '🇫🇷', category: 'beauty', domain: 'sephora.com',       url: 'https://www.sephora.com',       tagline: "Beauty's biggest playground",         iconSlug: 'sephora',      wordmark: 'SEPHORA',         colors: { from: '#000000', to: '#1f1f1f', accent: '#ffffff' } },
+  { name: 'Ulta Beauty',    country: '🇺🇸', category: 'beauty', domain: 'ulta.com',          url: 'https://www.ulta.com',          tagline: 'All things beauty, all in one place',  iconSlug: 'ulta',         wordmark: 'ULTA',            colors: { from: '#000000', to: '#1f1f1f', accent: '#ff6600' } },
+  { name: 'The Body Shop',  country: '🇬🇧', category: 'beauty', domain: 'thebodyshop.com',   url: 'https://www.thebodyshop.com',   tagline: 'Naturally inspired beauty',            iconSlug: 'thebodyshop',  wordmark: 'THE BODY SHOP',   colors: { from: '#004f30', to: '#003322', accent: '#ffffff' } },
+  { name: 'MAC Cosmetics',  country: '🇨🇦', category: 'beauty', domain: 'maccosmetics.com',  url: 'https://www.maccosmetics.com',  tagline: 'Professional makeup artistry',         iconSlug: 'maccosmetics', wordmark: 'M·A·C',           colors: { from: '#000000', to: '#1f1f1f', accent: '#ffffff' } },
+  { name: 'Lush',           country: '🇬🇧', category: 'beauty', domain: 'lush.com',          url: 'https://www.lush.com',          tagline: 'Fresh handmade cosmetics',             iconSlug: 'lush',         wordmark: 'LUSH',            colors: { from: '#000000', to: '#1f1f1f', accent: '#ffffff' } },
+  { name: "L'Oréal",        country: '🇫🇷', category: 'beauty', domain: 'loreal.com',        url: 'https://www.loreal.com',        tagline: "Because you're worth it",              iconSlug: 'loreal',       wordmark: "L'ORÉAL",         colors: { from: '#000000', to: '#1f1f1f', accent: '#ffffff' } },
+  { name: 'Dis-Chem',       country: '🇿🇦', category: 'beauty', domain: 'dischem.co.za',     url: 'https://www.dischem.co.za',     tagline: 'Pharmacies of choice in SA',           wordmark: 'Dis-Chem',     colors: { from: '#15803d', to: '#14532d', accent: '#ffffff' } },
+  { name: 'Clicks',         country: '🇿🇦', category: 'beauty', domain: 'clicks.co.za',      url: 'https://www.clicks.co.za',      tagline: 'Feel good. Pay less.',                  wordmark: 'Clicks',       wordmarkFont: 'font-black italic tracking-tight', colors: { from: '#0ea5e9', to: '#0369a1', accent: '#ffffff' } },
+  { name: 'Sorbet',         country: '🇿🇦', category: 'beauty', domain: 'sorbet.co.za',      url: 'https://www.sorbet.co.za',      tagline: 'Beauty, nails & wellness',              wordmark: 'Sorbet',       wordmarkFont: 'font-serif italic font-bold', colors: { from: '#ec4899', to: '#be185d', accent: '#ffffff' } },
+
+  // ─── Sports & fitness ───
+  { name: 'Puma',                  country: '🇩🇪', category: 'sports', domain: 'puma.com',                 url: 'https://www.puma.com',                 tagline: 'Forever Faster',                      iconSlug: 'puma',         wordmark: 'PUMA',          colors: { from: '#000000', to: '#1f1f1f', accent: '#ffffff' } },
+  { name: 'Under Armour',          country: '🇺🇸', category: 'sports', domain: 'underarmour.com',          url: 'https://www.underarmour.com',          tagline: 'The only way is through',             iconSlug: 'underarmour',  wordmark: 'UNDER ARMOUR',  colors: { from: '#000000', to: '#1f1f1f', accent: '#ffffff' } },
+  { name: 'Reebok',                country: '🇬🇧', category: 'sports', domain: 'reebok.com',               url: 'https://www.reebok.com',               tagline: 'Be more human',                       iconSlug: 'reebok',       wordmark: 'Reebok',        colors: { from: '#000000', to: '#1f1f1f', accent: '#ffffff' } },
+  { name: 'New Balance',           country: '🇺🇸', category: 'sports', domain: 'newbalance.com',           url: 'https://www.newbalance.com',           tagline: 'Fearlessly independent',              iconSlug: 'newbalance',   wordmark: 'New Balance',   colors: { from: '#cf2030', to: '#9b1722', accent: '#ffffff' } },
+  { name: 'ASICS',                 country: '🇯🇵', category: 'sports', domain: 'asics.com',                url: 'https://www.asics.com',                tagline: 'Sound mind, sound body',              iconSlug: 'asics',        wordmark: 'ASICS',         colors: { from: '#0011a8', to: '#000d7a', accent: '#ffffff' } },
+  { name: 'Decathlon',             country: '🇫🇷', category: 'sports', domain: 'decathlon.com',            url: 'https://www.decathlon.com',            tagline: 'Sport for everyone',                  iconSlug: 'decathlon',    wordmark: 'DECATHLON',     colors: { from: '#0082c3', to: '#005a8a', accent: '#ffffff' } },
+  { name: 'Foot Locker',           country: '🇺🇸', category: 'sports', domain: 'footlocker.com',           url: 'https://www.footlocker.com',           tagline: 'The official home of sneakers',       iconSlug: 'footlocker',   wordmark: 'Foot Locker',   colors: { from: '#000000', to: '#1f1f1f', accent: '#ffffff' } },
+  { name: 'Sportsmans Warehouse',  country: '🇿🇦', category: 'sports', domain: 'sportsmanswarehouse.co.za', url: 'https://www.sportsmanswarehouse.co.za', tagline: "SA's sport & outdoor superstore",    wordmark: 'Sportsmans',   colors: { from: '#0ea5e9', to: '#0369a1', accent: '#fbbf24' } },
+  { name: 'Totalsports',           country: '🇿🇦', category: 'sports', domain: 'totalsports.co.za',         url: 'https://www.totalsports.co.za',         tagline: 'Sportswear, sneakers & gear',         wordmark: 'totalsports',  wordmarkFont: 'font-black italic tracking-tight', colors: { from: '#1e293b', to: '#0f172a', accent: '#dc2626' } },
+  { name: 'Cape Union Mart',       country: '🇿🇦', category: 'sports', domain: 'capeunionmart.co.za',       url: 'https://www.capeunionmart.co.za',       tagline: 'Outdoor & adventure gear',            wordmark: 'Cape Union Mart', colors: { from: '#15803d', to: '#14532d', accent: '#fbbf24' } },
+
+  // ─── Books & stationery ───
+  { name: 'Barnes & Noble',  country: '🇺🇸', category: 'stationery', domain: 'barnesandnoble.com',  url: 'https://www.barnesandnoble.com',  tagline: "America's largest bookseller",       iconSlug: 'barnesandnoble', wordmark: 'BARNES & NOBLE', colors: { from: '#15803d', to: '#14532d', accent: '#ffffff' } },
+  { name: 'Waterstones',     country: '🇬🇧', category: 'stationery', domain: 'waterstones.com',     url: 'https://www.waterstones.com',     tagline: "UK's favourite bookseller",          iconSlug: 'waterstones',    wordmark: 'Waterstones',    wordmarkFont: 'font-serif font-bold', colors: { from: '#0c4a6e', to: '#082f49', accent: '#ffffff' } },
+  { name: 'Staples',         country: '🇺🇸', category: 'stationery', domain: 'staples.com',         url: 'https://www.staples.com',         tagline: 'Office, school & business supplies',  iconSlug: 'staples',        wordmark: 'Staples',        colors: { from: '#cc0000', to: '#7a0000', accent: '#ffffff' } },
+  { name: 'Exclusive Books', country: '🇿🇦', category: 'stationery', domain: 'exclusivebooks.co.za', url: 'https://www.exclusivebooks.co.za', tagline: "SA's premier bookstore",             wordmark: 'Exclusive Books', wordmarkFont: 'font-serif font-bold', colors: { from: '#7f1d1d', to: '#450a0a', accent: '#fbbf24' } },
+  { name: 'CNA',             country: '🇿🇦', category: 'stationery', domain: 'cna.co.za',           url: 'https://www.cna.co.za',           tagline: 'Books, stationery & tech',            wordmark: 'CNA',            colors: { from: '#dc2626', to: '#7f1d1d', accent: '#ffffff' } },
+  { name: 'Bargain Books',   country: '🇿🇦', category: 'stationery', domain: 'bargainbooks.co.za',  url: 'https://www.bargainbooks.co.za',  tagline: 'Great books at great prices',         wordmark: 'Bargain Books',  wordmarkFont: 'font-black italic tracking-tight', colors: { from: '#f97316', to: '#c2410c', accent: '#ffffff' } },
+  { name: 'PNA',             country: '🇿🇦', category: 'stationery', domain: 'pna.co.za',           url: 'https://www.pna.co.za',           tagline: 'Stationery, books & art supplies',     wordmark: 'PNA',            colors: { from: '#1e3a8a', to: '#1e40af', accent: '#fbbf24' } },
+  { name: 'Waltons',         country: '🇿🇦', category: 'stationery', domain: 'waltons.co.za',       url: 'https://www.waltons.co.za',       tagline: 'Office stationery & supplies',         wordmark: 'Waltons',        colors: { from: '#1e40af', to: '#1e3a8a', accent: '#ffffff' } },
+
+  // ─── Toys & kids ───
+  { name: 'LEGO',         country: '🇩🇰', category: 'toys', domain: 'lego.com',         url: 'https://www.lego.com',         tagline: 'Build the world brick by brick',  iconSlug: 'lego',  wordmark: 'LEGO',       colors: { from: '#dc2626', to: '#991b1b', accent: '#fde047' } },
+  { name: 'Toys R Us',    country: '🇿🇦', category: 'toys', domain: 'toysrus.co.za',    url: 'https://www.toysrus.co.za',    tagline: "The world's greatest toy store",    wordmark: 'Toys R Us',  wordmarkFont: 'font-black italic tracking-tight', colors: { from: '#2563eb', to: '#1d4ed8', accent: '#facc15' } },
+  { name: 'Hamleys',      country: '🇬🇧', category: 'toys', domain: 'hamleys.com',      url: 'https://www.hamleys.com',      tagline: 'The finest toy shop in the world',   wordmark: 'HAMLEYS',    wordmarkFont: 'font-serif font-bold', colors: { from: '#dc2626', to: '#7f1d1d', accent: '#fde047' } },
+  { name: 'Mattel',       country: '🇺🇸', category: 'toys', domain: 'mattel.com',       url: 'https://www.mattel.com',       tagline: 'Barbie, Hot Wheels & more',          iconSlug: 'mattel', wordmark: 'Mattel',     colors: { from: '#dc2626', to: '#991b1b', accent: '#ffffff' } },
+  { name: 'Reggies',      country: '🇿🇦', category: 'toys', domain: 'reggies.co.za',    url: 'https://www.reggies.co.za',    tagline: "SA's favourite toy shop",            wordmark: 'Reggies',    wordmarkFont: 'font-black italic tracking-tight', colors: { from: '#ec4899', to: '#be185d', accent: '#fde047' } },
+  { name: 'Toy Kingdom',  country: '🇿🇦', category: 'toys', domain: 'toykingdom.co.za', url: 'https://www.toykingdom.co.za', tagline: 'A kingdom of toys & fun',             wordmark: 'Toy Kingdom', colors: { from: '#7c3aed', to: '#5b21b6', accent: '#fde047' } },
+
+  // ─── Jewelry & accessories ───
+  { name: 'Pandora',         country: '🇩🇰', category: 'jewelry', domain: 'pandora.net',          url: 'https://www.pandora.net',          tagline: 'Charms, rings & jewellery for every moment', iconSlug: 'pandora',     wordmark: 'PANDORA',       colors: { from: '#000000', to: '#1f1f1f', accent: '#ffffff' } },
+  { name: 'Tiffany & Co.',   country: '🇺🇸', category: 'jewelry', domain: 'tiffany.com',          url: 'https://www.tiffany.com',          tagline: 'Iconic luxury jewellery since 1837',          iconSlug: 'tiffanyandco', wordmark: 'TIFFANY & CO.', wordmarkFont: 'font-serif font-bold tracking-wide', colors: { from: '#0abab5', to: '#067e7a', accent: '#ffffff' } },
+  { name: 'Swarovski',       country: '🇦🇹', category: 'jewelry', domain: 'swarovski.com',        url: 'https://www.swarovski.com',        tagline: 'Brilliant crystal jewellery',                  iconSlug: 'swarovski',   wordmark: 'SWAROVSKI',     colors: { from: '#000000', to: '#1f1f1f', accent: '#ffffff' } },
+  { name: 'Cartier',         country: '🇫🇷', category: 'jewelry', domain: 'cartier.com',          url: 'https://www.cartier.com',          tagline: 'Jeweller of kings, king of jewellers',         iconSlug: 'cartier',     wordmark: 'Cartier',       wordmarkFont: 'font-serif font-bold tracking-wide', colors: { from: '#7f1d1d', to: '#450a0a', accent: '#fbbf24' } },
+  { name: 'American Swiss',  country: '🇿🇦', category: 'jewelry', domain: 'americanswiss.co.za',  url: 'https://www.americanswiss.co.za',  tagline: 'Diamond & gold jewellery in SA',                wordmark: 'American Swiss', wordmarkFont: 'font-serif font-bold', colors: { from: '#1f1f1f', to: '#000000', accent: '#fbbf24' } },
+  { name: 'NWJ',             country: '🇿🇦', category: 'jewelry', domain: 'nwj.co.za',            url: 'https://www.nwj.co.za',            tagline: 'Affordable fine jewellery in SA',               wordmark: 'NWJ',           colors: { from: '#7c3aed', to: '#5b21b6', accent: '#fbbf24' } },
+  { name: 'Sterns',          country: '🇿🇦', category: 'jewelry', domain: 'sterns.co.za',         url: 'https://www.sterns.co.za',         tagline: 'Engagement & wedding jewellery',                wordmark: 'Sterns',        wordmarkFont: 'font-serif font-bold italic', colors: { from: '#1f1f1f', to: '#000000', accent: '#fbbf24' } },
+];
+
+// Reusable brand badge — gradient background + large logo or wordmark.
+// Image source chain: iconSlug (Simple Icons white SVG) → localLogo (PNG in
+// /public/images/retailers/) → stylized wordmark text.
+const RetailerBrandBadge = ({ retailer, className = '', logoClassName = '', wordmarkClassName = '' }) => {
+  const { colors = {}, iconSlug, localLogo, wordmark, name } = retailer;
+  const bg = `linear-gradient(135deg, ${colors.from || '#0f172a'} 0%, ${colors.to || '#1e293b'} 100%)`;
+
+  // Pick the primary image source (Simple Icons SVG preferred, then local file)
+  const primarySrc = iconSlug ? simpleIconWhite(iconSlug) : (localLogo || '');
+  const secondarySrc = iconSlug && localLogo ? localLogo : '';
+
+  const handleError = (event) => {
+    const img = event.currentTarget;
+    if (secondarySrc && !img.dataset.tried) {
+      img.dataset.tried = '1';
+      img.src = secondarySrc;
+      return;
+    }
+    const textFallback = img.nextElementSibling;
+    img.style.display = 'none';
+    if (textFallback) textFallback.style.display = 'flex';
+  };
+
+  return (
+    <div
+      className={`relative flex w-full items-center justify-center overflow-hidden ${className}`}
+      style={{ background: bg }}
+    >
+      {/* decorative glow blobs */}
+      <span
+        className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full opacity-30 blur-2xl"
+        style={{ background: colors.accent || '#ffffff' }}
+        aria-hidden="true"
+      />
+      <span
+        className="pointer-events-none absolute -left-10 -bottom-10 h-32 w-32 rounded-full opacity-20 blur-2xl"
+        style={{ background: colors.accent || '#ffffff' }}
+        aria-hidden="true"
+      />
+      {primarySrc ? (
+        <>
+          <img
+            src={primarySrc}
+            alt={`${name} logo`}
+            loading="lazy"
+            className={`relative z-10 max-h-[60%] max-w-[70%] object-contain drop-shadow-lg transition-transform duration-500 group-hover:scale-110 ${logoClassName}`}
+            onError={handleError}
+          />
+          <span
+            className={`relative z-10 hidden max-w-[88%] items-center justify-center px-3 text-center leading-tight text-white drop-shadow-lg ${retailer.wordmarkFont || DEFAULT_WORDMARK_FONT} ${wordmarkClassName}`}
+            aria-hidden="true"
+          >
+            {wordmark || name}
+          </span>
+        </>
+      ) : (
+        <span
+          className={`relative z-10 inline-flex max-w-[88%] items-center justify-center px-3 text-center leading-tight text-white drop-shadow-lg transition-transform duration-500 group-hover:scale-110 ${retailer.wordmarkFont || DEFAULT_WORDMARK_FONT} ${wordmarkClassName}`}
+        >
+          {wordmark || name}
+        </span>
+      )}
+    </div>
+  );
+};
+
+const RETAILER_TRUST_BG = 'https://images.pexels.com/photos/1640774/pexels-photo-1640774.jpeg?auto=compress&cs=tinysrgb&w=1600';
+
+// Tiny Levenshtein implementation — used for typo-tolerant search so a query
+// like "amzon" still matches "Amazon" and "takelot" matches "Takealot".
+const levenshtein = (a, b) => {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  const prev = new Array(b.length + 1);
+  for (let j = 0; j <= b.length; j += 1) prev[j] = j;
+  for (let i = 1; i <= a.length; i += 1) {
+    let prevDiag = prev[0];
+    prev[0] = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      const temp = prev[j];
+      const cost = a.charCodeAt(i - 1) === b.charCodeAt(j - 1) ? 0 : 1;
+      prev[j] = Math.min(prev[j] + 1, prev[j - 1] + 1, prevDiag + cost);
+      prevDiag = temp;
+    }
+  }
+  return prev[b.length];
+};
+
+// Typo-tolerant scoring — lower score is a better match. Returns -1 if no match.
+const fuzzyMatchRetailer = (retailer, query) => {
+  if (!query) return 0;
+  const q = query.toLowerCase().trim();
+  if (!q) return 0;
+  const haystacks = [
+    (retailer.name || '').toLowerCase(),
+    (retailer.tagline || '').toLowerCase(),
+    (retailer.description || '').toLowerCase(),
+    (retailer.domain || '').toLowerCase(),
+    (retailer.category || '').toLowerCase().replace(/-/g, ' '),
+    (retailer.country || '').toLowerCase(),
+  ];
+  // 1. Exact substring — highest priority.
+  for (let i = 0; i < haystacks.length; i += 1) {
+    if (haystacks[i].includes(q)) return i; // 0–5
+  }
+  // 2. Fuzzy token match — allow typos proportional to query length.
+  const tolerance = q.length <= 4 ? 1 : q.length <= 7 ? 2 : 3;
+  let best = Infinity;
+  for (let i = 0; i < haystacks.length; i += 1) {
+    const tokens = haystacks[i].split(/[^a-z0-9]+/).filter(Boolean);
+    for (let t = 0; t < tokens.length; t += 1) {
+      const token = tokens[t];
+      // Compare query to the token — use min distance against substrings of
+      // the same length if the token is longer than the query.
+      if (Math.abs(token.length - q.length) > tolerance && !token.includes(q.slice(0, Math.min(3, q.length)))) continue;
+      let dist;
+      if (token.length >= q.length) {
+        dist = levenshtein(q, token.slice(0, q.length));
+        const altDist = levenshtein(q, token);
+        dist = Math.min(dist, altDist);
+      } else {
+        dist = levenshtein(q, token);
+      }
+      if (dist <= tolerance && dist < best) best = dist;
+    }
+  }
+  return best === Infinity ? -1 : 10 + best; // fuzzy hits rank below exact hits
+};
+
 const RetailerDirectLinksPage = () => {
-  const { t } = useTranslation();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeCategory, setActiveCategory] = useState(null);
+  const [countryFilter, setCountryFilter] = useState('all'); // 'all' | 'sa' | 'global'
+  const [sortBy, setSortBy] = useState('featured'); // 'featured' | 'name' | 'sa'
+  const [showAll, setShowAll] = useState(false);
+  const allStoresRef = useRef(null);
+
+  const isSA = (retailer) => retailer.country === '\uD83C\uDDFF\uD83C\uDDE6';
+
+  const filteredRetailers = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    const scored = RETAILER_DIRECT_LINKS.map((retailer) => {
+      const matchesCategory = !activeCategory || activeCategory === 'all' || retailer.category === activeCategory;
+      const matchesCountry = countryFilter === 'all'
+        || (countryFilter === 'sa' && isSA(retailer))
+        || (countryFilter === 'global' && !isSA(retailer));
+      if (!matchesCategory || !matchesCountry) return null;
+      const score = fuzzyMatchRetailer(retailer, query);
+      if (score < 0) return null;
+      return { retailer, score };
+    }).filter(Boolean);
+
+    const sorters = {
+      featured: (a, b) => {
+        const fa = a.retailer.featured ? 0 : 1;
+        const fb = b.retailer.featured ? 0 : 1;
+        if (fa !== fb) return fa - fb;
+        return a.retailer.name.localeCompare(b.retailer.name);
+      },
+      name: (a, b) => a.retailer.name.localeCompare(b.retailer.name),
+      sa: (a, b) => {
+        const sa = isSA(a.retailer) ? 0 : 1;
+        const sb = isSA(b.retailer) ? 0 : 1;
+        if (sa !== sb) return sa - sb;
+        return a.retailer.name.localeCompare(b.retailer.name);
+      },
+    };
+    // When there is a query, sort by match score first; otherwise apply the
+    // user's chosen sort.
+    const effectiveSort = query
+      ? (a, b) => (a.score - b.score) || a.retailer.name.localeCompare(b.retailer.name)
+      : (sorters[sortBy] || sorters.featured);
+    return scored.sort(effectiveSort).map((entry) => entry.retailer);
+  }, [searchTerm, activeCategory, countryFilter, sortBy]);
+
+  const featuredRetailers = useMemo(
+    () => RETAILER_DIRECT_LINKS.filter((retailer) => retailer.featured),
+    [],
+  );
+
+  const categoryCounts = useMemo(() => {
+    const counts = { all: RETAILER_DIRECT_LINKS.length };
+    RETAILER_DIRECT_LINKS.forEach((retailer) => {
+      counts[retailer.category] = (counts[retailer.category] || 0) + 1;
+    });
+    return counts;
+  }, []);
+
+  const totalStats = useMemo(() => ({
+    total: RETAILER_DIRECT_LINKS.length,
+    sa: RETAILER_DIRECT_LINKS.filter(isSA).length,
+    global: RETAILER_DIRECT_LINKS.filter((r) => !isSA(r)).length,
+    categories: RETAILER_CATEGORIES.filter((c) => c.slug !== 'all').length,
+  }), []);
+
+  const handleSelectCategory = (slug) => {
+    setActiveCategory(slug);
+    setShowAll(true);
+    // Smooth scroll into the results section once it expands.
+    window.requestAnimationFrame(() => {
+      allStoresRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
+  const handleViewAll = () => {
+    setShowAll(true);
+    setActiveCategory(null);
+    window.requestAnimationFrame(() => {
+      allStoresRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
+  const handleSearchSubmit = (event) => {
+    event.preventDefault();
+    setShowAll(true);
+    window.requestAnimationFrame(() => {
+      allStoresRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
+  const activeCategoryLabel = activeCategory
+    ? (RETAILER_CATEGORIES.find((category) => category.slug === activeCategory)?.name || 'All Stores')
+    : 'All Stores';
+
   return (
     <PageFrame
-      title={t('markets.directLinks')}
-      subtitle={t('pageSubtitles.directLinks')}
-      heroImage="https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg?auto=compress&cs=tinysrgb&w=1600"
-      heroMediaClassName="scale-105 blur-[2px]"
-      heroOverlayClassName="bg-gradient-to-r from-black/75 via-black/65 to-black/55"
-      sectionClassName="px-0 pt-0 pb-8 sm:pt-0 sm:pb-10"
+      title="Ecommerce Market Links"
+      subtitle="Find trusted Ecommerce stores and buy directly from retailers you already know and trust."
+      heroImages={[
+        'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=1200',
+        'https://images.pexels.com/photos/1005638/pexels-photo-1005638.jpeg?auto=compress&cs=tinysrgb&w=1200',
+        'https://images.pexels.com/photos/3965545/pexels-photo-3965545.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      ]}
+      heroOverlayClassName="bg-gradient-to-r from-[#0b3b54]/55 via-[#a6275d]/35 to-[#7a1b3f]/45"
+      sectionClassName="px-0 pt-0 pb-0 sm:pt-0 sm:pb-0"
       heroWrapperClassName="w-full max-w-none"
       contentWrapperClassName="mx-auto w-full max-w-7xl px-4"
       heroContainerClassName="rounded-none border-x-0 border-t-0 p-0 shadow-none"
-      heroContentClassName="flex min-h-[220px] flex-col items-center justify-center px-6 py-8 text-center sm:min-h-[260px] sm:px-8 sm:py-10"
-      titleClassName="text-xl text-white sm:text-2xl"
-      subtitleClassName="mt-2 text-xs text-white/90 sm:text-sm"
+      heroContentClassName="flex min-h-[200px] flex-col items-center justify-center px-6 py-8 text-center sm:min-h-[240px] sm:px-8 sm:py-10"
+      titleClassName="text-2xl text-white drop-shadow sm:text-3xl"
+      subtitleClassName="mt-2 max-w-2xl text-sm text-white/95 drop-shadow sm:text-base"
     >
-      <div className="grid grid-cols-2 gap-3 py-4 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
-        {RETAILER_DIRECT_LINKS.map((retailer) => (
-          <a
-            key={retailer.name}
-            href={retailer.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group relative flex aspect-[4/5] flex-col overflow-hidden rounded-xl border border-[var(--svs-border)] shadow-[0_4px_8px_rgba(0,0,0,0.1)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_12px_22px_rgba(0,168,232,0.2)] sm:rounded-2xl"
-          >
-            <div
-              className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
-              style={{ backgroundImage: `url('${retailer.image}')` }}
-              aria-hidden="true"
+      {/* ── Search bar ── */}
+      <div className="mt-6 flex justify-center">
+        <form onSubmit={handleSearchSubmit} className="w-full max-w-3xl" role="search">
+          <label htmlFor="retailer-search" className="sr-only">Search retailers</label>
+          <div className="relative w-full">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+            <input
+              id="retailer-search"
+              type="search"
+              value={searchTerm}
+              onChange={(event) => {
+                setSearchTerm(event.target.value);
+                if (event.target.value.trim().length > 0) {
+                  setShowAll(true);
+                }
+              }}
+              placeholder="Search retailers — typos welcome (try ‘amzon’ or ‘takelot’) …"
+              autoComplete="off"
+              className="w-full rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] py-3 pl-11 pr-24 text-sm text-[var(--svs-text)] shadow-sm placeholder:text-slate-400 focus:border-[var(--svs-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--svs-primary)]/30"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/35 to-transparent" aria-hidden="true" />
-            <div className="relative z-10 flex h-full flex-col justify-between p-3 sm:p-4">
-              <div className="flex items-start justify-between">
-                <span className="rounded-full border border-white/35 bg-black/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm sm:text-xs">
-                  External link
-                </span>
-                <ExternalLink className="h-4 w-4 text-white/90 drop-shadow" aria-hidden="true" />
-              </div>
-              <div className="rounded-xl border border-white/20 bg-black/55 px-2.5 py-2 backdrop-blur-sm sm:px-3">
-                <p className="text-base font-bold leading-tight text-white drop-shadow sm:text-lg">{retailer.name}</p>
-                <p className="mt-1 text-[11px] leading-snug text-white/90 line-clamp-2 sm:text-xs">{retailer.tagline}</p>
-              </div>
+            <button
+              type="submit"
+              className="absolute right-1.5 top-1/2 inline-flex -translate-y-1/2 items-center gap-1 rounded-full bg-[var(--svs-primary)] px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[var(--svs-primary-strong)] sm:text-sm"
+              aria-label="Search"
+            >
+              <Search className="h-3.5 w-3.5" aria-hidden="true" />
+              Search
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* ── Stats banner ── */}
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[
+          { label: 'Trusted Retailers', value: totalStats.total,      icon: Store,        accent: 'from-sky-500 to-cyan-600' },
+          { label: 'SA Local Brands',   value: totalStats.sa,         icon: ShieldCheck,  accent: 'from-emerald-500 to-emerald-700' },
+          { label: 'Global Brands',     value: totalStats.global,     icon: ShoppingCart, accent: 'from-violet-500 to-indigo-700' },
+          { label: 'Categories',        value: totalStats.categories, icon: CheckCircle2, accent: 'from-amber-500 to-orange-600' },
+        ].map(({ label, value, icon: Icon, accent }) => (
+          <div key={label} className="flex items-center gap-3 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3 shadow-sm sm:p-4">
+            <span className={`flex h-10 w-10 flex-none items-center justify-center rounded-xl bg-gradient-to-br ${accent} text-white shadow-md sm:h-12 sm:w-12`}>
+              <Icon className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden="true" />
+            </span>
+            <div>
+              <p className="text-xl font-extrabold leading-none text-[var(--svs-text)] sm:text-2xl">{value}+</p>
+              <p className="mt-1 text-[11px] font-medium uppercase tracking-wide text-[var(--svs-muted)] sm:text-xs">{label}</p>
             </div>
-          </a>
+          </div>
         ))}
       </div>
-      <p className="mt-4 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4 text-xs text-[var(--svs-text)] sm:text-sm">
+
+      {/* ── Shop by Retailers Category ── */}
+      <div className="mt-8">
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-[var(--svs-cyan-surface)] text-[var(--svs-primary-strong)]">
+            <Store className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <div>
+            <h2 className="text-lg font-bold text-[var(--svs-text)] sm:text-xl">Shop by Retailers Category</h2>
+            <p className="text-xs text-[var(--svs-muted)] sm:text-sm">Browse our stores easily by exploring categories</p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+          {RETAILER_CATEGORIES.map((category) => {
+            const isActive = activeCategory === category.slug;
+            return (
+              <button
+                key={category.slug}
+                type="button"
+                onClick={() => handleSelectCategory(category.slug)}
+                className={`group relative flex aspect-square flex-col overflow-hidden rounded-xl border text-left shadow-[0_4px_8px_rgba(0,0,0,0.08)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_12px_22px_rgba(0,168,232,0.25)] focus:outline-none focus:ring-2 focus:ring-[var(--svs-primary)] sm:rounded-2xl ${isActive ? 'border-[var(--svs-primary)] ring-2 ring-[var(--svs-primary)]' : 'border-[var(--svs-border)]'}`}
+                aria-pressed={isActive}
+              >
+                <div
+                  className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
+                  style={{ backgroundImage: `url('${category.image}')` }}
+                  aria-hidden="true"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/10" aria-hidden="true" />
+                <span className="absolute right-2 top-2 z-10 inline-flex items-center rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold text-[var(--svs-primary-strong)] shadow-sm sm:text-xs">
+                  {categoryCounts[category.slug] || 0} {categoryCounts[category.slug] === 1 ? 'store' : 'stores'}
+                </span>
+                <div className="relative z-10 mt-auto p-3 sm:p-4">
+                  <p className="text-sm font-bold leading-tight text-white drop-shadow sm:text-base">{category.name}</p>
+                  <p className="mt-1 text-[11px] leading-snug text-white/90 line-clamp-2 sm:text-xs">{category.description}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Popular Trusted Retailers ── */}
+      <div className="mt-12 text-center">
+        <h2 className="text-xl font-bold text-[var(--svs-text)] sm:text-2xl">Popular Trusted Retailers</h2>
+        <p className="mt-1 text-xs text-[var(--svs-muted)] sm:text-sm">Top stores loved by millions of shoppers</p>
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {featuredRetailers.map((retailer) => (
+          <div
+            key={retailer.name}
+            className="group flex flex-col items-center overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 text-center shadow-[0_6px_18px_rgba(0,0,0,0.08)] transition hover:-translate-y-1 hover:shadow-[0_18px_36px_rgba(0,168,232,0.22)]"
+          >
+            <RetailerBrandBadge
+              retailer={retailer}
+              className="h-24 w-full max-w-[220px] rounded-xl ring-1 ring-white/10"
+              logoClassName="max-h-14"
+              wordmarkClassName="text-3xl sm:text-4xl"
+            />
+            <p className="mt-4 text-sm font-semibold text-[var(--svs-text)]">{retailer.tagline}</p>
+            <p className="mt-2 text-xs text-[var(--svs-muted)] sm:text-sm">{retailer.description}</p>
+            <a
+              href={retailer.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`${cudyBluePrimaryButtonClassName} mt-5 inline-flex items-center justify-center rounded-md bg-[var(--svs-primary)] px-8 py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}
+            >
+              Visit store
+            </a>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-8 flex justify-center">
+        <button
+          type="button"
+          onClick={handleViewAll}
+          className={`${cudyBluePrimaryButtonClassName} rounded-full bg-[var(--svs-primary-strong)] px-12 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-[var(--svs-primary)]`}
+        >
+          {showAll ? 'Hide All' : 'View All'}
+        </button>
+      </div>
+
+      {/* ── All Stores (expanded) ── */}
+      {showAll ? (
+        <div ref={allStoresRef} className="mt-10 scroll-mt-24">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 className="text-lg font-bold text-[var(--svs-text)] sm:text-xl">
+              {activeCategory ? activeCategoryLabel : 'All Retailers'}
+              <span className="ml-2 text-xs font-normal text-[var(--svs-muted)] sm:text-sm">({filteredRetailers.length})</span>
+            </h3>
+            {activeCategory ? (
+              <button
+                type="button"
+                onClick={() => setActiveCategory(null)}
+                className="inline-flex items-center gap-1 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-1 text-xs font-semibold text-[var(--svs-primary-strong)] transition hover:bg-[var(--svs-cyan-surface)]"
+              >
+                <X className="h-3 w-3" aria-hidden="true" />
+                Clear category filter
+              </button>
+            ) : null}
+          </div>
+
+          {/* Country chips + sort */}
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3 shadow-sm">
+            <div className="flex flex-wrap items-center gap-2">
+              {[
+                { value: 'all',    label: 'All Countries', flag: '\uD83C\uDF0D' },
+                { value: 'sa',     label: 'South Africa',  flag: '\uD83C\uDDFF\uD83C\uDDE6' },
+                { value: 'global', label: 'International', flag: '\uD83C\uDF10' },
+              ].map((option) => {
+                const active = countryFilter === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setCountryFilter(option.value)}
+                    aria-pressed={active}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition sm:text-sm ${active ? 'border-[var(--svs-primary)] bg-[var(--svs-primary)] text-white shadow-sm' : 'border-[var(--svs-border)] bg-[var(--svs-surface)] text-[var(--svs-text)] hover:bg-[var(--svs-cyan-surface)]'}`}
+                  >
+                    <span aria-hidden="true">{option.flag}</span>
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex items-center gap-2">
+              <label htmlFor="retailer-sort" className="text-xs font-medium text-[var(--svs-muted)] sm:text-sm">Sort:</label>
+              <select
+                id="retailer-sort"
+                value={sortBy}
+                onChange={(event) => setSortBy(event.target.value)}
+                className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2 py-1 text-xs font-semibold text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--svs-primary)]/30 sm:text-sm"
+              >
+                <option value="featured">Featured first</option>
+                <option value="sa">South Africa first</option>
+                <option value="name">Name (A–Z)</option>
+              </select>
+            </div>
+          </div>
+
+          {filteredRetailers.length === 0 ? (
+            <p className="mt-6 rounded-xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 text-center text-sm text-[var(--svs-muted)]">
+              No retailers match your search. Try a different term or category.
+            </p>
+          ) : (
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+              {filteredRetailers.map((retailer) => (
+                <a
+                  key={retailer.name}
+                  href={retailer.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group relative flex aspect-[4/5] flex-col overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-[0_4px_8px_rgba(0,0,0,0.1)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_16px_30px_rgba(0,168,232,0.25)] sm:rounded-2xl"
+                >
+                  {/* sheen sweep on hover */}
+                  <span
+                    className="pointer-events-none absolute inset-y-0 -left-1/2 z-20 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-0 transition-all duration-700 group-hover:left-[120%] group-hover:opacity-100"
+                    aria-hidden="true"
+                  />
+                  {/* country flag pill */}
+                  {retailer.country ? (
+                    <span className="absolute left-2 top-2 z-20 inline-flex items-center rounded-full bg-white/95 px-1.5 py-0.5 text-xs shadow-sm ring-1 ring-black/5" title={retailer.country}>
+                      <span aria-hidden="true">{retailer.country}</span>
+                    </span>
+                  ) : null}
+                  {/* featured ribbon */}
+                  {retailer.featured ? (
+                    <span className="absolute right-2 top-2 z-20 inline-flex items-center rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
+                      Featured
+                    </span>
+                  ) : null}
+                  <RetailerBrandBadge
+                    retailer={retailer}
+                    className="flex-1"
+                    logoClassName="max-h-20"
+                    wordmarkClassName="text-3xl sm:text-4xl"
+                  />
+                  <div className="relative z-10 flex items-center justify-between gap-2 border-t border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-[var(--svs-text)]">{retailer.name}</p>
+                      <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-[var(--svs-muted)] sm:text-xs">{retailer.tagline}</p>
+                    </div>
+                    <span className="inline-flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[var(--svs-primary)]/10 text-[var(--svs-primary)] transition group-hover:bg-[var(--svs-primary)] group-hover:text-white">
+                      <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                    </span>
+                  </div>
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      <p className="mt-8 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4 text-xs text-[var(--svs-text)] sm:text-sm">
         Links open in a new tab. SVS E-Commerce is not affiliated with these retailers; we provide convenient shortcuts to compare prices and brands.
       </p>
+
+      {/* ── Why Shop With Us? ── */}
+      <div
+        className="relative -mx-4 mt-12 bg-cover bg-center py-12"
+        style={{ backgroundImage: `url('${RETAILER_TRUST_BG}')` }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/40 to-black/55" aria-hidden="true" />
+        <div className="relative mx-auto w-full max-w-6xl px-4 sm:px-6">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-white drop-shadow sm:text-3xl">Why Shop With Us?</h2>
+            <p className="mx-auto mt-2 max-w-3xl text-sm text-white/95 drop-shadow sm:text-base">
+              Your one-stop marketplace for everything you need — from trusted retailers and leading brands.
+            </p>
+          </div>
+          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { icon: ShieldCheck,   title: 'Secure Shopping',       body: 'Shop safely from verified and trusted retailers.' },
+              { icon: CheckCircle2,  title: 'Authentic Products',    body: '100% genuine products from leading brands.' },
+              { icon: Store,         title: 'Trusted Brands',        body: 'Partnered with popular and trusted retailers.' },
+              { icon: ShoppingCart,  title: 'Easy Online Purchasing', body: 'Buy directly from stores you know and trust.' },
+            ].map(({ icon: Icon, title, body }) => (
+              <div key={title} className="rounded-xl bg-[#eaf6f9] px-4 py-6 text-center shadow-md">
+                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-[var(--svs-primary)] text-white">
+                  <Icon className="h-6 w-6" />
+                </span>
+                <h3 className="mt-3 text-base font-bold text-[var(--svs-primary-strong)]">{title}</h3>
+                <p className="mt-2 text-sm text-[var(--svs-primary-strong)]/85">{body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </PageFrame>
   );
 };
