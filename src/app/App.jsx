@@ -16903,6 +16903,16 @@ const MarketsPage = () => {
     [t],
   );
 
+  const directLinksMarket = useMemo(
+    () => orderedMarketLinks.find((market) => market.href === '/retailer-direct-links') || null,
+    [orderedMarketLinks],
+  );
+
+  const gridMarketLinks = useMemo(
+    () => orderedMarketLinks.filter((market) => market.href !== '/retailer-direct-links'),
+    [orderedMarketLinks],
+  );
+
   return (
     <section className="bg-[var(--svs-bg)] px-4 py-10">
     <div className="mx-auto w-full max-w-7xl">
@@ -16943,11 +16953,20 @@ const MarketsPage = () => {
               />
             ))}
           </div>
+          {directLinksMarket ? (
+            <Link
+              to={directLinksMarket.href}
+              className="mt-4 inline-flex max-w-full items-center rounded-xl border border-white/35 bg-black/35 px-4 py-2 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-black/50"
+            >
+              {t(directLinksMarket.labelKey)}
+              <span className="ml-2 text-xs text-cyan-100">Open</span>
+            </Link>
+          ) : null}
         </div>
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-3">
-        {orderedMarketLinks.map((market, index) => {
+        {gridMarketLinks.map((market, index) => {
           const isFastFood = market.href === '/fast-food';
           const isFashion = market.href === '/fashion-style';
           const isBookings = market.href === '/tickets' || market.href === '/home-care';
