@@ -48,6 +48,7 @@ import {
   Ticket,
   Globe,
   Hash,
+  Sparkles,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -5538,9 +5539,7 @@ const MinimalCheckoutShell = ({ title, badge = null, children }) => {
       <header className="border-b border-[var(--svs-border)] bg-[var(--svs-surface)]/95 backdrop-blur-sm">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
-            <Link to="/" aria-label="Back to SVS E-Commerce" className="shrink-0">
-              <img src={logo} alt="SVS E-Commerce" className="h-10 w-auto rounded-lg" />
-            </Link>
+            <ClickableLogo className="h-10 w-auto" roundedClassName="rounded-lg" />
             <h1 className="truncate text-2xl font-black text-[var(--svs-text)]">{title}</h1>
           </div>
 
@@ -7073,9 +7072,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
     <div className={`min-h-screen bg-[var(--svs-bg)] text-[var(--svs-text)] ${isDarkMode ? 'theme-dark' : 'theme-light'}`.trim()}>
       <header className="fixed top-0 z-50 w-full border-b border-[var(--svs-border)] bg-[var(--svs-nav-bg)]/95 text-[var(--svs-nav-text)] backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-7xl items-center gap-2 px-3 py-3 sm:gap-3 sm:px-4">
-          <Link to="/" className="shrink-0">
-            <img src={logo} alt="SVS E-Commerce" className="h-10 w-auto" />
-          </Link>
+          <ClickableLogo className="h-10 w-auto" roundedClassName="rounded-lg" />
 
           <button
             type="button"
@@ -10895,27 +10892,225 @@ const fuzzyMatchRetailer = (retailer, query) => {
   return best === Infinity ? -1 : 10 + best; // fuzzy hits rank below exact hits
 };
 
+// Universal web-search providers. Used to fan a query out to the wider
+// web so SVS search behaves like a Google/Bing power-tool: anything not
+// in our local retailer directory is still one tap away.
+const UNIVERSAL_SEARCH_PROVIDERS = [
+  { id: 'google',         label: 'Google',         hint: 'Search the entire web',           build: (q) => `https://www.google.com/search?q=${q}` },
+  { id: 'google-shopping',label: 'Google Shopping',hint: 'Compare prices everywhere',       build: (q) => `https://www.google.com/search?tbm=shop&q=${q}` },
+  { id: 'bing',           label: 'Bing',           hint: 'Microsoft web search',            build: (q) => `https://www.bing.com/search?q=${q}` },
+  { id: 'duckduckgo',     label: 'DuckDuckGo',     hint: 'Private, no-tracking search',     build: (q) => `https://duckduckgo.com/?q=${q}` },
+  { id: 'amazon',         label: 'Amazon',         hint: 'Global marketplace',              build: (q) => `https://www.amazon.com/s?k=${q}` },
+  { id: 'takealot',       label: 'Takealot',       hint: 'South Africa #1 marketplace',     build: (q) => `https://www.takealot.com/all?qsearch=${q}` },
+  { id: 'ebay',           label: 'eBay',           hint: 'New & used worldwide',            build: (q) => `https://www.ebay.com/sch/i.html?_nkw=${q}` },
+  { id: 'aliexpress',     label: 'AliExpress',     hint: 'Direct from manufacturers',       build: (q) => `https://www.aliexpress.com/wholesale?SearchText=${q}` },
+];
+
+// AI-powered search assistants. These take natural-language queries
+// ("find me running shoes under R500", "compare Samsung vs iPhone")
+// and return synthesised answers with cited sources.
+const AI_SEARCH_PROVIDERS = [
+  { id: 'perplexity', label: 'Perplexity AI', hint: 'AI answers with cited sources',  build: (q) => `https://www.perplexity.ai/search?q=${q}` },
+  { id: 'chatgpt',    label: 'ChatGPT Search',hint: 'Conversational AI shopping help',build: (q) => `https://chatgpt.com/?q=${q}&hints=search` },
+  { id: 'gemini',     label: 'Google Gemini', hint: 'Google\u2019s AI assistant',      build: (q) => `https://gemini.google.com/app?q=${q}` },
+  { id: 'copilot',    label: 'Microsoft Copilot', hint: 'Bing-powered AI search',     build: (q) => `https://www.bing.com/search?q=${q}&showconv=1` },
+  { id: 'you',        label: 'You.com',       hint: 'AI-first answer engine',         build: (q) => `https://you.com/search?q=${q}` },
+  { id: 'claude',     label: 'Claude',        hint: 'Anthropic\u2019s assistant',     build: (q) => `https://claude.ai/new?q=${q}` },
+];
+
+// Lightweight client-side natural-language intent detector. Maps phrases
+// in a free-text query to local retailer category slugs so the search
+// can act "AI-like" without an external API call. Cheap, instant,
+// privacy-friendly — good first-pass intent before a real LLM call.
+const AI_INTENT_KEYWORDS = {
+  food:          ['grocery', 'groceries', 'food', 'fresh', 'fruit', 'vegetable', 'meat', 'snack', 'dinner', 'cook', 'cooking', 'kitchen pantry', 'eat'],
+  electronics:   ['phone', 'iphone', 'samsung', 'laptop', 'macbook', 'tv', 'television', 'console', 'playstation', 'xbox', 'tablet', 'ipad', 'headphone', 'earbud', 'camera', 'gadget', 'electronic', 'appliance'],
+  clothing:      ['clothes', 'clothing', 'shirt', 'pants', 'jeans', 'dress', 'jacket', 'fashion', 'wear', 'outfit', 'sneaker', 'shoes', 'hoodie'],
+  beauty:        ['makeup', 'skincare', 'perfume', 'cosmetic', 'beauty', 'lotion', 'shampoo', 'haircare', 'lipstick', 'fragrance'],
+  sports:        ['sport', 'fitness', 'gym', 'running', 'workout', 'soccer', 'football', 'rugby', 'yoga', 'bicycle', 'bike', 'hiking', 'outdoor', 'training'],
+  home:          ['furniture', 'sofa', 'couch', 'bed', 'mattress', 'decor', 'curtain', 'rug', 'lamp', 'home decor', 'living room'],
+  hardware:      ['drill', 'hammer', 'tool', 'paint', 'screw', 'hardware', 'diy', 'plumbing', 'building'],
+  jewelry:       ['ring', 'necklace', 'bracelet', 'watch', 'jewelry', 'jewellery', 'diamond', 'gold', 'silver', 'accessory'],
+  toys:          ['toy', 'baby', 'kid', 'children', 'lego', 'doll', 'pram', 'stroller', 'nappy', 'diaper'],
+  stationery:    ['book', 'pen', 'notebook', 'stationery', 'office', 'paper', 'school supplies', 'textbook'],
+  'multi-purpose': ['everything', 'all in one', 'one stop', 'department store', 'general'],
+};
+
+// Detect category intent + extract a likely price ceiling from a query
+// like "headphones under R500" or "laptop below 8000".
+const detectAiIntent = (rawQuery) => {
+  const q = (rawQuery || '').toLowerCase().trim();
+  if (!q) return null;
+  const matchedCategories = [];
+  for (const [slug, keywords] of Object.entries(AI_INTENT_KEYWORDS)) {
+    if (keywords.some((kw) => q.includes(kw))) matchedCategories.push(slug);
+  }
+  const priceMatch = q.match(/(?:under|below|less than|max(?:imum)?|<)\s*r?\s*(\d[\d ,]*)/i);
+  const priceCeiling = priceMatch ? Number(priceMatch[1].replace(/[ ,]/g, '')) : null;
+  const localOnly = /\b(local|south africa|south african|sa only|near me|in sa)\b/i.test(q);
+  if (matchedCategories.length === 0 && !priceCeiling && !localOnly) return null;
+  return { categories: matchedCategories.slice(0, 3), priceCeiling, localOnly };
+};
+
+// Stop-words / filler the user typically types in a natural-language
+// shopping query. Stripping them before fuzzy-matching dramatically
+// improves recall — "find me running shoes under R500" effectively
+// becomes "running shoes" against the retailer corpus.
+const AI_STOP_WORDS = new Set([
+  'a','an','the','find','show','me','please','i','want','need','to','buy','get','some','any','for','of','in','on',
+  'where','can','could','would','should','do','does','have','has','is','are','am','my','our','near','best','cheap',
+  'cheapest','affordable','good','great','top','recommend','recommendation','recommended','looking','look','search',
+  'searching','online','store','stores','shop','shopping','site','sites','website','websites','retailer','retailers',
+  'brand','brands','product','products','item','items','please','help','assist','under','below','less','than','max',
+  'maximum','about','around','approximately','local','sa','south','africa','african','only','rand','rands','r',
+]);
+
+// Reduce a natural-language query to its content tokens so the existing
+// fuzzy matcher sees only the meaningful words.
+const distillQuery = (rawQuery) => {
+  const cleaned = (rawQuery || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]+/g, ' ')
+    .replace(/\b\d+\b/g, ' ') // numbers (prices, sizes) handled by intent
+    .split(/\s+/)
+    .filter((token) => token && !AI_STOP_WORDS.has(token));
+  return cleaned.join(' ').trim();
+};
+
+
 const RetailerDirectLinksPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState(null);
   const [countryFilter, setCountryFilter] = useState('all'); // 'all' | 'sa' | 'global'
   const [sortBy, setSortBy] = useState('featured'); // 'featured' | 'name' | 'sa'
   const [showAll, setShowAll] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [recentSearches, setRecentSearches] = useState(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const key = getUserScopedStorageKey('svs:recentRetailerSearches');
+      const raw = window.localStorage.getItem(key);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.filter((item) => typeof item === 'string').slice(0, 8) : [];
+    } catch (_) {
+      return [];
+    }
+  });
+  const [activeUserEmail, setActiveUserEmail] = useState(() => normalizeEmail(getCurrentUserEmail()));
   const allStoresRef = useRef(null);
+  const searchFormRef = useRef(null);
+  const searchInputRef = useRef(null);
+
+  // Re-load the recent-searches list whenever the signed-in user changes
+  // (sign-in, sign-out, or another tab switching account). This guarantees
+  // every shopper only ever sees — and clears — their own history.
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const reloadForCurrentUser = () => {
+      const nextEmail = normalizeEmail(getCurrentUserEmail());
+      setActiveUserEmail((prev) => (prev === nextEmail ? prev : nextEmail));
+      try {
+        const key = getUserScopedStorageKey('svs:recentRetailerSearches', nextEmail);
+        const raw = window.localStorage.getItem(key);
+        const parsed = raw ? JSON.parse(raw) : [];
+        setRecentSearches(
+          Array.isArray(parsed) ? parsed.filter((item) => typeof item === 'string').slice(0, 8) : []
+        );
+      } catch (_) {
+        setRecentSearches([]);
+      }
+    };
+    const handleStorageChange = (event) => {
+      if (!event.key) {
+        reloadForCurrentUser();
+        return;
+      }
+      if (event.key === 'svs-user-email') reloadForCurrentUser();
+      if (event.key.startsWith('svs:recentRetailerSearches:')) reloadForCurrentUser();
+    };
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('svs-auth-changed', reloadForCurrentUser);
+    window.addEventListener('focus', reloadForCurrentUser);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('svs-auth-changed', reloadForCurrentUser);
+      window.removeEventListener('focus', reloadForCurrentUser);
+    };
+  }, []);
+
+  const persistRecentSearches = useCallback((list) => {
+    if (typeof window === 'undefined') return;
+    try {
+      const key = getUserScopedStorageKey('svs:recentRetailerSearches');
+      window.localStorage.setItem(key, JSON.stringify(list));
+    } catch (_) {
+      /* localStorage may be disabled (Safari private mode etc.) */
+    }
+  }, [activeUserEmail]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const recordRecentSearch = useCallback((rawTerm) => {
+    const term = (rawTerm || '').trim();
+    if (term.length < 2) return;
+    setRecentSearches((prev) => {
+      const next = [term, ...prev.filter((entry) => entry.toLowerCase() !== term.toLowerCase())].slice(0, 8);
+      persistRecentSearches(next);
+      return next;
+    });
+  }, [persistRecentSearches]);
+
+  const removeRecentSearch = useCallback((term) => {
+    setRecentSearches((prev) => {
+      const next = prev.filter((entry) => entry !== term);
+      persistRecentSearches(next);
+      return next;
+    });
+  }, [persistRecentSearches]);
+
+  const clearRecentSearches = useCallback(() => {
+    setRecentSearches([]);
+    persistRecentSearches([]);
+  }, [persistRecentSearches]);
 
   const isSA = (retailer) => retailer.country === '\uD83C\uDDFF\uD83C\uDDE6';
 
   const filteredRetailers = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
+    const rawQuery = searchTerm.trim().toLowerCase();
+    const intent = detectAiIntent(rawQuery);
+    // Use the distilled (stop-word-stripped) query for fuzzy matching so
+    // natural-language phrases like "find me a phone" retrieve like "phone".
+    const distilled = distillQuery(rawQuery);
+    const fuzzyQuery = distilled || rawQuery;
+    const intentCategorySet = new Set(intent?.categories || []);
+    // If the user's natural-language query *clearly* names a category,
+    // we soft-filter to that category set — but only when no explicit
+    // category chip is already selected. Otherwise the chip wins.
+    const useIntentCategoryFilter = !activeCategory && intentCategorySet.size > 0;
+    // If the user said "local" / "SA", we soft-filter to SA retailers when
+    // the country chip is still "all".
+    const useIntentLocalFilter = countryFilter === 'all' && intent?.localOnly;
+
     const scored = RETAILER_DIRECT_LINKS.map((retailer) => {
       const matchesCategory = !activeCategory || activeCategory === 'all' || retailer.category === activeCategory;
       const matchesCountry = countryFilter === 'all'
         || (countryFilter === 'sa' && isSA(retailer))
         || (countryFilter === 'global' && !isSA(retailer));
       if (!matchesCategory || !matchesCountry) return null;
-      const score = fuzzyMatchRetailer(retailer, query);
-      if (score < 0) return null;
-      return { retailer, score };
+      if (useIntentCategoryFilter && !intentCategorySet.has(retailer.category)) return null;
+      if (useIntentLocalFilter && !isSA(retailer)) return null;
+      const score = fuzzyMatchRetailer(retailer, fuzzyQuery);
+      if (score < 0) {
+        // Fall back: if AI intent identified the retailer's category we
+        // still include it (so "find me a phone" surfaces electronics
+        // stores even when their name doesn't contain "phone").
+        if (intentCategorySet.has(retailer.category)) {
+          return { retailer, score: 20 }; // ranked below direct matches
+        }
+        return null;
+      }
+      // AI boost: stores whose category matches the detected intent
+      // get a lower (= better) score so they rank first.
+      const boosted = intentCategorySet.has(retailer.category) ? score - 5 : score;
+      return { retailer, score: boosted };
     }).filter(Boolean);
 
     const sorters = {
@@ -10933,9 +11128,9 @@ const RetailerDirectLinksPage = () => {
         return a.retailer.name.localeCompare(b.retailer.name);
       },
     };
-    // When there is a query, sort by match score first; otherwise apply the
-    // user's chosen sort.
-    const effectiveSort = query
+    // When there is a query, sort by AI-adjusted match score first;
+    // otherwise apply the user's chosen sort.
+    const effectiveSort = rawQuery
       ? (a, b) => (a.score - b.score) || a.retailer.name.localeCompare(b.retailer.name)
       : (sorters[sortBy] || sorters.featured);
     return scored.sort(effectiveSort).map((entry) => entry.retailer);
@@ -10980,11 +11175,68 @@ const RetailerDirectLinksPage = () => {
 
   const handleSearchSubmit = (event) => {
     event.preventDefault();
+    recordRecentSearch(searchTerm);
+    setSearchFocused(false);
     setShowAll(true);
     window.requestAnimationFrame(() => {
       allStoresRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   };
+
+  // Debounced auto-save: if the user types a query and pauses for ~1.2s
+  // it's saved to history without needing to hit Enter.
+  useEffect(() => {
+    const term = searchTerm.trim();
+    if (term.length < 2) return undefined;
+    const timer = window.setTimeout(() => recordRecentSearch(term), 1200);
+    return () => window.clearTimeout(timer);
+  }, [searchTerm, recordRecentSearch]);
+
+  // Close the suggestions dropdown when clicking anywhere outside the
+  // search form.
+  useEffect(() => {
+    if (!searchFocused) return undefined;
+    const handlePointerDown = (event) => {
+      if (searchFormRef.current && !searchFormRef.current.contains(event.target)) {
+        setSearchFocused(false);
+      }
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+    };
+  }, [searchFocused]);
+
+  const trimmedQuery = searchTerm.trim();
+  const suggestionList = useMemo(
+    () => (trimmedQuery ? filteredRetailers.slice(0, 6) : []),
+    [trimmedQuery, filteredRetailers],
+  );
+  const universalLinks = useMemo(() => {
+    if (!trimmedQuery) return [];
+    const encoded = encodeURIComponent(trimmedQuery);
+    return UNIVERSAL_SEARCH_PROVIDERS.map((provider) => ({
+      ...provider,
+      href: provider.build(encoded),
+    }));
+  }, [trimmedQuery]);
+  const aiLinks = useMemo(() => {
+    if (!trimmedQuery) return [];
+    const encoded = encodeURIComponent(trimmedQuery);
+    return AI_SEARCH_PROVIDERS.map((provider) => ({
+      ...provider,
+      href: provider.build(encoded),
+    }));
+  }, [trimmedQuery]);
+  const aiIntent = useMemo(() => detectAiIntent(trimmedQuery), [trimmedQuery]);
+  const aiIntentCategories = useMemo(
+    () => (aiIntent?.categories || [])
+      .map((slug) => RETAILER_CATEGORIES.find((category) => category.slug === slug))
+      .filter(Boolean),
+    [aiIntent],
+  );
 
   const activeCategoryLabel = activeCategory
     ? (RETAILER_CATEGORIES.find((category) => category.slug === activeCategory)?.name || 'All Stores')
@@ -11010,21 +11262,29 @@ const RetailerDirectLinksPage = () => {
     >
       {/* ── Search bar ── */}
       <div className="mt-6 flex justify-center">
-        <form onSubmit={handleSearchSubmit} className="w-full max-w-3xl" role="search">
-          <label htmlFor="retailer-search" className="sr-only">Search retailers</label>
+        <form
+          ref={searchFormRef}
+          onSubmit={handleSearchSubmit}
+          className="relative w-full max-w-3xl"
+          role="search"
+        >
+          <label htmlFor="retailer-search" className="sr-only">Search retailers, brands, products — anything sold globally, nationally or locally</label>
           <div className="relative w-full">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
             <input
               id="retailer-search"
+              ref={searchInputRef}
               type="search"
               value={searchTerm}
               onChange={(event) => {
                 setSearchTerm(event.target.value);
+                setSearchFocused(true);
                 if (event.target.value.trim().length > 0) {
                   setShowAll(true);
                 }
               }}
-              placeholder="Search retailers — typos welcome (try ‘amzon’ or ‘takelot’) …"
+              onFocus={() => setSearchFocused(true)}
+              placeholder="Ask anything \u2728 — \u201cwireless headphones under R500\u201d, retailers, brands, products\u2026"
               autoComplete="off"
               className="w-full rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] py-3 pl-11 pr-24 text-sm text-[var(--svs-text)] shadow-sm placeholder:text-slate-400 focus:border-[var(--svs-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--svs-primary)]/30"
             />
@@ -11037,6 +11297,199 @@ const RetailerDirectLinksPage = () => {
               Search
             </button>
           </div>
+          <p className="mt-2 text-center text-[11px] text-[var(--svs-muted)] sm:text-xs">
+            <Sparkles className="mr-1 inline h-3 w-3 text-[var(--svs-primary)]" aria-hidden="true" />
+            AI-assisted &bull; Understands natural language &bull; Searches our directory, the web, and AI engines
+          </p>
+
+          {/* Recent searches — shown when input is focused but empty */}
+          {searchFocused && !trimmedQuery && recentSearches.length > 0 ? (
+            <div className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-[0_20px_50px_rgba(15,23,42,0.18)]">
+              <div className="flex items-center justify-between border-b border-[var(--svs-border)] px-4 py-2">
+                <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--svs-muted)]">
+                  <Clock className="h-3 w-3" aria-hidden="true" />
+                  Recent searches
+                </p>
+                <button
+                  type="button"
+                  onClick={clearRecentSearches}
+                  className="text-[11px] font-semibold text-[var(--svs-primary-strong)] transition hover:underline"
+                >
+                  Clear all
+                </button>
+              </div>
+              <ul className="py-1">
+                {recentSearches.map((term) => (
+                  <li key={term} className="group flex items-center gap-2 px-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchTerm(term);
+                        setShowAll(true);
+                        recordRecentSearch(term);
+                        searchInputRef.current?.focus();
+                      }}
+                      className="flex flex-1 items-center gap-3 rounded-md px-2 py-2 text-left text-sm text-[var(--svs-text)] transition hover:bg-[var(--svs-cyan-surface)]"
+                    >
+                      <Clock className="h-3.5 w-3.5 flex-none text-[var(--svs-muted)]" aria-hidden="true" />
+                      <span className="truncate">{term}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeRecentSearch(term)}
+                      aria-label={`Remove ${term} from recent searches`}
+                      className="rounded-full p-1.5 text-[var(--svs-muted)] opacity-0 transition hover:bg-[var(--svs-cyan-surface)] hover:text-[var(--svs-text)] group-hover:opacity-100"
+                    >
+                      <X className="h-3.5 w-3.5" aria-hidden="true" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {/* Live suggestions + universal web search dropdown */}
+          {searchFocused && trimmedQuery ? (
+            <div className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-[0_20px_50px_rgba(15,23,42,0.18)]">
+              {/* AI intent banner — appears when we recognise a category, price ceiling, or "local" hint */}
+              {aiIntent ? (
+                <div className="border-b border-[var(--svs-border)] bg-gradient-to-r from-violet-50 via-sky-50 to-cyan-50 px-4 py-3">
+                  <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-violet-700">
+                    <Sparkles className="h-3 w-3" aria-hidden="true" />
+                    AI understood your request
+                  </p>
+                  <p className="mt-1 text-xs text-slate-700">
+                    Looks like you&rsquo;re looking for
+                    {aiIntentCategories.length > 0 ? (
+                      <> stores in <strong>{aiIntentCategories.map((c) => c.name).join(', ')}</strong></>
+                    ) : null}
+                    {aiIntent.priceCeiling ? <> under <strong>R{aiIntent.priceCeiling.toLocaleString()}</strong></> : null}
+                    {aiIntent.localOnly ? <> &mdash; <strong>South African retailers only</strong></> : null}
+                    .
+                  </p>
+                  {aiIntentCategories.length > 0 ? (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {aiIntentCategories.map((category) => (
+                        <button
+                          key={category.slug}
+                          type="button"
+                          onClick={() => {
+                            handleSelectCategory(category.slug);
+                            setSearchFocused(false);
+                          }}
+                          className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-violet-700 shadow-sm ring-1 ring-violet-200 transition hover:bg-violet-600 hover:text-white"
+                        >
+                          Browse {category.name}
+                        </button>
+                      ))}
+                      {aiIntent.localOnly ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCountryFilter('sa');
+                            setShowAll(true);
+                            setSearchFocused(false);
+                          }}
+                          className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-emerald-700 shadow-sm ring-1 ring-emerald-200 transition hover:bg-emerald-600 hover:text-white"
+                        >
+                          \uD83C\uDDFF\uD83C\uDDE6 SA only
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {suggestionList.length > 0 ? (
+                <div className="border-b border-[var(--svs-border)]">
+                  <p className="px-4 pt-3 text-[10px] font-bold uppercase tracking-wider text-[var(--svs-muted)]">
+                    From our directory
+                  </p>
+                  <ul className="py-2">
+                    {suggestionList.map((retailer) => (
+                      <li key={retailer.name}>
+                        <a
+                          href={retailer.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => setSearchFocused(false)}
+                          className="flex items-center gap-3 px-4 py-2 text-sm text-[var(--svs-text)] transition hover:bg-[var(--svs-cyan-surface)]"
+                        >
+                          <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[var(--svs-primary)]/10 text-[var(--svs-primary)]">
+                            <Store className="h-3.5 w-3.5" aria-hidden="true" />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-semibold">
+                              {retailer.country ? <span className="mr-1" aria-hidden="true">{retailer.country}</span> : null}
+                              {retailer.name}
+                            </span>
+                            {retailer.tagline ? (
+                              <span className="block truncate text-[11px] text-[var(--svs-muted)]">{retailer.tagline}</span>
+                            ) : null}
+                          </span>
+                          <ExternalLink className="h-3.5 w-3.5 flex-none text-[var(--svs-muted)]" aria-hidden="true" />
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <p className="px-4 py-3 text-xs text-[var(--svs-muted)]">
+                  No directory match — try the web search below.
+                </p>
+              )}
+              <div className="border-b border-[var(--svs-border)]">
+                <p className="flex items-center gap-1.5 px-4 pt-3 text-[10px] font-bold uppercase tracking-wider text-violet-700">
+                  <Sparkles className="h-3 w-3" aria-hidden="true" />
+                  Ask AI about &ldquo;{trimmedQuery}&rdquo;
+                </p>
+                <ul className="grid grid-cols-2 gap-1 p-2 sm:grid-cols-3">
+                  {aiLinks.map((provider) => (
+                    <li key={provider.id}>
+                      <a
+                        href={provider.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setSearchFocused(false)}
+                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-[var(--svs-text)] transition hover:bg-violet-50 sm:text-sm"
+                      >
+                        <Sparkles className="h-3.5 w-3.5 flex-none text-violet-600" aria-hidden="true" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate">{provider.label}</span>
+                          <span className="block truncate text-[10px] font-normal text-[var(--svs-muted)] sm:text-[11px]">{provider.hint}</span>
+                        </span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div>
+                <p className="px-4 pt-3 text-[10px] font-bold uppercase tracking-wider text-[var(--svs-muted)]">
+                  Search the entire web for &ldquo;{trimmedQuery}&rdquo;
+                </p>
+                <ul className="grid grid-cols-2 gap-1 p-2 sm:grid-cols-3">
+                  {universalLinks.map((provider) => (
+                    <li key={provider.id}>
+                      <a
+                        href={provider.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setSearchFocused(false)}
+                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-cyan-surface)] sm:text-sm"
+                      >
+                        <Search className="h-3.5 w-3.5 flex-none text-[var(--svs-primary)]" aria-hidden="true" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate">{provider.label}</span>
+                          <span className="block truncate text-[10px] font-normal text-[var(--svs-muted)] sm:text-[11px]">{provider.hint}</span>
+                        </span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          ) : null}
         </form>
       </div>
 
@@ -11203,9 +11656,48 @@ const RetailerDirectLinksPage = () => {
           </div>
 
           {filteredRetailers.length === 0 ? (
-            <p className="mt-6 rounded-xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 text-center text-sm text-[var(--svs-muted)]">
-              No retailers match your search. Try a different term or category.
-            </p>
+            <div className="mt-6 rounded-2xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 text-center">
+              <p className="text-sm text-[var(--svs-muted)]">
+                No retailers in our directory match {trimmedQuery ? <strong>&ldquo;{trimmedQuery}&rdquo;</strong> : 'your search'}.
+              </p>
+              {trimmedQuery ? (
+                <>
+                  <p className="mt-3 flex items-center justify-center gap-1.5 text-xs font-semibold text-violet-700">
+                    <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                    Ask an AI assistant:
+                  </p>
+                  <div className="mt-2 flex flex-wrap justify-center gap-2">
+                    {aiLinks.map((provider) => (
+                      <a
+                        key={provider.id}
+                        href={provider.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-600 hover:text-white sm:text-sm"
+                      >
+                        <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                        {provider.label}
+                      </a>
+                    ))}
+                  </div>
+                  <p className="mt-4 text-xs text-[var(--svs-muted)]">Or search the entire web:</p>
+                  <div className="mt-2 flex flex-wrap justify-center gap-2">
+                    {universalLinks.map((provider) => (
+                      <a
+                        key={provider.id}
+                        href={provider.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--svs-primary-strong)] transition hover:bg-[var(--svs-primary)] hover:text-white sm:text-sm"
+                      >
+                        <Search className="h-3.5 w-3.5" aria-hidden="true" />
+                        {provider.label}
+                      </a>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+            </div>
           ) : (
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
               {filteredRetailers.map((retailer) => (
@@ -16414,7 +16906,12 @@ const MarketsPage = () => {
   return (
     <section className="bg-[var(--svs-bg)] px-4 py-10">
     <div className="mx-auto w-full max-w-7xl">
-      <div className="relative overflow-hidden rounded-2xl border border-[var(--svs-border)] p-6 shadow-[0_4px_8px_rgba(0,0,0,0.1)] sm:p-8">
+      <div className="mb-5 text-center sm:mb-6">
+        <h1 className="text-2xl font-extrabold tracking-tight text-[var(--svs-primary-strong)] sm:text-3xl">
+          Global, National &amp; Local Markets
+        </h1>
+      </div>
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--svs-border)] p-6 pb-10 shadow-[0_4px_8px_rgba(0,0,0,0.1)] sm:p-8 sm:pb-12">
         {MARKETS_HERO_SLIDES.map((slideUrl, slideIndex) => (
           <div
             key={slideUrl}
@@ -16431,11 +16928,9 @@ const MarketsPage = () => {
           aria-hidden="true"
         />
         <div className="relative z-10">
-          <h1 className="text-3xl font-bold text-white drop-shadow sm:text-4xl">{t('marketsPage.title')}</h1>
-          <p className="mt-2 max-w-2xl text-sm text-white/90 drop-shadow sm:text-base">{t('marketsPage.subtitle')}</p>
-          <div className="mt-5 flex flex-wrap gap-2">
-            <span className="rounded-full border border-white/30 bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">{t('marketsPage.tags.superShopping')}</span>
+          <div className="mt-6 flex flex-wrap items-center gap-2">
             <span className="rounded-full border border-white/30 bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">{t('marketsPage.tags.superService')}</span>
+            <span className="rounded-full border border-white/30 bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">{t('marketsPage.tags.superShopping')}</span>
             <span className="rounded-full border border-white/30 bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">{t('marketsPage.tags.intelligentPlatform')}</span>
           </div>
           <div className="mt-5 flex gap-1.5" aria-hidden="true">
@@ -22012,6 +22507,42 @@ const SimpleContentPage = ({ title, description }) => (
   </PageFrame>
 );
 
+const ClickableLogo = ({ className = 'h-10 w-auto', roundedClassName = 'rounded-lg' }) => {
+  return (
+    <Link
+      to="/logo"
+      className={`shrink-0 transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--svs-primary)] focus:ring-offset-2 ${roundedClassName}`.trim()}
+      aria-label="Open SVS logo page"
+      title="Tap to view logo full screen"
+    >
+      <img src={logo} alt="SVS E-Commerce" className={`${className} ${roundedClassName}`.trim()} />
+    </Link>
+  );
+};
+
+const LogoFullscreenPage = () => {
+  const navigate = useNavigate();
+
+  return (
+    <section className="fixed inset-0 z-[160] flex min-h-screen w-full items-center justify-center bg-black px-4 py-6">
+      <button
+        type="button"
+        onClick={() => navigate(-1)}
+        className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/15"
+        aria-label="Go back"
+      >
+        <ChevronLeft className="h-4 w-4" />
+        Back
+      </button>
+      <img
+        src={logo}
+        alt="SVS E-Commerce logo"
+        className="max-h-[92vh] max-w-[92vw] object-contain"
+      />
+    </section>
+  );
+};
+
 const PageFrame = ({ title, subtitle, children, darkHero = false, heroImage = '', heroImages = [], heroMediaClassName = '', heroOverlayClassName = '', titleClassName = '', subtitleClassName = '', sectionClassName = '', heroWrapperClassName = '', contentWrapperClassName = '', heroContainerClassName = '', heroContentClassName = '' }) => (
   <section className={`${darkHero ? 'bg-[#121212] text-white' : 'bg-[var(--svs-bg)] text-[var(--svs-text)]'} px-4 py-8 sm:py-10 ${sectionClassName}`.trim()}>
     <div className={`${heroWrapperClassName || 'mx-auto w-full max-w-7xl'}`.trim()}>
@@ -23556,6 +24087,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
   return (
   <Routes>
     <Route path="/" element={<HomePage />} />
+    <Route path="/logo" element={<LogoFullscreenPage />} />
     <Route path="/markets" element={<MarketsPage />} />
     <Route path="/offers" element={<OffersPage />} />
     <Route path="/orders" element={<OrdersPage orders={orders} cartItems={cartItems} onCancelOrder={onCancelOrder} />} />
