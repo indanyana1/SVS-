@@ -73,6 +73,7 @@ import {
   PropertyVisitStatusPage,
   PropertySellPage,
 } from '../features/property';
+import { getSellerListings as getPropertySellerListings } from '../features/property/data/sellerListings';
 import {
   getListings as getLivestockListings,
   hydrateListings as hydrateLivestockListings,
@@ -3923,6 +3924,45 @@ const searchableCatalog = [
       'fashion clothes clothing shoes sneakers heels apparel style boutique bags accessories',
     ]),
   })),
+  ...beautyFitnessSportsItems.map((item) => ({
+    ...item,
+    section: 'Beauty, Fitness And Sports Products',
+    sectionKey: 'markets.votingClients',
+    route: '/voting-clients',
+    searchText: buildSearchText([
+      item.title,
+      item.category,
+      item.specification,
+      item.price,
+      'beauty fitness sports skincare gym training supplements wellness activewear',
+    ]),
+  })),
+  ...toysKidsItems.map((item) => ({
+    ...item,
+    section: 'Toys And Kids',
+    sectionKey: 'markets.safety',
+    route: '/safety',
+    searchText: buildSearchText([
+      item.title,
+      item.category,
+      item.specification,
+      item.price,
+      'toys kids children games baby educational puzzles learning play',
+    ]),
+  })),
+  ...jewelleryAccessoriesItems.map((item) => ({
+    ...item,
+    section: 'Jewellery And Accessories',
+    sectionKey: 'markets.votingProviders',
+    route: '/voting-providers',
+    searchText: buildSearchText([
+      item.title,
+      item.category,
+      item.specification,
+      item.price,
+      'jewellery jewelry accessories rings necklace watch earrings fashion luxury',
+    ]),
+  })),
   ...naturalResourcesItems.map((item) => ({
     ...item,
     section: 'Natural Resources and Minerals Exchange',
@@ -3936,7 +3976,218 @@ const searchableCatalog = [
       'natural resources minerals copper sand granite timber salt quarry mining bulk commodities',
     ]),
   })),
+  ...secondhandItems.map((item) => ({
+    ...item,
+    section: 'SecondHand Central',
+    sectionKey: 'markets.secondhand',
+    route: '/secondhand-central',
+    searchText: buildSearchText([
+      item.title,
+      item.category,
+      item.condition,
+      item.location,
+      item.summary,
+      item.description,
+      item.price,
+      'secondhand pre-loved used refurbished resale marketplace',
+    ]),
+  })),
+  ...homeCareProviders.map((provider) => ({
+    id: `homecare-provider-${provider.id}`,
+    title: provider.name,
+    subtitle: provider.experience,
+    image: provider.image,
+    category: provider.category,
+    location: provider.location,
+    serviceType: provider.serviceType,
+    availabilityWindow: provider.availabilityWindow,
+    professionalPreference: provider.professionalPreference,
+    section: 'Book @ Home-Care Services',
+    sectionKey: 'markets.homeCare',
+    route: `/home-care/provider/${provider.id}`,
+    searchText: buildSearchText([
+      provider.name,
+      provider.category,
+      provider.location,
+      provider.serviceType,
+      provider.availabilityWindow,
+      provider.professionalPreference,
+      provider.experience,
+      'home care homecare service provider nursing elderly care physiotherapist baby care cleaner electrician plumber caregiver',
+    ]),
+  })),
 ];
+
+const dedupeSearchCatalogEntries = (items = []) => {
+  const seen = new Set();
+  return (items || []).filter((item, index) => {
+    const idPart = String(item?.id || '').trim();
+    const routePart = String(item?.route || '').trim();
+    const titlePart = String(item?.title || '').trim();
+    const key = `${idPart}|${routePart}|${titlePart}|${index}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+const mapSellerItemToSearchEntry = (item) => {
+  if (!item) return null;
+  const title = String(item.title || '').trim();
+  if (!title) return null;
+  return {
+    ...item,
+    id: item.id || `seller-${item.dbId || title}`,
+    section: item.section || item.marketName || 'Marketplace Listing',
+    route: item.route || '/markets',
+    searchText: buildSearchText([
+      title,
+      item.subtitle,
+      item.description,
+      item.category,
+      item.brand,
+      item.location,
+      item.marketKey,
+      item.sellerName,
+      item.sellerEmail,
+      item.price,
+    ]),
+  };
+};
+
+const mapPropertyListingToSearchEntry = (listing) => {
+  if (!listing) return null;
+  const title = String(listing.title || '').trim();
+  if (!title) return null;
+  const propertyId = String(listing.id || '').trim();
+  return {
+    id: propertyId ? `property-${propertyId}` : `property-${title}`,
+    title,
+    image: listing.image || '',
+    section: 'Property Marketplace',
+    route: propertyId ? `/property-hub/listing/${propertyId}` : '/property-hub',
+    location: listing.location || listing.city || listing.country || '',
+    category: listing.category || listing.propertyType || '',
+    price: listing.priceLabel || listing.price || listing.priceNumeric || '',
+    searchText: buildSearchText([
+      title,
+      listing.category,
+      listing.propertyType,
+      listing.location,
+      listing.city,
+      listing.country,
+      listing.about,
+      listing.status,
+      listing.priceLabel,
+      listing.price,
+    ]),
+  };
+};
+
+const mapLivestockListingToSearchEntry = (listing) => {
+  if (!listing) return null;
+  const title = String(listing.title || '').trim();
+  if (!title) return null;
+  return {
+    id: listing.id ? `livestock-${listing.id}` : `livestock-${title}`,
+    title,
+    image: listing.image || '',
+    section: 'Livestock Online Selling & Buying Hub',
+    route: '/livestock-hub',
+    location: listing.location || '',
+    category: listing.category || '',
+    price: listing.price || '',
+    searchText: buildSearchText([
+      title,
+      listing.category,
+      listing.breed,
+      listing.location,
+      listing.summary,
+      listing.description,
+      listing.price,
+    ]),
+  };
+};
+
+const PROJECT_ROUTE_SEARCH_ENTRIES = [
+  { id: 'page-home', title: 'Home', section: 'Main Navigation', route: '/', keywords: 'home landing browse discover svs ecommerce marketplace' },
+  { id: 'page-markets', title: 'Markets', section: 'Main Navigation', route: '/markets', keywords: 'all markets categories marketplace shopping services listings' },
+  { id: 'page-offers', title: 'Offers', section: 'Main Navigation', route: '/offers', keywords: 'offers discounts deals promotions sales' },
+  { id: 'page-orders', title: 'Orders', section: 'Main Navigation', route: '/orders', keywords: 'orders purchases tracking order history delivery status' },
+  { id: 'page-checkout', title: 'Checkout', section: 'Shop', route: '/checkout', keywords: 'checkout payment cart billing shipping address' },
+  { id: 'page-wishlist', title: 'Wishlist', section: 'Shop', route: '/wishlist', keywords: 'wishlist saved items favorites watchlist' },
+  { id: 'page-search', title: 'Search', section: 'Tools', route: '/search', keywords: 'search finder look up discover all items' },
+  { id: 'page-chat', title: 'Support Chat', section: 'Support', route: '/support/chat', keywords: 'chat support buyer seller messages enquiry help' },
+  { id: 'page-direct-links', title: 'Ecommerce Market Links', section: 'Markets', route: '/retailer-direct-links', keywords: 'retailers brands stores direct links ecommerce market links' },
+  { id: 'page-signin', title: 'Sign In', section: 'Account', route: '/signin', keywords: 'signin login account access' },
+  { id: 'page-signup', title: 'Sign Up', section: 'Account', route: '/signup', keywords: 'signup register create account' },
+  { id: 'page-seller-dashboard', title: 'Seller Dashboard', section: 'Seller Console', route: '/seller/dashboard', keywords: 'seller dashboard listings analytics management' },
+  { id: 'page-seller-orders', title: 'Seller Orders', section: 'Seller Console', route: '/seller/orders', keywords: 'seller orders fulfillment status updates' },
+  { id: 'page-seller-upload', title: 'Seller Upload', section: 'Seller Console', route: '/seller/upload', keywords: 'seller upload create listing product service add item' },
+  { id: 'page-property-hub', title: 'Property Hub', section: 'Markets', route: '/property-hub', keywords: 'property real estate homes rentals land commercial' },
+  { id: 'page-livestock-hub', title: 'Livestock Hub', section: 'Markets', route: '/livestock-hub', keywords: 'livestock cattle goats sheep poultry farm animals' },
+  { id: 'page-home-care', title: 'Home Care Services', section: 'Markets', route: '/home-care', keywords: 'home care providers nursing elderly baby care cleaner plumber electrician' },
+];
+
+const mapRetailerDirectLinkToSearchEntry = (retailer) => {
+  if (!retailer) return null;
+  const title = String(retailer.name || '').trim();
+  if (!title) return null;
+  return {
+    id: `direct-link-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+    title,
+    subtitle: retailer.tagline || retailer.description || '',
+    section: 'Ecommerce Market Links',
+    route: '/retailer-direct-links',
+    category: retailer.category || '',
+    searchText: buildSearchText([
+      title,
+      retailer.tagline,
+      retailer.description,
+      retailer.category,
+      retailer.domain,
+      retailer.country,
+      retailer.url,
+      'retailer direct links global brands trusted stores ecommerce',
+    ]),
+  };
+};
+
+const buildProjectWideStaticSearchCatalog = () => {
+  const routeEntries = PROJECT_ROUTE_SEARCH_ENTRIES.map((entry) => ({
+    id: entry.id,
+    title: entry.title,
+    subtitle: entry.section,
+    section: entry.section,
+    route: entry.route,
+    searchText: buildSearchText([entry.title, entry.section, entry.route, entry.keywords]),
+  }));
+
+  const marketEntries = marketLinks.map((market) => ({
+    id: `market-link-${market.href}`,
+    title: market.labelKey,
+    subtitle: marketShortDescriptions[market.href] || 'Market',
+    section: 'Markets Directory',
+    route: market.href,
+    searchText: buildSearchText([
+      market.labelKey,
+      market.href,
+      marketShortDescriptions[market.href],
+      'market category shopping services listings',
+    ]),
+  }));
+
+  const retailerEntries = RETAILER_DIRECT_LINKS.map(mapRetailerDirectLinkToSearchEntry).filter(Boolean);
+
+  return dedupeSearchCatalogEntries([...routeEntries, ...marketEntries, ...retailerEntries]);
+};
+
+const buildDynamicSearchCatalog = ({ sellerItems = [], propertyItems = [], livestockItems = [] } = {}) => {
+  const sellerEntries = (sellerItems || []).map(mapSellerItemToSearchEntry).filter(Boolean);
+  const propertyEntries = (propertyItems || []).map(mapPropertyListingToSearchEntry).filter(Boolean);
+  const livestockEntries = (livestockItems || []).map(mapLivestockListingToSearchEntry).filter(Boolean);
+  return dedupeSearchCatalogEntries([...sellerEntries, ...propertyEntries, ...livestockEntries]);
+};
 
 const getAuthState = () => {
   if (typeof window === 'undefined') {
@@ -6764,7 +7015,7 @@ const MarketSelectorField = ({
   );
 };
 
-const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notifications = [], onMarkNotificationsRead, onMarkNotificationRead, onClearNotifications }) => {
+const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notifications = [], onMarkNotificationsRead, onMarkNotificationRead, onClearNotifications, searchCatalog = [] }) => {
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -6774,6 +7025,21 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
   const [focusedLanguageIndex, setFocusedLanguageIndex] = useState(0);
   const [languageSearchQuery, setLanguageSearchQuery] = useState('');
   const [query, setQuery] = useState('');
+  const [remoteQuickSearchCatalog, setRemoteQuickSearchCatalog] = useState([]);
+  const [isQuickSearchLoading, setIsQuickSearchLoading] = useState(false);
+  const [isGlobalSearchFocused, setIsGlobalSearchFocused] = useState(false);
+  const [recentGlobalSearches, setRecentGlobalSearches] = useState(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const key = getUserScopedStorageKey('svs:recentGlobalSearches');
+      const raw = window.localStorage.getItem(key);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.filter((item) => typeof item === 'string').slice(0, 8) : [];
+    } catch (_) {
+      return [];
+    }
+  });
+  const globalSearchFormRef = useRef(null);
   const [isAuthenticated, setIsAuthenticated] = useState(getAuthState);
   const [hasSellerAccess, setHasSellerAccess] = useState(getSellerAccessState);
   const [sellerHomePath, setSellerHomePath] = useState(getSellerHomePath);
@@ -7007,6 +7273,52 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
     };
   }, [isLanguageModalOpen]);
 
+  const quickSearchSource = useMemo(
+    () => dedupeSearchCatalogEntries([
+      ...searchableCatalog,
+      ...buildProjectWideStaticSearchCatalog(),
+      ...(Array.isArray(searchCatalog) ? searchCatalog : []),
+      ...remoteQuickSearchCatalog,
+    ]),
+    [remoteQuickSearchCatalog, searchCatalog],
+  );
+
+  useEffect(() => {
+    const rawQuery = String(query || '').trim();
+
+    if (!rawQuery || rawQuery.length < 2) {
+      setRemoteQuickSearchCatalog([]);
+      setIsQuickSearchLoading(false);
+      return undefined;
+    }
+
+    const distilledQuery = distillQuery(rawQuery);
+    const effectiveQuery = distilledQuery || rawQuery;
+    let isCancelled = false;
+
+    setIsQuickSearchLoading(true);
+    const timeoutId = window.setTimeout(() => {
+      fetchRemoteGlobalSearchEntries(effectiveQuery)
+        .then((entries) => {
+          if (isCancelled) return;
+          setRemoteQuickSearchCatalog(entries || []);
+        })
+        .catch(() => {
+          if (isCancelled) return;
+          setRemoteQuickSearchCatalog([]);
+        })
+        .finally(() => {
+          if (isCancelled) return;
+          setIsQuickSearchLoading(false);
+        });
+    }, 280);
+
+    return () => {
+      isCancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [query]);
+
   const quickResults = useMemo(() => {
     const needle = query.trim();
 
@@ -7014,9 +7326,12 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
       return [];
     }
 
+    const distilledNeedle = distillQuery(needle);
+    const effectiveNeedle = distilledNeedle || needle;
+
     // Powerful cross-market search: multi-token AND, weighted field scoring,
     // diacritic-insensitive, with typo-tolerant fuzzy matching.
-    return searchItemsPowerful(searchableCatalog, needle, {
+    return searchItemsPowerful(quickSearchSource, effectiveNeedle, {
       fields: [
         { key: 'title', weight: 10 },
         { key: 'subtitle', weight: 6 },
@@ -7028,7 +7343,108 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
       haystackField: 'searchText',
       limit: 6,
     });
-  }, [query]);
+  }, [quickSearchSource, query]);
+
+  const persistRecentGlobalSearches = useCallback((list) => {
+    if (typeof window === 'undefined') return;
+    try {
+      const key = getUserScopedStorageKey('svs:recentGlobalSearches');
+      window.localStorage.setItem(key, JSON.stringify(list));
+    } catch (_) {
+      /* localStorage unavailable */
+    }
+  }, []);
+
+  const recordRecentGlobalSearch = useCallback((rawTerm) => {
+    const term = (rawTerm || '').trim();
+    if (term.length < 2) return;
+    setRecentGlobalSearches((prev) => {
+      const next = [term, ...prev.filter((entry) => entry.toLowerCase() !== term.toLowerCase())].slice(0, 8);
+      persistRecentGlobalSearches(next);
+      return next;
+    });
+  }, [persistRecentGlobalSearches]);
+
+  const removeRecentGlobalSearch = useCallback((term) => {
+    setRecentGlobalSearches((prev) => {
+      const next = prev.filter((entry) => entry !== term);
+      persistRecentGlobalSearches(next);
+      return next;
+    });
+  }, [persistRecentGlobalSearches]);
+
+  const clearRecentGlobalSearches = useCallback(() => {
+    setRecentGlobalSearches([]);
+    persistRecentGlobalSearches([]);
+  }, [persistRecentGlobalSearches]);
+
+  // Re-load recent searches when the signed-in user changes (sign-in,
+  // sign-out, account switch in another tab).
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const reload = () => {
+      try {
+        const key = getUserScopedStorageKey('svs:recentGlobalSearches');
+        const raw = window.localStorage.getItem(key);
+        const parsed = raw ? JSON.parse(raw) : [];
+        setRecentGlobalSearches(
+          Array.isArray(parsed) ? parsed.filter((item) => typeof item === 'string').slice(0, 8) : []
+        );
+      } catch (_) {
+        setRecentGlobalSearches([]);
+      }
+    };
+    const handleStorageChange = (event) => {
+      if (!event.key) { reload(); return; }
+      if (event.key === 'svs-user-email') reload();
+      if (event.key.startsWith('svs:recentGlobalSearches:')) reload();
+    };
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('svs-auth-changed', reload);
+    window.addEventListener('focus', reload);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('svs-auth-changed', reload);
+      window.removeEventListener('focus', reload);
+    };
+  }, []);
+
+  // Close the dropdown when clicking outside the search form.
+  useEffect(() => {
+    if (!isGlobalSearchFocused) return undefined;
+    const onPointerDown = (event) => {
+      if (globalSearchFormRef.current && !globalSearchFormRef.current.contains(event.target)) {
+        setIsGlobalSearchFocused(false);
+      }
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('touchstart', onPointerDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('touchstart', onPointerDown);
+    };
+  }, [isGlobalSearchFocused]);
+
+  // Debounced auto-save: when the user types and pauses, save the query.
+  useEffect(() => {
+    const term = query.trim();
+    if (term.length < 2) return undefined;
+    const timer = window.setTimeout(() => recordRecentGlobalSearch(term), 1200);
+    return () => window.clearTimeout(timer);
+  }, [query, recordRecentGlobalSearch]);
+
+  const trimmedGlobalQuery = query.trim();
+  const globalAiLinks = useMemo(() => {
+    if (!trimmedGlobalQuery) return [];
+    const encoded = encodeURIComponent(trimmedGlobalQuery);
+    return AI_SEARCH_PROVIDERS.map((provider) => ({ ...provider, href: provider.build(encoded) }));
+  }, [trimmedGlobalQuery]);
+  const globalWebLinks = useMemo(() => {
+    if (!trimmedGlobalQuery) return [];
+    const encoded = encodeURIComponent(trimmedGlobalQuery);
+    return UNIVERSAL_SEARCH_PROVIDERS.map((provider) => ({ ...provider, href: provider.build(encoded) }));
+  }, [trimmedGlobalQuery]);
+  const globalAiIntent = useMemo(() => detectAiIntent(trimmedGlobalQuery), [trimmedGlobalQuery]);
 
   const handleSearchSubmit = (event) => {
     event.preventDefault();
@@ -7038,6 +7454,8 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
       return;
     }
 
+    recordRecentGlobalSearch(term);
+    setIsGlobalSearchFocused(false);
     navigate(`/search?query=${encodeURIComponent(term)}`);
     setQuery('');
     setMobileOpen(false);
@@ -7047,6 +7465,20 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
     navigate(`/search?query=${encodeURIComponent(term)}`);
     setQuery('');
     setMobileOpen(false);
+  };
+
+  const handleQuickResultSelect = (item) => {
+    if (item?.route) {
+      navigate(item.route);
+      setQuery('');
+      setMobileOpen(false);
+      return;
+    }
+
+    const term = String(item?.title || '').trim();
+    if (term) {
+      handleQuickSelect(term);
+    }
   };
 
   const handleLogout = () => {
@@ -7117,18 +7549,66 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
             )}
           </nav>
 
-          <form className={`relative max-w-xl flex-1 ${isSellerConsoleRoute ? 'hidden' : ''}`} onSubmit={handleSearchSubmit}>
+          <form ref={globalSearchFormRef} className={`relative max-w-xl flex-1 ${isSellerConsoleRoute ? 'hidden' : ''}`} onSubmit={handleSearchSubmit}>
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               type="search"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => { setQuery(event.target.value); setIsGlobalSearchFocused(true); }}
+              onFocus={() => setIsGlobalSearchFocused(true)}
               placeholder={t('search.placeholder')}
               className="w-full rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-9 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/40"
               aria-label={t('search.globalAria')}
             />
+            {isGlobalSearchFocused && !trimmedGlobalQuery && recentGlobalSearches.length > 0 ? (
+              <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-[60] overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-xl">
+                <div className="flex items-center justify-between border-b border-[var(--svs-border)] px-3 py-2">
+                  <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--svs-muted)]">
+                    <Clock className="h-3 w-3" aria-hidden="true" />
+                    Recent searches
+                  </p>
+                  <button type="button" onClick={clearRecentGlobalSearches} className="text-[11px] font-semibold text-[var(--svs-primary-strong)] transition hover:underline">
+                    Clear all
+                  </button>
+                </div>
+                <ul className="py-1">
+                  {recentGlobalSearches.map((term) => (
+                    <li key={term} className="group flex items-center gap-1 px-1">
+                      <button
+                        type="button"
+                        onClick={() => { setQuery(term); recordRecentGlobalSearch(term); }}
+                        className="flex flex-1 items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-[var(--svs-text)] transition hover:bg-[var(--svs-cyan-surface)]"
+                      >
+                        <Clock className="h-3.5 w-3.5 flex-none text-[var(--svs-muted)]" aria-hidden="true" />
+                        <span className="truncate">{term}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeRecentGlobalSearch(term)}
+                        aria-label={`Remove ${term} from recent searches`}
+                        className="rounded-full p-1.5 text-[var(--svs-muted)] opacity-0 transition hover:bg-[var(--svs-cyan-surface)] hover:text-[var(--svs-text)] group-hover:opacity-100"
+                      >
+                        <X className="h-3.5 w-3.5" aria-hidden="true" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             {query.trim() ? (
-              <div className="absolute left-0 right-0 top-[calc(100%+8px)] rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3 shadow-xl">
+              <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-[60] max-h-[70vh] overflow-y-auto rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3 shadow-xl">
+                <p className="mb-2 flex items-center gap-1.5 text-[11px] text-[var(--svs-muted)]">
+                  <Sparkles className="h-3 w-3 text-[var(--svs-primary)]" aria-hidden="true" />
+                  AI-enhanced search across all markets{isQuickSearchLoading ? ' \u2022 Checking live database...' : ''}
+                </p>
+                {globalAiIntent ? (
+                  <p className="mb-2 rounded-md bg-violet-50 px-2 py-1.5 text-[11px] text-violet-700">
+                    <Sparkles className="mr-1 inline h-3 w-3" aria-hidden="true" />
+                    AI understood: {globalAiIntent.categories.length > 0 ? `category "${globalAiIntent.categories[0]}"` : ''}
+                    {globalAiIntent.priceCeiling ? ` \u2022 under R${globalAiIntent.priceCeiling.toLocaleString()}` : ''}
+                    {globalAiIntent.localOnly ? ' \u2022 SA only' : ''}
+                  </p>
+                ) : null}
                 {quickResults.length ? (
                   <ul className="space-y-2 text-sm text-[var(--svs-text)]">
                     {quickResults.map((item) => {
@@ -7139,7 +7619,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                         <li key={item.id}>
                           <button
                             type="button"
-                            onClick={() => handleQuickSelect(itemTitle)}
+                            onClick={() => handleQuickResultSelect(item)}
                             className="flex w-full items-center gap-3 rounded-md bg-[var(--svs-surface-soft)] px-3 py-2 text-left transition hover:bg-[var(--svs-cyan-surface)]"
                           >
                             {item.image ? (
@@ -7162,6 +7642,50 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                 ) : (
                   <p className="text-sm text-[var(--svs-muted)]">{t('common.noResults')}</p>
                 )}
+
+                {/* Ask AI */}
+                <p className="mt-3 flex items-center gap-1.5 px-1 text-[10px] font-bold uppercase tracking-wider text-violet-700">
+                  <Sparkles className="h-3 w-3" aria-hidden="true" />
+                  Ask AI about &ldquo;{trimmedGlobalQuery}&rdquo;
+                </p>
+                <ul className="mt-1 grid grid-cols-2 gap-1 sm:grid-cols-3">
+                  {globalAiLinks.map((provider) => (
+                    <li key={provider.id}>
+                      <a
+                        href={provider.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => { recordRecentGlobalSearch(trimmedGlobalQuery); setIsGlobalSearchFocused(false); }}
+                        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-semibold text-[var(--svs-text)] transition hover:bg-violet-50"
+                      >
+                        <Sparkles className="h-3.5 w-3.5 flex-none text-violet-600" aria-hidden="true" />
+                        <span className="truncate">{provider.label}</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+
+                {/* Search the Web */}
+                <p className="mt-3 flex items-center gap-1.5 px-1 text-[10px] font-bold uppercase tracking-wider text-[var(--svs-muted)]">
+                  <Search className="h-3 w-3" aria-hidden="true" />
+                  Search the entire web
+                </p>
+                <ul className="mt-1 grid grid-cols-2 gap-1 sm:grid-cols-3">
+                  {globalWebLinks.map((provider) => (
+                    <li key={provider.id}>
+                      <a
+                        href={provider.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => { recordRecentGlobalSearch(trimmedGlobalQuery); setIsGlobalSearchFocused(false); }}
+                        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-cyan-surface)]"
+                      >
+                        <Search className="h-3.5 w-3.5 flex-none text-[var(--svs-primary)]" aria-hidden="true" />
+                        <span className="truncate">{provider.label}</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
               </div>
             ) : null}
           </form>
@@ -16958,7 +17482,7 @@ const MarketsPage = () => {
               to={directLinksMarket.href}
               className="mt-4 inline-flex max-w-full items-center rounded-xl border border-white/35 bg-black/35 px-4 py-2 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-black/50"
             >
-              {t(directLinksMarket.labelKey)}
+              Direct Links for Leading Retailers & Big Brands
               <span className="ml-2 text-xs text-cyan-100">Open</span>
             </Link>
           ) : null}
@@ -17109,17 +17633,150 @@ const MarketsPage = () => {
   );
 };
 
-const SearchResultsPage = () => {
+const fetchRemoteGlobalSearchEntries = async (query) => {
+  const normalizedQuery = String(query || '').trim();
+  if (!normalizedQuery) return [];
+
+  const escaped = normalizedQuery.replace(/[%,()]/g, ' ').trim();
+  if (!escaped) return [];
+  const pattern = `%${escaped}%`;
+
+  const sellerPromise = (hasSupabaseEnv && supabase)
+    ? supabase
+      .from(SELLER_ITEMS_TABLE)
+      .select('*')
+      .or([
+        `title.ilike.${pattern}`,
+        `description.ilike.${pattern}`,
+        `market_key.ilike.${pattern}`,
+        `seller_name.ilike.${pattern}`,
+        `seller_email.ilike.${pattern}`,
+      ].join(','))
+      .limit(80)
+    : Promise.resolve({ data: [], error: null });
+
+  const propertyPromise = (hasSupabaseEnv && supabase)
+    ? supabase
+      .from('property_listings')
+      .select('id, title, property_type, category, status, location, city, country, about, image, price_label, price_numeric, price_currency')
+      .or([
+        `title.ilike.${pattern}`,
+        `property_type.ilike.${pattern}`,
+        `category.ilike.${pattern}`,
+        `location.ilike.${pattern}`,
+        `city.ilike.${pattern}`,
+        `country.ilike.${pattern}`,
+        `about.ilike.${pattern}`,
+      ].join(','))
+      .limit(80)
+    : Promise.resolve({ data: [], error: null });
+
+  const [sellerResult, propertyResult, livestockResult] = await Promise.all([
+    sellerPromise,
+    propertyPromise,
+    remoteSearchLivestockListings(normalizedQuery),
+  ]);
+
+  const remoteSellerEntries = sellerResult?.error
+    ? []
+    : (sellerResult?.data || [])
+      .map(mapSellerItemRecord)
+      .map(mapSellerItemToSearchEntry)
+      .filter(Boolean);
+
+  const remotePropertyEntries = propertyResult?.error
+    ? []
+    : (propertyResult?.data || [])
+      .map((row) => ({
+        id: row.id,
+        title: row.title,
+        propertyType: row.property_type,
+        category: row.category,
+        status: row.status,
+        location: row.location,
+        city: row.city,
+        country: row.country,
+        about: row.about,
+        image: row.image,
+        priceLabel: row.price_label,
+        priceNumeric: row.price_numeric,
+        priceCurrency: row.price_currency,
+      }))
+      .map(mapPropertyListingToSearchEntry)
+      .filter(Boolean);
+
+  const remoteLivestockEntries = (livestockResult || [])
+    .map(mapLivestockListingToSearchEntry)
+    .filter(Boolean);
+
+  return dedupeSearchCatalogEntries([
+    ...remoteSellerEntries,
+    ...remotePropertyEntries,
+    ...remoteLivestockEntries,
+  ]);
+};
+
+const SearchResultsPage = ({ sellerItems = [] }) => {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const query = (searchParams.get('query') || '').trim();
+  const [remoteSearchCatalog, setRemoteSearchCatalog] = useState([]);
+  const [isRemoteSearchLoading, setIsRemoteSearchLoading] = useState(false);
+
+  const localDynamicSearchCatalog = useMemo(
+    () => buildDynamicSearchCatalog({
+      sellerItems,
+      propertyItems: getPropertySellerListings(),
+      livestockItems: getLivestockListings(),
+    }),
+    [sellerItems],
+  );
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    if (!query) {
+      setRemoteSearchCatalog([]);
+      setIsRemoteSearchLoading(false);
+      return undefined;
+    }
+
+    setIsRemoteSearchLoading(true);
+    fetchRemoteGlobalSearchEntries(query)
+      .then((entries) => {
+        if (isCancelled) return;
+        setRemoteSearchCatalog(entries);
+      })
+      .catch(() => {
+        if (isCancelled) return;
+        setRemoteSearchCatalog([]);
+      })
+      .finally(() => {
+        if (isCancelled) return;
+        setIsRemoteSearchLoading(false);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [query]);
+
+  const mergedSearchCatalog = useMemo(
+    () => dedupeSearchCatalogEntries([
+      ...searchableCatalog,
+      ...buildProjectWideStaticSearchCatalog(),
+      ...localDynamicSearchCatalog,
+      ...remoteSearchCatalog,
+    ]),
+    [localDynamicSearchCatalog, remoteSearchCatalog],
+  );
 
   const results = useMemo(() => {
     if (!query) {
       return [];
     }
 
-    return searchItemsPowerful(searchableCatalog, query, {
+    return searchItemsPowerful(mergedSearchCatalog, query, {
       fields: [
         { key: 'title', weight: 10 },
         { key: 'subtitle', weight: 6 },
@@ -17130,14 +17787,19 @@ const SearchResultsPage = () => {
       ],
       haystackField: 'searchText',
     });
-  }, [query]);
+  }, [mergedSearchCatalog, query]);
 
   return (
     <PageFrame title={t('searchResults.title')} subtitle={t('searchResults.subtitle')}>
       {query ? (
-        <p className="mb-4 text-sm text-slate-600">
-          Showing {results.length} result{results.length === 1 ? '' : 's'} for "{query}".
-        </p>
+        <>
+          <p className="mb-1 text-sm text-slate-600">
+            Showing {results.length} result{results.length === 1 ? '' : 's'} for "{query}".
+          </p>
+          <p className="mb-4 text-xs text-slate-500">
+            {isRemoteSearchLoading ? 'Searching live database for latest listings...' : 'Includes local + live database listings for better accuracy.'}
+          </p>
+        </>
       ) : (
         <p className="mb-4 text-sm text-slate-600">Enter a term in the top search bar to begin.</p>
       )}
@@ -24124,7 +24786,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/checkout" element={<CheckoutPage cartItems={cartItems} buyNowCheckout={buyNowCheckout} onUpdateCartQuantity={onUpdateCartQuantity} onRemoveCartItem={onRemoveCartItem} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />
     <Route path="/checkout/payfast" element={<PayfastCheckoutPage buyNowCheckout={buyNowCheckout} onPlaceOrder={onPlaceOrder} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />
     <Route path="/support/chat" element={<SupportChatPage orders={orders} onPushNotificationToUser={onPushNotificationToUser} />} />
-    <Route path="/search" element={<SearchResultsPage />} />
+    <Route path="/search" element={<SearchResultsPage sellerItems={sellerItems} />} />
 
     <Route path="/e-commerce" element={<ECommercePage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/tickets" element={<TicketsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
@@ -24219,6 +24881,14 @@ const App = () => {
     return normalizeEmail(order.ownerEmail || order.customer?.email) === normalizedActiveUserEmail;
   }), [orders, normalizedActiveUserEmail]);
   const wishlistItemIds = useMemo(() => wishlistItems.map((item) => item.id), [wishlistItems]);
+  const shellSearchCatalog = useMemo(
+    () => buildDynamicSearchCatalog({
+      sellerItems,
+      propertyItems: getPropertySellerListings(),
+      livestockItems: getLivestockListings(),
+    }),
+    [sellerItems],
+  );
   const selectedItemReviewKey = useMemo(() => getProductReviewItemKey(selectedItemDetails), [selectedItemDetails]);
   const currentReviewerName = typeof window === 'undefined'
     ? ''
@@ -25854,6 +26524,7 @@ const App = () => {
       onMarkNotificationsRead={markNotificationsAsRead}
       onMarkNotificationRead={markNotificationAsRead}
       onClearNotifications={handleClearNotifications}
+      searchCatalog={shellSearchCatalog}
     >
       {appContent}
     </Shell>
