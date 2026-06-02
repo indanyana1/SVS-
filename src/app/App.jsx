@@ -617,6 +617,7 @@ const marketLinks = [
   { labelKey: 'markets.secondhand', href: '/secondhand-central' },
   { labelKey: 'markets.stationery', href: '/stationery-office' },
   { labelKey: 'markets.directLinks', href: '/retailer-direct-links' },
+  { labelKey: 'markets.informalMarket', label: 'Informal Market', href: '/informal-market' },
 ];
 
 // Short marketing taglines shown beneath the market name on the Markets page cards.
@@ -643,6 +644,7 @@ const marketShortDescriptions = {
   '/secondhand-central': 'Quality pre-loved goods at great prices',
   '/stationery-office': 'Office, school & creative supplies',
   '/retailer-direct-links': 'Quick links to top global retailers & brands',
+  '/informal-market': 'Street traders, spazas & informal seller listings',
 };
 
 const sellerMarketOptions = [
@@ -666,6 +668,7 @@ const sellerMarketOptions = [
   { key: 'toysKids', labelKey: 'markets.safety', route: '/safety' },
   { key: 'jewelleryAccessories', labelKey: 'markets.votingProviders', route: '/voting-providers' },
   { key: 'livestock', labelKey: 'markets.livestockHub', route: '/livestock-hub' },
+  { key: 'informalMarket', labelKey: 'markets.informalMarket', label: 'Informal Market', route: '/informal-market' },
 ];
 
 const sellerMarketConfig = sellerMarketOptions.reduce((accumulator, option) => {
@@ -1749,6 +1752,31 @@ const stationeryItems = [
       'https://images.pexels.com/photos/355952/pexels-photo-355952.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
 ];
+
+const informalMarketItems = [
+  /* ── Street Food ── */
+  { id: 'im1', title: 'Vetkoek (Pack of 6)', category: 'Street Food', description: 'Freshly fried dough pockets — eat plain or filled with mince.', price: '3.50', image: 'https://images.pexels.com/photos/4253312/pexels-photo-4253312.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { id: 'im2', title: 'Boerewors Roll', category: 'Street Food', description: 'Grilled boerewors on a fresh roll with tomato-onion sauce.', price: '2.80', image: 'https://images.pexels.com/photos/2282532/pexels-photo-2282532.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { id: 'im3', title: 'Roasted Corn on the Cob', category: 'Street Food', description: 'Charcoal-roasted corn seasoned with butter and chilli salt.', price: '1.20', image: 'https://images.pexels.com/photos/547263/pexels-photo-547263.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  /* ── Fresh Produce ── */
+  { id: 'im4', title: 'Mixed Vegetable Basket', category: 'Fresh Produce', description: 'Spinach, tomatoes, onions & potatoes — sourced directly from local farms.', price: '5.00', image: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { id: 'im5', title: 'Seasonal Fruit Pack (2 kg)', category: 'Fresh Produce', description: 'Mangoes, bananas and guavas picked this week.', price: '4.50', image: 'https://images.pexels.com/photos/1132047/pexels-photo-1132047.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { id: 'im6', title: 'Free-Range Eggs (Tray of 30)', category: 'Fresh Produce', description: 'Farm-fresh eggs from free-roaming hens.', price: '6.00', image: 'https://images.pexels.com/photos/162712/egg-white-food-protein-162712.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  /* ── Clothing ── */
+  { id: 'im7', title: 'Shweshwe Print Wrap Skirt', category: 'Clothing', description: 'Vibrant traditional three-cats fabric handmade wrap skirt.', price: '18.00', image: 'https://images.pexels.com/photos/7691069/pexels-photo-7691069.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { id: 'im8', title: "Men's Kanga Shirt", category: 'Clothing', description: 'Colourful East African kanga fabric button-up shirt.', price: '14.00', image: 'https://images.pexels.com/photos/3622608/pexels-photo-3622608.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { id: 'im9', title: 'Pre-Owned Denim Jeans', category: 'Clothing', description: 'Good-condition second-hand denim jeans, assorted sizes.', price: '8.00', image: 'https://images.pexels.com/photos/52518/jeans-pants-blue-shop-52518.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  /* ── Crafts & Décor ── */
+  { id: 'im10', title: 'Hand-Woven Grass Basket', category: 'Crafts & Décor', description: 'Traditional Zulu ukhamba-style coiled basket, hand-dyed.', price: '12.00', image: 'https://images.pexels.com/photos/6044266/pexels-photo-6044266.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { id: 'im11', title: 'Beaded African Bracelet Set', category: 'Crafts & Décor', description: 'Set of 5 handmade beaded bracelets in traditional Ndebele patterns.', price: '7.50', image: 'https://images.pexels.com/photos/1191531/pexels-photo-1191531.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { id: 'im12', title: 'Wire & Bead Animal Sculpture', category: 'Crafts & Décor', description: 'Handcrafted wire giraffe sculpture — perfect desk or shelf décor.', price: '9.00', image: 'https://images.pexels.com/photos/3768916/pexels-photo-3768916.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  /* ── Household ── */
+  { id: 'im13', title: 'Canola Cooking Oil (2 L)', category: 'Household', description: 'Affordable everyday cooking oil, widely sold in township spazas.', price: '4.20', image: 'https://images.pexels.com/photos/33783/olive-oil-salad-dressing-cooking-olive.jpg?auto=compress&cs=tinysrgb&w=800' },
+  { id: 'im14', title: 'Paraffin Lamp & Wick Set', category: 'Household', description: 'Classic tin paraffin lamp with two replacement wicks.', price: '6.50', image: 'https://images.pexels.com/photos/207985/pexels-photo-207985.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { id: 'im15', title: 'Washing Powder (2 kg Bag)', category: 'Household', description: 'Budget laundry powder — strong clean for hand-washing.', price: '3.80', image: 'https://images.pexels.com/photos/4239013/pexels-photo-4239013.jpeg?auto=compress&cs=tinysrgb&w=800' },
+];
+
+const informalMarketCategories = ['All', 'Street Food', 'Fresh Produce', 'Clothing', 'Crafts & Décor', 'Household'];
 
 const constructionToolsItems = [
   {
@@ -3835,6 +3863,19 @@ const searchableCatalog = [
       'stationery stationary pens pen books notebooks invoice books office school supplies',
     ]),
   })),
+  ...informalMarketItems.map((item) => ({
+    ...item,
+    section: 'Informal Market',
+    sectionKey: 'markets.informalMarket',
+    route: '/informal-market',
+    searchText: buildSearchText([
+      item.title,
+      item.category,
+      item.description,
+      item.price,
+      'informal market street food spaza hawker trader vendor township crafts produce clothing',
+    ]),
+  })),
   ...constructionToolsItems.map((item) => ({
     ...item,
     section: 'Building Materials, Construction and Engineering Tools',
@@ -4127,6 +4168,7 @@ const PROJECT_ROUTE_SEARCH_ENTRIES = [
   { id: 'page-property-hub', title: 'Property Hub', section: 'Markets', route: '/property-hub', keywords: 'property real estate homes rentals land commercial' },
   { id: 'page-livestock-hub', title: 'Livestock Hub', section: 'Markets', route: '/livestock-hub', keywords: 'livestock cattle goats sheep poultry farm animals' },
   { id: 'page-home-care', title: 'Home Care Services', section: 'Markets', route: '/home-care', keywords: 'home care providers nursing elderly baby care cleaner plumber electrician' },
+  { id: 'page-informal-market', title: 'Informal Market', section: 'Markets', route: '/informal-market', keywords: 'informal market street trader spaza hawker local seller township vendor' },
 ];
 
 const mapRetailerDirectLinkToSearchEntry = (retailer) => {
@@ -4165,12 +4207,12 @@ const buildProjectWideStaticSearchCatalog = () => {
 
   const marketEntries = marketLinks.map((market) => ({
     id: `market-link-${market.href}`,
-    title: market.labelKey,
+    title: market.label || market.labelKey,
     subtitle: marketShortDescriptions[market.href] || 'Market',
     section: 'Markets Directory',
     route: market.href,
     searchText: buildSearchText([
-      market.labelKey,
+      market.label || market.labelKey,
       market.href,
       marketShortDescriptions[market.href],
       'market category shopping services listings',
@@ -7027,19 +7069,6 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
   const [query, setQuery] = useState('');
   const [remoteQuickSearchCatalog, setRemoteQuickSearchCatalog] = useState([]);
   const [isQuickSearchLoading, setIsQuickSearchLoading] = useState(false);
-  const [isGlobalSearchFocused, setIsGlobalSearchFocused] = useState(false);
-  const [recentGlobalSearches, setRecentGlobalSearches] = useState(() => {
-    if (typeof window === 'undefined') return [];
-    try {
-      const key = getUserScopedStorageKey('svs:recentGlobalSearches');
-      const raw = window.localStorage.getItem(key);
-      const parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed.filter((item) => typeof item === 'string').slice(0, 8) : [];
-    } catch (_) {
-      return [];
-    }
-  });
-  const globalSearchFormRef = useRef(null);
   const [isAuthenticated, setIsAuthenticated] = useState(getAuthState);
   const [hasSellerAccess, setHasSellerAccess] = useState(getSellerAccessState);
   const [sellerHomePath, setSellerHomePath] = useState(getSellerHomePath);
@@ -7345,107 +7374,6 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
     });
   }, [quickSearchSource, query]);
 
-  const persistRecentGlobalSearches = useCallback((list) => {
-    if (typeof window === 'undefined') return;
-    try {
-      const key = getUserScopedStorageKey('svs:recentGlobalSearches');
-      window.localStorage.setItem(key, JSON.stringify(list));
-    } catch (_) {
-      /* localStorage unavailable */
-    }
-  }, []);
-
-  const recordRecentGlobalSearch = useCallback((rawTerm) => {
-    const term = (rawTerm || '').trim();
-    if (term.length < 2) return;
-    setRecentGlobalSearches((prev) => {
-      const next = [term, ...prev.filter((entry) => entry.toLowerCase() !== term.toLowerCase())].slice(0, 8);
-      persistRecentGlobalSearches(next);
-      return next;
-    });
-  }, [persistRecentGlobalSearches]);
-
-  const removeRecentGlobalSearch = useCallback((term) => {
-    setRecentGlobalSearches((prev) => {
-      const next = prev.filter((entry) => entry !== term);
-      persistRecentGlobalSearches(next);
-      return next;
-    });
-  }, [persistRecentGlobalSearches]);
-
-  const clearRecentGlobalSearches = useCallback(() => {
-    setRecentGlobalSearches([]);
-    persistRecentGlobalSearches([]);
-  }, [persistRecentGlobalSearches]);
-
-  // Re-load recent searches when the signed-in user changes (sign-in,
-  // sign-out, account switch in another tab).
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    const reload = () => {
-      try {
-        const key = getUserScopedStorageKey('svs:recentGlobalSearches');
-        const raw = window.localStorage.getItem(key);
-        const parsed = raw ? JSON.parse(raw) : [];
-        setRecentGlobalSearches(
-          Array.isArray(parsed) ? parsed.filter((item) => typeof item === 'string').slice(0, 8) : []
-        );
-      } catch (_) {
-        setRecentGlobalSearches([]);
-      }
-    };
-    const handleStorageChange = (event) => {
-      if (!event.key) { reload(); return; }
-      if (event.key === 'svs-user-email') reload();
-      if (event.key.startsWith('svs:recentGlobalSearches:')) reload();
-    };
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('svs-auth-changed', reload);
-    window.addEventListener('focus', reload);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('svs-auth-changed', reload);
-      window.removeEventListener('focus', reload);
-    };
-  }, []);
-
-  // Close the dropdown when clicking outside the search form.
-  useEffect(() => {
-    if (!isGlobalSearchFocused) return undefined;
-    const onPointerDown = (event) => {
-      if (globalSearchFormRef.current && !globalSearchFormRef.current.contains(event.target)) {
-        setIsGlobalSearchFocused(false);
-      }
-    };
-    document.addEventListener('mousedown', onPointerDown);
-    document.addEventListener('touchstart', onPointerDown);
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown);
-      document.removeEventListener('touchstart', onPointerDown);
-    };
-  }, [isGlobalSearchFocused]);
-
-  // Debounced auto-save: when the user types and pauses, save the query.
-  useEffect(() => {
-    const term = query.trim();
-    if (term.length < 2) return undefined;
-    const timer = window.setTimeout(() => recordRecentGlobalSearch(term), 1200);
-    return () => window.clearTimeout(timer);
-  }, [query, recordRecentGlobalSearch]);
-
-  const trimmedGlobalQuery = query.trim();
-  const globalAiLinks = useMemo(() => {
-    if (!trimmedGlobalQuery) return [];
-    const encoded = encodeURIComponent(trimmedGlobalQuery);
-    return AI_SEARCH_PROVIDERS.map((provider) => ({ ...provider, href: provider.build(encoded) }));
-  }, [trimmedGlobalQuery]);
-  const globalWebLinks = useMemo(() => {
-    if (!trimmedGlobalQuery) return [];
-    const encoded = encodeURIComponent(trimmedGlobalQuery);
-    return UNIVERSAL_SEARCH_PROVIDERS.map((provider) => ({ ...provider, href: provider.build(encoded) }));
-  }, [trimmedGlobalQuery]);
-  const globalAiIntent = useMemo(() => detectAiIntent(trimmedGlobalQuery), [trimmedGlobalQuery]);
-
   const handleSearchSubmit = (event) => {
     event.preventDefault();
     const term = query.trim();
@@ -7454,8 +7382,6 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
       return;
     }
 
-    recordRecentGlobalSearch(term);
-    setIsGlobalSearchFocused(false);
     navigate(`/search?query=${encodeURIComponent(term)}`);
     setQuery('');
     setMobileOpen(false);
@@ -7549,66 +7475,21 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
             )}
           </nav>
 
-          <form ref={globalSearchFormRef} className={`relative max-w-xl flex-1 ${isSellerConsoleRoute ? 'hidden' : ''}`} onSubmit={handleSearchSubmit}>
+          <form className={`relative max-w-xl flex-1 ${isSellerConsoleRoute ? 'hidden' : ''}`} onSubmit={handleSearchSubmit}>
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               type="search"
               value={query}
-              onChange={(event) => { setQuery(event.target.value); setIsGlobalSearchFocused(true); }}
-              onFocus={() => setIsGlobalSearchFocused(true)}
+              onChange={(event) => setQuery(event.target.value)}
               placeholder={t('search.placeholder')}
               className="w-full rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-9 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/40"
               aria-label={t('search.globalAria')}
             />
-            {isGlobalSearchFocused && !trimmedGlobalQuery && recentGlobalSearches.length > 0 ? (
-              <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-[60] overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-xl">
-                <div className="flex items-center justify-between border-b border-[var(--svs-border)] px-3 py-2">
-                  <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--svs-muted)]">
-                    <Clock className="h-3 w-3" aria-hidden="true" />
-                    Recent searches
-                  </p>
-                  <button type="button" onClick={clearRecentGlobalSearches} className="text-[11px] font-semibold text-[var(--svs-primary-strong)] transition hover:underline">
-                    Clear all
-                  </button>
-                </div>
-                <ul className="py-1">
-                  {recentGlobalSearches.map((term) => (
-                    <li key={term} className="group flex items-center gap-1 px-1">
-                      <button
-                        type="button"
-                        onClick={() => { setQuery(term); recordRecentGlobalSearch(term); }}
-                        className="flex flex-1 items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-[var(--svs-text)] transition hover:bg-[var(--svs-cyan-surface)]"
-                      >
-                        <Clock className="h-3.5 w-3.5 flex-none text-[var(--svs-muted)]" aria-hidden="true" />
-                        <span className="truncate">{term}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removeRecentGlobalSearch(term)}
-                        aria-label={`Remove ${term} from recent searches`}
-                        className="rounded-full p-1.5 text-[var(--svs-muted)] opacity-0 transition hover:bg-[var(--svs-cyan-surface)] hover:text-[var(--svs-text)] group-hover:opacity-100"
-                      >
-                        <X className="h-3.5 w-3.5" aria-hidden="true" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
             {query.trim() ? (
-              <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-[60] max-h-[70vh] overflow-y-auto rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3 shadow-xl">
-                <p className="mb-2 flex items-center gap-1.5 text-[11px] text-[var(--svs-muted)]">
-                  <Sparkles className="h-3 w-3 text-[var(--svs-primary)]" aria-hidden="true" />
-                  AI-enhanced search across all markets{isQuickSearchLoading ? ' \u2022 Checking live database...' : ''}
+              <div className="absolute left-0 right-0 top-[calc(100%+8px)] rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3 shadow-xl">
+                <p className="mb-2 text-[11px] text-[var(--svs-muted)]">
+                  AI-enhanced search across all markets{isQuickSearchLoading ? ' • Checking live database...' : ''}
                 </p>
-                {globalAiIntent ? (
-                  <p className="mb-2 rounded-md bg-violet-50 px-2 py-1.5 text-[11px] text-violet-700">
-                    <Sparkles className="mr-1 inline h-3 w-3" aria-hidden="true" />
-                    AI understood: {globalAiIntent.categories.length > 0 ? `category "${globalAiIntent.categories[0]}"` : ''}
-                    {globalAiIntent.priceCeiling ? ` \u2022 under R${globalAiIntent.priceCeiling.toLocaleString()}` : ''}
-                    {globalAiIntent.localOnly ? ' \u2022 SA only' : ''}
-                  </p>
-                ) : null}
                 {quickResults.length ? (
                   <ul className="space-y-2 text-sm text-[var(--svs-text)]">
                     {quickResults.map((item) => {
@@ -7642,50 +7523,6 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                 ) : (
                   <p className="text-sm text-[var(--svs-muted)]">{t('common.noResults')}</p>
                 )}
-
-                {/* Ask AI */}
-                <p className="mt-3 flex items-center gap-1.5 px-1 text-[10px] font-bold uppercase tracking-wider text-violet-700">
-                  <Sparkles className="h-3 w-3" aria-hidden="true" />
-                  Ask AI about &ldquo;{trimmedGlobalQuery}&rdquo;
-                </p>
-                <ul className="mt-1 grid grid-cols-2 gap-1 sm:grid-cols-3">
-                  {globalAiLinks.map((provider) => (
-                    <li key={provider.id}>
-                      <a
-                        href={provider.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => { recordRecentGlobalSearch(trimmedGlobalQuery); setIsGlobalSearchFocused(false); }}
-                        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-semibold text-[var(--svs-text)] transition hover:bg-violet-50"
-                      >
-                        <Sparkles className="h-3.5 w-3.5 flex-none text-violet-600" aria-hidden="true" />
-                        <span className="truncate">{provider.label}</span>
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* Search the Web */}
-                <p className="mt-3 flex items-center gap-1.5 px-1 text-[10px] font-bold uppercase tracking-wider text-[var(--svs-muted)]">
-                  <Search className="h-3 w-3" aria-hidden="true" />
-                  Search the entire web
-                </p>
-                <ul className="mt-1 grid grid-cols-2 gap-1 sm:grid-cols-3">
-                  {globalWebLinks.map((provider) => (
-                    <li key={provider.id}>
-                      <a
-                        href={provider.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => { recordRecentGlobalSearch(trimmedGlobalQuery); setIsGlobalSearchFocused(false); }}
-                        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-cyan-surface)]"
-                      >
-                        <Search className="h-3.5 w-3.5 flex-none text-[var(--svs-primary)]" aria-hidden="true" />
-                        <span className="truncate">{provider.label}</span>
-                      </a>
-                    </li>
-                  ))}
-                </ul>
               </div>
             ) : null}
           </form>
@@ -11105,6 +10942,159 @@ const StationeryPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
       isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/stationery-office', item.id))}
       metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • <SalePrice price={item.price} currency={item.currency} /></p>}
     />
+  </PageFrame>
+  );
+};
+
+const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
+  const { t } = useTranslation();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState('All');
+  const [sortOrder, setSortOrder] = useState('Default');
+
+  const allItems = useMemo(
+    () => [...getSellerItemsForMarket(sellerItems, 'informalMarket'), ...informalMarketItems],
+    [sellerItems],
+  );
+
+  const filteredItems = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return allItems
+      .filter((item) => {
+        const matchCat = activeCategory === 'All' || item.category === activeCategory;
+        const matchQ = !q || [item.title, item.category, item.description].some((v) => String(v || '').toLowerCase().includes(q));
+        return matchCat && matchQ;
+      })
+      .sort((a, b) => {
+        if (sortOrder === 'Price Low') return getNumericPriceValue(a.price) - getNumericPriceValue(b.price);
+        if (sortOrder === 'Price High') return getNumericPriceValue(b.price) - getNumericPriceValue(a.price);
+        return 0;
+      });
+  }, [allItems, searchQuery, activeCategory, sortOrder]);
+
+  const buildCartItem = (item) => createCartItem({
+    ...item,
+    route: '/informal-market',
+    marketName: 'Informal Market',
+    details: `${item.category || 'Informal listing'} • ${item.description || item.sellerName || 'Local informal seller'}`,
+  });
+  const buildWishlistItem = (item) => createWishlistItem({
+    ...item,
+    route: '/informal-market',
+    marketName: 'Informal Market',
+    details: `${item.category || 'Informal listing'} • ${item.sellerName || 'Local informal seller'}`,
+  });
+
+  return (
+  <PageFrame
+    title="Informal Market"
+    subtitle="Street traders, spazas &amp; informal seller listings"
+    heroImages={[
+      'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      'https://images.pexels.com/photos/5632379/pexels-photo-5632379.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      'https://images.pexels.com/photos/1435904/pexels-photo-1435904.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    ]}
+    heroOverlayClassName="bg-gradient-to-b from-black/70 via-black/55 to-black/70"
+    sectionClassName="px-0 pt-0 pb-8 sm:pt-0 sm:pb-10"
+    heroWrapperClassName="w-full max-w-none"
+    contentWrapperClassName="mx-auto w-full max-w-7xl px-4"
+    heroContainerClassName="rounded-none border-x-0 border-t-0 p-0 shadow-none"
+    heroContentClassName="flex min-h-[220px] flex-col items-center justify-center px-6 py-8 text-center sm:min-h-[260px] sm:px-8 sm:py-10"
+    titleClassName="text-xl text-white sm:text-2xl"
+    subtitleClassName="mt-2 text-xs text-white/90 sm:text-sm"
+  >
+    {/* ── Search + Filter Bar ── */}
+    <div className="mt-8 sm:mt-10">
+      {/* Search */}
+      <div className="mx-auto max-w-[700px]">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search street food, clothing, crafts, produce…"
+            className="h-10 w-full rounded-full border border-[var(--svs-border)] bg-white pl-11 pr-4 text-xs font-medium text-[var(--svs-text)] shadow-sm outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30"
+          />
+        </div>
+      </div>
+
+      {/* Filter row */}
+      <div className="mt-4 rounded-xl border border-[var(--svs-border)] bg-white/80 px-4 py-3 shadow-[0_2px_8px_rgba(15,23,42,0.06)] backdrop-blur sm:px-5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          {/* Category tabs */}
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
+            {informalMarketCategories.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setActiveCategory(cat)}
+                className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition ${activeCategory === cat ? 'bg-[var(--svs-primary)] text-white shadow-[0_4px_14px_rgba(15,118,110,0.25)]' : 'border border-[var(--svs-border)] bg-white text-[var(--svs-text)] hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]'}`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          {/* Sort dropdown */}
+          <div className="relative shrink-0">
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value)}
+              className="h-9 w-full appearance-none rounded-full border border-[var(--svs-border)] bg-white px-4 pr-8 text-xs font-semibold text-[var(--svs-text)] outline-none transition hover:border-[var(--svs-primary)] focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30 sm:w-[160px]"
+            >
+              <option value="Default">Default</option>
+              <option value="Price Low">Price: Low → High</option>
+              <option value="Price High">Price: High → Low</option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* ── Results summary ── */}
+    <p className="mt-5 text-xs text-[var(--svs-muted)]">
+      {filteredItems.length} listing{filteredItems.length === 1 ? '' : 's'}{activeCategory !== 'All' ? ` in ${activeCategory}` : ''}
+      {searchQuery ? ` for "${searchQuery}"` : ''}
+    </p>
+
+    {/* ── Grid ── */}
+    <div className="mt-3">
+      {filteredItems.length > 0 ? (
+        <CardGrid
+          items={filteredItems}
+          buttonLabel={t('common.addToCart')}
+          secondaryButtonLabel={t('common.viewDetails')}
+          reviewSummaryMap={productReviewSummaryMap}
+          getItemReviewKey={(item) => getCollectionItemId('/informal-market', item.id)}
+          onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+          onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
+          onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+          onOpenItemDetails={(item) => {
+            const wishlistItem = buildWishlistItem(item);
+            onOpenItemDetails?.({
+              title: getTranslatedValue(t, item.titleKey, item.title),
+              image: item.image,
+              images: item.images || (item.image ? [item.image] : []),
+              marketName: 'Informal Market',
+              details: `${item.category || 'Informal listing'} • ${item.description || item.sellerName || 'Local informal seller'}`,
+              priceLabel: getSalePrices(item.price).nowPrice,
+              cartItem: buildCartItem(item),
+              wishlistItem,
+            });
+          }}
+          isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/informal-market', item.id))}
+          metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Informal listing'} • <SalePrice price={item.price} currency={item.currency} /></p>}
+        />
+      ) : (
+        <div className="rounded-2xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-14 text-center">
+          <p className="text-3xl mb-3">🛒</p>
+          <p className="text-sm font-semibold text-[var(--svs-primary-strong)] mb-1">No listings found</p>
+          <p className="text-xs text-[var(--svs-muted)]">Try a different category or clear your search.</p>
+        </div>
+      )}
+    </div>
   </PageFrame>
   );
 };
@@ -17427,13 +17417,8 @@ const MarketsPage = () => {
     [t],
   );
 
-  const directLinksMarket = useMemo(
-    () => orderedMarketLinks.find((market) => market.href === '/retailer-direct-links') || null,
-    [orderedMarketLinks],
-  );
-
   const gridMarketLinks = useMemo(
-    () => orderedMarketLinks.filter((market) => market.href !== '/retailer-direct-links'),
+    () => orderedMarketLinks,
     [orderedMarketLinks],
   );
 
@@ -17477,15 +17462,7 @@ const MarketsPage = () => {
               />
             ))}
           </div>
-          {directLinksMarket ? (
-            <Link
-              to={directLinksMarket.href}
-              className="mt-4 inline-flex max-w-full items-center rounded-xl border border-white/35 bg-black/35 px-4 py-2 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-black/50"
-            >
-              Direct Links for Leading Retailers & Big Brands
-              <span className="ml-2 text-xs text-cyan-100">Open</span>
-            </Link>
-          ) : null}
+
         </div>
       </div>
 
@@ -17513,6 +17490,7 @@ const MarketsPage = () => {
           const isToysKids = market.href === '/safety';
           const isJewelleryAccessories = market.href === '/voting-providers';
           const isDirectLinks = market.href === '/retailer-direct-links';
+          const isInformalMarket = market.href === '/informal-market';
           const marketDisplayNumber = market.href === '/tickets'
             ? '09'
             : String(index + 1).padStart(2, '0');
@@ -17520,10 +17498,10 @@ const MarketsPage = () => {
           const overlayClassName = useBookingsPreset
             ? 'absolute inset-0 bg-gradient-to-t from-[#041a26]/70 via-[#0f6f84]/35 to-[#14b8a6]/15'
             : 'absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent';
-          const marketLabelClassName = 'text-xs font-semibold uppercase tracking-wide text-[#8eeaff] drop-shadow sm:text-xs';
+          const marketLabelClassName = 'inline-flex rounded-lg border border-white/35 bg-black/55 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-white shadow-[0_1px_6px_rgba(0,0,0,0.8)] backdrop-blur-sm sm:text-xs';
           const marketTitleClassName = 'text-base font-bold leading-tight text-white drop-shadow line-clamp-3 sm:text-lg sm:line-clamp-none';
           const badgeClassName = 'svs-berkshire-swash rounded-full border border-white/35 bg-white/15 px-2 py-0.5 text-xs text-white sm:px-2 sm:py-1 sm:text-sm';
-          const hasHeroImage = isFastFood || isFashion || isBookings || isBeverages || isGroceries || isMobility || isEcommerce || isElectronics || isBetting || isConstruction || isLivestock || isHomeCare || isNaturalResources || isWellness || isStationery || isProperty || isHerbs || isSecondhand || isBeautyFitnessSports || isToysKids || isJewelleryAccessories || isDirectLinks;
+          const hasHeroImage = isFastFood || isFashion || isBookings || isBeverages || isGroceries || isMobility || isEcommerce || isElectronics || isBetting || isConstruction || isLivestock || isHomeCare || isNaturalResources || isWellness || isStationery || isProperty || isHerbs || isSecondhand || isBeautyFitnessSports || isToysKids || isJewelleryAccessories || isDirectLinks || isInformalMarket;
           const heroImageUrl = isFastFood
             ? 'https://images.pexels.com/photos/2983101/pexels-photo-2983101.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isFashion
@@ -17568,7 +17546,9 @@ const MarketsPage = () => {
             ? 'https://images.pexels.com/photos/691046/pexels-photo-691046.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isDirectLinks
             ? 'https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg?auto=compress&cs=tinysrgb&w=1200'
-            : '';
+            : isInformalMarket
+            ? 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            : ''
           return hasHeroImage ? (
             <Link
               key={`all-${market.href}`}
@@ -17590,7 +17570,7 @@ const MarketsPage = () => {
                 {/* Center: market name perfectly centered on the image */}
                 <div className="flex flex-1 flex-col items-center justify-center px-1 text-center sm:items-start sm:px-0 sm:text-left">
                   <div className="inline-flex flex-col items-center gap-1 rounded-xl border border-white/20 bg-black/55 px-2.5 py-1.5 backdrop-blur-sm sm:items-start sm:gap-1.5 sm:rounded-2xl sm:px-3 sm:py-2">
-                    <p className={marketTitleClassName}>{t(market.labelKey)}</p>
+                    <p className={marketTitleClassName}>{market.label || t(market.labelKey)}</p>
                     {marketShortDescriptions[market.href] ? (
                       <p className="text-[11px] leading-snug text-white/90 line-clamp-2 sm:text-xs">
                         {marketShortDescriptions[market.href]}
@@ -17608,12 +17588,12 @@ const MarketsPage = () => {
           >
             {/* Top: label + SVS badge */}
             <div className="flex items-start justify-between gap-2 sm:gap-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#8eeaff] drop-shadow">{t('marketsPage.marketLabel', { number: marketDisplayNumber })}</p>
+              <p className={marketLabelClassName}>{t('marketsPage.marketLabel', { number: marketDisplayNumber })}</p>
               <span className="svs-berkshire-swash rounded-full border border-white/35 bg-white/15 px-2 py-0.5 text-xs text-white sm:px-2 sm:py-1 sm:text-sm">SVS</span>
             </div>
             {/* Center: title + tagline */}
             <div className="flex flex-1 flex-col items-center justify-center px-1 text-center sm:items-start sm:px-0 sm:text-left">
-              <p className="text-base font-bold leading-tight text-white drop-shadow line-clamp-3 sm:text-lg sm:line-clamp-none">{t(market.labelKey)}</p>
+              <p className="text-base font-bold leading-tight text-white drop-shadow line-clamp-3 sm:text-lg sm:line-clamp-none">{market.label || t(market.labelKey)}</p>
               {marketShortDescriptions[market.href] ? (
                 <p className="mt-1.5 text-[11px] leading-snug text-white/85 drop-shadow line-clamp-2 sm:mt-2 sm:text-xs">
                   {marketShortDescriptions[market.href]}
@@ -24804,6 +24784,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/wellness" element={<WellnessPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/stationery-office" element={<StationeryPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/retailer-direct-links" element={<RetailerDirectLinksPage />} />
+    <Route path="/informal-market" element={<InformalMarketPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/secondhand-central" element={<SecondHandPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/secondhand-central/product/:itemId" element={<SecondHandProductDetailPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} />} />
     <Route path="/secondhand-central/:categoryKey" element={<SecondHandPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
