@@ -19675,11 +19675,18 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
 
       const sellerEmail = candidate.sellerEmail
         || candidate.seller_email
+        || candidate.providerEmail
+        || candidate.provider_email
+        || candidate.contactEmail
+        || candidate.contact_email
         || candidate.seller?.email
         || candidate.seller?.sellerEmail
         || '';
       const sellerName = candidate.sellerName
         || candidate.seller_name
+        || candidate.providerName
+        || candidate.storeName
+        || candidate.businessName
         || candidate.seller?.name
         || candidate.seller?.sellerName
         || candidate.provider
@@ -19998,6 +20005,14 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       return;
     }
 
+    const hasActiveSelection = Boolean(
+      selectedThreadId && visibleThreads.some((thread) => thread.id === selectedThreadId)
+    );
+
+    if (hasActiveSelection) {
+      return;
+    }
+
     const preferredThread = preferredRecipientEmail
       ? visibleThreads.find((thread) => {
         if (!Array.isArray(thread?.participants)) {
@@ -20022,10 +20037,6 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
 
     if (preferredThread && preferredThread.id !== selectedThreadId) {
       setSelectedThreadId(preferredThread.id);
-      return;
-    }
-
-    if (selectedThreadId && visibleThreads.some((thread) => thread.id === selectedThreadId)) {
       return;
     }
 
@@ -20373,6 +20384,14 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                     key={thread.id}
                     type="button"
                     onClick={() => {
+                      const counterpartEmail = normalizeEmail(
+                        thread.participants?.find((participant) => normalizeEmail(participant) !== currentUserEmail) || ''
+                      );
+                      if (counterpartEmail) {
+                        setRecipientEmail(counterpartEmail);
+                      }
+                      setSelectedOrderId(String(thread.orderId || ''));
+                      setIssueType(String(thread.issueType || 'General Support'));
                       setSelectedThreadId(thread.id);
                       setMobilePanel('chat');
                     }}
@@ -25124,7 +25143,37 @@ const App = () => {
       return true;
     }
 
-    return normalizeEmail(order.ownerEmail || order.customer?.email) === normalizedActiveUserEmail;
+    const orderOwnerEmail = normalizeEmail(order.ownerEmail || order.customer?.email || order.customer?.contact || '');
+
+    if (orderOwnerEmail === normalizedActiveUserEmail) {
+      return true;
+    }
+
+    const orderSellerEmail = normalizeEmail(
+      order.sellerEmail
+      || order.seller_email
+      || order.seller?.email
+      || order.providerEmail
+      || order.provider_email
+      || order.contactEmail
+      || order.contact_email
+      || ''
+    );
+
+    if (orderSellerEmail === normalizedActiveUserEmail) {
+      return true;
+    }
+
+    return (order.items || []).some((item) => normalizeEmail(
+      item?.sellerEmail
+      || item?.seller_email
+      || item?.seller?.email
+      || item?.providerEmail
+      || item?.provider_email
+      || item?.contactEmail
+      || item?.contact_email
+      || ''
+    ) === normalizedActiveUserEmail);
   }), [orders, normalizedActiveUserEmail]);
   const wishlistItemIds = useMemo(() => wishlistItems.map((item) => item.id), [wishlistItems]);
   const shellSearchCatalog = useMemo(
