@@ -19753,6 +19753,21 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     return 'Contact';
   }, []);
 
+  const getRecipientPresenceLabel = useCallback((role) => {
+    if (role === 'admin') return 'Online now';
+    if (role === 'seller') return 'Available';
+    if (role === 'client') return 'Active contact';
+    return 'Available';
+  }, []);
+
+  const getRecipientAvatarLabel = useCallback((option) => {
+    const rawName = String(option?.name || option?.email || 'C').trim();
+    const parts = rawName.split(/\s+/).filter(Boolean);
+    const first = parts[0]?.[0] || rawName[0] || 'C';
+    const second = parts.length > 1 ? parts[1][0] : (parts[0]?.[1] || '');
+    return `${first}${second}`.toUpperCase();
+  }, []);
+
   const filteredRecipientOptions = useMemo(() => {
     const searchTerm = String(recipientSearchQuery || '').trim().toLowerCase();
     if (!searchTerm) {
@@ -19774,6 +19789,34 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       return haystack.includes(searchTerm);
     });
   }, [recipientOptions, recipientSearchQuery]);
+
+  const groupedRecipientOptions = useMemo(() => {
+    const bucket = {
+      buyer: [],
+      seller: [],
+      admin: [],
+    };
+
+    filteredRecipientOptions.forEach((option) => {
+      if (option.role === 'admin') {
+        bucket.admin.push(option);
+        return;
+      }
+
+      if (option.role === 'seller') {
+        bucket.seller.push(option);
+        return;
+      }
+
+      bucket.buyer.push(option);
+    });
+
+    return [
+      { key: 'buyer', title: 'Buyers', items: bucket.buyer },
+      { key: 'seller', title: 'Sellers', items: bucket.seller },
+      { key: 'admin', title: 'Support', items: bucket.admin },
+    ].filter((group) => group.items.length);
+  }, [filteredRecipientOptions]);
 
   const preferredRecipientEmail = normalizeEmail(recipientEmail || prefillRecipientEmailFromState || '');
   const selectedRecipientName = useMemo(() => {
@@ -20235,25 +20278,44 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
 
                 <div className="mt-3">
                   <p className="text-xs font-semibold text-slate-600">{startChatRecipientLabel}</p>
-                  {filteredRecipientOptions.length ? (
-                    <div className="mt-1 max-h-52 space-y-1.5 overflow-y-auto rounded-lg border border-[#d6e6f5] bg-white p-2">
-                      {filteredRecipientOptions.map((option) => {
-                        const isSelected = normalizeEmail(recipientEmail) === option.email;
-                        return (
-                          <button
-                            key={`recipient-${option.email}`}
-                            type="button"
-                            onClick={() => {
-                              setRecipientEmail(option.email);
-                              createThread(option.email);
-                            }}
-                            className={`w-full rounded-lg border px-3 py-2.5 text-left text-sm transition ${isSelected ? 'border-[#0f6674] bg-[#e8f7fb]' : 'border-[#d6e6f5] bg-white hover:border-[#0f6674]'}`}
-                          >
-                            <p className="truncate font-semibold text-[#0f6674]">{option.name}</p>
-                            <p className="truncate text-xs text-slate-500">{option.email} • {getRecipientRoleLabel(option.role)}</p>
-                          </button>
-                        );
-                      })}
+                  {groupedRecipientOptions.length ? (
+                    <div className="mt-1 max-h-72 space-y-3 overflow-y-auto rounded-xl border border-[#d6e6f5] bg-white p-2.5 shadow-sm">
+                      {groupedRecipientOptions.map((group) => (
+                        <div key={group.key}>
+                          <p className="px-1 pb-2 text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">{group.title}</p>
+                          <div className="space-y-1.5">
+                            {group.items.map((option) => {
+                              const isSelected = normalizeEmail(recipientEmail) === option.email;
+                              const statusLabel = getRecipientPresenceLabel(option.role);
+                              return (
+                                <button
+                                  key={`recipient-${option.email}`}
+                                  type="button"
+                                  onClick={() => {
+                                    setRecipientEmail(option.email);
+                                    createThread(option.email);
+                                  }}
+                                  className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition ${isSelected ? 'border-[#0f6674] bg-[#e8f7fb]' : 'border-[#d6e6f5] bg-white hover:border-[#0f6674]'}`}
+                                >
+                                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-black ${option.role === 'admin' ? 'bg-[#0f6674] text-white' : option.role === 'seller' ? 'bg-[#dff6ea] text-[#0f7a46]' : 'bg-[#eef4ff] text-[#3356a8]'}`}>
+                                    {getRecipientAvatarLabel(option)}
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <p className="truncate font-semibold text-[#0f6674]">{option.name}</p>
+                                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${option.role === 'admin' ? 'bg-[#e8f7fb] text-[#0f6674]' : option.role === 'seller' ? 'bg-[#e9f8ef] text-[#0f7a46]' : 'bg-[#edf1fb] text-[#3356a8]'}`}>
+                                        {getRecipientRoleLabel(option.role)}
+                                      </span>
+                                    </div>
+                                    <p className="truncate text-xs text-slate-500">{option.email}</p>
+                                    <p className="mt-0.5 text-[11px] font-semibold text-slate-400">{statusLabel}</p>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   ) : (
                     <p className="mt-2 text-[11px] font-semibold text-amber-700">
@@ -20359,10 +20421,14 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                           onChange={(event) => handleRecipientChange(event.target.value)}
                           className="rounded-lg border border-[#d6e6f5] bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-[#0f6674]"
                         >
-                          {filteredRecipientOptions.map((option) => (
-                            <option key={`header-recipient-${option.email}`} value={option.email}>
-                              {option.name} • {getRecipientRoleLabel(option.role)}
-                            </option>
+                          {groupedRecipientOptions.map((group) => (
+                            <optgroup key={`header-group-${group.key}`} label={group.title}>
+                              {group.items.map((option) => (
+                                <option key={`header-recipient-${option.email}`} value={option.email}>
+                                  {option.name} • {getRecipientRoleLabel(option.role)}
+                                </option>
+                              ))}
+                            </optgroup>
                           ))}
                         </select>
                       </label>
@@ -20453,10 +20519,14 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                             onChange={(event) => handleRecipientChange(event.target.value)}
                             className="mt-1 w-full rounded-lg border border-[#d6e6f5] bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-[#0f6674]"
                           >
-                            {filteredRecipientOptions.map((option) => (
-                              <option key={`empty-recipient-${option.email}`} value={option.email}>
-                                {option.name} • {getRecipientRoleLabel(option.role)}
-                              </option>
+                            {groupedRecipientOptions.map((group) => (
+                              <optgroup key={`empty-group-${group.key}`} label={group.title}>
+                                {group.items.map((option) => (
+                                  <option key={`empty-recipient-${option.email}`} value={option.email}>
+                                    {option.name} • {getRecipientRoleLabel(option.role)}
+                                  </option>
+                                ))}
+                              </optgroup>
                             ))}
                           </select>
                         </label>
