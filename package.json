@@ -28,10 +28,10 @@
   },
   "proxy": "http://localhost:5000",
   "scripts": {
-    "start": "react-scripts start",
+    "start": "cross-env NODE_NO_WARNINGS=1 react-scripts start",
     "start:server": "node server.js",
-    "dev": "concurrently \"npm run start:server\" \"npm start\"",
-    "build": "cross-env DISABLE_ESLINT_PLUGIN=true react-scripts build",
+    "dev": "cross-env NODE_NO_WARNINGS=1 concurrently \"npm run start:server\" \"npm start\"",
+    "build": "cross-env NODE_NO_WARNINGS=1 DISABLE_ESLINT_PLUGIN=true react-scripts build",
     "test": "react-scripts test",
     "test:ci": "cross-env CI=true react-scripts test --watch=false --passWithNoTests",
     "eject": "react-scripts eject"
