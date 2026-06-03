@@ -19836,17 +19836,6 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     return getDisplayNameFromEmail(preferredRecipientEmail) || preferredRecipientEmail;
   }, [prefillRecipientEmailFromState, prefillRecipientNameFromState, preferredRecipientEmail, recipientOptions]);
 
-  const handleRecipientChange = useCallback((nextRecipientEmail) => {
-    const normalizedRecipient = normalizeEmail(nextRecipientEmail);
-    if (!normalizedRecipient || normalizedRecipient === currentUserEmail) {
-      return;
-    }
-
-    setRecipientEmail(normalizedRecipient);
-    createThread(normalizedRecipient);
-    setMobilePanel('chat');
-  }, [createThread, currentUserEmail]);
-
   const createThread = useCallback((recipientOverride = '', options = {}) => {
     const normalizedRecipient = normalizeEmail(recipientOverride || recipientEmail);
     if (!normalizedRecipient || normalizedRecipient === currentUserEmail) {
@@ -19951,6 +19940,17 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
 
     return nextThread;
   }, [currentUserEmail, currentUserName, issueType, loadRemoteChat, orderOptions, prefillRecipientEmailFromState, prefillRecipientNameFromState, prefillItemKeyFromState, prefillItemTitleFromState, prefillItemImageFromState, prefillItemLinkFromState, recipientEmail, recipientOptions, selectedOrderId, threads]);
+
+  const handleRecipientChange = useCallback((nextRecipientEmail) => {
+    const normalizedRecipient = normalizeEmail(nextRecipientEmail);
+    if (!normalizedRecipient || normalizedRecipient === currentUserEmail) {
+      return;
+    }
+
+    setRecipientEmail(normalizedRecipient);
+    createThread(normalizedRecipient);
+    setMobilePanel('chat');
+  }, [createThread, currentUserEmail]);
 
   useEffect(() => {
     if (prefillOrderIdFromState) {
