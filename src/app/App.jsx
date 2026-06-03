@@ -17542,9 +17542,7 @@ const MarketsPage = () => {
           const isJewelleryAccessories = market.href === '/voting-providers';
           const isDirectLinks = market.href === '/retailer-direct-links';
           const isInformalMarket = market.href === '/informal-market';
-          const marketDisplayNumber = market.href === '/tickets'
-            ? '09'
-            : String(index + 1).padStart(2, '0');
+          const marketDisplayNumber = String(index + 1).padStart(2, '0');
           const useBookingsPreset = isBookings;
           const overlayClassName = useBookingsPreset
             ? 'absolute inset-0 bg-gradient-to-t from-[#041a26]/70 via-[#0f6f84]/35 to-[#14b8a6]/15'
