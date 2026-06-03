@@ -5748,6 +5748,57 @@ const requestStripeClientSecret = async ({ amount, currency, email, fullName }) 
   return result.clientSecret;
 };
 
+const requestSupportAgentReply = async ({ message, context = {}, history = [] }) => {
+  const normalizedMessage = String(message || '').trim();
+  if (!normalizedMessage) {
+    throw new Error('Message is required.');
+  }
+
+  let response;
+  try {
+    response = await fetch('/api/support-agent', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: normalizedMessage,
+        context,
+        history,
+      }),
+    });
+  } catch (networkError) {
+    // eslint-disable-next-line no-console
+    console.error('[support-agent] network error:', networkError);
+    throw new Error('Cannot reach SVS Agent right now. Please try again shortly.');
+  }
+
+  const rawBody = await response.text();
+  let result = {};
+  try {
+    result = rawBody ? JSON.parse(rawBody) : {};
+  } catch (_error) {
+    result = {};
+  }
+
+  if (!response.ok) {
+    // eslint-disable-next-line no-console
+    console.error('[support-agent] request failed', response.status, rawBody);
+    const detail = result.error
+      || result.message
+      || (rawBody && rawBody.length < 240 ? rawBody : '')
+      || 'SVS Agent is currently unavailable.';
+    throw new Error(`${detail} (HTTP ${response.status})`);
+  }
+
+  const reply = String(result.reply || '').trim();
+  if (!reply) {
+    throw new Error('SVS Agent returned an empty response.');
+  }
+
+  return reply;
+};
+
 const getCartTotals = (cartItems) => {
   const subtotal = getCartSubtotal(cartItems);
   const serviceFee = getServiceFee(subtotal);
@@ -17500,7 +17551,7 @@ const MarketsPage = () => {
             : 'absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent';
           const marketLabelClassName = 'inline-flex rounded-lg border border-white/35 bg-black/55 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-white shadow-[0_1px_6px_rgba(0,0,0,0.8)] backdrop-blur-sm sm:text-xs';
           const marketTitleClassName = 'text-base font-bold leading-tight text-white drop-shadow line-clamp-3 sm:text-lg sm:line-clamp-none';
-          const badgeClassName = 'svs-berkshire-swash rounded-full border border-white/35 bg-white/15 px-2 py-0.5 text-xs text-white sm:px-2 sm:py-1 sm:text-sm';
+          const badgeClassName = 'svs-berkshire-swash inline-flex items-center justify-center rounded-full border border-white/50 bg-black/60 px-2 py-0.5 text-xs text-white shadow-[0_2px_8px_rgba(0,0,0,0.65)] backdrop-blur-sm sm:px-2 sm:py-1 sm:text-sm';
           const hasHeroImage = isFastFood || isFashion || isBookings || isBeverages || isGroceries || isMobility || isEcommerce || isElectronics || isBetting || isConstruction || isLivestock || isHomeCare || isNaturalResources || isWellness || isStationery || isProperty || isHerbs || isSecondhand || isBeautyFitnessSports || isToysKids || isJewelleryAccessories || isDirectLinks || isInformalMarket;
           const heroImageUrl = isFastFood
             ? 'https://images.pexels.com/photos/2983101/pexels-photo-2983101.jpeg?auto=compress&cs=tinysrgb&w=1200'
@@ -17589,7 +17640,7 @@ const MarketsPage = () => {
             {/* Top: label + SVS badge */}
             <div className="flex items-start justify-between gap-2 sm:gap-3">
               <p className={marketLabelClassName}>{t('marketsPage.marketLabel', { number: marketDisplayNumber })}</p>
-              <span className="svs-berkshire-swash rounded-full border border-white/35 bg-white/15 px-2 py-0.5 text-xs text-white sm:px-2 sm:py-1 sm:text-sm">SVS</span>
+              <span className={badgeClassName}>SVS</span>
             </div>
             {/* Center: title + tagline */}
             <div className="flex flex-1 flex-col items-center justify-center px-1 text-center sm:items-start sm:px-0 sm:text-left">
@@ -19475,6 +19526,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   const [selectedOrderId, setSelectedOrderId] = useState(prefillOrderIdFromState);
   const [isRemoteChatEnabled, setIsRemoteChatEnabled] = useState(false);
   const [remoteChatStatusMessage, setRemoteChatStatusMessage] = useState('Checking chat sync...');
+  const [isAgentReplying, setIsAgentReplying] = useState(false);
   const prefilledThreadBootstrapRef = useRef('');
 
   useEffect(() => {
@@ -19956,7 +20008,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   }, [currentUserEmail]);
 
 
-  const handleSendMessage = useCallback(() => {
+  const handleSendMessage = useCallback(async () => {
     const body = String(draftMessage || '').trim();
     if (!body) {
       return;
@@ -19989,6 +20041,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
         }
         : candidate
     )));
+    setDraftMessage('');
 
     const updatedThread = {
       ...(thread || {}),
@@ -19999,7 +20052,8 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     const recipientEmail = normalizeEmail(
       (updatedThread.participants || []).find((participant) => normalizeEmail(participant) !== currentUserEmail) || ''
     );
-    if (recipientEmail) {
+    const isSupportAgentThread = recipientEmail === SUPPORT_ADMIN_EMAIL;
+    if (recipientEmail && !isSupportAgentThread) {
       const messagePreview = body.length > 120 ? `${body.slice(0, 117)}...` : body;
       onPushNotificationToUser?.(recipientEmail, {
         type: 'chat',
@@ -20024,8 +20078,96 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
         });
     }
 
-    setDraftMessage('');
-  }, [activeThread, createThread, currentRole, currentUserEmail, currentUserName, draftMessage, loadRemoteChat, onPushNotificationToUser]);
+    if (isSupportAgentThread && !isAdmin) {
+      setIsAgentReplying(true);
+      try {
+        const agentHistory = activeMessages.slice(-8).map((message) => ({
+          role: normalizeEmail(message.senderEmail || '') === SUPPORT_ADMIN_EMAIL ? 'assistant' : 'user',
+          content: String(message.body || ''),
+        }));
+        const agentReplyBody = await requestSupportAgentReply({
+          message: body,
+          history: agentHistory,
+          context: {
+            userRole: currentRole,
+            issueType: updatedThread.issueType || 'General Support',
+            orderReference: updatedThread.orderReference || '',
+            orderId: updatedThread.orderId || '',
+            route: typeof window !== 'undefined' ? window.location.pathname : '/support/chat',
+            recipientName: resolveCounterparty(updatedThread).name,
+          },
+        });
+
+        const agentTimestamp = new Date().toISOString();
+        const agentMessage = {
+          id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          threadId: updatedThread.id,
+          senderEmail: SUPPORT_ADMIN_EMAIL,
+          senderName: SUPPORT_ADMIN_NAME,
+          senderRole: 'admin',
+          body: agentReplyBody,
+          createdAt: agentTimestamp,
+        };
+
+        setMessages((current) => [...current, agentMessage]);
+        setThreads((current) => current.map((candidate) => (
+          candidate.id === updatedThread.id
+            ? {
+              ...candidate,
+              updatedAt: agentTimestamp,
+              lastMessage: agentReplyBody,
+            }
+            : candidate
+        )));
+
+        if (getAuthState() && currentUserEmail && hasSupabaseEnv && supabase) {
+          const syncedThread = {
+            ...updatedThread,
+            updatedAt: agentTimestamp,
+            lastMessage: agentReplyBody,
+          };
+
+          supabase
+            .from(SUPPORT_CHAT_THREADS_TABLE)
+            .upsert([toSupportChatThreadRecord(syncedThread)], { onConflict: 'thread_key' })
+            .then(() => {
+              return supabase
+                .from(SUPPORT_CHAT_MESSAGES_TABLE)
+                .upsert([toSupportChatMessageRecord(agentMessage)], { onConflict: 'message_key' });
+            })
+            .then(() => {
+              loadRemoteChat();
+            });
+        }
+      } catch (agentError) {
+        const fallbackTimestamp = new Date().toISOString();
+        const fallbackBody = `SVS Agent is temporarily unavailable. Please try again in a moment.\n\nDetails: ${agentError?.message || 'Unknown error.'}`;
+        const fallbackMessage = {
+          id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          threadId: updatedThread.id,
+          senderEmail: SUPPORT_ADMIN_EMAIL,
+          senderName: SUPPORT_ADMIN_NAME,
+          senderRole: 'admin',
+          body: fallbackBody,
+          createdAt: fallbackTimestamp,
+        };
+
+        setMessages((current) => [...current, fallbackMessage]);
+        setThreads((current) => current.map((candidate) => (
+          candidate.id === updatedThread.id
+            ? {
+              ...candidate,
+              updatedAt: fallbackTimestamp,
+              lastMessage: fallbackBody,
+            }
+            : candidate
+        )));
+      } finally {
+        setIsAgentReplying(false);
+      }
+    }
+
+  }, [activeMessages, activeThread, createThread, currentRole, currentUserEmail, currentUserName, draftMessage, isAdmin, loadRemoteChat, onPushNotificationToUser, resolveCounterparty]);
 
   return (
     <PageFrame>
@@ -20033,7 +20175,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
         <div className="border-b border-[#e5eef8] bg-gradient-to-r from-[#0f6674] via-[#0f889a] to-[#0f6674] px-4 py-4 text-white sm:px-7 sm:py-5">
           <h1 className="text-2xl font-black sm:text-3xl">Support Chat</h1>
           <p className="mt-1 text-sm text-cyan-50">
-            Chat directly with sellers or admin support when you need help with orders, payments, or delivery issues.
+            Chat with sellers, or ask SVS Agent for instant help across buying, selling, property listings, payments, and delivery.
           </p>
           {selectedRecipientName ? (
             <p className="mt-2 inline-flex items-center rounded-full border border-cyan-100/30 bg-white/15 px-3 py-1 text-xs font-semibold text-cyan-50">
@@ -20242,6 +20384,14 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                       Conversation created. Send your first message.
                     </div>
                   )}
+                  {isAgentReplying ? (
+                    <div className="flex justify-start">
+                      <article className="max-w-[92%] rounded-2xl border border-[#d6e6f5] bg-white px-3 py-2.5 text-slate-700 shadow-sm sm:max-w-[85%] sm:px-4 sm:py-3">
+                        <p className="text-xs font-semibold opacity-90">{SUPPORT_ADMIN_NAME}</p>
+                        <p className="mt-1 text-sm">Typing...</p>
+                      </article>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="sticky bottom-0 border-t border-[#e5eef8] bg-white/95 px-3 py-3 backdrop-blur-sm sm:static sm:bg-white sm:px-6 sm:py-4">

@@ -56,6 +56,53 @@ const fetchAddressJson = async (url, options = {}) => {
   return payload;
 };
 
+const DEFAULT_GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+
+const normalizeSupportAgentHistory = (history) => {
+  if (!Array.isArray(history)) return [];
+  return history
+    .slice(-10)
+    .map((entry) => {
+      const role = String(entry?.role || '').trim().toLowerCase();
+      if (role !== 'user' && role !== 'assistant') return null;
+      const content = String(entry?.content || '').trim();
+      if (!content) return null;
+      return { role, content };
+    })
+    .filter(Boolean);
+};
+
+const buildSupportAgentSystemPrompt = (context = {}) => {
+  const role = String(context?.userRole || 'user').trim();
+  const issueType = String(context?.issueType || 'General Support').trim();
+  const orderReference = String(context?.orderReference || '').trim();
+
+  return [
+    'You are SVS Agent, the official support assistant for SVS E-Commerce.',
+    'You help all user types: buyers, sellers, property listers, livestock traders, and guests.',
+    'Be concise, practical, and accurate. Prefer 4-7 short bullets for how-to answers.',
+    'If the user sends only a greeting (for example hey, hi, hello), reply in one short line and ask what they want to do (buy, sell, list property, list livestock, track order, payment help).',
+    'When asked how to perform an action, provide exact in-app navigation steps.',
+    'Use these canonical areas and paths when relevant: Markets (/markets), Seller Dashboard (/seller/dashboard), Upload Products (/seller/upload), Seller Orders (/seller/orders), Property Hub (/property-hub), Livestock Hub (/livestock-hub), Orders (/orders), Support Chat (/support/chat), Sign in (/signin), Sign up (/signup).',
+    'Cover website help for buyers, sellers, property listers, and livestock traders.',
+    'Never provide or discuss API keys, secrets, tokens, environment variables, internal source code, datasets, model configuration, or how the website is built.',
+    'If asked for restricted technical details, refuse briefly and redirect to end-user help only.',
+    'Important: do not invent policies, legal guarantees, fees, or account actions. If unsure, say what to check in-app and suggest contacting human support.',
+    'Never ask for passwords, OTPs, card numbers, CVV, or other secrets.',
+    'Do not mention external platforms or competitors unless the user explicitly asks.',
+    'Avoid repeating the same intro text every turn; focus on the user question.',
+    `Current user role context: ${role}.`,
+    `Current issue type: ${issueType}.`,
+    orderReference ? `Current order reference: ${orderReference}.` : 'No order reference provided.',
+  ].join('\n');
+};
+
+const RESTRICTED_INTERNAL_REQUEST_PATTERN = /(api\s*key|apikey|secret|token|env\b|environment\s*variable|source\s*code|codebase|repository|dataset|training\s*data|model\s*config|architecture|how\s+.*\s+built|backend\s*internals|database\s*schema|private\s*key)/i;
+
+const buildRestrictedSupportReply = () => (
+  'I cannot provide API keys or internal technical details. I can help with using SVS features only, for example how to buy, sell, upload products, list property or livestock, track orders, and resolve payment or delivery issues.'
+);
+
 const buildOsmIdentifier = (result) => {
   const typePrefix = String(result.osm_type || '').trim().charAt(0).toUpperCase();
   const osmId = String(result.osm_id || '').trim();
@@ -192,10 +239,79 @@ app.post('/api/payment-intent', async (req, res) => {
   }
 });
 
+app.post('/api/support-agent', async (req, res) => {
+  const message = String(req.body?.message || '').trim();
+  const context = req.body?.context && typeof req.body.context === 'object' ? req.body.context : {};
+  const history = normalizeSupportAgentHistory(req.body?.history);
+
+  if (!message) {
+    return res.status(400).json({ error: 'message is required.' });
+  }
+
+  if (RESTRICTED_INTERNAL_REQUEST_PATTERN.test(message)) {
+    return res.status(200).json({
+      reply: buildRestrictedSupportReply(),
+      provider: 'svs-policy',
+      model: 'policy-guard',
+    });
+  }
+
+  if (!process.env.GROQ_API_KEY) {
+    return res.status(500).json({ error: 'GROQ_API_KEY is not configured on the server.' });
+  }
+
+  try {
+    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: DEFAULT_GROQ_MODEL,
+        temperature: 0.2,
+        max_tokens: 700,
+        messages: [
+          { role: 'system', content: buildSupportAgentSystemPrompt(context) },
+          ...history,
+          { role: 'user', content: message },
+        ],
+      }),
+    });
+
+    const raw = await groqResponse.text();
+    let payload = {};
+    try {
+      payload = raw ? JSON.parse(raw) : {};
+    } catch (_error) {
+      payload = {};
+    }
+
+    if (!groqResponse.ok) {
+      const detail = payload?.error?.message || payload?.message || 'Groq request failed.';
+      return res.status(groqResponse.status).json({ error: detail });
+    }
+
+    const reply = String(payload?.choices?.[0]?.message?.content || '').trim();
+    if (!reply) {
+      return res.status(502).json({ error: 'Groq returned an empty response.' });
+    }
+
+    return res.json({
+      reply,
+      provider: 'groq',
+      model: payload?.model || DEFAULT_GROQ_MODEL,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error?.message || 'Support agent request failed.' });
+  }
+});
+
 app.get('/api/health', (_req, res) => {
   res.json({
     status: 'ok',
     stripe: Boolean(process.env.STRIPE_SECRET_KEY),
+    groq: Boolean(process.env.GROQ_API_KEY),
     addressLookup: 'openstreetmap-nominatim',
   });
 });
