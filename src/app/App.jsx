@@ -19739,7 +19739,8 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     }
 
     if (!recipientOptions.some((option) => option.email === normalizeEmail(recipientEmail))) {
-      setRecipientEmail(recipientOptions[0].email);
+      const preferredOption = recipientOptions.find((option) => option.role !== 'admin') || recipientOptions[0];
+      setRecipientEmail(preferredOption.email);
     }
   }, [recipientEmail, recipientOptions]);
 
@@ -19791,6 +19792,17 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
 
     return getDisplayNameFromEmail(preferredRecipientEmail) || preferredRecipientEmail;
   }, [prefillRecipientEmailFromState, prefillRecipientNameFromState, preferredRecipientEmail, recipientOptions]);
+
+  const handleRecipientChange = useCallback((nextRecipientEmail) => {
+    const normalizedRecipient = normalizeEmail(nextRecipientEmail);
+    if (!normalizedRecipient || normalizedRecipient === currentUserEmail) {
+      return;
+    }
+
+    setRecipientEmail(normalizedRecipient);
+    createThread(normalizedRecipient);
+    setMobilePanel('chat');
+  }, [createThread, currentUserEmail]);
 
   const createThread = useCallback((recipientOverride = '', options = {}) => {
     const normalizedRecipient = normalizeEmail(recipientOverride || recipientEmail);
@@ -20339,6 +20351,22 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                         </div>
                       ) : null}
                     </div>
+                    {recipientOptions.length ? (
+                      <label className="hidden min-w-[210px] flex-col gap-1 text-xs font-semibold text-slate-500 sm:flex">
+                        Switch contact
+                        <select
+                          value={preferredRecipientEmail}
+                          onChange={(event) => handleRecipientChange(event.target.value)}
+                          className="rounded-lg border border-[#d6e6f5] bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-[#0f6674]"
+                        >
+                          {filteredRecipientOptions.map((option) => (
+                            <option key={`header-recipient-${option.email}`} value={option.email}>
+                              {option.name} • {getRecipientRoleLabel(option.role)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ) : null}
                     <button
                       type="button"
                       onClick={() => setMobilePanel('contacts')}
@@ -20416,6 +20444,25 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                 <div>
                   <p className="text-lg font-bold text-[#0f6674]">No active support conversation</p>
                   <p className="mt-2 text-sm text-slate-600">Create a new chat on the left to contact a seller or admin support.</p>
+                    {recipientOptions.length ? (
+                      <div className="mx-auto mt-4 max-w-sm rounded-2xl border border-[#d6e6f5] bg-[#f8fbff] p-4 text-left">
+                        <label className="block text-xs font-semibold text-slate-600">
+                          Start with a contact
+                          <select
+                            value={preferredRecipientEmail}
+                            onChange={(event) => handleRecipientChange(event.target.value)}
+                            className="mt-1 w-full rounded-lg border border-[#d6e6f5] bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-[#0f6674]"
+                          >
+                            {filteredRecipientOptions.map((option) => (
+                              <option key={`empty-recipient-${option.email}`} value={option.email}>
+                                {option.name} • {getRecipientRoleLabel(option.role)}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <p className="mt-2 text-xs text-slate-500">Pick a person, seller, or agent before you start typing.</p>
+                      </div>
+                    ) : null}
                   <button
                     type="button"
                     onClick={() => setMobilePanel('contacts')}
