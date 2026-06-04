@@ -28,6 +28,7 @@
   },
   "proxy": "http://localhost:5000",
   "scripts": {
+    "predev": "kill-port 3000 5000",
     "start": "cross-env NODE_NO_WARNINGS=1 react-scripts start",
     "start:server": "node server.js",
     "dev": "cross-env NODE_NO_WARNINGS=1 concurrently \"npm run start:server\" \"npm start\"",
@@ -57,6 +58,7 @@
   "devDependencies": {
     "autoprefixer": "^10.4.20",
     "cross-env": "^10.1.0",
+    "kill-port": "^2.0.1",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17"
   },

@@ -28,7 +28,6 @@ import {
 import {
 	deleteIntent,
 	getIntents,
-	subscribeToIntents,
 	useIntentsVersion,
 } from '../data/propertyIntents';
 import PropertyCard from '../components/PropertyCard';

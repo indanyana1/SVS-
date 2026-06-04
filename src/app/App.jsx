@@ -1776,8 +1776,6 @@ const informalMarketItems = [
   { id: 'im15', title: 'Washing Powder (2 kg Bag)', category: 'Household', description: 'Budget laundry powder — strong clean for hand-washing.', price: '3.80', image: 'https://images.pexels.com/photos/4239013/pexels-photo-4239013.jpeg?auto=compress&cs=tinysrgb&w=800' },
 ];
 
-const informalMarketCategories = ['All', 'Street Food', 'Fresh Produce', 'Clothing', 'Crafts & Décor', 'Household'];
-
 const constructionToolsItems = [
   {
     id: 'ct1',
@@ -10999,29 +10997,158 @@ const StationeryPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
 
 const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
-  const [sortOrder, setSortOrder] = useState('Default');
+  const [activeVendor, setActiveVendor] = useState('All Vendors');
+  const [sortOrder, setSortOrder] = useState('Trending');
+  const [visibleCount, setVisibleCount] = useState(8);
+  const allListingsRef = useRef(null);
 
   const allItems = useMemo(
     () => [...getSellerItemsForMarket(sellerItems, 'informalMarket'), ...informalMarketItems],
     [sellerItems],
   );
 
+  const normalizedItems = useMemo(() => allItems.map((item) => {
+    const category = String(item.category || 'Other').trim() || 'Other';
+    const vendor = String(item.sellerName || item.provider || item.businessName || item.storeName || 'Local Trader').trim() || 'Local Trader';
+    const reviewKey = getCollectionItemId('/informal-market', item.id);
+    const reviewSummary = getProductReviewSummary(productReviewSummaryMap, reviewKey);
+
+    return {
+      ...item,
+      normalizedCategory: category,
+      normalizedVendor: vendor,
+      reviewSummary,
+    };
+  }), [allItems, productReviewSummaryMap]);
+
+  const availableCategories = useMemo(() => {
+    const counts = normalizedItems.reduce((map, item) => {
+      map.set(item.normalizedCategory, (map.get(item.normalizedCategory) || 0) + 1);
+      return map;
+    }, new Map());
+
+    const sortedCategories = Array.from(counts.entries())
+      .sort((left, right) => right[1] - left[1])
+      .map(([name, count]) => ({ name, count }));
+
+    return [{ name: 'All', count: normalizedItems.length }, ...sortedCategories];
+  }, [normalizedItems]);
+
+  const vendorOptions = useMemo(() => {
+    const counts = normalizedItems.reduce((map, item) => {
+      map.set(item.normalizedVendor, (map.get(item.normalizedVendor) || 0) + 1);
+      return map;
+    }, new Map());
+
+    const sortedVendors = Array.from(counts.entries())
+      .sort((left, right) => right[1] - left[1])
+      .map(([name, count]) => ({ name, count }));
+
+    return [{ name: 'All Vendors', count: normalizedItems.length }, ...sortedVendors];
+  }, [normalizedItems]);
+
   const filteredItems = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return allItems
+    return normalizedItems
       .filter((item) => {
-        const matchCat = activeCategory === 'All' || item.category === activeCategory;
-        const matchQ = !q || [item.title, item.category, item.description].some((v) => String(v || '').toLowerCase().includes(q));
-        return matchCat && matchQ;
+        const matchCat = activeCategory === 'All' || item.normalizedCategory === activeCategory;
+        const matchVendor = activeVendor === 'All Vendors' || item.normalizedVendor === activeVendor;
+        const matchQ = !q || [item.title, item.normalizedCategory, item.description, item.normalizedVendor]
+          .some((v) => String(v || '').toLowerCase().includes(q));
+        return matchCat && matchVendor && matchQ;
       })
-      .sort((a, b) => {
-        if (sortOrder === 'Price Low') return getNumericPriceValue(a.price) - getNumericPriceValue(b.price);
-        if (sortOrder === 'Price High') return getNumericPriceValue(b.price) - getNumericPriceValue(a.price);
-        return 0;
+      .sort((left, right) => {
+        if (sortOrder === 'Price Low') {
+          return getNumericPriceValue(left.price) - getNumericPriceValue(right.price);
+        }
+
+        if (sortOrder === 'Price High') {
+          return getNumericPriceValue(right.price) - getNumericPriceValue(left.price);
+        }
+
+        if (sortOrder === 'Top Rated') {
+          return (Number(right.reviewSummary?.averageRating) || 0) - (Number(left.reviewSummary?.averageRating) || 0);
+        }
+
+        return (Number(right.reviewSummary?.reviewCount) || 0) - (Number(left.reviewSummary?.reviewCount) || 0);
       });
-  }, [allItems, searchQuery, activeCategory, sortOrder]);
+  }, [normalizedItems, searchQuery, activeCategory, activeVendor, sortOrder]);
+
+  const featuredItems = useMemo(() => filteredItems.slice(0, 3), [filteredItems]);
+  const visibleItems = useMemo(() => filteredItems.slice(0, visibleCount), [filteredItems, visibleCount]);
+
+  const popularVendors = useMemo(() => {
+    const vendorMap = new Map();
+    filteredItems.forEach((item) => {
+      const vendorName = item.normalizedVendor;
+      if (!vendorName || vendorMap.has(vendorName)) {
+        return;
+      }
+
+      vendorMap.set(vendorName, {
+        name: vendorName,
+        listingCount: filteredItems.filter((entry) => entry.normalizedVendor === vendorName).length,
+        location: String(item.details || item.description || 'Local market stall').split('•')[0].trim() || 'Local market stall',
+      });
+    });
+
+    return Array.from(vendorMap.values()).slice(0, 3);
+  }, [filteredItems]);
+
+  useEffect(() => {
+    setVisibleCount(8);
+  }, [searchQuery, activeCategory, activeVendor, sortOrder]);
+
+  const categoryShowcase = [
+    {
+      key: 'produce',
+      title: 'Fresh produce',
+      subtitle: 'Fruits, vegetables, potatoes',
+      image: 'https://images.pexels.com/photos/1132047/pexels-photo-1132047.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      category: 'Produce',
+    },
+    {
+      key: 'crafts',
+      title: 'Crafts',
+      subtitle: 'Handmade, cultural decor',
+      image: 'https://images.pexels.com/photos/2393835/pexels-photo-2393835.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      category: 'Crafts',
+    },
+    {
+      key: 'beverages',
+      title: 'Beverages',
+      subtitle: 'Refreshments',
+      image: 'https://images.pexels.com/photos/302899/pexels-photo-302899.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      category: 'Beverages',
+    },
+    {
+      key: 'food',
+      title: 'Street food',
+      subtitle: 'Local meals',
+      image: 'https://images.pexels.com/photos/2474661/pexels-photo-2474661.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      category: 'Street Food',
+    },
+  ];
+
+  const buyerBenefits = [
+    { value: '1', title: 'Support local businesses', body: 'Every order helps township and community sellers grow.' },
+    { value: '2', title: 'Affordable prices', body: 'Shop fresh goods and essentials with competitive pricing.' },
+    { value: '3', title: 'Community approved', body: 'Browse trusted vendors with repeat buyer history.' },
+    { value: '4', title: 'Simple checkout', body: 'Use secure checkout with fast confirmation updates.' },
+    { value: '5', title: 'Vendor ratings', body: 'Quickly compare vendors by listing quality and reliability.' },
+  ];
+
+  const trustHighlights = [
+    { metric: '24/7', label: 'Support chat available' },
+    { metric: '5', label: 'Secure payment options' },
+    { metric: '48h', label: 'Order issue response target' },
+    { metric: '100+', label: 'Active market listings' },
+    { metric: 'Local', label: 'Community-first suppliers' },
+    { metric: 'Live', label: 'Real-time order tracking' },
+  ];
 
   const buildCartItem = (item) => createCartItem({
     ...item,
@@ -11036,10 +11163,27 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
     details: `${item.category || 'Informal listing'} • ${item.sellerName || 'Local informal seller'}`,
   });
 
+  const openItemDetails = useCallback((item) => {
+    onOpenItemDetails?.({
+      title: getTranslatedValue(t, item.titleKey, item.title),
+      image: item.image,
+      images: item.images || (item.image ? [item.image] : []),
+      marketName: 'Informal Market',
+      details: `${item.normalizedCategory || item.category || 'Informal listing'} • ${item.description || item.normalizedVendor || 'Local informal seller'}`,
+      priceLabel: getSalePrices(item.price).nowPrice,
+      cartItem: buildCartItem(item),
+      wishlistItem: buildWishlistItem(item),
+    });
+  }, [onOpenItemDetails, t]);
+
+  const jumpToAllListings = useCallback(() => {
+    allListingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
   return (
   <PageFrame
     title="Informal Market"
-    subtitle="Street traders, spazas &amp; informal seller listings"
+    subtitle="Discover goods from township and local street vendors"
     heroImages={[
       'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=1200',
       'https://images.pexels.com/photos/5632379/pexels-photo-5632379.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -11054,97 +11198,301 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
     titleClassName="text-xl text-white sm:text-2xl"
     subtitleClassName="mt-2 text-xs text-white/90 sm:text-sm"
   >
-    {/* ── Search + Filter Bar ── */}
-    <div className="mt-8 sm:mt-10">
-      {/* Search */}
-      <div className="mx-auto max-w-[700px]">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
-          <input
-            type="search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search street food, clothing, crafts, produce…"
-            className="h-10 w-full rounded-full border border-[var(--svs-border)] bg-white pl-11 pr-4 text-xs font-medium text-[var(--svs-text)] shadow-sm outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30"
-          />
+    <div className="mt-7 space-y-7 bg-[radial-gradient(circle_at_top,#e3f6ff_0,#f8fbff_42%,#ffffff_100%)] pb-8 sm:mt-9 sm:space-y-9">
+      <div className="rounded-2xl border border-[#b9d9ea] bg-white/95 p-3 shadow-[0_14px_28px_rgba(2,32,71,0.1)] backdrop-blur">
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+          <label className="relative block">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0f6674]" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search market listings"
+              className="h-10 w-full rounded-lg border border-[#b9d9ea] bg-[#f8fcff] pl-9 pr-3 text-sm text-[var(--svs-text)] outline-none focus:border-[#0f6674]"
+            />
+          </label>
+
+          <select
+            value={activeVendor}
+            onChange={(event) => setActiveVendor(event.target.value)}
+            className="h-10 rounded-lg border border-[#b9d9ea] bg-white px-3 text-xs font-semibold text-[#0f6674] outline-none"
+          >
+            {vendorOptions.map((vendor) => (
+              <option key={`vendor-${vendor.name}`} value={vendor.name}>
+                {vendor.name} ({vendor.count})
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={sortOrder}
+            onChange={(event) => setSortOrder(event.target.value)}
+            className="h-10 rounded-lg border border-[#b9d9ea] bg-white px-3 text-xs font-semibold text-[#0f6674] outline-none"
+          >
+            <option value="Trending">Trending</option>
+            <option value="Top Rated">Top rated</option>
+            <option value="Price Low">Price low-high</option>
+            <option value="Price High">Price high-low</option>
+          </select>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {availableCategories.map((category) => (
+            <button
+              key={`cat-chip-${category.name}`}
+              type="button"
+              onClick={() => setActiveCategory(category.name)}
+              className={`rounded-full px-3 py-1 text-[11px] font-bold transition ${activeCategory === category.name ? 'bg-[#0f6674] text-white shadow-[0_5px_12px_rgba(15,102,116,0.25)]' : 'border border-[#bfdbea] bg-white text-[#0f6674]'}`}
+            >
+              {category.name} ({category.count})
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Filter row */}
-      <div className="mt-4 rounded-xl border border-[var(--svs-border)] bg-white/80 px-4 py-3 shadow-[0_2px_8px_rgba(15,23,42,0.06)] backdrop-blur sm:px-5">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          {/* Category tabs */}
-          <div className="flex flex-wrap gap-1.5 sm:gap-2">
-            {informalMarketCategories.map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setActiveCategory(cat)}
-                className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition ${activeCategory === cat ? 'bg-[var(--svs-primary)] text-white shadow-[0_4px_14px_rgba(15,118,110,0.25)]' : 'border border-[var(--svs-border)] bg-white text-[var(--svs-text)] hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]'}`}
-              >
-                {cat}
-              </button>
+      <section>
+        <h2 className="text-center text-xs font-bold uppercase tracking-[0.18em] text-[var(--svs-primary-strong)]">Shop by informal market categories</h2>
+        <p className="mt-1 text-center text-[11px] text-[var(--svs-muted)]">Explore products from local traders, street vendors, and independent sellers</p>
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {categoryShowcase.map((category) => (
+            <button
+              key={category.key}
+              type="button"
+              onClick={() => setActiveCategory(category.category)}
+              className={`overflow-hidden rounded-lg border text-left transition ${activeCategory === category.category ? 'border-[var(--svs-primary)] shadow-[0_6px_18px_rgba(15,102,116,0.25)]' : 'border-[var(--svs-border)]'}`}
+            >
+              <img src={category.image} alt={category.title} className="h-20 w-full object-cover" />
+              <div className="bg-[#0f6674] px-2 py-2 text-white">
+                <p className="truncate text-xs font-bold">{category.title}</p>
+                <p className="truncate text-[10px] text-white/85">{category.subtitle}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-center text-xs font-bold uppercase tracking-[0.18em] text-[var(--svs-primary-strong)]">Featured local listings</h2>
+        <p className="mt-1 text-center text-[11px] text-[var(--svs-muted)]">Discover products from trusted local traders</p>
+        {featuredItems.length ? (
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {featuredItems.map((item) => {
+              const reviewKey = getCollectionItemId('/informal-market', item.id);
+              const reviewSummary = getProductReviewSummary(productReviewSummaryMap, reviewKey);
+              return (
+                <article key={item.id} className="overflow-hidden rounded-xl border border-[var(--svs-border)] bg-white shadow-sm">
+                  <img src={item.image} alt={item.title} className="h-28 w-full object-cover" />
+                  <div className="p-3">
+                    <p className="truncate text-sm font-bold text-[var(--svs-primary-strong)]">{item.title}</p>
+                    <p className="mt-1 text-[11px] text-[var(--svs-muted)]">{item.category || 'Informal listing'} • {item.sellerName || 'Local trader'}</p>
+                    <p className="mt-1 text-sm font-bold text-[var(--svs-primary)]"><SalePrice price={item.price} currency={item.currency} /></p>
+                    <p className="mt-1 text-[11px] text-slate-500">{reviewSummary.reviewCount} reviews • {reviewSummary.averageRating || 0} rating</p>
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openItemDetails(item)}
+                        className="flex-1 rounded-md border border-[var(--svs-border)] px-2 py-1.5 text-xs font-semibold text-[var(--svs-text)]"
+                      >
+                        View details
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onAddToCart(buildCartItem(item))}
+                        className="flex-1 rounded-md bg-[var(--svs-primary)] px-2 py-1.5 text-xs font-semibold text-white"
+                      >
+                        Add to cart
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onToggleWishlist(buildWishlistItem(item))}
+                        className={`flex-1 rounded-md border px-2 py-1.5 text-xs font-semibold ${wishlistItemIds.includes(getCollectionItemId('/informal-market', item.id)) ? 'border-rose-300 bg-rose-50 text-rose-600' : 'border-[#bfdbea] bg-white text-[#0f6674]'}`}
+                      >
+                        {wishlistItemIds.includes(getCollectionItemId('/informal-market', item.id)) ? 'Wishlisted' : 'Wishlist'}
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="mt-3 rounded-lg border border-dashed border-[var(--svs-border)] bg-white px-4 py-8 text-center text-sm text-[var(--svs-muted)]">
+            No listings match your search yet.
+          </div>
+        )}
+        <div className="mt-3 flex justify-center">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveCategory('All');
+              setActiveVendor('All Vendors');
+              setSearchQuery('');
+              setSortOrder('Trending');
+              jumpToAllListings();
+            }}
+            className="rounded-md bg-[#0f6674] px-5 py-2 text-xs font-bold text-white"
+          >
+            View all
+          </button>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-[var(--svs-border)] bg-[#f8fbff] p-4">
+        <h2 className="text-center text-xs font-bold uppercase tracking-[0.18em] text-[var(--svs-primary-strong)]">Popular local traders</h2>
+        <p className="mt-1 text-center text-[11px] text-[var(--svs-muted)]">Connect with trusted local buyers and sellers quickly</p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          {popularVendors.map((vendor) => (
+            <button
+              key={vendor.name}
+              type="button"
+              onClick={() => {
+                setActiveVendor(vendor.name);
+                jumpToAllListings();
+              }}
+              className="rounded-lg border border-[var(--svs-border)] bg-white px-3 py-2.5 text-left transition hover:border-[#0f6674] hover:bg-[#f4fbfe]"
+            >
+              <p className="text-sm font-bold text-[var(--svs-primary-strong)]">{vendor.name}</p>
+              <p className="text-[11px] text-[var(--svs-muted)]">{vendor.location}</p>
+              <p className="mt-1 text-[11px] text-slate-500">{vendor.listingCount} listing{vendor.listingCount === 1 ? '' : 's'}</p>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section ref={allListingsRef} className="rounded-2xl border border-[#c7e0ec] bg-white p-4 shadow-[0_12px_24px_rgba(2,32,71,0.08)]">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-sm font-black uppercase tracking-[0.14em] text-[#0f6674]">All listings</h2>
+            <p className="text-xs text-slate-500">{filteredItems.length} result{filteredItems.length === 1 ? '' : 's'} • {activeCategory} • {activeVendor}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveCategory('All');
+              setActiveVendor('All Vendors');
+              setSearchQuery('');
+              setSortOrder('Trending');
+            }}
+            className="rounded-md border border-[#bfdbea] bg-[#f8fbff] px-3 py-1.5 text-[11px] font-bold text-[#0f6674]"
+          >
+            Clear filters
+          </button>
+        </div>
+
+        {visibleItems.length ? (
+          <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-3">
+            {visibleItems.map((item) => (
+              <article key={`all-${item.id}`} className="overflow-hidden rounded-xl border border-[#d7e8f2] bg-white transition hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(2,32,71,0.12)]">
+                <img src={item.image} alt={item.title} className="h-32 w-full object-cover" />
+                <div className="p-3">
+                  <p className="truncate text-sm font-bold text-[#0f6674]">{item.title}</p>
+                  <p className="mt-1 text-[11px] text-slate-500">{item.normalizedCategory} • {item.normalizedVendor}</p>
+                  <p className="mt-1 text-[11px] text-slate-500">{item.reviewSummary.reviewCount || 0} review{item.reviewSummary.reviewCount === 1 ? '' : 's'} • {item.reviewSummary.averageRating || 0}★</p>
+                  <p className="mt-1 text-sm font-black text-[#0f6674]"><SalePrice price={item.price} currency={item.currency} /></p>
+                  <div className="mt-3 grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => openItemDetails(item)}
+                      className="rounded-md border border-[#bfdbea] bg-[#f8fbff] px-2 py-1.5 text-[11px] font-bold text-[#0f6674]"
+                    >
+                      Details
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onAddToCart(buildCartItem(item))}
+                      className="rounded-md bg-[#0f6674] px-2 py-1.5 text-[11px] font-bold text-white"
+                    >
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onBuyNow?.(buildCartItem(item))}
+                      className="rounded-md border border-[#0f6674] bg-[#e8f7fb] px-2 py-1.5 text-[11px] font-bold text-[#0f6674]"
+                    >
+                      Buy now
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onToggleWishlist(buildWishlistItem(item))}
+                      className={`rounded-md border px-2 py-1.5 text-[11px] font-bold ${wishlistItemIds.includes(getCollectionItemId('/informal-market', item.id)) ? 'border-rose-300 bg-rose-50 text-rose-600' : 'border-[#bfdbea] bg-white text-[#0f6674]'}`}
+                    >
+                      {wishlistItemIds.includes(getCollectionItemId('/informal-market', item.id)) ? 'Saved' : 'Save'}
+                    </button>
+                  </div>
+                </div>
+              </article>
             ))}
           </div>
+        ) : (
+          <div className="mt-3 rounded-lg border border-dashed border-[#bfdbea] bg-[#f8fbff] px-4 py-9 text-center">
+            <p className="text-sm font-semibold text-[#0f6674]">No listings found</p>
+            <p className="mt-1 text-xs text-slate-500">Try another keyword, vendor, or category.</p>
+          </div>
+        )}
 
-          {/* Sort dropdown */}
-          <div className="relative shrink-0">
-            <select
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
-              className="h-9 w-full appearance-none rounded-full border border-[var(--svs-border)] bg-white px-4 pr-8 text-xs font-semibold text-[var(--svs-text)] outline-none transition hover:border-[var(--svs-primary)] focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30 sm:w-[160px]"
+        {filteredItems.length > visibleCount ? (
+          <div className="mt-4 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setVisibleCount((current) => current + 8)}
+              className="rounded-full border border-[#0f6674] bg-white px-4 py-2 text-xs font-bold text-[#0f6674]"
             >
-              <option value="Default">Default</option>
-              <option value="Price Low">Price: Low → High</option>
-              <option value="Price High">Price: High → Low</option>
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
+              Load more listings
+            </button>
+          </div>
+        ) : null}
+      </section>
+
+      <section>
+        <h2 className="text-center text-xs font-bold uppercase tracking-[0.18em] text-[var(--svs-primary-strong)]">Featured local offering</h2>
+        <p className="mt-1 text-center text-[11px] text-[var(--svs-muted)]">Discover products from trusted local traders</p>
+        <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-5">
+          {buyerBenefits.map((benefit) => (
+            <article key={benefit.value} className="rounded-lg border border-[var(--svs-border)] bg-white px-2.5 py-3 text-center">
+              <div className="mx-auto flex h-6 w-6 items-center justify-center rounded-full bg-[#e7f5f8] text-xs font-black text-[#0f6674]">{benefit.value}</div>
+              <p className="mt-2 text-[11px] font-bold text-[#0f6674]">{benefit.title}</p>
+              <p className="mt-1 text-[10px] text-[var(--svs-muted)]">{benefit.body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="overflow-hidden rounded-xl border border-[#0f6674]/40 bg-[#0f6674] text-white">
+        <div className="bg-[url('https://images.pexels.com/photos/5632379/pexels-photo-5632379.jpeg?auto=compress&cs=tinysrgb&w=1200')] bg-cover bg-center px-4 py-7">
+          <div className="rounded-lg bg-black/55 px-4 py-5 text-center backdrop-blur-[1px]">
+            <h2 className="text-base font-black">Start selling today</h2>
+            <p className="mt-1 text-xs text-white/90">Upload your first item, connect directly with buyers in your community, and grow your small business in this trusted market.</p>
+            <div className="mt-3 flex flex-wrap justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => navigate('/sell/signup')}
+                className="rounded-md bg-white px-3 py-2 text-xs font-bold text-[#0f6674]"
+              >
+                Post your listing
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/seller/dashboard')}
+                className="rounded-md border border-white/60 bg-white/10 px-3 py-2 text-xs font-bold text-white"
+              >
+                Seller dashboard
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      </section>
 
-    {/* ── Results summary ── */}
-    <p className="mt-5 text-xs text-[var(--svs-muted)]">
-      {filteredItems.length} listing{filteredItems.length === 1 ? '' : 's'}{activeCategory !== 'All' ? ` in ${activeCategory}` : ''}
-      {searchQuery ? ` for "${searchQuery}"` : ''}
-    </p>
-
-    {/* ── Grid ── */}
-    <div className="mt-3">
-      {filteredItems.length > 0 ? (
-        <CardGrid
-          items={filteredItems}
-          buttonLabel={t('common.addToCart')}
-          secondaryButtonLabel={t('common.viewDetails')}
-          reviewSummaryMap={productReviewSummaryMap}
-          getItemReviewKey={(item) => getCollectionItemId('/informal-market', item.id)}
-          onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-          onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
-          onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
-          onOpenItemDetails={(item) => {
-            const wishlistItem = buildWishlistItem(item);
-            onOpenItemDetails?.({
-              title: getTranslatedValue(t, item.titleKey, item.title),
-              image: item.image,
-              images: item.images || (item.image ? [item.image] : []),
-              marketName: 'Informal Market',
-              details: `${item.category || 'Informal listing'} • ${item.description || item.sellerName || 'Local informal seller'}`,
-              priceLabel: getSalePrices(item.price).nowPrice,
-              cartItem: buildCartItem(item),
-              wishlistItem,
-            });
-          }}
-          isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/informal-market', item.id))}
-          metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Informal listing'} • <SalePrice price={item.price} currency={item.currency} /></p>}
-        />
-      ) : (
-        <div className="rounded-2xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-14 text-center">
-          <p className="text-3xl mb-3">🛒</p>
-          <p className="text-sm font-semibold text-[var(--svs-primary-strong)] mb-1">No listings found</p>
-          <p className="text-xs text-[var(--svs-muted)]">Try a different category or clear your search.</p>
+      <section>
+        <h2 className="text-center text-xs font-bold uppercase tracking-[0.18em] text-[var(--svs-primary-strong)]">Why buy from informal market</h2>
+        <p className="mt-1 text-center text-[11px] text-[var(--svs-muted)]">Your trusted platform for community sourcing</p>
+        <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+          {trustHighlights.map((highlight) => (
+            <article key={highlight.label} className="rounded-lg border border-[var(--svs-border)] bg-white px-3 py-3 text-center">
+              <p className="text-lg font-black text-[#0f6674]">{highlight.metric}</p>
+              <p className="mt-1 text-[11px] text-[var(--svs-muted)]">{highlight.label}</p>
+            </article>
+          ))}
         </div>
-      )}
+      </section>
     </div>
   </PageFrame>
   );
@@ -11561,7 +11909,6 @@ const RetailerDirectLinksPage = () => {
       return [];
     }
   });
-  const [activeUserEmail, setActiveUserEmail] = useState(() => normalizeEmail(getCurrentUserEmail()));
   const allStoresRef = useRef(null);
   const searchFormRef = useRef(null);
   const searchInputRef = useRef(null);
@@ -11570,21 +11917,23 @@ const RetailerDirectLinksPage = () => {
   // (sign-in, sign-out, or another tab switching account). This guarantees
   // every shopper only ever sees — and clears — their own history.
   useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+
     const reloadForCurrentUser = () => {
-      const nextEmail = normalizeEmail(getCurrentUserEmail());
-      setActiveUserEmail((prev) => (prev === nextEmail ? prev : nextEmail));
       try {
-        const key = getUserScopedStorageKey('svs:recentRetailerSearches', nextEmail);
+        const key = getUserScopedStorageKey('svs:recentRetailerSearches');
         const raw = window.localStorage.getItem(key);
         const parsed = raw ? JSON.parse(raw) : [];
-        setRecentSearches(
-          Array.isArray(parsed) ? parsed.filter((item) => typeof item === 'string').slice(0, 8) : []
-        );
+        setRecentSearches(Array.isArray(parsed) ? parsed.filter((item) => typeof item === 'string').slice(0, 8) : []);
       } catch (_) {
         setRecentSearches([]);
       }
     };
+
+    reloadForCurrentUser();
+
     const handleStorageChange = (event) => {
       if (!event.key) {
         reloadForCurrentUser();
@@ -11611,7 +11960,7 @@ const RetailerDirectLinksPage = () => {
     } catch (_) {
       /* localStorage may be disabled (Safari private mode etc.) */
     }
-  }, [activeUserEmail]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const recordRecentSearch = useCallback((rawTerm) => {
     const term = (rawTerm || '').trim();
