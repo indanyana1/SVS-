@@ -49,6 +49,7 @@ import {
   Globe,
   Hash,
   Sparkles,
+  MessageCircle,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -7747,16 +7748,6 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                   <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{profileName}</p>
                   <button
                     type="button"
-                    onClick={() => {
-                      setProfileOpen(false);
-                      navigate('/support/chat');
-                    }}
-                    className="mt-3 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-3 py-2 text-sm font-semibold text-[var(--svs-primary-strong)] transition hover:border-[var(--svs-primary-strong)]"
-                  >
-                    Support Chat
-                  </button>
-                  <button
-                    type="button"
                     onClick={handleLogout}
                     className="mt-3 w-full rounded-md border border-[#fca5a5] bg-[#fff1f2] px-3 py-2 text-sm font-semibold text-[#b91c1c] transition hover:bg-[#ffe4e6]"
                   >
@@ -7878,6 +7869,15 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
 
       <main className="pt-20">{children}</main>
       <SiteFooter />
+
+      <Link
+        to="/support/chat"
+        aria-label="Open support chat"
+        title="Support Chat"
+        className="fixed bottom-4 right-4 z-[95] inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#1f4c8f] text-white shadow-[0_12px_24px_rgba(8,32,40,0.35)] transition hover:scale-105 hover:bg-[#173e78] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 sm:bottom-6 sm:right-6"
+      >
+        <MessageCircle className="h-7 w-7" strokeWidth={2.25} />
+      </Link>
     </div>
   );
 };
@@ -25552,6 +25552,17 @@ const SiteFooter = () => {
   );
 };
 
+const FloatingSupportChatButton = () => (
+  <Link
+    to="/support/chat"
+    aria-label="Open support chat"
+    title="Support Chat"
+    className="fixed bottom-5 right-4 z-[130] inline-flex h-16 w-16 items-center justify-center rounded-full border-2 border-white/80 bg-[#1f4c8f] text-white shadow-[0_14px_28px_rgba(8,32,40,0.38)] transition hover:scale-105 hover:bg-[#173e78] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 sm:bottom-6 sm:right-6"
+  >
+    <MessageCircle className="h-8 w-8" strokeWidth={2.4} />
+  </Link>
+);
+
 const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerItems, buyNowCheckout, productReviewSummaryMap, onAddToCart, onBuyNow, onToggleWishlist, onRemoveWishlistItem, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder, onClearBuyNowCheckout, onCancelOrder, onSellerItemCreated, onDeleteSellerItem, onUpdateSellerItem, onUpdateOrderStatus, onAdminSetOrderStatus, onOpenItemDetails, onPushNotificationToUser }) => {
   const { t } = useTranslation();
 
@@ -25651,6 +25662,7 @@ const App = () => {
     ...order,
     status: normalizeOrderStatus(order.status),
   })));
+
   const [notifications, setNotifications] = useState(getStoredNotifications);
   const [sellerItems, setSellerItems] = useState([]);
   const [productReviews, setProductReviews] = useState([]);
@@ -27330,6 +27342,7 @@ const App = () => {
           {actionNotice}
         </div>
       ) : null}
+      <FloatingSupportChatButton />
     </>
   );
 
