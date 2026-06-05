@@ -11059,15 +11059,32 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
   const normalizedItems = useMemo(() => allItems.map((item) => {
     const category = String(item.category || 'Other').trim() || 'Other';
     const vendor = String(item.sellerName || item.provider || item.businessName || item.storeName || 'Local Trader').trim() || 'Local Trader';
-    const location = String(item.location || item.city || item.province || item.suburb || item.town || item.fullAddress || item.details || '').trim();
+    const location = String(
+      item.location
+      || item.fullAddress
+      || item.address
+      || item.addressLine1
+      || item.addressLine2
+      || item.suburb
+      || item.area
+      || item.town
+      || item.city
+      || item.municipality
+      || item.region
+      || item.province
+      || item.country
+      || '',
+    ).trim();
     const reviewKey = getCollectionItemId('/informal-market', item.id);
     const reviewSummary = getProductReviewSummary(productReviewSummaryMap, reviewKey);
+    const hasLocation = Boolean(location);
 
     return {
       ...item,
       normalizedCategory: category,
       normalizedVendor: vendor,
-      normalizedLocation: location,
+      normalizedLocation: location || 'Location unavailable',
+      hasLocation,
       reviewSummary,
     };
   }), [allItems, productReviewSummaryMap]);
@@ -11105,7 +11122,7 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
     const matchesLocationQuery = (item) => {
       if (!locationQ) return true;
 
-      const locationHaystacks = [item.normalizedLocation, item.description, item.normalizedVendor, item.details]
+      const locationHaystacks = [item.normalizedLocation]
         .map((value) => normalizeSearchText(value))
         .filter(Boolean);
 
@@ -11129,12 +11146,13 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
 
     return normalizedItems
       .filter((item) => {
+        const hasLocation = item.hasLocation;
         const matchCat = activeCategory === 'All' || item.normalizedCategory === activeCategory;
         const matchVendor = activeVendor === 'All Vendors' || item.normalizedVendor === activeVendor;
         const matchQ = !q || [item.title, item.normalizedCategory, item.description, item.normalizedVendor, item.normalizedLocation]
           .some((v) => String(v || '').toLowerCase().includes(q));
         const matchLocation = matchesLocationQuery(item);
-        return matchCat && matchVendor && matchQ && matchLocation;
+        return hasLocation && matchCat && matchVendor && matchQ && matchLocation;
       })
       .sort((left, right) => {
         if (locationQ) {
@@ -11185,7 +11203,7 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
       vendorMap.set(vendorName, {
         name: vendorName,
         listingCount: filteredItems.filter((entry) => entry.normalizedVendor === vendorName).length,
-        location: String(item.details || item.description || 'Local market stall').split('•')[0].trim() || 'Local market stall',
+        location: item.normalizedLocation || 'Location unavailable',
       });
     });
 
@@ -11450,6 +11468,7 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
                     </span>
                     <p className="truncate text-sm font-bold text-[var(--svs-primary-strong)]">{item.title}</p>
                     <p className="mt-1 text-[11px] text-[var(--svs-muted)]">{item.category || 'Informal listing'} • {item.sellerName || 'Local trader'}</p>
+                    <p className="mt-1 truncate text-[11px] text-slate-500">{item.normalizedLocation || 'Location unavailable'}</p>
                     <p className="mt-1 text-sm font-bold text-[var(--svs-primary)]"><SalePrice price={item.price} currency={item.currency} /></p>
                     <p className="mt-1 text-[11px] text-slate-500">{reviewSummary.reviewCount} reviews • {reviewSummary.averageRating || 0} rating</p>
                     <div className="mt-3 grid grid-cols-2 gap-2">
@@ -11548,6 +11567,7 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
                   </span>
                   <p className="truncate text-sm font-bold text-[#0f6674]">{item.title}</p>
                   <p className="mt-1 text-[11px] text-slate-500">{item.normalizedCategory} • {item.normalizedVendor}</p>
+                  <p className="mt-1 truncate text-[11px] text-slate-500">{item.normalizedLocation || 'Location unavailable'}</p>
                   <p className="mt-1 text-[11px] text-slate-500">{item.reviewSummary.reviewCount || 0} review{item.reviewSummary.reviewCount === 1 ? '' : 's'} • {item.reviewSummary.averageRating || 0}★</p>
                   <p className="mt-1 text-sm font-black text-[#0f6674]"><SalePrice price={item.price} currency={item.currency} /></p>
                   <div className="mt-3 grid grid-cols-2 gap-1.5">
