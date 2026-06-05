@@ -58,6 +58,7 @@ import { createAddressLookupSessionToken, lookupAddressDetails, lookupAddressSug
 import { DEFAULT_LANGUAGE_CODE, getLanguageByCode, isRtlLanguage, SUPPORTED_LANGUAGES } from '../lib/languages';
 import { embeddedCardCheckoutEnabled, getStripeInstance, startCardPayment, stripeCurrency } from '../lib/payments';
 import { hasSupabaseEnv, supabase } from '../lib/supabase';
+import useNearbyLocation from '../hooks/useLocation';
 import SigninPage from '../pages/SigninPage';
 import ForgotPasswordPage from '../pages/ForgotPasswordPage';
 import ResetPasswordPage from '../pages/ResetPasswordPage';
@@ -1755,25 +1756,25 @@ const stationeryItems = [
 
 const informalMarketItems = [
   /* ── Street Food ── */
-  { id: 'im1', title: 'Vetkoek (Pack of 6)', category: 'Street Food', description: 'Freshly fried dough pockets — eat plain or filled with mince.', price: '3.50', image: 'https://images.pexels.com/photos/4253312/pexels-photo-4253312.jpeg?auto=compress&cs=tinysrgb&w=800' },
-  { id: 'im2', title: 'Boerewors Roll', category: 'Street Food', description: 'Grilled boerewors on a fresh roll with tomato-onion sauce.', price: '2.80', image: 'https://images.pexels.com/photos/2282532/pexels-photo-2282532.jpeg?auto=compress&cs=tinysrgb&w=800' },
-  { id: 'im3', title: 'Roasted Corn on the Cob', category: 'Street Food', description: 'Charcoal-roasted corn seasoned with butter and chilli salt.', price: '1.20', image: 'https://images.pexels.com/photos/547263/pexels-photo-547263.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { id: 'im1', title: 'Vetkoek (Pack of 6)', category: 'Street Food', sellerName: 'Nomsa Street Kitchen', location: 'Soweto, Johannesburg, Gauteng, South Africa', description: 'Freshly fried dough pockets — eat plain or filled with mince.', price: '3.50', image: 'https://images.pexels.com/photos/4253312/pexels-photo-4253312.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { id: 'im2', title: 'Boerewors Roll', category: 'Street Food', sellerName: 'Kasi Grill Spot', location: 'Alexandra, Johannesburg, Gauteng, South Africa', description: 'Grilled boerewors on a fresh roll with tomato-onion sauce.', price: '2.80', image: 'https://images.pexels.com/photos/2282532/pexels-photo-2282532.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { id: 'im3', title: 'Roasted Corn on the Cob', category: 'Street Food', sellerName: 'Mama Palesa Corn', location: 'Mamelodi, Pretoria, Gauteng, South Africa', description: 'Charcoal-roasted corn seasoned with butter and chilli salt.', price: '1.20', image: 'https://images.pexels.com/photos/547263/pexels-photo-547263.jpeg?auto=compress&cs=tinysrgb&w=800' },
   /* ── Fresh Produce ── */
-  { id: 'im4', title: 'Mixed Vegetable Basket', category: 'Fresh Produce', description: 'Spinach, tomatoes, onions & potatoes — sourced directly from local farms.', price: '5.00', image: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' },
-  { id: 'im5', title: 'Seasonal Fruit Pack (2 kg)', category: 'Fresh Produce', description: 'Mangoes, bananas and guavas picked this week.', price: '4.50', image: 'https://images.pexels.com/photos/1132047/pexels-photo-1132047.jpeg?auto=compress&cs=tinysrgb&w=800' },
-  { id: 'im6', title: 'Free-Range Eggs (Tray of 30)', category: 'Fresh Produce', description: 'Farm-fresh eggs from free-roaming hens.', price: '6.00', image: 'https://images.pexels.com/photos/162712/egg-white-food-protein-162712.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { id: 'im4', title: 'Mixed Vegetable Basket', category: 'Fresh Produce', sellerName: 'Fresh Taxi Market', location: 'Warwick Junction, Durban, KwaZulu-Natal, South Africa', description: 'Spinach, tomatoes, onions & potatoes — sourced directly from local farms.', price: '5.00', image: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { id: 'im5', title: 'Seasonal Fruit Pack (2 kg)', category: 'Fresh Produce', sellerName: 'Lindi Fruit Stall', location: 'KwaMashu, Durban, KwaZulu-Natal, South Africa', description: 'Mangoes, bananas and guavas picked this week.', price: '4.50', image: 'https://images.pexels.com/photos/1132047/pexels-photo-1132047.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { id: 'im6', title: 'Free-Range Eggs (Tray of 30)', category: 'Fresh Produce', sellerName: 'KZN Farm Basket', location: 'Pietermaritzburg, KwaZulu-Natal, South Africa', description: 'Farm-fresh eggs from free-roaming hens.', price: '6.00', image: 'https://images.pexels.com/photos/162712/egg-white-food-protein-162712.jpeg?auto=compress&cs=tinysrgb&w=800' },
   /* ── Clothing ── */
-  { id: 'im7', title: 'Shweshwe Print Wrap Skirt', category: 'Clothing', description: 'Vibrant traditional three-cats fabric handmade wrap skirt.', price: '18.00', image: 'https://images.pexels.com/photos/7691069/pexels-photo-7691069.jpeg?auto=compress&cs=tinysrgb&w=800' },
-  { id: 'im8', title: "Men's Kanga Shirt", category: 'Clothing', description: 'Colourful East African kanga fabric button-up shirt.', price: '14.00', image: 'https://images.pexels.com/photos/3622608/pexels-photo-3622608.jpeg?auto=compress&cs=tinysrgb&w=800' },
-  { id: 'im9', title: 'Pre-Owned Denim Jeans', category: 'Clothing', description: 'Good-condition second-hand denim jeans, assorted sizes.', price: '8.00', image: 'https://images.pexels.com/photos/52518/jeans-pants-blue-shop-52518.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { id: 'im7', title: 'Shweshwe Print Wrap Skirt', category: 'Clothing', sellerName: 'Thandi Tailor Hub', location: 'Khayelitsha, Cape Town, Western Cape, South Africa', description: 'Vibrant traditional three-cats fabric handmade wrap skirt.', price: '18.00', image: 'https://images.pexels.com/photos/7691069/pexels-photo-7691069.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { id: 'im8', title: "Men's Kanga Shirt", category: 'Clothing', sellerName: 'Cape Fabric Traders', location: 'Mitchells Plain, Cape Town, Western Cape, South Africa', description: 'Colourful East African kanga fabric button-up shirt.', price: '14.00', image: 'https://images.pexels.com/photos/3622608/pexels-photo-3622608.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { id: 'im9', title: 'Pre-Owned Denim Jeans', category: 'Clothing', sellerName: 'Urban Rewear Market', location: 'Bellville, Cape Town, Western Cape, South Africa', description: 'Good-condition second-hand denim jeans, assorted sizes.', price: '8.00', image: 'https://images.pexels.com/photos/52518/jeans-pants-blue-shop-52518.jpeg?auto=compress&cs=tinysrgb&w=800' },
   /* ── Crafts & Décor ── */
-  { id: 'im10', title: 'Hand-Woven Grass Basket', category: 'Crafts & Décor', description: 'Traditional Zulu ukhamba-style coiled basket, hand-dyed.', price: '12.00', image: 'https://images.pexels.com/photos/6044266/pexels-photo-6044266.jpeg?auto=compress&cs=tinysrgb&w=800' },
-  { id: 'im11', title: 'Beaded African Bracelet Set', category: 'Crafts & Décor', description: 'Set of 5 handmade beaded bracelets in traditional Ndebele patterns.', price: '7.50', image: 'https://images.pexels.com/photos/1191531/pexels-photo-1191531.jpeg?auto=compress&cs=tinysrgb&w=800' },
-  { id: 'im12', title: 'Wire & Bead Animal Sculpture', category: 'Crafts & Décor', description: 'Handcrafted wire giraffe sculpture — perfect desk or shelf décor.', price: '9.00', image: 'https://images.pexels.com/photos/3768916/pexels-photo-3768916.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { id: 'im10', title: 'Hand-Woven Grass Basket', category: 'Crafts & Décor', sellerName: 'Zulu Craft Circle', location: 'Ulundi, KwaZulu-Natal, South Africa', description: 'Traditional Zulu ukhamba-style coiled basket, hand-dyed.', price: '12.00', image: 'https://images.pexels.com/photos/6044266/pexels-photo-6044266.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { id: 'im11', title: 'Beaded African Bracelet Set', category: 'Crafts & Décor', sellerName: 'Ndebele Bead House', location: 'Mabopane, Pretoria, Gauteng, South Africa', description: 'Set of 5 handmade beaded bracelets in traditional Ndebele patterns.', price: '7.50', image: 'https://images.pexels.com/photos/1191531/pexels-photo-1191531.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { id: 'im12', title: 'Wire & Bead Animal Sculpture', category: 'Crafts & Décor', sellerName: 'Township Artisan Co-op', location: 'Tembisa, Ekurhuleni, Gauteng, South Africa', description: 'Handcrafted wire giraffe sculpture — perfect desk or shelf décor.', price: '9.00', image: 'https://images.pexels.com/photos/3768916/pexels-photo-3768916.jpeg?auto=compress&cs=tinysrgb&w=800' },
   /* ── Household ── */
-  { id: 'im13', title: 'Canola Cooking Oil (2 L)', category: 'Household', description: 'Affordable everyday cooking oil, widely sold in township spazas.', price: '4.20', image: 'https://images.pexels.com/photos/33783/olive-oil-salad-dressing-cooking-olive.jpg?auto=compress&cs=tinysrgb&w=800' },
-  { id: 'im14', title: 'Paraffin Lamp & Wick Set', category: 'Household', description: 'Classic tin paraffin lamp with two replacement wicks.', price: '6.50', image: 'https://images.pexels.com/photos/207985/pexels-photo-207985.jpeg?auto=compress&cs=tinysrgb&w=800' },
-  { id: 'im15', title: 'Washing Powder (2 kg Bag)', category: 'Household', description: 'Budget laundry powder — strong clean for hand-washing.', price: '3.80', image: 'https://images.pexels.com/photos/4239013/pexels-photo-4239013.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { id: 'im13', title: 'Canola Cooking Oil (2 L)', category: 'Household', sellerName: 'Spaza Saver Deals', location: 'Mdantsane, East London, Eastern Cape, South Africa', description: 'Affordable everyday cooking oil, widely sold in township spazas.', price: '4.20', image: 'https://images.pexels.com/photos/33783/olive-oil-salad-dressing-cooking-olive.jpg?auto=compress&cs=tinysrgb&w=800' },
+  { id: 'im14', title: 'Paraffin Lamp & Wick Set', category: 'Household', sellerName: 'Rural Home Essentials', location: 'Giyani, Limpopo, South Africa', description: 'Classic tin paraffin lamp with two replacement wicks.', price: '6.50', image: 'https://images.pexels.com/photos/207985/pexels-photo-207985.jpeg?auto=compress&cs=tinysrgb&w=800' },
+  { id: 'im15', title: 'Washing Powder (2 kg Bag)', category: 'Household', sellerName: 'Everyday Value Corner', location: 'Polokwane, Limpopo, South Africa', description: 'Budget laundry powder — strong clean for hand-washing.', price: '3.80', image: 'https://images.pexels.com/photos/4239013/pexels-photo-4239013.jpeg?auto=compress&cs=tinysrgb&w=800' },
 ];
 
 const constructionToolsItems = [
@@ -10998,12 +10999,57 @@ const StationeryPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
 const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const {
+    city: currentCity,
+    province: currentProvince,
+    country: currentCountry,
+    locationLabel: currentLocationLabel,
+    isLoading: isResolvingLocation,
+    error: locationError,
+    hasApproximateLocation,
+    refreshLocation,
+  } = useNearbyLocation();
   const [searchQuery, setSearchQuery] = useState('');
+  const [locationQuery, setLocationQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [activeVendor, setActiveVendor] = useState('All Vendors');
   const [sortOrder, setSortOrder] = useState('Trending');
   const [visibleCount, setVisibleCount] = useState(8);
   const allListingsRef = useRef(null);
+
+  useEffect(() => {
+    if (!locationQuery && currentLocationLabel && currentLocationLabel !== 'Near you') {
+      setLocationQuery(currentLocationLabel);
+    }
+  }, [currentLocationLabel, locationQuery]);
+
+  const normalizeSearchText = useCallback((value) => String(value || '').toLowerCase().replace(/[^a-z0-9\s]+/g, ' ').replace(/\s+/g, ' ').trim(), []);
+  const locationSearchText = normalizeSearchText(locationQuery);
+  const currentLocationSearchText = normalizeSearchText([currentCity, currentProvince, currentCountry].filter(Boolean).join(' '));
+  const locationQueryTokens = useMemo(
+    () => locationSearchText.split(' ').filter((token) => token.length > 2),
+    [locationSearchText],
+  );
+
+  const getProximityLabel = useCallback((item) => {
+    const itemLocation = normalizeSearchText(item.normalizedLocation || item.location || item.city || item.province || item.fullAddress || item.details || '');
+
+    if (!itemLocation) {
+      return 'Local trader';
+    }
+
+    const cityText = normalizeSearchText(currentCity);
+    const provinceText = normalizeSearchText(currentProvince);
+    const countryText = normalizeSearchText(currentCountry);
+
+    if (cityText && itemLocation.includes(cityText)) return 'Same city';
+    if (provinceText && itemLocation.includes(provinceText)) return 'Same province';
+    if (countryText && itemLocation.includes(countryText)) return 'Same country';
+    if (currentLocationSearchText && itemLocation.includes(currentLocationSearchText)) return 'Near you';
+    if (locationSearchText && itemLocation.includes(locationSearchText)) return 'Matches search area';
+
+    return 'Nearby seller';
+  }, [currentCity, currentProvince, currentCountry, currentLocationSearchText, locationSearchText, normalizeSearchText]);
 
   const allItems = useMemo(
     () => [...getSellerItemsForMarket(sellerItems, 'informalMarket'), ...informalMarketItems],
@@ -11013,6 +11059,7 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
   const normalizedItems = useMemo(() => allItems.map((item) => {
     const category = String(item.category || 'Other').trim() || 'Other';
     const vendor = String(item.sellerName || item.provider || item.businessName || item.storeName || 'Local Trader').trim() || 'Local Trader';
+    const location = String(item.location || item.city || item.province || item.suburb || item.town || item.fullAddress || item.details || '').trim();
     const reviewKey = getCollectionItemId('/informal-market', item.id);
     const reviewSummary = getProductReviewSummary(productReviewSummaryMap, reviewKey);
 
@@ -11020,6 +11067,7 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
       ...item,
       normalizedCategory: category,
       normalizedVendor: vendor,
+      normalizedLocation: location,
       reviewSummary,
     };
   }), [allItems, productReviewSummaryMap]);
@@ -11052,15 +11100,61 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
 
   const filteredItems = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
+    const locationQ = locationSearchText;
+
+    const matchesLocationQuery = (item) => {
+      if (!locationQ) return true;
+
+      const locationHaystacks = [item.normalizedLocation, item.description, item.normalizedVendor, item.details]
+        .map((value) => normalizeSearchText(value))
+        .filter(Boolean);
+
+      if (!locationHaystacks.length) {
+        return false;
+      }
+
+      if (locationHaystacks.some((value) => value.includes(locationQ) || locationQ.includes(value))) {
+        return true;
+      }
+
+      if (!locationQueryTokens.length) {
+        return false;
+      }
+
+      return locationHaystacks.some((value) => {
+        const matchedTokenCount = locationQueryTokens.reduce((count, token) => count + (value.includes(token) ? 1 : 0), 0);
+        return matchedTokenCount >= Math.min(2, locationQueryTokens.length);
+      });
+    };
+
     return normalizedItems
       .filter((item) => {
         const matchCat = activeCategory === 'All' || item.normalizedCategory === activeCategory;
         const matchVendor = activeVendor === 'All Vendors' || item.normalizedVendor === activeVendor;
-        const matchQ = !q || [item.title, item.normalizedCategory, item.description, item.normalizedVendor]
+        const matchQ = !q || [item.title, item.normalizedCategory, item.description, item.normalizedVendor, item.normalizedLocation]
           .some((v) => String(v || '').toLowerCase().includes(q));
-        return matchCat && matchVendor && matchQ;
+        const matchLocation = matchesLocationQuery(item);
+        return matchCat && matchVendor && matchQ && matchLocation;
       })
       .sort((left, right) => {
+        if (locationQ) {
+          const scoreLocation = (item) => {
+            const locationText = normalizeSearchText(item.normalizedLocation || `${item.normalizedVendor} ${item.details || ''}`);
+            if (!locationText) return 0;
+            if (locationText === locationQ) return 100;
+            if (locationText.includes(locationQ)) return 80;
+            const tokenScore = locationQueryTokens.reduce((score, token) => score + (locationText.includes(token) ? 12 : 0), 0);
+            return tokenScore + (item.normalizedLocation ? 5 : 0);
+          };
+
+          const leftScore = scoreLocation(left);
+          const rightScore = scoreLocation(right);
+
+          if (leftScore !== rightScore) {
+            return rightScore - leftScore;
+          }
+        }
+
         if (sortOrder === 'Price Low') {
           return getNumericPriceValue(left.price) - getNumericPriceValue(right.price);
         }
@@ -11075,7 +11169,7 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
 
         return (Number(right.reviewSummary?.reviewCount) || 0) - (Number(left.reviewSummary?.reviewCount) || 0);
       });
-  }, [normalizedItems, searchQuery, activeCategory, activeVendor, sortOrder]);
+  }, [normalizedItems, searchQuery, activeCategory, activeVendor, sortOrder, locationSearchText, locationQueryTokens, normalizeSearchText]);
 
   const featuredItems = useMemo(() => filteredItems.slice(0, 3), [filteredItems]);
   const visibleItems = useMemo(() => filteredItems.slice(0, visibleCount), [filteredItems, visibleCount]);
@@ -11134,20 +11228,20 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
   ];
 
   const buyerBenefits = [
-    { value: '1', title: 'Support local businesses', body: 'Every order helps township and community sellers grow.' },
-    { value: '2', title: 'Affordable prices', body: 'Shop fresh goods and essentials with competitive pricing.' },
-    { value: '3', title: 'Community approved', body: 'Browse trusted vendors with repeat buyer history.' },
-    { value: '4', title: 'Simple checkout', body: 'Use secure checkout with fast confirmation updates.' },
-    { value: '5', title: 'Vendor ratings', body: 'Quickly compare vendors by listing quality and reliability.' },
+    { value: '1', title: 'Near you first', body: 'See sellers around your suburb, town, or city before you travel.' },
+    { value: '2', title: 'Real local prices', body: 'Compare township and street-market deals instantly.' },
+    { value: '3', title: 'Meet sellers directly', body: 'Chat first, confirm location, then go collect in person.' },
+    { value: '4', title: 'Fresh daily stock', body: 'Browse food, household items, and fast-moving local goods.' },
+    { value: '5', title: 'Trusted community trade', body: 'Shop from local traders with quick review signals.' },
   ];
 
   const trustHighlights = [
-    { metric: '24/7', label: 'Support chat available' },
-    { metric: '5', label: 'Secure payment options' },
-    { metric: '48h', label: 'Order issue response target' },
-    { metric: '100+', label: 'Active market listings' },
-    { metric: 'Local', label: 'Community-first suppliers' },
-    { metric: 'Live', label: 'Real-time order tracking' },
+    { metric: 'Near', label: 'Find items around you' },
+    { metric: 'Chat', label: 'Confirm the meeting point' },
+    { metric: 'Fresh', label: 'Daily local stock' },
+    { metric: 'Fast', label: 'Quick deal discovery' },
+    { metric: 'Local', label: 'Township sellers first' },
+    { metric: 'Real', label: 'No fake delivery promises' },
   ];
 
   const buildCartItem = (item) => createCartItem({
@@ -11183,7 +11277,7 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
   return (
   <PageFrame
     title="Informal Market"
-    subtitle="Discover goods from township and local street vendors"
+    subtitle="Discover goods sold near your area by township and street vendors"
     heroImages={[
       'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=1200',
       'https://images.pexels.com/photos/5632379/pexels-photo-5632379.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -11199,8 +11293,31 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
     subtitleClassName="mt-2 text-xs text-white/90 sm:text-sm"
   >
     <div className="mt-7 space-y-7 bg-[radial-gradient(circle_at_top,#e3f6ff_0,#f8fbff_42%,#ffffff_100%)] pb-8 sm:mt-9 sm:space-y-9">
+      <section className="overflow-hidden rounded-3xl border border-[#0f6674]/20 bg-[linear-gradient(135deg,#0f6674_0%,#0c203d_55%,#08111f_100%)] px-4 py-5 text-white shadow-[0_18px_40px_rgba(2,32,71,0.24)] sm:px-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="max-w-2xl">
+            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-cyan-200">Local street market advertising</p>
+            <h2 className="mt-2 text-2xl font-black leading-tight sm:text-3xl">Find items sold around your location and meet the seller directly.</h2>
+            <p className="mt-2 max-w-xl text-sm text-white/80">Search by item, suburb, town, or city. No delivery hype, just real nearby traders and in-person collection.</p>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center text-xs sm:min-w-[18rem]">
+            <div className="rounded-2xl border border-white/10 bg-white/10 px-3 py-3 backdrop-blur">
+              <p className="text-lg font-black text-white">Nearby</p>
+              <p className="text-white/75">Search local sellers</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/10 px-3 py-3 backdrop-blur">
+              <p className="text-lg font-black text-white">Chat</p>
+              <p className="text-white/75">Arrange collection</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/10 px-3 py-3 backdrop-blur">
+              <p className="text-lg font-black text-white">Local</p>
+              <p className="text-white/75">Real market ads</p>
+            </div>
+          </div>
+        </div>
+      </section>
       <div className="rounded-2xl border border-[#b9d9ea] bg-white/95 p-3 shadow-[0_14px_28px_rgba(2,32,71,0.1)] backdrop-blur">
-        <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
           <label className="relative block">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0f6674]" />
             <input
@@ -11208,6 +11325,17 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Search market listings"
+              className="h-10 w-full rounded-lg border border-[#b9d9ea] bg-[#f8fcff] pl-9 pr-3 text-sm text-[var(--svs-text)] outline-none focus:border-[#0f6674]"
+            />
+          </label>
+
+          <label className="relative block">
+            <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0f6674]" />
+            <input
+              type="search"
+              value={locationQuery}
+              onChange={(event) => setLocationQuery(event.target.value)}
+              placeholder="Search around your area"
               className="h-10 w-full rounded-lg border border-[#b9d9ea] bg-[#f8fcff] pl-9 pr-3 text-sm text-[var(--svs-text)] outline-none focus:border-[#0f6674]"
             />
           </label>
@@ -11234,6 +11362,29 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
             <option value="Price Low">Price low-high</option>
             <option value="Price High">Price high-low</option>
           </select>
+
+          <button
+            type="button"
+            onClick={async () => {
+              const resolvedLocation = await refreshLocation();
+              const nextLocationQuery = [resolvedLocation?.city, resolvedLocation?.province, resolvedLocation?.country]
+                .filter(Boolean)
+                .join(', ')
+                || resolvedLocation?.formattedAddress
+                || resolvedLocation?.locationLabel
+                || '';
+
+              if (nextLocationQuery) {
+                setLocationQuery(nextLocationQuery);
+                setActiveCategory('All');
+                setActiveVendor('All Vendors');
+                setSortOrder('Trending');
+              }
+            }}
+            className="h-10 rounded-lg border border-[#0f6674] bg-[#e8f7fb] px-4 text-xs font-bold text-[#0f6674]"
+          >
+            {isResolvingLocation ? 'Finding your area...' : 'Use my location'}
+          </button>
         </div>
         <div className="mt-2 flex flex-wrap gap-1.5">
           {availableCategories.map((category) => (
@@ -11247,11 +11398,23 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
             </button>
           ))}
         </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+          <span className="rounded-full bg-[#e8f7fb] px-3 py-1 font-semibold text-[#0f6674]">
+            {locationQuery ? `Showing items near ${locationQuery}` : 'Browse all local sellers'}
+          </span>
+          {currentCity || currentProvince || currentCountry ? (
+            <span className="rounded-full bg-[#f4fbfe] px-3 py-1 font-semibold text-slate-600">
+              Current area: {[currentCity, currentProvince, currentCountry].filter(Boolean).join(', ')}
+            </span>
+          ) : null}
+          {locationError ? <span className="rounded-full bg-rose-50 px-3 py-1 font-semibold text-rose-600">{locationError}</span> : null}
+          {hasApproximateLocation && !locationError ? <span className="rounded-full bg-amber-50 px-3 py-1 font-semibold text-amber-700">Using nearby search fallback</span> : null}
+        </div>
       </div>
 
       <section>
         <h2 className="text-center text-xs font-bold uppercase tracking-[0.18em] text-[var(--svs-primary-strong)]">Shop by informal market categories</h2>
-        <p className="mt-1 text-center text-[11px] text-[var(--svs-muted)]">Explore products from local traders, street vendors, and independent sellers</p>
+        <p className="mt-1 text-center text-[11px] text-[var(--svs-muted)]">Explore items sold around your area by local traders and street vendors</p>
         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {categoryShowcase.map((category) => (
             <button
@@ -11282,31 +11445,27 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
                 <article key={item.id} className="overflow-hidden rounded-xl border border-[var(--svs-border)] bg-white shadow-sm">
                   <img src={item.image} alt={item.title} className="h-28 w-full object-cover" />
                   <div className="p-3">
+                    <span className="inline-flex rounded-full bg-[#e8f7fb] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#0f6674]">
+                      {getProximityLabel(item)}
+                    </span>
                     <p className="truncate text-sm font-bold text-[var(--svs-primary-strong)]">{item.title}</p>
                     <p className="mt-1 text-[11px] text-[var(--svs-muted)]">{item.category || 'Informal listing'} • {item.sellerName || 'Local trader'}</p>
                     <p className="mt-1 text-sm font-bold text-[var(--svs-primary)]"><SalePrice price={item.price} currency={item.currency} /></p>
                     <p className="mt-1 text-[11px] text-slate-500">{reviewSummary.reviewCount} reviews • {reviewSummary.averageRating || 0} rating</p>
-                    <div className="mt-3 flex gap-2">
+                    <div className="mt-3 grid grid-cols-2 gap-2">
                       <button
                         type="button"
                         onClick={() => openItemDetails(item)}
-                        className="flex-1 rounded-md border border-[var(--svs-border)] px-2 py-1.5 text-xs font-semibold text-[var(--svs-text)]"
+                        className="rounded-md border border-[var(--svs-border)] px-2 py-2 text-xs font-semibold text-[var(--svs-text)]"
                       >
                         View details
                       </button>
                       <button
                         type="button"
-                        onClick={() => onAddToCart(buildCartItem(item))}
-                        className="flex-1 rounded-md bg-[var(--svs-primary)] px-2 py-1.5 text-xs font-semibold text-white"
-                      >
-                        Add to cart
-                      </button>
-                      <button
-                        type="button"
                         onClick={() => onToggleWishlist(buildWishlistItem(item))}
-                        className={`flex-1 rounded-md border px-2 py-1.5 text-xs font-semibold ${wishlistItemIds.includes(getCollectionItemId('/informal-market', item.id)) ? 'border-rose-300 bg-rose-50 text-rose-600' : 'border-[#bfdbea] bg-white text-[#0f6674]'}`}
+                        className={`rounded-md border px-2 py-2 text-xs font-semibold ${wishlistItemIds.includes(getCollectionItemId('/informal-market', item.id)) ? 'border-rose-300 bg-rose-50 text-rose-600' : 'border-[#bfdbea] bg-white text-[#0f6674]'}`}
                       >
-                        {wishlistItemIds.includes(getCollectionItemId('/informal-market', item.id)) ? 'Wishlisted' : 'Wishlist'}
+                        {wishlistItemIds.includes(getCollectionItemId('/informal-market', item.id)) ? 'Saved' : 'Save'}
                       </button>
                     </div>
                   </div>
@@ -11382,8 +11541,11 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
           <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-3">
             {visibleItems.map((item) => (
               <article key={`all-${item.id}`} className="overflow-hidden rounded-xl border border-[#d7e8f2] bg-white transition hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(2,32,71,0.12)]">
-                <img src={item.image} alt={item.title} className="h-32 w-full object-cover" />
+                <img src={item.image} alt={item.title} className="h-28 w-full object-cover sm:h-32" />
                 <div className="p-3">
+                  <span className="inline-flex rounded-full bg-[#e8f7fb] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#0f6674]">
+                    {getProximityLabel(item)}
+                  </span>
                   <p className="truncate text-sm font-bold text-[#0f6674]">{item.title}</p>
                   <p className="mt-1 text-[11px] text-slate-500">{item.normalizedCategory} • {item.normalizedVendor}</p>
                   <p className="mt-1 text-[11px] text-slate-500">{item.reviewSummary.reviewCount || 0} review{item.reviewSummary.reviewCount === 1 ? '' : 's'} • {item.reviewSummary.averageRating || 0}★</p>
@@ -11395,20 +11557,6 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
                       className="rounded-md border border-[#bfdbea] bg-[#f8fbff] px-2 py-1.5 text-[11px] font-bold text-[#0f6674]"
                     >
                       Details
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onAddToCart(buildCartItem(item))}
-                      className="rounded-md bg-[#0f6674] px-2 py-1.5 text-[11px] font-bold text-white"
-                    >
-                      Add
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onBuyNow?.(buildCartItem(item))}
-                      className="rounded-md border border-[#0f6674] bg-[#e8f7fb] px-2 py-1.5 text-[11px] font-bold text-[#0f6674]"
-                    >
-                      Buy now
                     </button>
                     <button
                       type="button"
@@ -23960,6 +24108,7 @@ const ItemDetailsModal = ({
     };
   })();
   const actionWishlistItem = item.wishlistItem || item;
+  const isInformalMarketItem = String(item.marketName || '').toLowerCase().includes('informal market');
   const rawSellerName = String(
     actionCartItem?.sellerName
     || item?.sellerName
@@ -24256,22 +24405,30 @@ const ItemDetailsModal = ({
                 </div>
               </div>
             ) : null}
-            {/* Add to Cart / Buy Now Buttons */}
-            <div className="mt-6 flex gap-3">
-              <button
-                type="button"
-                className="rounded-lg bg-[var(--svs-primary)] px-6 py-3 text-base font-semibold text-white shadow hover:bg-[var(--svs-primary-strong)]"
-                onClick={() => onAddToCart?.(actionCartItem)}
-              >
-                Add to Basket
-              </button>
-              <button
-                type="button"
-                className="rounded-lg border border-[var(--svs-primary)] px-6 py-3 text-base font-semibold text-[var(--svs-primary)] hover:bg-[var(--svs-primary-faint)]"
-                onClick={() => onBuyNow?.(actionCartItem)}
-              >
-                Buy Now
-              </button>
+            {isInformalMarketItem ? (
+              <div className="mt-6 rounded-lg border border-[#d6e6f5] bg-[#f8fbff] px-4 py-3 text-sm text-slate-600">
+                Informal market items are for in-person collection. Use chat to confirm location and meet the seller directly.
+              </div>
+            ) : null}
+            <div className={isInformalMarketItem ? 'mt-4 flex flex-col gap-3 sm:flex-row' : 'mt-6 flex gap-3'}>
+              {!isInformalMarketItem ? (
+                <>
+                  <button
+                    type="button"
+                    className="rounded-lg bg-[var(--svs-primary)] px-6 py-3 text-base font-semibold text-white shadow hover:bg-[var(--svs-primary-strong)]"
+                    onClick={() => onAddToCart?.(actionCartItem)}
+                  >
+                    Add to Basket
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-lg border border-[var(--svs-primary)] px-6 py-3 text-base font-semibold text-[var(--svs-primary)] hover:bg-[var(--svs-primary-faint)]"
+                    onClick={() => onBuyNow?.(actionCartItem)}
+                  >
+                    Buy Now
+                  </button>
+                </>
+              ) : null}
               <button
                 type="button"
                 className={`rounded-lg border px-6 py-3 text-base font-semibold ${isWishlisted ? 'border-rose-400 text-rose-600 bg-rose-50' : 'border-[var(--svs-primary)] text-[var(--svs-primary)] hover:bg-[var(--svs-primary-faint)]'}`}
