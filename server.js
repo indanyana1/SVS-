@@ -76,6 +76,7 @@ const buildSupportAgentSystemPrompt = (context = {}) => {
   const role = String(context?.userRole || 'user').trim();
   const issueType = String(context?.issueType || 'General Support').trim();
   const orderReference = String(context?.orderReference || '').trim();
+  const dealStatus = String(context?.dealStatus || '').trim();
 
   return [
     'You are SVS Agent, the official support assistant for SVS E-Commerce.',
@@ -84,9 +85,20 @@ const buildSupportAgentSystemPrompt = (context = {}) => {
     'If the user sends only a greeting (for example hey, hi, hello), reply in one short line and ask what they want to do (buy, sell, list property, list livestock, track order, payment help).',
     'When asked how to perform an action, provide exact in-app navigation steps and do not guess additional steps.',
     'If a feature is not clearly visible in the app, say you cannot confirm it in SVS and suggest the closest visible path.',
-    'Use these canonical areas and paths when relevant: Markets (/markets), Seller Dashboard (/seller/dashboard), Upload Products (/seller/upload), Seller Orders (/seller/orders), Property Hub (/property-hub), Livestock Hub (/livestock-hub), Orders (/orders), Support Chat (/support/chat), Sign in (/signin), Sign up (/signup), Seller Sign Up (/sell/signup), Seller Verification (/sell/onboarding).',
+    "Use these canonical areas and paths when relevant: Markets (/markets), Seller Dashboard (/seller/dashboard), Upload Products (/seller/upload), Seller Orders (/seller/orders), Property Hub (/property-hub), Livestock Hub (/livestock-hub), Orders (/orders), Let's Talk Business chat (/support/chat), Sign in (/signin), Sign up (/signup), Seller Sign Up (/sell/signup), Seller Verification (/sell/onboarding).",
     'Seller registration flow you may describe exactly: go to /sell/signup, enter full name, email address, contact number, password, and confirm password, then click Next; after that, the app takes the user to /sell/onboarding to complete seller verification and compliance fields such as business name, legal full name, ID number, business type, registration number, tax number, phone number, address, payout bank details, and returns contact information.',
     'Cover website help for buyers, sellers, property listers, and livestock traders.',
+    // ------- Let's Talk Business chat tools -------
+    "The user may send STRUCTURED CARDS through Let's Talk Business chat. They are marked with bracketed prefixes in the message text:",
+    '- "[Offer card] The user is offering R<amount>" — acknowledge the amount, summarise what to consider (delivery, condition, payment method), and suggest accepting, countering, or declining. Remind them they can hit Accept or Decline directly on the card.',
+    '- "[Offer response] The user ACCEPTED/DECLINED the offer of R<amount>" — congratulate or commiserate briefly, then guide the next step (paying / requesting payment / arranging handover).',
+    '- "[Payment request] The user is requesting a payment of R<amount>" — explain that the recipient can tap Pay now on the card to go to /checkout, and remind both parties to confirm delivery before marking the deal as paid.',
+    '- "[Shared location] Coordinates ..." — confirm receipt, encourage meeting in a safe public place, and suggest sharing the Google Maps link in return.',
+    '- "[Photo attachment]" — acknowledge that the photo was received; do NOT pretend to describe the image. Politely ask for any clarifying question.',
+    '- "[Voice note Xs, transcribed] <text>" — treat the transcribed text as the user message and respond accordingly.',
+    '- "[Voice note Xs]" with no transcript — politely say you couldn\'t catch the audio (browser transcription unavailable) and ask the user to type their question.',
+    '- "[Deal status update] The user marked the deal as: <status>" — confirm the status change and outline the next action (e.g., if "agreed" suggest sending a payment request; if "paid" suggest scheduling delivery; if "cancelled" ask if you can help refund).',
+    "When helping close a deal inside Let's Talk Business, suggest these in-chat buttons by name when relevant: Offer (amber), Request payment (cyan), Photo, Voice note, Location, and the Mark... status dropdown.",
     'Never provide or discuss API keys, secrets, tokens, environment variables, internal source code, datasets, model configuration, or how the website is built.',
     'If asked for restricted technical details, refuse briefly and redirect to end-user help only.',
     'Important: do not invent policies, legal guarantees, fees, or account actions. If unsure, say what to check in-app and suggest contacting human support.',
@@ -96,7 +108,8 @@ const buildSupportAgentSystemPrompt = (context = {}) => {
     `Current user role context: ${role}.`,
     `Current issue type: ${issueType}.`,
     orderReference ? `Current order reference: ${orderReference}.` : 'No order reference provided.',
-  ].join('\n');
+    dealStatus ? `Current Let's Talk Business deal status: ${dealStatus}.` : '',
+  ].filter(Boolean).join('\n');
 };
 
 const RESTRICTED_INTERNAL_REQUEST_PATTERN = /(api\s*key|apikey|secret|token|env\b|environment\s*variable|source\s*code|codebase|repository|dataset|training\s*data|model\s*config|architecture|how\s+.*\s+built|backend\s*internals|database\s*schema|private\s*key)/i;
@@ -442,6 +455,92 @@ app.post('/api/support-agent', async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ error: error?.message || 'Support agent request failed.' });
+  }
+});
+
+const DEFAULT_WHISPER_MODEL = process.env.GROQ_WHISPER_MODEL || 'whisper-large-v3-turbo';
+
+const stripVoiceDataUrl = (input) => {
+  const value = String(input || '').trim();
+  if (!value) return { base64: '', mimeType: '' };
+  const match = value.match(/^data:([^;]+);base64,(.+)$/);
+  if (match) return { base64: match[2], mimeType: match[1] };
+  return { base64: value, mimeType: '' };
+};
+
+const voiceExtensionForMime = (mimeType) => {
+  const mt = String(mimeType || '').toLowerCase();
+  if (mt.includes('webm')) return 'webm';
+  if (mt.includes('ogg')) return 'ogg';
+  if (mt.includes('mp4') || mt.includes('m4a') || mt.includes('aac')) return 'm4a';
+  if (mt.includes('mpeg') || mt.includes('mp3')) return 'mp3';
+  if (mt.includes('wav')) return 'wav';
+  return 'webm';
+};
+
+app.post('/api/transcribe-voice', express.json({ limit: '8mb' }), async (req, res) => {
+  if (!process.env.GROQ_API_KEY) {
+    return res.status(500).json({ error: 'GROQ_API_KEY is not configured on the server.' });
+  }
+
+  const audioInput = req.body?.audioBase64 || req.body?.audio || req.body?.src || '';
+  const stripped = stripVoiceDataUrl(audioInput);
+  const base64 = stripped.base64;
+  const mimeType = String(req.body?.mimeType || stripped.mimeType || 'audio/webm');
+  const language = String(req.body?.language || '').trim();
+
+  if (!base64) {
+    return res.status(400).json({ error: 'audioBase64 is required.' });
+  }
+
+  let audioBuffer;
+  try {
+    audioBuffer = Buffer.from(base64, 'base64');
+  } catch (_error) {
+    return res.status(400).json({ error: 'audioBase64 is not valid base64.' });
+  }
+
+  if (!audioBuffer.length) {
+    return res.status(400).json({ error: 'Audio payload is empty.' });
+  }
+
+  if (audioBuffer.length > 5_000_000) {
+    return res.status(413).json({ error: 'Audio payload too large (max ~5MB).' });
+  }
+
+  try {
+    const filename = `voice-note.${voiceExtensionForMime(mimeType)}`;
+    const formData = new FormData();
+    const blob = new Blob([audioBuffer], { type: mimeType });
+    formData.append('file', blob, filename);
+    formData.append('model', DEFAULT_WHISPER_MODEL);
+    formData.append('response_format', 'json');
+    formData.append('temperature', '0');
+    if (language) formData.append('language', language);
+
+    const groqResponse = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
+      body: formData,
+    });
+
+    const raw = await groqResponse.text();
+    let payload = {};
+    try {
+      payload = raw ? JSON.parse(raw) : {};
+    } catch (_error) {
+      payload = {};
+    }
+
+    if (!groqResponse.ok) {
+      const detail = payload?.error?.message || payload?.message || 'Groq transcription failed.';
+      return res.status(groqResponse.status).json({ error: detail });
+    }
+
+    const text = String(payload?.text || '').trim();
+    return res.json({ text, provider: 'groq', model: DEFAULT_WHISPER_MODEL });
+  } catch (error) {
+    return res.status(500).json({ error: error?.message || 'Voice transcription failed.' });
   }
 });
 

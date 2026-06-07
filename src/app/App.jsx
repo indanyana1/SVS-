@@ -50,6 +50,9 @@ import {
   Hash,
   Sparkles,
   MessageCircle,
+  Image as ImageIcon,
+  Mic,
+  Square,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -450,7 +453,7 @@ const MARKET_FIELD_SPEC = {
     title: 'Livestock Listing Details',
     helper: 'Tell buyers the livestock type, breed, age, weight, and farm location so they can filter and find your animal quickly.',
     fields: [
-      { name: 'category', label: 'Livestock type', type: 'select', required: true, options: ['Cattles', 'Buffalos', 'Goats', 'Sheeps', 'Poultry', 'Horses', 'Camels', 'Exotic Livestock'] },
+      { name: 'category', label: 'Livestock type', type: 'select', required: true, options: ['Cattles', 'Buffalos', 'Goats', 'Sheeps', 'Poultry', 'Horses', 'Camels', 'Exotic Livestock', 'Other'] },
       { name: 'breed', label: 'Breed', type: 'text', required: true, placeholder: 'e.g. Holstein Friesian, Boer, Murrah' },
       { name: 'age', label: 'Age', type: 'text', required: true, placeholder: 'e.g. 3 years, 6 months' },
       { name: 'weight', label: 'Weight', type: 'text', required: true, placeholder: 'e.g. 550 kg, 45 kg' },
@@ -4158,7 +4161,7 @@ const PROJECT_ROUTE_SEARCH_ENTRIES = [
   { id: 'page-checkout', title: 'Checkout', section: 'Shop', route: '/checkout', keywords: 'checkout payment cart billing shipping address' },
   { id: 'page-wishlist', title: 'Wishlist', section: 'Shop', route: '/wishlist', keywords: 'wishlist saved items favorites watchlist' },
   { id: 'page-search', title: 'Search', section: 'Tools', route: '/search', keywords: 'search finder look up discover all items' },
-  { id: 'page-chat', title: 'Support Chat', section: 'Support', route: '/support/chat', keywords: 'chat support buyer seller messages enquiry help' },
+  { id: 'page-chat', title: "Let's Talk Business", section: 'Support', route: '/support/chat', keywords: 'chat support buyer seller messages enquiry help offer payment deal negotiate close business' },
   { id: 'page-direct-links', title: 'Ecommerce Market Links', section: 'Markets', route: '/retailer-direct-links', keywords: 'retailers brands stores direct links ecommerce market links' },
   { id: 'page-signin', title: 'Sign In', section: 'Account', route: '/signin', keywords: 'signin login account access' },
   { id: 'page-signup', title: 'Sign Up', section: 'Account', route: '/signup', keywords: 'signup register create account' },
@@ -4194,6 +4197,72 @@ const mapRetailerDirectLinkToSearchEntry = (retailer) => {
     ]),
   };
 };
+
+const AI_SEARCH_ENGINES = [
+  {
+    id: 'perplexity',
+    name: 'Perplexity AI',
+    description: 'AI answers with cited sources',
+    buildUrl: (q) => `https://www.perplexity.ai/search?q=${encodeURIComponent(q)}`,
+  },
+  {
+    id: 'chatgpt',
+    name: 'ChatGPT Search',
+    description: 'Conversational AI shopping help',
+    buildUrl: (q) => `https://chatgpt.com/?q=${encodeURIComponent(q)}`,
+  },
+  {
+    id: 'gemini',
+    name: 'Google Gemini',
+    description: 'Google’s AI assistant',
+    buildUrl: (q) => `https://gemini.google.com/app?q=${encodeURIComponent(q)}`,
+  },
+  {
+    id: 'copilot',
+    name: 'Microsoft Copilot',
+    description: 'Bing-powered AI search',
+    buildUrl: (q) => `https://copilot.microsoft.com/?q=${encodeURIComponent(q)}`,
+  },
+  {
+    id: 'you',
+    name: 'You.com',
+    description: 'AI-first answer engine',
+    buildUrl: (q) => `https://you.com/search?q=${encodeURIComponent(q)}`,
+  },
+  {
+    id: 'claude',
+    name: 'Claude',
+    description: 'Anthropic’s assistant',
+    buildUrl: (q) => `https://claude.ai/new?q=${encodeURIComponent(q)}`,
+  },
+];
+
+const WEB_SEARCH_ENGINES = [
+  {
+    id: 'google',
+    name: 'Google',
+    description: 'Search the entire web',
+    buildUrl: (q) => `https://www.google.com/search?q=${encodeURIComponent(q)}`,
+  },
+  {
+    id: 'google-shopping',
+    name: 'Google Shopping',
+    description: 'Compare prices everywhere',
+    buildUrl: (q) => `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(q)}`,
+  },
+  {
+    id: 'bing',
+    name: 'Bing',
+    description: 'Microsoft web search',
+    buildUrl: (q) => `https://www.bing.com/search?q=${encodeURIComponent(q)}`,
+  },
+  {
+    id: 'duckduckgo',
+    name: 'DuckDuckGo',
+    description: 'Private web search',
+    buildUrl: (q) => `https://duckduckgo.com/?q=${encodeURIComponent(q)}`,
+  },
+];
 
 const buildProjectWideStaticSearchCatalog = () => {
   const routeEntries = PROJECT_ROUTE_SEARCH_ENTRIES.map((entry) => ({
@@ -5799,6 +5868,47 @@ const requestSupportAgentReply = async ({ message, context = {}, history = [] })
   return reply;
 };
 
+const requestVoiceTranscription = async ({ audioBase64, mimeType, language } = {}) => {
+  const normalized = String(audioBase64 || '').trim();
+  if (!normalized) {
+    throw new Error('Audio payload is required.');
+  }
+
+  let response;
+  try {
+    response = await fetch('/api/transcribe-voice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        audioBase64: normalized,
+        mimeType: mimeType || 'audio/webm',
+        language: language || undefined,
+      }),
+    });
+  } catch (networkError) {
+    // eslint-disable-next-line no-console
+    console.error('[transcribe-voice] network error:', networkError);
+    throw new Error('Cannot reach voice transcription service.');
+  }
+
+  const rawBody = await response.text();
+  let result = {};
+  try {
+    result = rawBody ? JSON.parse(rawBody) : {};
+  } catch (_error) {
+    result = {};
+  }
+
+  if (!response.ok) {
+    // eslint-disable-next-line no-console
+    console.error('[transcribe-voice] request failed', response.status, rawBody);
+    const detail = result.error || result.message || 'Voice transcription failed.';
+    throw new Error(`${detail} (HTTP ${response.status})`);
+  }
+
+  return String(result.text || '').trim();
+};
+
 const getCartTotals = (cartItems) => {
   const subtotal = getCartSubtotal(cartItems);
   const serviceFee = getServiceFee(subtotal);
@@ -7120,6 +7230,8 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
   const [query, setQuery] = useState('');
   const [remoteQuickSearchCatalog, setRemoteQuickSearchCatalog] = useState([]);
   const [isQuickSearchLoading, setIsQuickSearchLoading] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const searchFormRef = useRef(null);
   const [isAuthenticated, setIsAuthenticated] = useState(getAuthState);
   const [hasSellerAccess, setHasSellerAccess] = useState(getSellerAccessState);
   const [sellerHomePath, setSellerHomePath] = useState(getSellerHomePath);
@@ -7136,6 +7248,18 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
   const isDarkMode = theme === 'dark';
   const isSellerConsoleRoute = location.pathname.startsWith('/seller/') || location.pathname === '/sell/onboarding';
   const activeLanguage = getLanguageByCode(i18n.resolvedLanguage || i18n.language);
+  const popularSearchTerms = useMemo(() => [
+    'Groceries',
+    'Fast Food',
+    'Beverages',
+    'Fashion',
+    'Electronics',
+    'Property',
+    'Vehicles',
+    'Tickets',
+    'Informal Market',
+    'Wellness',
+  ], []);
   const unreadNotificationsCount = useMemo(
     () => notifications.reduce((count, notification) => (notification.read ? count : count + 1), 0),
     [notifications],
@@ -7353,6 +7477,25 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
     };
   }, [isLanguageModalOpen]);
 
+  useEffect(() => {
+    if (!isSearchFocused) {
+      return undefined;
+    }
+
+    const handlePointerDown = (event) => {
+      if (searchFormRef.current && !searchFormRef.current.contains(event.target)) {
+        setIsSearchFocused(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+    };
+  }, [isSearchFocused]);
+
   const quickSearchSource = useMemo(
     () => dedupeSearchCatalogEntries([
       ...searchableCatalog,
@@ -7436,12 +7579,17 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
     navigate(`/search?query=${encodeURIComponent(term)}`);
     setQuery('');
     setMobileOpen(false);
+    setIsSearchFocused(false);
+    if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
   };
 
   const handleQuickSelect = (term) => {
     navigate(`/search?query=${encodeURIComponent(term)}`);
     setQuery('');
     setMobileOpen(false);
+    setIsSearchFocused(false);
   };
 
   const handleQuickResultSelect = (item) => {
@@ -7449,6 +7597,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
       navigate(item.route);
       setQuery('');
       setMobileOpen(false);
+      setIsSearchFocused(false);
       return;
     }
 
@@ -7526,53 +7675,188 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
             )}
           </nav>
 
-          <form className={`relative max-w-xl flex-1 ${isSellerConsoleRoute ? 'hidden' : ''}`} onSubmit={handleSearchSubmit}>
+          <form
+            ref={searchFormRef}
+            className={`relative max-w-xl flex-1 ${isSellerConsoleRoute ? 'hidden' : ''}`}
+            onSubmit={handleSearchSubmit}
+          >
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
+              onFocus={() => setIsSearchFocused(true)}
               placeholder={t('search.placeholder')}
-              className="w-full rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-9 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/40"
+              className="w-full rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] py-2 pl-9 pr-28 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/40"
               aria-label={t('search.globalAria')}
             />
-            {query.trim() ? (
-              <div className="absolute left-0 right-0 top-[calc(100%+8px)] rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3 shadow-xl">
-                <p className="mb-2 text-[11px] text-[var(--svs-muted)]">
-                  AI-enhanced search across all markets{isQuickSearchLoading ? ' • Checking live database...' : ''}
+            <div className="absolute right-1.5 top-1/2 flex -translate-y-1/2 items-center gap-1">
+              {query.trim() ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery('');
+                    setIsSearchFocused(true);
+                  }}
+                  aria-label="Clear search"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[var(--svs-muted)] transition hover:bg-[var(--svs-surface-soft)] hover:text-[var(--svs-primary-strong)]"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              ) : null}
+              <button
+                type="submit"
+                className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[var(--svs-primary)] px-3 text-xs font-bold text-white shadow-sm transition hover:bg-[var(--svs-primary-strong)]"
+              >
+                <Search className="h-3.5 w-3.5" />
+                Search
+              </button>
+            </div>
+            {isSearchFocused || query.trim() ? (
+              <div className="absolute left-1/2 top-[calc(100%+8px)] z-[85] w-[min(94vw,40rem)] -translate-x-1/2 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3 shadow-2xl sm:left-0 sm:right-0 sm:w-auto sm:translate-x-0">
+                <p className="mb-3 flex flex-wrap items-center gap-1.5 px-1 text-[11px] text-[var(--svs-muted)]">
+                  <Sparkles className="h-3.5 w-3.5 text-[var(--svs-primary)]" />
+                  <span className="font-semibold text-[var(--svs-text)]">AI-assisted</span>
+                  <span aria-hidden>•</span>
+                  <span>Understands natural language</span>
+                  <span aria-hidden>•</span>
+                  <span>Searches our directory, the web, and AI engines</span>
                 </p>
-                {quickResults.length ? (
-                  <ul className="space-y-2 text-sm text-[var(--svs-text)]">
-                    {quickResults.map((item) => {
-                      const itemTitle = getTranslatedValue(t, item.titleKey, item.title);
-                      const itemSection = getTranslatedValue(t, item.sectionKey, item.section);
 
-                      return (
-                        <li key={item.id}>
-                          <button
-                            type="button"
-                            onClick={() => handleQuickResultSelect(item)}
-                            className="flex w-full items-center gap-3 rounded-md bg-[var(--svs-surface-soft)] px-3 py-2 text-left transition hover:bg-[var(--svs-cyan-surface)]"
-                          >
-                            {item.image ? (
-                              <img
-                                src={item.image}
-                                alt={itemTitle}
-                                className="h-12 w-12 rounded-md object-cover"
-                                loading="lazy"
-                              />
-                            ) : null}
-                            <span>
-                              <p className="font-semibold">{itemTitle}</p>
-                              <p className="text-xs text-[var(--svs-muted)]">{itemSection}</p>
-                            </span>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                {!query.trim() ? (
+                  <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3">
+                    <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                      Popular searches
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {popularSearchTerms.map((term) => (
+                        <button
+                          key={`popular-${term}`}
+                          type="button"
+                          onClick={() => handleQuickSelect(term)}
+                          className="rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-1 text-xs font-semibold text-[var(--svs-primary-strong)] transition hover:border-[var(--svs-primary)] hover:bg-[var(--svs-cyan-surface)]"
+                        >
+                          {term}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="mt-3 text-[11px] text-[var(--svs-muted)]">
+                      Start typing to search across our directory, the web, and AI engines.
+                    </p>
+                  </div>
                 ) : (
-                  <p className="text-sm text-[var(--svs-muted)]">{t('common.noResults')}</p>
+                  <div className="max-h-[70vh] space-y-3 overflow-y-auto pr-1">
+                    <section className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3">
+                      <header className="mb-2 flex items-center justify-between gap-2">
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                          From our directory
+                        </p>
+                        {isQuickSearchLoading ? (
+                          <span className="text-[10px] text-[var(--svs-muted)]">Checking live database…</span>
+                        ) : null}
+                      </header>
+                      {quickResults.length ? (
+                        <ul className="space-y-1.5 text-sm text-[var(--svs-text)]">
+                          {quickResults.map((item) => {
+                            const itemTitle = getTranslatedValue(t, item.titleKey, item.title);
+                            const itemSection = getTranslatedValue(t, item.sectionKey, item.section);
+
+                            return (
+                              <li key={item.id}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleQuickResultSelect(item)}
+                                  className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left transition hover:bg-[var(--svs-cyan-surface)]"
+                                >
+                                  {item.image ? (
+                                    <img
+                                      src={item.image}
+                                      alt={itemTitle}
+                                      className="h-9 w-9 shrink-0 rounded-md object-cover"
+                                      loading="lazy"
+                                    />
+                                  ) : (
+                                    <Store className="h-5 w-5 shrink-0 text-[var(--svs-primary)]" />
+                                  )}
+                                  <span className="min-w-0 flex-1">
+                                    <p className="whitespace-normal break-words text-sm font-semibold leading-tight">{itemTitle}</p>
+                                    <p className="mt-0.5 whitespace-normal break-words text-xs leading-snug text-[var(--svs-muted)]">{itemSection}</p>
+                                  </span>
+                                  <ExternalLink className="h-4 w-4 shrink-0 text-[var(--svs-muted)]" />
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : (
+                        <p className="px-1 py-2 text-xs text-[var(--svs-muted)]">
+                          {isQuickSearchLoading ? 'Searching our directory…' : 'No matching items in our directory.'}
+                        </p>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleQuickSelect(query.trim())}
+                        className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-[var(--svs-primary)] bg-[var(--svs-cyan-surface)] px-3 py-1.5 text-[11px] font-bold text-[var(--svs-primary-strong)] transition hover:bg-[var(--svs-primary)] hover:text-white"
+                      >
+                        View all directory results for &ldquo;{query.trim()}&rdquo;
+                        <ArrowUpRight className="h-3.5 w-3.5" />
+                      </button>
+                    </section>
+
+                    <section className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3">
+                      <header className="mb-2 flex items-center gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-purple-600">
+                          Ask AI about &ldquo;{query.trim()}&rdquo;
+                        </p>
+                      </header>
+                      <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+                        {AI_SEARCH_ENGINES.map((engine) => (
+                          <li key={engine.id}>
+                            <a
+                              href={engine.buildUrl(query.trim())}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-start gap-2.5 rounded-md px-2 py-2 transition hover:bg-purple-50"
+                            >
+                              <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-purple-500" />
+                              <span className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold leading-tight text-[var(--svs-text)]">{engine.name}</p>
+                                <p className="text-[11px] leading-snug text-[var(--svs-muted)]">{engine.description}</p>
+                              </span>
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+
+                    <section className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3">
+                      <header className="mb-2 flex items-center gap-1.5">
+                        <Globe className="h-3.5 w-3.5 text-[var(--svs-primary)]" />
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                          Search the entire web for &ldquo;{query.trim()}&rdquo;
+                        </p>
+                      </header>
+                      <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+                        {WEB_SEARCH_ENGINES.map((engine) => (
+                          <li key={engine.id}>
+                            <a
+                              href={engine.buildUrl(query.trim())}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-start gap-2.5 rounded-md px-2 py-2 transition hover:bg-[var(--svs-cyan-surface)]"
+                            >
+                              <Search className="mt-0.5 h-4 w-4 shrink-0 text-[var(--svs-primary)]" />
+                              <span className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold leading-tight text-[var(--svs-text)]">{engine.name}</p>
+                                <p className="text-[11px] leading-snug text-[var(--svs-muted)]">{engine.description}</p>
+                              </span>
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  </div>
                 )}
               </div>
             ) : null}
@@ -7872,8 +8156,8 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
 
       <Link
         to="/support/chat"
-        aria-label="Open support chat"
-        title="Support Chat"
+        aria-label="Open Let's Talk Business chat"
+        title="Let's Talk Business"
         className="fixed bottom-4 right-4 z-[95] inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#1f4c8f] text-white shadow-[0_12px_24px_rgba(8,32,40,0.35)] transition hover:scale-105 hover:bg-[#173e78] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 sm:bottom-6 sm:right-6"
       >
         <MessageCircle className="h-7 w-7" strokeWidth={2.25} />
@@ -20044,6 +20328,94 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   const [isAgentReplying, setIsAgentReplying] = useState(false);
   const prefilledThreadBootstrapRef = useRef('');
 
+  // --- "Let's Talk Business" deal-closing toolkit ----------------------
+  // Cards (offers, payments, location, images, status changes) are encoded
+  // inside the regular message body using the `[svs-card]` prefix so the
+  // existing supabase schema works unchanged.
+  const SVS_CARD_PREFIX = '[svs-card]';
+  const [offerDraftOpen, setOfferDraftOpen] = useState(false);
+  const [offerAmount, setOfferAmount] = useState('');
+  const [offerNote, setOfferNote] = useState('');
+  const [paymentDraftOpen, setPaymentDraftOpen] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentNote, setPaymentNote] = useState('');
+  const attachmentInputRef = useRef(null);
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const [voiceElapsedSec, setVoiceElapsedSec] = useState(0);
+  const mediaRecorderRef = useRef(null);
+  const mediaStreamRef = useRef(null);
+  const voiceChunksRef = useRef([]);
+  const voiceTimerRef = useRef(null);
+  const voiceStartRef = useRef(0);
+  const speechRecognitionRef = useRef(null);
+  const voiceTranscriptRef = useRef('');
+
+  const parseCardBody = useCallback((body) => {
+    const raw = String(body || '');
+    if (!raw.startsWith(SVS_CARD_PREFIX)) return null;
+    try {
+      const json = raw.slice(SVS_CARD_PREFIX.length);
+      const parsed = JSON.parse(json);
+      if (parsed && typeof parsed === 'object' && parsed.type) {
+        return parsed;
+      }
+    } catch (_) {
+      /* not a valid card */
+    }
+    return null;
+  }, []);
+
+  const buildCardBody = useCallback((card) => `${SVS_CARD_PREFIX}${JSON.stringify(card)}`, []);
+
+  // Convert a card payload (or fall back to a raw text body) into a plain
+  // English description so the AI agent can understand offers, payment
+  // requests, location shares, photos, voice notes, status changes, etc.
+  const cardToReadableText = useCallback((body) => {
+    const card = parseCardBody(body);
+    if (!card) return String(body || '');
+    switch (card.type) {
+      case 'offer':
+        return `[Offer card] The user is offering ${card.currency || 'ZAR'} ${Number(card.amount).toLocaleString()}${card.note ? `. Note: ${card.note}` : '.'}`;
+      case 'offer-response':
+        return card.accepted
+          ? `[Offer response] The user ACCEPTED the offer of ${card.currency || 'ZAR'} ${Number(card.amount || 0).toLocaleString()}.`
+          : `[Offer response] The user DECLINED the offer of ${card.currency || 'ZAR'} ${Number(card.amount || 0).toLocaleString()}.`;
+      case 'payment-request':
+        return `[Payment request] The user is requesting a payment of ${card.currency || 'ZAR'} ${Number(card.amount).toLocaleString()}${card.note ? ` for: ${card.note}` : '.'}`;
+      case 'location':
+        return `[Shared location] Coordinates ${card.lat}, ${card.lng}${card.label ? ` (${card.label})` : ''}. Google Maps: https://www.google.com/maps?q=${card.lat},${card.lng}`;
+      case 'image':
+        return `[Photo attachment] The user shared a photo${card.name ? ` named "${card.name}"` : ''}. (Image data is not shown to you; respond helpfully without describing the image.)`;
+      case 'voice': {
+        const dur = card.durationSec || 0;
+        if (card.transcript && card.transcript.trim()) {
+          return `[Voice note ${dur}s, transcribed] ${card.transcript.trim()}`;
+        }
+        return `[Voice note ${dur}s] The user sent a voice note. A live transcript was not available, so reply that you couldn't catch the audio and politely ask them to type their question.`;
+      }
+      case 'deal-status':
+        return `[Deal status update] The user marked the deal as: ${card.status}.`;
+      default:
+        return `[${card.type}] ${JSON.stringify(card)}`;
+    }
+  }, [parseCardBody]);
+
+  // Deal status is derived from the most recent `deal-status` card in the
+  // active thread. Statuses: discussion (default), negotiating, agreed,
+  // paid, closed, cancelled.
+  // -------------------------------------------------------------------
+  // Quick reply templates that cover the typical questions buyers and
+  // sellers ping each other about so they don't need WhatsApp.
+  const QUICK_REPLIES = [
+    'Is this still available?',
+    'What\u2019s your best price?',
+    'Where can we meet?',
+    'Can you deliver?',
+    'Do you accept EFT / card / cash?',
+    'Please share more photos',
+    'Deal \u2014 let\u2019s do it.',
+  ];
+
   useEffect(() => {
     window.localStorage.setItem(getUserScopedStorageKey(SUPPORT_CHAT_THREADS_STORAGE_KEY, currentUserEmail), JSON.stringify(threads));
   }, [currentUserEmail, threads]);
@@ -20572,6 +20944,18 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       .sort((left, right) => Date.parse(left.createdAt || '') - Date.parse(right.createdAt || ''));
   }, [activeThread, messages]);
 
+  // True when the active thread is the SVS Agent / Support thread.
+  // The deal-closing toolkit (offers, payment requests, location, photos,
+  // voice notes, status updates, quick replies) only makes sense between
+  // real buyers and sellers, not when chatting with the support agent.
+  const isAgentThread = useMemo(() => {
+    if (!activeThread) return false;
+    const participants = activeThread.participants || [];
+    return participants
+      .map((participant) => normalizeEmail(participant))
+      .includes(SUPPORT_ADMIN_EMAIL);
+  }, [activeThread]);
+
   const resolveCounterparty = useCallback((thread) => {
     if (!thread || !Array.isArray(thread.participants)) {
       return { email: SUPPORT_ADMIN_EMAIL, name: SUPPORT_ADMIN_NAME };
@@ -20587,6 +20971,95 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       name: displayName,
     };
   }, [currentUserEmail]);
+
+  // Ask the SVS Agent to reply in this thread. Used by plain-text messages
+  // AND by the new card messages (offers, payment requests, location, voice
+  // notes, etc.) so the AI can negotiate, confirm payment, etc.
+  const triggerAgentReply = useCallback(async (updatedThread, userMessageText) => {
+    if (!updatedThread) return;
+    setIsAgentReplying(true);
+    try {
+      const threadMessages = messages
+        .filter((message) => message.threadId === updatedThread.id)
+        .sort((left, right) => Date.parse(left.createdAt || '') - Date.parse(right.createdAt || ''));
+      const agentHistory = threadMessages.slice(-8).map((message) => ({
+        role: normalizeEmail(message.senderEmail || '') === SUPPORT_ADMIN_EMAIL ? 'assistant' : 'user',
+        content: cardToReadableText(message.body),
+      }));
+      // Derive the current deal status from the thread's history so the
+      // agent knows whether we're still discussing, negotiating, agreed, etc.
+      let currentDealStatus = 'discussion';
+      for (let i = threadMessages.length - 1; i >= 0; i -= 1) {
+        const historicalCard = parseCardBody(threadMessages[i].body);
+        if (historicalCard?.type === 'deal-status' && historicalCard.status) {
+          currentDealStatus = historicalCard.status;
+          break;
+        }
+      }
+      const agentReplyBody = await requestSupportAgentReply({
+        message: userMessageText,
+        history: agentHistory,
+        context: {
+          userRole: currentRole,
+          issueType: updatedThread.issueType || 'General Support',
+          orderReference: updatedThread.orderReference || '',
+          orderId: updatedThread.orderId || '',
+          route: typeof window !== 'undefined' ? window.location.pathname : '/support/chat',
+          recipientName: resolveCounterparty(updatedThread).name,
+          dealStatus: currentDealStatus,
+        },
+      });
+
+      const agentTimestamp = new Date().toISOString();
+      const agentMessage = {
+        id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        threadId: updatedThread.id,
+        senderEmail: SUPPORT_ADMIN_EMAIL,
+        senderName: SUPPORT_ADMIN_NAME,
+        senderRole: 'admin',
+        body: agentReplyBody,
+        createdAt: agentTimestamp,
+      };
+
+      setMessages((current) => [...current, agentMessage]);
+      setThreads((current) => current.map((candidate) => (
+        candidate.id === updatedThread.id
+          ? { ...candidate, updatedAt: agentTimestamp, lastMessage: agentReplyBody }
+          : candidate
+      )));
+
+      if (getAuthState() && currentUserEmail && hasSupabaseEnv && supabase) {
+        const syncedThread = { ...updatedThread, updatedAt: agentTimestamp, lastMessage: agentReplyBody };
+        supabase
+          .from(SUPPORT_CHAT_THREADS_TABLE)
+          .upsert([toSupportChatThreadRecord(syncedThread)], { onConflict: 'thread_key' })
+          .then(() => supabase
+            .from(SUPPORT_CHAT_MESSAGES_TABLE)
+            .upsert([toSupportChatMessageRecord(agentMessage)], { onConflict: 'message_key' }))
+          .then(() => { loadRemoteChat(); });
+      }
+    } catch (agentError) {
+      const fallbackTimestamp = new Date().toISOString();
+      const fallbackBody = `SVS Agent is temporarily unavailable. Please try again in a moment.\n\nDetails: ${agentError?.message || 'Unknown error.'}`;
+      const fallbackMessage = {
+        id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        threadId: updatedThread.id,
+        senderEmail: SUPPORT_ADMIN_EMAIL,
+        senderName: SUPPORT_ADMIN_NAME,
+        senderRole: 'admin',
+        body: fallbackBody,
+        createdAt: fallbackTimestamp,
+      };
+      setMessages((current) => [...current, fallbackMessage]);
+      setThreads((current) => current.map((candidate) => (
+        candidate.id === updatedThread.id
+          ? { ...candidate, updatedAt: fallbackTimestamp, lastMessage: fallbackBody }
+          : candidate
+      )));
+    } finally {
+      setIsAgentReplying(false);
+    }
+  }, [cardToReadableText, currentRole, currentUserEmail, loadRemoteChat, messages, parseCardBody, resolveCounterparty]);
 
 
   const handleSendMessage = useCallback(async () => {
@@ -20660,103 +21133,342 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     }
 
     if (isSupportAgentThread && !isAdmin) {
-      setIsAgentReplying(true);
-      try {
-        const agentHistory = activeMessages.slice(-8).map((message) => ({
-          role: normalizeEmail(message.senderEmail || '') === SUPPORT_ADMIN_EMAIL ? 'assistant' : 'user',
-          content: String(message.body || ''),
-        }));
-        const agentReplyBody = await requestSupportAgentReply({
-          message: body,
-          history: agentHistory,
-          context: {
-            userRole: currentRole,
-            issueType: updatedThread.issueType || 'General Support',
-            orderReference: updatedThread.orderReference || '',
-            orderId: updatedThread.orderId || '',
-            route: typeof window !== 'undefined' ? window.location.pathname : '/support/chat',
-            recipientName: resolveCounterparty(updatedThread).name,
-          },
-        });
-
-        const agentTimestamp = new Date().toISOString();
-        const agentMessage = {
-          id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          threadId: updatedThread.id,
-          senderEmail: SUPPORT_ADMIN_EMAIL,
-          senderName: SUPPORT_ADMIN_NAME,
-          senderRole: 'admin',
-          body: agentReplyBody,
-          createdAt: agentTimestamp,
-        };
-
-        setMessages((current) => [...current, agentMessage]);
-        setThreads((current) => current.map((candidate) => (
-          candidate.id === updatedThread.id
-            ? {
-              ...candidate,
-              updatedAt: agentTimestamp,
-              lastMessage: agentReplyBody,
-            }
-            : candidate
-        )));
-
-        if (getAuthState() && currentUserEmail && hasSupabaseEnv && supabase) {
-          const syncedThread = {
-            ...updatedThread,
-            updatedAt: agentTimestamp,
-            lastMessage: agentReplyBody,
-          };
-
-          supabase
-            .from(SUPPORT_CHAT_THREADS_TABLE)
-            .upsert([toSupportChatThreadRecord(syncedThread)], { onConflict: 'thread_key' })
-            .then(() => {
-              return supabase
-                .from(SUPPORT_CHAT_MESSAGES_TABLE)
-                .upsert([toSupportChatMessageRecord(agentMessage)], { onConflict: 'message_key' });
-            })
-            .then(() => {
-              loadRemoteChat();
-            });
-        }
-      } catch (agentError) {
-        const fallbackTimestamp = new Date().toISOString();
-        const fallbackBody = `SVS Agent is temporarily unavailable. Please try again in a moment.\n\nDetails: ${agentError?.message || 'Unknown error.'}`;
-        const fallbackMessage = {
-          id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          threadId: updatedThread.id,
-          senderEmail: SUPPORT_ADMIN_EMAIL,
-          senderName: SUPPORT_ADMIN_NAME,
-          senderRole: 'admin',
-          body: fallbackBody,
-          createdAt: fallbackTimestamp,
-        };
-
-        setMessages((current) => [...current, fallbackMessage]);
-        setThreads((current) => current.map((candidate) => (
-          candidate.id === updatedThread.id
-            ? {
-              ...candidate,
-              updatedAt: fallbackTimestamp,
-              lastMessage: fallbackBody,
-            }
-            : candidate
-        )));
-      } finally {
-        setIsAgentReplying(false);
-      }
+      triggerAgentReply(updatedThread, body);
     }
 
-  }, [activeMessages, activeThread, createThread, currentRole, currentUserEmail, currentUserName, draftMessage, isAdmin, loadRemoteChat, onPushNotificationToUser, resolveCounterparty]);
+  }, [activeThread, createThread, currentRole, currentUserEmail, currentUserName, draftMessage, isAdmin, loadRemoteChat, onPushNotificationToUser, triggerAgentReply]);
+
+  // Generic helper: send a "card" message (offer / payment / location /
+  // image / status). It builds the body, appends a message locally, syncs
+  // to Supabase if available, and pings the recipient like a normal chat.
+  const sendCardMessage = useCallback(async (card) => {
+    const thread = activeThread || createThread();
+    if (!thread) return;
+    const body = buildCardBody(card);
+    const nowIso = new Date().toISOString();
+    const nextMessage = {
+      id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      threadId: thread.id,
+      senderEmail: currentUserEmail,
+      senderName: currentUserName,
+      senderRole: currentRole,
+      body,
+      createdAt: nowIso,
+    };
+    const previewByType = {
+      offer: `\uD83E\uDD1D Offer: R${card.amount}`,
+      'payment-request': `\uD83D\uDCB3 Payment request: R${card.amount}`,
+      location: '\uD83D\uDCCD Shared a location',
+      image: '\uD83D\uDDBC\uFE0F Sent a photo',
+      voice: `\uD83C\uDFA4 Voice note (${card.durationSec || 0}s)`,
+      'deal-status': `\u2705 Deal status: ${card.status}`,
+      'offer-response': card.accepted ? '\uD83D\uDC4D Offer accepted' : '\uD83D\uDC4E Offer declined',
+    };
+    const preview = previewByType[card.type] || 'New update';
+
+    setMessages((current) => [...current, nextMessage]);
+    setThreads((current) => current.map((candidate) => (
+      candidate.id === thread.id
+        ? { ...candidate, updatedAt: nowIso, lastMessage: preview }
+        : candidate
+    )));
+
+    const updatedThread = { ...(thread || {}), updatedAt: nowIso, lastMessage: preview };
+    const recipientEmailLocal = normalizeEmail(
+      (updatedThread.participants || []).find((p) => normalizeEmail(p) !== currentUserEmail) || ''
+    );
+    if (recipientEmailLocal && recipientEmailLocal !== SUPPORT_ADMIN_EMAIL) {
+      onPushNotificationToUser?.(recipientEmailLocal, {
+        type: 'chat',
+        title: `New ${card.type.replace('-', ' ')} from ${currentUserName || 'SVS user'}`,
+        message: preview,
+        href: '/support/chat',
+        orderId: updatedThread.orderId || null,
+      });
+    }
+
+    if (getAuthState() && currentUserEmail && hasSupabaseEnv && supabase) {
+      supabase
+        .from(SUPPORT_CHAT_THREADS_TABLE)
+        .upsert([toSupportChatThreadRecord(updatedThread)], { onConflict: 'thread_key' })
+        .then(() => supabase
+          .from(SUPPORT_CHAT_MESSAGES_TABLE)
+          .upsert([toSupportChatMessageRecord(nextMessage)], { onConflict: 'message_key' }))
+        .then(() => { loadRemoteChat(); });
+    }
+
+    // If this card is destined for the SVS Agent, trigger an AI reply too.
+    if (recipientEmailLocal === SUPPORT_ADMIN_EMAIL && !isAdmin) {
+      triggerAgentReply(updatedThread, cardToReadableText(body));
+    }
+  }, [activeThread, buildCardBody, cardToReadableText, createThread, currentRole, currentUserEmail, currentUserName, isAdmin, loadRemoteChat, onPushNotificationToUser, triggerAgentReply]);
+
+  const handleSendOffer = useCallback(() => {
+    const amount = Number(String(offerAmount).replace(/[^\d.]/g, ''));
+    if (!amount || amount <= 0) return;
+    sendCardMessage({ type: 'offer', amount, currency: 'ZAR', note: offerNote.trim(), status: 'pending' });
+    setOfferAmount('');
+    setOfferNote('');
+    setOfferDraftOpen(false);
+  }, [offerAmount, offerNote, sendCardMessage]);
+
+  const handleSendPaymentRequest = useCallback(() => {
+    const amount = Number(String(paymentAmount).replace(/[^\d.]/g, ''));
+    if (!amount || amount <= 0) return;
+    sendCardMessage({ type: 'payment-request', amount, currency: 'ZAR', note: paymentNote.trim(), link: '/checkout' });
+    setPaymentAmount('');
+    setPaymentNote('');
+    setPaymentDraftOpen(false);
+  }, [paymentAmount, paymentNote, sendCardMessage]);
+
+  const handleShareLocation = useCallback(() => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      // eslint-disable-next-line no-alert
+      window.alert('Location sharing is not supported by this browser.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = Number(position.coords.latitude.toFixed(6));
+        const lng = Number(position.coords.longitude.toFixed(6));
+        sendCardMessage({ type: 'location', lat, lng, label: 'My current location' });
+      },
+      (error) => {
+        // eslint-disable-next-line no-alert
+        window.alert(`Couldn\u2019t get your location: ${error.message || 'permission denied'}`);
+      },
+      { enableHighAccuracy: true, timeout: 8000 },
+    );
+  }, [sendCardMessage]);
+
+  const handleAttachmentChange = useCallback((event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!/^image\//.test(file.type)) {
+      // eslint-disable-next-line no-alert
+      window.alert('Only image files are supported in chat attachments.');
+      event.target.value = '';
+      return;
+    }
+    if (file.size > 1_500_000) {
+      // eslint-disable-next-line no-alert
+      window.alert('Please choose an image smaller than 1.5 MB.');
+      event.target.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || '');
+      if (dataUrl) {
+        sendCardMessage({ type: 'image', src: dataUrl, name: file.name });
+      }
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+  }, [sendCardMessage]);
+
+  const handleQuickReply = useCallback((text) => {
+    setDraftMessage((prev) => (prev ? `${prev} ${text}` : text));
+  }, []);
+
+  // --- Voice notes -----------------------------------------------------
+  // Records mic input with MediaRecorder, encodes as a data URL, and ships
+  // it as a `voice` card so the existing chat schema is reused. Capped at
+  // ~60 s and ~1.5 MB to keep messages reasonable.
+  const stopVoiceTracksAndTimer = useCallback(() => {
+    if (voiceTimerRef.current) {
+      window.clearInterval(voiceTimerRef.current);
+      voiceTimerRef.current = null;
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+    }
+    if (speechRecognitionRef.current) {
+      try { speechRecognitionRef.current.stop(); } catch (_) { /* ignore */ }
+      speechRecognitionRef.current = null;
+    }
+  }, []);
+
+  const handleStopVoiceRecording = useCallback(() => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.stop();
+    }
+  }, []);
+
+  const handleStartVoiceRecording = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia || typeof window.MediaRecorder === 'undefined') {
+      // eslint-disable-next-line no-alert
+      window.alert('Voice recording is not supported by this browser.');
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+      const mimeCandidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'];
+      const mimeType = mimeCandidates.find((candidate) => window.MediaRecorder.isTypeSupported?.(candidate)) || '';
+      const recorder = mimeType ? new window.MediaRecorder(stream, { mimeType }) : new window.MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+      voiceChunksRef.current = [];
+      voiceStartRef.current = Date.now();
+      voiceTranscriptRef.current = '';
+      setVoiceElapsedSec(0);
+
+      // Live transcription (Chrome / Edge via webkitSpeechRecognition). If
+      // unavailable we still record audio; the AI agent will just be told
+      // it could not catch the audio.
+      const SpeechRecognitionCtor = (typeof window !== 'undefined')
+        ? (window.SpeechRecognition || window.webkitSpeechRecognition)
+        : null;
+      if (SpeechRecognitionCtor) {
+        try {
+          const recognition = new SpeechRecognitionCtor();
+          recognition.continuous = true;
+          recognition.interimResults = false;
+          recognition.lang = (typeof navigator !== 'undefined' && navigator.language) ? navigator.language : 'en-US';
+          recognition.onresult = (event) => {
+            let captured = '';
+            for (let i = event.resultIndex; i < event.results.length; i += 1) {
+              const result = event.results[i];
+              if (result.isFinal && result[0]?.transcript) {
+                captured += `${result[0].transcript} `;
+              }
+            }
+            if (captured) {
+              voiceTranscriptRef.current = `${voiceTranscriptRef.current}${captured}`.trim();
+            }
+          };
+          recognition.onerror = () => { /* keep recording even if SR fails */ };
+          recognition.start();
+          speechRecognitionRef.current = recognition;
+        } catch (_) {
+          speechRecognitionRef.current = null;
+        }
+      }
+
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          voiceChunksRef.current.push(event.data);
+        }
+      };
+      recorder.onstop = () => {
+        const durationSec = Math.max(1, Math.round((Date.now() - voiceStartRef.current) / 1000));
+        const blob = new Blob(voiceChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+        const transcript = voiceTranscriptRef.current.trim();
+        stopVoiceTracksAndTimer();
+        setIsRecordingVoice(false);
+        setVoiceElapsedSec(0);
+        if (!blob || blob.size === 0) return;
+        if (blob.size > 1_500_000) {
+          // eslint-disable-next-line no-alert
+          window.alert('Voice note is too long. Please keep it under ~60 seconds.');
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const dataUrl = String(reader.result || '');
+          if (!dataUrl) return;
+
+          let finalTranscript = transcript;
+          // Fallback: if the browser couldn't transcribe (no Web Speech API,
+          // Firefox / Safari / Android stock browser, etc.) ask the server to
+          // transcribe via Groq Whisper so the AI can still understand it.
+          if (!finalTranscript) {
+            try {
+              const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+              const serverText = await requestVoiceTranscription({
+                audioBase64: base64,
+                mimeType: blob.type || 'audio/webm',
+                language: (navigator.language || '').split('-')[0] || undefined,
+              });
+              if (serverText) finalTranscript = serverText;
+            } catch (transcribeError) {
+              // eslint-disable-next-line no-console
+              console.warn('[voice-note] server transcription failed:', transcribeError);
+            }
+          }
+
+          sendCardMessage({
+            type: 'voice',
+            src: dataUrl,
+            durationSec,
+            mimeType: blob.type,
+            transcript: finalTranscript || undefined,
+          });
+        };
+        reader.readAsDataURL(blob);
+      };
+
+      recorder.start();
+      setIsRecordingVoice(true);
+
+      voiceTimerRef.current = window.setInterval(() => {
+        const elapsed = Math.round((Date.now() - voiceStartRef.current) / 1000);
+        setVoiceElapsedSec(elapsed);
+        if (elapsed >= 60) {
+          handleStopVoiceRecording();
+        }
+      }, 250);
+    } catch (error) {
+      stopVoiceTracksAndTimer();
+      setIsRecordingVoice(false);
+      // eslint-disable-next-line no-alert
+      window.alert(`Couldn\u2019t start recording: ${error?.message || 'microphone permission denied'}`);
+    }
+  }, [handleStopVoiceRecording, sendCardMessage, stopVoiceTracksAndTimer]);
+
+  // Always release the microphone if the component unmounts mid-record.
+  useEffect(() => () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    stopVoiceTracksAndTimer();
+  }, [stopVoiceTracksAndTimer]);
+
+  // Derive deal status from the most recent deal-status card.
+  const dealStatus = useMemo(() => {
+    for (let i = activeMessages.length - 1; i >= 0; i -= 1) {
+      const card = parseCardBody(activeMessages[i].body);
+      if (card?.type === 'deal-status' && card.status) {
+        return card.status;
+      }
+    }
+    return 'discussion';
+  }, [activeMessages, parseCardBody]);
+
+  const handleChangeDealStatus = useCallback((nextStatus) => {
+    sendCardMessage({ type: 'deal-status', status: nextStatus });
+  }, [sendCardMessage]);
+
+  const handleOfferResponse = useCallback((card, accepted) => {
+    sendCardMessage({
+      type: 'offer-response',
+      accepted,
+      amount: card.amount,
+      currency: card.currency || 'ZAR',
+    });
+    if (accepted) {
+      sendCardMessage({ type: 'deal-status', status: 'agreed' });
+    }
+  }, [sendCardMessage]);
+
+  const dealStatusMeta = {
+    discussion: { label: 'Discussion', cls: 'bg-slate-100 text-slate-700' },
+    negotiating: { label: 'Negotiating', cls: 'bg-amber-100 text-amber-800' },
+    agreed: { label: 'Agreed', cls: 'bg-emerald-100 text-emerald-800' },
+    paid: { label: 'Paid', cls: 'bg-cyan-100 text-cyan-800' },
+    closed: { label: 'Closed', cls: 'bg-slate-200 text-slate-700' },
+    cancelled: { label: 'Cancelled', cls: 'bg-rose-100 text-rose-700' },
+  };
 
   return (
     <PageFrame>
       <section className="mx-auto w-full max-w-6xl overflow-hidden rounded-2xl border border-[#d4e3f1] bg-white shadow-[0_20px_40px_rgba(2,32,71,0.08)] sm:rounded-3xl">
         <div className="border-b border-[#e5eef8] bg-gradient-to-r from-[#0f6674] via-[#0f889a] to-[#0f6674] px-4 py-4 text-white sm:px-7 sm:py-5">
-          <h1 className="text-2xl font-black sm:text-3xl">Support Chat</h1>
+          <h1 className="text-2xl font-black sm:text-3xl">Let&rsquo;s Talk Business</h1>
           <p className="mt-1 text-sm text-cyan-50">
-            Chat with sellers, or ask SVS Agent for instant help across buying, selling, property listings, payments, and delivery.
+            Chat, negotiate, share photos &amp; location, send offers, request payment, and close the deal &mdash; all in one place. No need to switch to WhatsApp or other social platforms.
           </p>
           {selectedRecipientName ? (
             <p className="mt-2 inline-flex items-center rounded-full border border-cyan-100/30 bg-white/15 px-3 py-1 text-xs font-semibold text-cyan-50">
@@ -20933,7 +21645,14 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                 <div className="border-b border-[#e5eef8] px-4 py-3 sm:px-6 sm:py-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-base font-bold text-[#0f6674] sm:text-lg">{resolveCounterparty(activeThread).name}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate text-base font-bold text-[#0f6674] sm:text-lg">{resolveCounterparty(activeThread).name}</p>
+                        {!isAgentThread ? (
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${dealStatusMeta[dealStatus]?.cls || 'bg-slate-100 text-slate-700'}`}>
+                            {dealStatusMeta[dealStatus]?.label || dealStatus}
+                          </span>
+                        ) : null}
+                      </div>
                       <p className="truncate text-xs text-slate-500">
                         {activeThread.issueType || 'General Support'}{activeThread.orderReference ? ` • ${activeThread.orderReference}` : ''}
                       </p>
@@ -20996,11 +21715,122 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                   ) : null}
                   {activeMessages.length ? activeMessages.map((message) => {
                     const mine = normalizeEmail(message.senderEmail || '') === currentUserEmail;
+                    const card = parseCardBody(message.body);
                     return (
                       <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
                         <article className={`max-w-[92%] rounded-2xl px-3 py-2.5 shadow-sm sm:max-w-[85%] sm:px-4 sm:py-3 ${mine ? 'bg-[#0f6674] text-white' : 'border border-[#d6e6f5] bg-white text-slate-700'}`}>
                           <p className="text-xs font-semibold opacity-90">{mine ? 'You' : (message.senderName || message.senderEmail)}</p>
-                          <p className="mt-1 whitespace-pre-wrap text-sm">{message.body}</p>
+                          {card ? (
+                            <div className="mt-1">
+                              {card.type === 'offer' ? (
+                                <div className={`rounded-lg border ${mine ? 'border-cyan-200/40 bg-white/10' : 'border-amber-200 bg-amber-50'} p-2.5`}>
+                                  <p className={`text-[11px] font-bold uppercase tracking-wider ${mine ? 'text-cyan-100' : 'text-amber-700'}`}>
+                                    🤝 Offer
+                                  </p>
+                                  <p className={`mt-1 text-lg font-black ${mine ? 'text-white' : 'text-amber-900'}`}>
+                                    R{Number(card.amount).toLocaleString()}
+                                  </p>
+                                  {card.note ? (
+                                    <p className={`mt-1 text-xs ${mine ? 'text-cyan-50' : 'text-amber-800'}`}>{card.note}</p>
+                                  ) : null}
+                                  {!mine ? (
+                                    <div className="mt-2 flex gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOfferResponse(card, true)}
+                                        className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700"
+                                      >
+                                        Accept
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOfferResponse(card, false)}
+                                        className="rounded-md border border-rose-300 bg-white px-3 py-1.5 text-xs font-bold text-rose-700 transition hover:bg-rose-50"
+                                      >
+                                        Decline
+                                      </button>
+                                    </div>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                              {card.type === 'offer-response' ? (
+                                <p className={`rounded-lg px-2.5 py-1.5 text-sm font-bold ${card.accepted ? (mine ? 'bg-white/15 text-emerald-100' : 'bg-emerald-50 text-emerald-800') : (mine ? 'bg-white/15 text-rose-100' : 'bg-rose-50 text-rose-700')}`}>
+                                  {card.accepted ? '👍 Offer accepted' : '👎 Offer declined'}
+                                  {card.amount ? ` • R${Number(card.amount).toLocaleString()}` : ''}
+                                </p>
+                              ) : null}
+                              {card.type === 'payment-request' ? (
+                                <div className={`rounded-lg border ${mine ? 'border-cyan-200/40 bg-white/10' : 'border-cyan-200 bg-cyan-50'} p-2.5`}>
+                                  <p className={`text-[11px] font-bold uppercase tracking-wider ${mine ? 'text-cyan-100' : 'text-cyan-800'}`}>
+                                    💳 Payment request
+                                  </p>
+                                  <p className={`mt-1 text-lg font-black ${mine ? 'text-white' : 'text-cyan-900'}`}>
+                                    R{Number(card.amount).toLocaleString()}
+                                  </p>
+                                  {card.note ? (
+                                    <p className={`mt-1 text-xs ${mine ? 'text-cyan-50' : 'text-cyan-800'}`}>{card.note}</p>
+                                  ) : null}
+                                  {!mine ? (
+                                    <Link
+                                      to={card.link || '/checkout'}
+                                      className="mt-2 inline-flex items-center gap-1 rounded-md bg-[#0f6674] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#0d5762]"
+                                    >
+                                      Pay now →
+                                    </Link>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                              {card.type === 'location' ? (
+                                <a
+                                  href={`https://www.google.com/maps?q=${card.lat},${card.lng}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={`flex items-center gap-2 rounded-lg border p-2.5 ${mine ? 'border-cyan-200/40 bg-white/10 text-white' : 'border-[#d6e6f5] bg-[#f7fbff] text-[#0f6674]'} transition hover:opacity-90`}
+                                >
+                                  <MapPin className="h-5 w-5 flex-none" aria-hidden="true" />
+                                  <span className="min-w-0 flex-1">
+                                    <p className="text-xs font-bold">📍 {card.label || 'Shared location'}</p>
+                                    <p className={`text-[11px] ${mine ? 'text-cyan-100' : 'text-slate-500'}`}>{card.lat}, {card.lng}</p>
+                                  </span>
+                                  <ExternalLink className="h-4 w-4 flex-none" aria-hidden="true" />
+                                </a>
+                              ) : null}
+                              {card.type === 'image' ? (
+                                <a href={card.src} target="_blank" rel="noopener noreferrer" className="block">
+                                  <img
+                                    src={card.src}
+                                    alt={card.name || 'Shared photo'}
+                                    className="mt-1 max-h-64 w-full rounded-lg border border-slate-200 object-cover"
+                                    loading="lazy"
+                                  />
+                                </a>
+                              ) : null}
+                              {card.type === 'voice' ? (
+                                <div className={`rounded-lg border p-2 ${mine ? 'border-cyan-200/40 bg-white/10' : 'border-[#d6e6f5] bg-[#f7fbff]'}`}>
+                                  <div className="flex items-center gap-2">
+                                    <Mic className={`h-4 w-4 flex-none ${mine ? 'text-cyan-100' : 'text-[#0f6674]'}`} aria-hidden="true" />
+                                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                                    <audio controls src={card.src} className="h-9 flex-1 min-w-0" />
+                                    <span className={`shrink-0 text-[11px] font-bold ${mine ? 'text-cyan-100' : 'text-slate-500'}`}>
+                                      {card.durationSec || 0}s
+                                    </span>
+                                  </div>
+                                  {card.transcript ? (
+                                    <p className={`mt-1.5 text-[11px] italic ${mine ? 'text-cyan-50' : 'text-slate-600'}`}>
+                                      &ldquo;{card.transcript}&rdquo;
+                                    </p>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                              {card.type === 'deal-status' ? (
+                                <p className={`rounded-lg px-2.5 py-1.5 text-xs font-bold ${mine ? 'bg-white/15 text-cyan-50' : 'bg-slate-100 text-slate-700'}`}>
+                                  ✅ Deal status changed to: <span className="uppercase">{card.status}</span>
+                                </p>
+                              ) : null}
+                            </div>
+                          ) : (
+                            <p className="mt-1 whitespace-pre-wrap text-sm">{message.body}</p>
+                          )}
                           <p className={`mt-1 text-[11px] ${mine ? 'text-cyan-100' : 'text-slate-400'}`}>
                             {new Date(message.createdAt || Date.now()).toLocaleString()}
                           </p>
@@ -21023,12 +21853,199 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                 </div>
 
                 <div className="sticky bottom-0 border-t border-[#e5eef8] bg-white/95 px-3 py-3 backdrop-blur-sm sm:static sm:bg-white sm:px-6 sm:py-4">
+                  {!isAgentThread ? (
+                    /* Quick reply chips — peer chats only */
+                    <div className="mb-2 flex flex-wrap gap-1.5">
+                      {QUICK_REPLIES.map((text) => (
+                        <button
+                          key={text}
+                          type="button"
+                          onClick={() => handleQuickReply(text)}
+                          className="rounded-full border border-[#d6e6f5] bg-[#f7fbff] px-2.5 py-1 text-[11px] font-semibold text-[#0f6674] transition hover:border-[#0f6674] hover:bg-white"
+                        >
+                          {text}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {/* Action toolbar. Photo and Voice are always available
+                      (including in the SVS Agent thread). Offer, Payment,
+                      Location and Mark... only make sense between real
+                      buyers and sellers. */}
+                  <div className="mb-2 flex flex-wrap items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => attachmentInputRef.current?.click()}
+                      title="Attach a photo"
+                      className="inline-flex items-center gap-1 rounded-md border border-[#d6e6f5] bg-white px-2 py-1 text-[11px] font-bold text-[#0f6674] transition hover:bg-[#e8f7fb]"
+                    >
+                      <ImageIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                      Photo
+                    </button>
+                    <input
+                      ref={attachmentInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAttachmentChange}
+                      className="hidden"
+                    />
+                    {isRecordingVoice ? (
+                      <button
+                        type="button"
+                        onClick={handleStopVoiceRecording}
+                        title="Stop recording and send"
+                        className="inline-flex items-center gap-1 rounded-md border border-rose-300 bg-rose-50 px-2 py-1 text-[11px] font-bold text-rose-700 transition hover:bg-rose-100"
+                      >
+                        <Square className="h-3.5 w-3.5 animate-pulse" aria-hidden="true" />
+                        Stop ({voiceElapsedSec}s)
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleStartVoiceRecording}
+                        title="Record a voice note"
+                        className="inline-flex items-center gap-1 rounded-md border border-[#d6e6f5] bg-white px-2 py-1 text-[11px] font-bold text-[#0f6674] transition hover:bg-[#e8f7fb]"
+                      >
+                        <Mic className="h-3.5 w-3.5" aria-hidden="true" />
+                        Voice note
+                      </button>
+                    )}
+                    {!isAgentThread ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => { setOfferDraftOpen((v) => !v); setPaymentDraftOpen(false); }}
+                          title="Send an offer"
+                          className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-800 transition hover:bg-amber-100"
+                        >
+                          <DollarSign className="h-3.5 w-3.5" aria-hidden="true" />
+                          Offer
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setPaymentDraftOpen((v) => !v); setOfferDraftOpen(false); }}
+                          title="Request payment"
+                          className="inline-flex items-center gap-1 rounded-md border border-cyan-200 bg-cyan-50 px-2 py-1 text-[11px] font-bold text-cyan-800 transition hover:bg-cyan-100"
+                        >
+                          <CreditCard className="h-3.5 w-3.5" aria-hidden="true" />
+                          Request payment
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleShareLocation}
+                          title="Share your current location"
+                          className="inline-flex items-center gap-1 rounded-md border border-[#d6e6f5] bg-white px-2 py-1 text-[11px] font-bold text-[#0f6674] transition hover:bg-[#e8f7fb]"
+                        >
+                          <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+                          Location
+                        </button>
+                        <div className="ml-auto inline-flex items-center gap-1">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500" htmlFor="lt-deal-status">Mark:</label>
+                          <select
+                            id="lt-deal-status"
+                            value=""
+                            onChange={(event) => { if (event.target.value) handleChangeDealStatus(event.target.value); event.target.value = ''; }}
+                            className="rounded-md border border-[#d6e6f5] bg-white px-1.5 py-1 text-[11px] font-semibold text-[#0f6674]"
+                          >
+                            <option value="">Update status...</option>
+                            <option value="negotiating">Negotiating</option>
+                            <option value="agreed">Agreed</option>
+                            <option value="paid">Paid</option>
+                            <option value="closed">Closed</option>
+                            <option value="cancelled">Cancelled</option>
+                          </select>
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
+
+                  {!isAgentThread && offerDraftOpen ? (
+                    <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-amber-800">Send an offer</p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <div className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-white px-2 py-1">
+                          <span className="text-xs font-bold text-amber-800">R</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={offerAmount}
+                            onChange={(event) => setOfferAmount(event.target.value)}
+                            placeholder="Amount"
+                            className="w-24 border-0 bg-transparent text-sm font-semibold text-slate-800 outline-none"
+                          />
+                        </div>
+                        <input
+                          type="text"
+                          value={offerNote}
+                          onChange={(event) => setOfferNote(event.target.value)}
+                          placeholder="Optional note (e.g. final offer, includes delivery)"
+                          className="flex-1 min-w-[150px] rounded-md border border-amber-300 bg-white px-2 py-1 text-sm text-slate-800 outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleSendOffer}
+                          className="rounded-md bg-amber-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-amber-700"
+                        >
+                          Send offer
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setOfferDraftOpen(false)}
+                          className="rounded-md border border-amber-300 bg-white px-2 py-1.5 text-xs font-bold text-amber-800 transition hover:bg-amber-100"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {!isAgentThread && paymentDraftOpen ? (
+                    <div className="mb-2 rounded-lg border border-cyan-200 bg-cyan-50 p-2.5">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-cyan-800">Request payment</p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <div className="inline-flex items-center gap-1 rounded-md border border-cyan-300 bg-white px-2 py-1">
+                          <span className="text-xs font-bold text-cyan-800">R</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={paymentAmount}
+                            onChange={(event) => setPaymentAmount(event.target.value)}
+                            placeholder="Amount"
+                            className="w-24 border-0 bg-transparent text-sm font-semibold text-slate-800 outline-none"
+                          />
+                        </div>
+                        <input
+                          type="text"
+                          value={paymentNote}
+                          onChange={(event) => setPaymentNote(event.target.value)}
+                          placeholder="What is this payment for?"
+                          className="flex-1 min-w-[150px] rounded-md border border-cyan-300 bg-white px-2 py-1 text-sm text-slate-800 outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleSendPaymentRequest}
+                          className="rounded-md bg-[#0f6674] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#0d5762]"
+                        >
+                          Send request
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPaymentDraftOpen(false)}
+                          className="rounded-md border border-cyan-300 bg-white px-2 py-1.5 text-xs font-bold text-cyan-800 transition hover:bg-cyan-100"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+
                   <div className="flex items-end gap-2">
                     <textarea
                       value={draftMessage}
                       onChange={(event) => setDraftMessage(event.target.value)}
                       rows={2}
-                      placeholder="Type your message..."
+                      placeholder={isAgentThread ? 'Ask the SVS Agent anything about the site...' : 'Negotiate, share details, or close the deal here...'}
                       className="min-h-[74px] flex-1 rounded-xl border border-[#d6e6f5] bg-[#f9fcff] px-3 py-2 text-sm text-slate-700 outline-none focus:border-[#0f6674] sm:min-h-[82px]"
                     />
                     <button
@@ -25555,8 +26572,8 @@ const SiteFooter = () => {
 const FloatingSupportChatButton = () => (
   <Link
     to="/support/chat"
-    aria-label="Open support chat"
-    title="Support Chat"
+    aria-label="Open Let's Talk Business chat"
+    title="Let's Talk Business"
     className="fixed bottom-5 right-4 z-[130] inline-flex h-16 w-16 items-center justify-center rounded-full border-2 border-white/80 bg-[#1f4c8f] text-white shadow-[0_14px_28px_rgba(8,32,40,0.38)] transition hover:scale-105 hover:bg-[#173e78] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 sm:bottom-6 sm:right-6"
   >
     <MessageCircle className="h-8 w-8" strokeWidth={2.4} />
