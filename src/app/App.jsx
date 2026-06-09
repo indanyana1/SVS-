@@ -11,6 +11,7 @@ import {
   Flag,
   Heart,
   HelpCircle,
+  Home,
   LayoutDashboard,
   MapPin,
   Menu,
@@ -473,6 +474,92 @@ const MARKET_FIELD_SPEC = {
       { name: 'purpose', label: 'Purpose', type: 'select', options: ['Dairy', 'Beef / Meat', 'Breeding', 'Wool', 'Eggs', 'Riding / Racing', 'Mixed Use'] },
     ],
   },
+  // Aligned with VotingClientsPage (/voting-clients = "Beauty, Fitness and Sports Products").
+  // Static items use category: Beauty, Fitness. Allow sellers to add Sports too so the
+  // page label remains accurate.
+  beautyFitnessSports: {
+    title: 'Beauty, Fitness & Sports Listing Details',
+    helper: 'Pick the right category, brand and (where relevant) skin/hair type, sport, or activity so buyers can filter your listing accurately.',
+    fields: [
+      { name: 'category', label: 'Category', type: 'select', required: true, options: [
+        'Beauty', 'Skincare', 'Haircare', 'Makeup', 'Fragrance', 'Nailcare',
+        'Fitness', 'Home Gym Equipment', 'Yoga & Pilates', 'Cardio Equipment', 'Activewear',
+        'Sports', 'Football', 'Basketball', 'Cricket', 'Rugby', 'Tennis', 'Cycling', 'Running',
+        'Outdoor & Hiking', 'Swimming', 'Other',
+      ] },
+      { name: 'brand', label: 'Brand', type: 'text', required: true, placeholder: 'e.g. Nivea, Nike, Adidas' },
+      { name: 'suitableFor', label: 'Suitable for', type: 'select', options: ['All Skin Types', 'Oily Skin', 'Dry Skin', 'Sensitive Skin', 'Men', 'Women', 'Unisex', 'Kids', 'Beginners', 'Pro Athletes', 'All Ages'] },
+      { name: 'volume', label: 'Pack size / Volume', type: 'text', placeholder: 'e.g. 250ml, 60 capsules, Size M' },
+      { name: 'color', label: 'Colour', type: 'text', placeholder: 'e.g. Nude, Black, Red' },
+      { name: 'condition', label: 'Condition', type: 'select', options: ['Brand New', 'Like New', 'Good'] },
+    ],
+  },
+  // Aligned with VotingProvidersPage (/voting-providers = "Jewellery and Accessories").
+  // Static items use category: Necklaces, Rings, Bracelets, Earrings, Watches, Sunglasses,
+  // Handbags, Wallets.
+  jewelleryAccessories: {
+    title: 'Jewellery & Accessories Listing Details',
+    helper: 'Pick the accessory type, material, gender audience, and any authenticity details so buyers can find and trust your listing.',
+    fields: [
+      { name: 'category', label: 'Category', type: 'select', required: true, options: [
+        'Necklaces', 'Pendants', 'Rings', 'Engagement Rings', 'Wedding Bands',
+        'Bracelets', 'Bangles', 'Anklets', 'Earrings', 'Watches', 'Smart Watches',
+        'Sunglasses', 'Handbags', 'Clutches', 'Wallets', 'Belts', 'Scarves',
+        'Hats & Caps', 'Hair Accessories', 'Other',
+      ] },
+      { name: 'material', label: 'Material', type: 'select', required: true, options: [
+        '18K Gold', '14K Gold', '9K Gold', 'Sterling Silver', 'Platinum',
+        'Rose Gold', 'White Gold', 'Stainless Steel', 'Titanium',
+        'Genuine Leather', 'PU Leather', 'Beaded', 'Pearl', 'Diamond', 'Gemstone', 'Other',
+      ] },
+      { name: 'brand', label: 'Brand', type: 'text', placeholder: 'e.g. Pandora, Fossil, Gucci' },
+      { name: 'gender', label: 'Audience', type: 'select', options: ['Women', 'Men', 'Unisex', 'Kids'] },
+      { name: 'color', label: 'Colour', type: 'text', placeholder: 'e.g. Gold, Silver, Rose Gold, Black' },
+      { name: 'condition', label: 'Condition', type: 'select', required: true, options: ['Brand New', 'Like New', 'Pre-Owned', 'Vintage / Antique'] },
+      { name: 'warranty', label: 'Authenticity / Warranty', type: 'text', placeholder: 'e.g. Hallmark certified, 2-yr warranty' },
+    ],
+  },
+  // Aligned with SafetyPage (/safety = "Toys And Kids"). Static items use categories like
+  // Educational Toys, Soft Toys, Action Toys, Dolls, Board Games, Baby Gear, Kids Accessories,
+  // Outdoor Play. Age band is the most important filter for parents.
+  toysKids: {
+    title: 'Toys & Kids Listing Details',
+    helper: 'Pick the toy category, recommended age, brand and any safety/educational details so parents can filter confidently.',
+    fields: [
+      { name: 'category', label: 'Category', type: 'select', required: true, options: [
+        'Educational Toys', 'STEM & Robotics', 'Soft Toys', 'Action Toys', 'Dolls',
+        'Board Games', 'Puzzles', 'Outdoor Play', 'Ride-Ons', 'Baby Gear',
+        'Strollers & Car Seats', 'Feeding & Nursing', 'Kids Clothing', 'Kids Accessories',
+        'Art & Craft', 'Books', 'Other',
+      ] },
+      { name: 'ageRange', label: 'Recommended age', type: 'select', required: true, options: ['0-12 months', '1-2 years', '3-5 years', '6-8 years', '9-12 years', '13+ years', 'All Ages'] },
+      { name: 'gender', label: 'Audience', type: 'select', options: ['Boys', 'Girls', 'Unisex'] },
+      { name: 'brand', label: 'Brand', type: 'text', placeholder: 'e.g. Lego, Fisher-Price, Mattel' },
+      { name: 'material', label: 'Material', type: 'select', options: ['Plastic', 'Wood', 'Plush / Fabric', 'Metal', 'Mixed / Composite', 'Other'] },
+      { name: 'safetyCertification', label: 'Safety certification', type: 'text', placeholder: 'e.g. CE, ASTM F963, EN71' },
+      { name: 'color', label: 'Colour', type: 'text', placeholder: 'e.g. Multicolour, Blue' },
+      { name: 'condition', label: 'Condition', type: 'select', options: ['Brand New', 'Like New', 'Used - Good'] },
+    ],
+  },
+  // Aligned with InformalMarketPage (/informal-market = "Township / spaza / street traders").
+  // Static items use category: Street Food, Fresh Produce, Clothing, Crafts & Décor, Household.
+  // Location is the make-or-break field for these listings.
+  informalMarket: {
+    title: 'Informal Market Listing Details',
+    helper: 'Tell buyers what you sell, where to find you, and how you trade so locals can support your stall.',
+    fields: [
+      { name: 'category', label: 'Category', type: 'select', required: true, options: [
+        'Street Food', 'Fresh Produce', 'Meat & Poultry', 'Clothing', 'Crafts & Décor',
+        'Household', 'Hardware & Tools', 'Beauty & Hair', 'Mobile Accessories',
+        'Traditional Goods', 'Spices & Condiments', 'Snacks & Sweets', 'Other',
+      ] },
+      { name: 'location', label: 'Stall / Pitch location', type: 'text', required: true, placeholder: 'e.g. Warwick Junction, Durban, KZN' },
+      { name: 'brand', label: 'Trader / Stall name', type: 'text', placeholder: 'e.g. Mama Palesa Corn' },
+      { name: 'origin', label: 'Origin / Sourced from', type: 'text', placeholder: 'e.g. Local farm, Self-made' },
+      { name: 'volume', label: 'Pack size / Portion', type: 'text', placeholder: 'e.g. 1 kg, Pack of 6, Single serving' },
+      { name: 'availability', label: 'Trading days', type: 'select', options: ['Daily', 'Weekdays only', 'Weekends only', 'Market days only', 'By order'] },
+    ],
+  },
 };
 
 // All distinct field names across the spec, used to seed empty form state
@@ -607,6 +694,7 @@ const sellerConsoleNavItems = [
   { label: 'Dashboard', href: '/seller/dashboard' },
   { label: 'Orders', href: '/seller/orders' },
   { label: 'Upload Products', href: '/seller/upload' },
+  { label: 'Payouts', href: '/seller/payouts' },
 ];
 
 const marketLinks = [
@@ -4179,6 +4267,7 @@ const PROJECT_ROUTE_SEARCH_ENTRIES = [
   { id: 'page-signup', title: 'Sign Up', section: 'Account', route: '/signup', keywords: 'signup register create account' },
   { id: 'page-seller-dashboard', title: 'Seller Dashboard', section: 'Seller Console', route: '/seller/dashboard', keywords: 'seller dashboard listings analytics management' },
   { id: 'page-seller-orders', title: 'Seller Orders', section: 'Seller Console', route: '/seller/orders', keywords: 'seller orders fulfillment status updates' },
+  { id: 'page-seller-payouts', title: 'Seller Payouts', section: 'Seller Console', route: '/seller/payouts', keywords: 'seller payouts withdraw balance bank earnings' },
   { id: 'page-seller-upload', title: 'Seller Upload', section: 'Seller Console', route: '/seller/upload', keywords: 'seller upload create listing product service add item' },
   { id: 'page-property-hub', title: 'Property Hub', section: 'Markets', route: '/property-hub', keywords: 'property real estate homes rentals land commercial' },
   { id: 'page-livestock-hub', title: 'Livestock Hub', section: 'Markets', route: '/livestock-hub', keywords: 'livestock cattle goats sheep poultry farm animals' },
@@ -7734,6 +7823,13 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
 
   return (
     <div className={`min-h-screen bg-[var(--svs-bg)] text-[var(--svs-text)] ${isDarkMode ? 'theme-dark' : 'theme-light'}`.trim()}>
+      {/* Accessibility: keyboard users can jump straight to the page body */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[100] focus:rounded-md focus:bg-[var(--svs-primary)] focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-white"
+      >
+        Skip to main content
+      </a>
       <header className="fixed top-0 z-50 w-full border-b border-[var(--svs-border)] bg-[var(--svs-nav-bg)]/95 text-[var(--svs-nav-text)] backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-7xl items-center gap-2 px-3 py-3 sm:gap-3 sm:px-4">
           <ClickableLogo className="h-10 w-auto" roundedClassName="rounded-lg" />
@@ -8257,7 +8353,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
         ) : null}
       </header>
 
-      <main className="pt-20">{children}</main>
+      <main id="main-content" className="pt-20">{children}</main>
       <SiteFooter />
 
       <Link
@@ -8410,6 +8506,8 @@ const HomePage = () => {
       </section>
 
       <section className="h-10 bg-gradient-to-b from-[var(--svs-bg)] to-[var(--svs-surface-soft)]" />
+
+      <RecentlyViewedStrip />
 
       <section className="bg-[var(--svs-surface-soft)] px-4 py-12">
         <div className="mx-auto w-full max-w-4xl text-center">
@@ -8825,10 +8923,12 @@ const ECommercePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
   });
 
   return (
-    <PageFrame
+    <MarketShowcase
+      marketKey="ecommerce"
       title={t('markets.ecommerce')}
       subtitle={t('ecommercePage.subtitle')}
-      darkHero
+      eyebrow={t('markets.ecommerce')}
+      chips={['Verified retailers', 'Same-day delivery', 'Secure checkout']}
     >
       <CardGrid
         items={marketItems}
@@ -8855,7 +8955,7 @@ const ECommercePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
         isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/e-commerce', item.id))}
         metaRenderer={(item) => <p className="text-sm text-slate-500">{item.subtitle || item.sellerName || 'Seller item'} • <SalePrice price={item.price} currency={item.currency} /></p>}
       />
-    </PageFrame>
+    </MarketShowcase>
   );
 };
 
@@ -9346,22 +9446,12 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
   });
 
   return (
-    <PageFrame
-      title="Bookings And Tickets Sales Market"
+    <MarketShowcase
+      marketKey="bookingsTickets"
+      title="Bookings & Tickets"
       subtitle="Book movies, concerts, sports, and travel instantly with date and location filters."
-      heroImages={[
-        'https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=1200',
-        'https://images.pexels.com/photos/1190298/pexels-photo-1190298.jpeg?auto=compress&cs=tinysrgb&w=1200',
-        'https://images.pexels.com/photos/912050/pexels-photo-912050.jpeg?auto=compress&cs=tinysrgb&w=1200',
-      ]}
-      heroOverlayClassName="bg-gradient-to-b from-black/70 via-black/55 to-black/70"
-      heroContainerClassName="rounded-none border-x-0 border-t-0 p-0 shadow-none"
-      heroContentClassName="flex min-h-[220px] flex-col items-center justify-center px-6 py-8 text-center sm:min-h-[260px] sm:px-8 sm:py-10"
-      sectionClassName="px-0 pt-0 pb-8 sm:pt-0 sm:pb-10"
-      heroWrapperClassName="w-full max-w-none"
-      contentWrapperClassName="mx-auto w-full max-w-7xl px-4"
-      titleClassName="text-xl text-white sm:text-2xl"
-      subtitleClassName="mt-2 text-xs text-white/90 sm:text-sm"
+      eyebrow="Bookings & Tickets"
+      chips={['Movies', 'Concerts', 'Sports', 'Travel']}
     >
       {/* ── Search + Filter Bar ── */}
       <div className="mt-8 sm:mt-10">
@@ -9773,7 +9863,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
       )}
         </div>
       </div>
-    </PageFrame>
+    </MarketShowcase>
   );
 };
 
@@ -9797,19 +9887,12 @@ const VotingClientsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIt
   });
 
   return (
-    <PageFrame
+    <MarketShowcase
+      marketKey="votingClients"
       title={t('markets.votingClients')}
       subtitle={t('pageSubtitles.votingClients')}
-      heroImage="https://images.pexels.com/photos/2533266/pexels-photo-2533266.jpeg?auto=compress&cs=tinysrgb&w=1600"
-      heroMediaClassName="scale-105 blur-[2px]"
-      heroOverlayClassName="bg-gradient-to-r from-black/75 via-black/65 to-black/55"
-      sectionClassName="px-0 pt-0 pb-8 sm:pt-0 sm:pb-10"
-      heroWrapperClassName="w-full max-w-none"
-      contentWrapperClassName="mx-auto w-full max-w-7xl px-4"
-      heroContainerClassName="rounded-none border-x-0 border-t-0 p-0 shadow-none"
-      heroContentClassName="flex min-h-[220px] flex-col items-center justify-center px-6 py-8 text-center sm:min-h-[260px] sm:px-8 sm:py-10"
-      titleClassName="text-xl text-white sm:text-2xl"
-      subtitleClassName="mt-2 text-xs text-white/90 sm:text-sm"
+      eyebrow={t('markets.votingClients')}
+      chips={['Beauty', 'Fitness', 'Sports']}
     >
       <CardGrid
         items={marketItems}
@@ -9836,7 +9919,7 @@ const VotingClientsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIt
         isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/voting-clients', item.id))}
         metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • <SalePrice price={item.price} currency={item.currency} /></p>}
       />
-    </PageFrame>
+    </MarketShowcase>
   );
 };
 
@@ -9860,19 +9943,12 @@ const VotingProvidersPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
   });
 
   return (
-    <PageFrame
+    <MarketShowcase
+      marketKey="votingProviders"
       title={t('markets.votingProviders')}
       subtitle={t('pageSubtitles.votingProviders')}
-      heroImage="https://images.pexels.com/photos/691046/pexels-photo-691046.jpeg?auto=compress&cs=tinysrgb&w=1600"
-      heroMediaClassName="scale-105 blur-[2px]"
-      heroOverlayClassName="bg-gradient-to-r from-black/75 via-black/65 to-black/55"
-      sectionClassName="px-0 pt-0 pb-8 sm:pt-0 sm:pb-10"
-      heroWrapperClassName="w-full max-w-none"
-      contentWrapperClassName="mx-auto w-full max-w-7xl px-4"
-      heroContainerClassName="rounded-none border-x-0 border-t-0 p-0 shadow-none"
-      heroContentClassName="flex min-h-[220px] flex-col items-center justify-center px-6 py-8 text-center sm:min-h-[260px] sm:px-8 sm:py-10"
-      titleClassName="text-xl text-white sm:text-2xl"
-      subtitleClassName="mt-2 text-xs text-white/90 sm:text-sm"
+      eyebrow={t('markets.votingProviders')}
+      chips={['Jewellery', 'Watches', 'Accessories']}
     >
       <CardGrid
         items={marketItems}
@@ -9899,7 +9975,7 @@ const VotingProvidersPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
         isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/voting-providers', item.id))}
         metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • <SalePrice price={item.price} currency={item.currency} /></p>}
       />
-    </PageFrame>
+    </MarketShowcase>
   );
 };
 
@@ -10429,22 +10505,12 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
 
   /* ── All-categories landing (enhanced with Bookings patterns) ── */
   return (
-    <PageFrame
+    <MarketShowcase
+      marketKey="secondhand"
       title={t('markets.secondhand')}
       subtitle="Buy and sell quality pre-owned phones, laptops, fashion, furniture, and more — all at unbeatable prices"
-      heroImages={[
-        'https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=1200',
-        'https://images.pexels.com/photos/18105/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=1200',
-        'https://images.pexels.com/photos/1148957/pexels-photo-1148957.jpeg?auto=compress&cs=tinysrgb&w=1200',
-      ]}
-      heroOverlayClassName="bg-gradient-to-b from-black/70 via-black/55 to-black/70"
-      sectionClassName="px-0 pt-0 pb-8 sm:pt-0 sm:pb-10"
-      heroWrapperClassName="w-full max-w-none"
-      contentWrapperClassName="mx-auto w-full max-w-7xl px-4"
-      heroContainerClassName="rounded-none border-x-0 border-t-0 p-0 shadow-none"
-      heroContentClassName="flex min-h-[220px] flex-col items-center justify-center px-6 py-8 text-center sm:min-h-[260px] sm:px-8 sm:py-10"
-      titleClassName="text-xl text-white sm:text-2xl"
-      subtitleClassName="mt-2 text-xs text-white/90 sm:text-sm"
+      eyebrow={t('markets.secondhand')}
+      chips={['Verified condition', 'Inspected listings', 'Buyer protection']}
     >
       {/* ── Search + Filter Bar (from Bookings) ── */}
       <div className="mt-8 sm:mt-10">
@@ -10656,7 +10722,7 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
           No items match your current search and filters. Adjust the condition, category, or search query to see more options.
         </div>
       )}
-    </PageFrame>
+    </MarketShowcase>
   );
 };
 
@@ -10692,9 +10758,6 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
 
     // Handler: Hero Order Now scrolls to grid
     const gridRef = useRef(null);
-    const handleHeroOrderNow = () => {
-      if (gridRef.current) gridRef.current.scrollIntoView({ behavior: 'smooth' });
-    };
 
     // Handler: View All (scroll to grid)
     const handleViewAll = () => {
@@ -10791,16 +10854,14 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
 
   return (
     <div className="bg-[var(--svs-bg)] min-h-screen font-sans">
-      {/* Hero Banner */}
-      <section className="relative w-full h-[340px] md:h-[420px] lg:h-[520px] flex items-center justify-center overflow-hidden">
-        <img src="https://images.pexels.com/photos/2983101/pexels-photo-2983101.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="Fast Food Hero" className="absolute inset-0 w-full h-full object-cover object-center z-0" />
-        <div className="absolute inset-0" style={{background:'linear-gradient(180deg,rgba(0,168,232,0.82) 0%,rgba(245,247,251,0.00) 100%)'}} />
-        <div className="relative z-20 flex flex-col items-center justify-center w-full text-center px-4">
-          <h1 className="text-[var(--svs-text)] font-extrabold" style={{fontSize:'48px',letterSpacing:'-0.03em',lineHeight:'1.1'}}>Fast Food Delivery</h1>
-          <p className="text-[var(--svs-muted)] mt-5" style={{fontWeight:500,fontSize:'20px',lineHeight:'1.4',maxWidth:600}}>Order your favorite meals, snacks, and drinks. Fast, fresh, and delivered to your door.</p>
-          <button className="mt-10 px-12 py-3 rounded-[18px] bg-[var(--svs-primary)] text-white font-bold shadow-lg hover:bg-[var(--svs-primary-strong)] transition" style={{fontSize:'18px',boxShadow:'0 6px 32px 0 rgba(0,168,232,0.18)'}} onClick={handleHeroOrderNow}>Order Now</button>
-        </div>
-      </section>
+      <MarketHero
+        marketKey="fastFood"
+        title={t('markets.fastFood')}
+        subtitle="Order your favorite meals, snacks, and drinks. Fast, fresh, and delivered to your door."
+        eyebrow={t('markets.fastFood')}
+        chips={['Burgers', 'Pizza', 'Chicken', 'Sides']}
+      />
+      <MarketTrustStrip />
 
       {/* Informational Section */}
       <section className="py-14 bg-[var(--svs-surface)] flex flex-col items-center">
@@ -11096,18 +11157,12 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
   useListingFocusFromQuery(filteredBeverageItems, openBeverageItemDetails);
 
   return (
-    <PageFrame
+    <MarketShowcase
+      marketKey="beveragesLiquors"
       title="Beverages & Liquors"
       subtitle="Shop wine, beer, spirits, and more."
-      heroImages={["https://images.pexels.com/photos/434311/pexels-photo-434311.jpeg?auto=compress&cs=tinysrgb&w=1200","https://images.pexels.com/photos/1269025/pexels-photo-1269025.jpeg?auto=compress&cs=tinysrgb&w=1200","https://images.pexels.com/photos/602750/pexels-photo-602750.jpeg?auto=compress&cs=tinysrgb&w=1200"]}
-      heroOverlayClassName="bg-gradient-to-b from-black/70 via-black/55 to-black/70"
-      heroContainerClassName="rounded-none border-x-0 border-t-0 p-0 shadow-none"
-      heroContentClassName="flex min-h-[220px] flex-col items-center justify-center px-6 py-8 text-center sm:min-h-[260px] sm:px-8 sm:py-10"
-      sectionClassName="px-0 pt-0 pb-8 sm:pt-0 sm:pb-10"
-      heroWrapperClassName="w-full max-w-none"
-      contentWrapperClassName="mx-auto w-full max-w-7xl px-4"
-      titleClassName="text-xl text-white sm:text-2xl"
-      subtitleClassName="mt-2 text-xs text-white/90 sm:text-sm"
+      eyebrow="Beverages & Liquors"
+      chips={['Wine', 'Beer', 'Spirits', 'Soft drinks']}
     >
       {/* Search + Filter Bar */}
       <div className="mt-8 sm:mt-10">
@@ -11238,7 +11293,7 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
           </div>
         )}
       </div>
-    </PageFrame>
+    </MarketShowcase>
   );
 };
 
@@ -11259,7 +11314,13 @@ const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
   });
 
   return (
-  <PageFrame title={t('markets.wellness')} subtitle={t('pageSubtitles.wellness')}>
+  <MarketShowcase
+    marketKey="wellness"
+    title={t('markets.wellness')}
+    subtitle={t('pageSubtitles.wellness')}
+    eyebrow={t('markets.wellness')}
+    chips={['Pharmacy', 'Self-care', 'Telehealth ready']}
+  >
     <CardGrid
       items={marketItems}
       buttonLabel={t('common.add')}
@@ -11285,7 +11346,7 @@ const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
       isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/wellness', item.id))}
       metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} currency={item.currency} />{item.sellerName ? ` • ${item.sellerName}` : ''}</p>}
     />
-  </PageFrame>
+  </MarketShowcase>
   );
 };
 
@@ -11306,7 +11367,13 @@ const TraditionalMedicinesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wis
   });
 
   return (
-  <PageFrame title={t('markets.traditionalMedicines')} subtitle={t('pageSubtitles.traditionalMedicines')}>
+  <MarketShowcase
+    marketKey="traditionalMedicines"
+    title={t('markets.traditionalMedicines')}
+    subtitle={t('pageSubtitles.traditionalMedicines')}
+    eyebrow={t('markets.traditionalMedicines')}
+    chips={['Herbal remedies', 'Practitioner verified', 'Heritage botanicals']}
+  >
     <div className="mb-5 rounded-xl border border-[#d6c8a3] bg-[#fff9ec] p-3 text-sm text-[#7b5b12]">
       Traditional remedies should be used responsibly. Buyers should follow local guidance and consult qualified practitioners when needed.
     </div>
@@ -11335,7 +11402,7 @@ const TraditionalMedicinesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wis
       isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/traditional-medicines-herbs', item.id))}
       metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • <SalePrice price={item.price} currency={item.currency} /></p>}
     />
-  </PageFrame>
+  </MarketShowcase>
   );
 };
 
@@ -11356,7 +11423,13 @@ const StationeryPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
   });
 
   return (
-  <PageFrame title={t('markets.stationery')} subtitle={t('pageSubtitles.stationery')}>
+  <MarketShowcase
+    marketKey="stationery"
+    title={t('markets.stationery')}
+    subtitle={t('pageSubtitles.stationery')}
+    eyebrow={t('markets.stationery')}
+    chips={['School', 'Office supplies', 'Bulk orders']}
+  >
     <CardGrid
       items={marketItems}
       buttonLabel={t('common.addToCart')}
@@ -11382,7 +11455,7 @@ const StationeryPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
       isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/stationery-office', item.id))}
       metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • <SalePrice price={item.price} currency={item.currency} /></p>}
     />
-  </PageFrame>
+  </MarketShowcase>
   );
 };
 
@@ -11683,22 +11756,12 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
   }, []);
 
   return (
-  <PageFrame
+  <MarketShowcase
+    marketKey="informalMarket"
     title="Informal Market"
     subtitle="Discover goods sold near your area by township and street vendors"
-    heroImages={[
-      'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=1200',
-      'https://images.pexels.com/photos/5632379/pexels-photo-5632379.jpeg?auto=compress&cs=tinysrgb&w=1200',
-      'https://images.pexels.com/photos/1435904/pexels-photo-1435904.jpeg?auto=compress&cs=tinysrgb&w=1200',
-    ]}
-    heroOverlayClassName="bg-gradient-to-b from-black/70 via-black/55 to-black/70"
-    sectionClassName="px-0 pt-0 pb-8 sm:pt-0 sm:pb-10"
-    heroWrapperClassName="w-full max-w-none"
-    contentWrapperClassName="mx-auto w-full max-w-7xl px-4"
-    heroContainerClassName="rounded-none border-x-0 border-t-0 p-0 shadow-none"
-    heroContentClassName="flex min-h-[220px] flex-col items-center justify-center px-6 py-8 text-center sm:min-h-[260px] sm:px-8 sm:py-10"
-    titleClassName="text-xl text-white sm:text-2xl"
-    subtitleClassName="mt-2 text-xs text-white/90 sm:text-sm"
+    eyebrow="Informal Market"
+    chips={['Township sellers', 'Local pickup', 'Direct trade']}
   >
     <div className="mt-7 space-y-7 bg-[radial-gradient(circle_at_top,#e3f6ff_0,#f8fbff_42%,#ffffff_100%)] pb-8 sm:mt-9 sm:space-y-9">
       <section className="overflow-hidden rounded-3xl border border-[#0f6674]/20 bg-[linear-gradient(135deg,#0f6674_0%,#0c203d_55%,#08111f_100%)] px-4 py-5 text-white shadow-[0_18px_40px_rgba(2,32,71,0.24)] sm:px-5">
@@ -12052,7 +12115,7 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
         </div>
       </section>
     </div>
-  </PageFrame>
+  </MarketShowcase>
   );
 };
 
@@ -12715,22 +12778,12 @@ const RetailerDirectLinksPage = () => {
     : 'All Stores';
 
   return (
-    <PageFrame
+    <MarketShowcase
+      marketKey="ecommerce"
       title="Ecommerce Market Links"
       subtitle="Find trusted Ecommerce stores and buy directly from retailers you already know and trust."
-      heroImages={[
-        'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=1200',
-        'https://images.pexels.com/photos/1005638/pexels-photo-1005638.jpeg?auto=compress&cs=tinysrgb&w=1200',
-        'https://images.pexels.com/photos/3965545/pexels-photo-3965545.jpeg?auto=compress&cs=tinysrgb&w=1200',
-      ]}
-      heroOverlayClassName="bg-gradient-to-r from-[#0b3b54]/55 via-[#a6275d]/35 to-[#7a1b3f]/45"
-      sectionClassName="px-0 pt-0 pb-0 sm:pt-0 sm:pb-0"
-      heroWrapperClassName="w-full max-w-none"
-      contentWrapperClassName="mx-auto w-full max-w-7xl px-4"
-      heroContainerClassName="rounded-none border-x-0 border-t-0 p-0 shadow-none"
-      heroContentClassName="flex min-h-[200px] flex-col items-center justify-center px-6 py-8 text-center sm:min-h-[240px] sm:px-8 sm:py-10"
-      titleClassName="text-2xl text-white drop-shadow sm:text-3xl"
-      subtitleClassName="mt-2 max-w-2xl text-sm text-white/95 drop-shadow sm:text-base"
+      eyebrow="Direct Links"
+      chips={['Verified retailers', 'Global brands', 'Direct checkout']}
     >
       {/* ── Search bar ── */}
       <div className="mt-6 flex justify-center">
@@ -13254,7 +13307,7 @@ const RetailerDirectLinksPage = () => {
           </div>
         </div>
       </div>
-    </PageFrame>
+    </MarketShowcase>
   );
 };
 
@@ -13545,23 +13598,16 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
   });
 
   return (
-    <section className="bg-[var(--svs-bg)] px-4 py-8 font-['Inter',sans-serif] text-[#1A1A1A] sm:px-6 lg:py-10">
-      <div className="mx-auto w-full max-w-[1280px]">
-        <section className="relative h-[220px] overflow-hidden rounded-2xl sm:h-[260px]">
-          <img
-            src="https://images.pexels.com/photos/1249611/pexels-photo-1249611.jpeg?auto=compress&cs=tinysrgb&w=1920"
-            alt={t('markets.constructionTools')}
-            className="h-full w-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/55 to-black/70" />
-          <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
-            <h1 className="text-xl font-bold text-white sm:text-2xl">{t('markets.constructionTools')}</h1>
-            <p className="mt-2 max-w-[680px] text-xs text-white/90 sm:text-sm">
-              {t('pageSubtitles.constructionTools')}
-            </p>
-          </div>
-        </section>
-
+    <section className="bg-[var(--svs-bg)] font-['Inter',sans-serif] text-[#1A1A1A]">
+      <MarketHero
+        marketKey="constructionTools"
+        title={t('markets.constructionTools')}
+        subtitle={t('pageSubtitles.constructionTools')}
+        eyebrow={t('markets.constructionTools')}
+        chips={['Power tools', 'Hand tools', 'Building materials']}
+      />
+      <MarketTrustStrip />
+      <div className="mx-auto w-full max-w-[1280px] px-4 py-8 sm:px-6 lg:py-10">
         <div className="mt-8 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-[var(--svs-text)]">Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}</h2>
           <button
@@ -13988,23 +14034,16 @@ const HomeCarePage = ({ sellerItems = [], onOpenItemDetails }) => {
   );
 
   return (
-    <section className="bg-[var(--svs-bg)] px-3 py-4 font-['Inter',sans-serif] text-[#1A1A1A] sm:px-6 sm:py-8 lg:py-10">
-      <div className="mx-auto w-full max-w-[1280px]">
-        <section className="relative h-[160px] overflow-hidden rounded-2xl sm:h-[260px]">
-          <img
-            src="https://images.pexels.com/photos/3846022/pexels-photo-3846022.jpeg?auto=compress&cs=tinysrgb&w=1920"
-            alt="Book Home Care Services"
-            className="h-full w-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/55 to-black/70" />
-          <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
-            <h1 className="text-xl font-bold text-white sm:text-2xl">Book @ Home-Care Services</h1>
-            <p className="mt-2 max-w-[680px] text-xs text-white/90 sm:text-sm">
-              Stay connected to trusted home services with a curated selection of skilled professionals available to serve you anytime, anywhere.
-            </p>
-          </div>
-        </section>
-
+    <section className="bg-[var(--svs-bg)] font-['Inter',sans-serif] text-[#1A1A1A]">
+      <MarketHero
+        marketKey="homeCare"
+        title="Book @ Home-Care Services"
+        subtitle="Stay connected to trusted home services with a curated selection of skilled professionals available to serve you anytime, anywhere."
+        eyebrow="Home-Care Services"
+        chips={['Cleaning', 'Repairs', 'Childcare', 'Wellness']}
+      />
+      <MarketTrustStrip />
+      <div className="mx-auto w-full max-w-[1280px] px-3 py-4 sm:px-6 sm:py-8 lg:py-10">
         <div className="mt-5 flex items-center justify-between sm:mt-8">
           <h2 className="text-base font-semibold text-[var(--svs-text)] sm:text-xl">Filters</h2>
           <button
@@ -14356,7 +14395,6 @@ const HardwareSoftwareFiltersPanel = ({
 
 const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const marketItems = useMemo(
     () => [...getSellerItemsForMarket(sellerItems, 'hardwareSoftware'), ...techItems],
     [sellerItems]
@@ -14534,28 +14572,14 @@ const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
 
   return (
     <section className="bg-[var(--svs-bg)] text-[var(--svs-text)]">
-      {/* Hero */}
-      <div className="px-4 pt-6">
-        <div
-          className="relative mx-auto w-full max-w-7xl overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 px-6 py-12 text-white shadow-lg sm:px-10 sm:py-16"
-          style={{ backgroundImage: `linear-gradient(rgba(8,15,30,0.78), rgba(8,15,30,0.85)), url(${HARDWARE_SOFTWARE_HERO_IMAGE})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
-        >
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            aria-label="Go back"
-            className="absolute left-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur transition hover:bg-white/25"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <div className="mx-auto max-w-3xl text-center">
-            <h1 className="text-3xl font-bold sm:text-4xl">{t('markets.hardwareSoftware')}</h1>
-            <p className="mt-3 text-sm text-slate-200 sm:text-base">
-              Explore a comprehensive hardware and software marketplace offering verified vendors, secure solutions, and performance-driven tools built for modern business requirements.
-            </p>
-          </div>
-        </div>
-      </div>
+      <MarketHero
+        marketKey="hardwareSoftware"
+        title={t('markets.hardwareSoftware')}
+        subtitle="Explore a comprehensive hardware and software marketplace offering verified vendors, secure solutions, and performance-driven tools built for modern business requirements."
+        eyebrow={t('markets.hardwareSoftware')}
+        chips={['Verified vendors', 'Enterprise grade', 'Secure licensing']}
+      />
+      <MarketTrustStrip />
 
       {/* Search bar + mobile filter toggle */}
       <div className="mx-auto mt-6 w-full max-w-7xl px-4">
@@ -14672,7 +14696,13 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
   });
 
   return (
-  <PageFrame title={t('markets.mobilityVehicles')} subtitle={t('pageSubtitles.mobilityVehicles')}>
+  <MarketShowcase
+    marketKey="mobilityVehicles"
+    title={t('markets.mobilityVehicles')}
+    subtitle={t('pageSubtitles.mobilityVehicles')}
+    eyebrow={t('markets.mobilityVehicles')}
+    chips={['Cars', 'Bikes', 'Commercial fleet']}
+  >
     <CardGrid
       items={marketItems}
       buttonLabel={t('common.addToCart')}
@@ -14698,7 +14728,7 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/mobility-vehicles', item.id))}
       metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.specification || item.sellerName || 'Transport listing'} • <SalePrice price={item.price} currency={item.currency} /></p>}
     />
-  </PageFrame>
+  </MarketShowcase>
   );
 };
 
@@ -15052,23 +15082,16 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
   });
 
   return (
-    <section className="bg-[var(--svs-bg)] px-4 py-8 font-['Inter',sans-serif] text-[#1A1A1A] sm:px-6 lg:py-10">
-      <div className="mx-auto w-full max-w-[1280px]">
-        <section className="relative h-[220px] overflow-hidden rounded-2xl sm:h-[260px]">
-          <img
-            src="https://images.pexels.com/photos/996329/pexels-photo-996329.jpeg?auto=compress&cs=tinysrgb&w=1920"
-            alt={t('markets.fashionStyle')}
-            className="h-full w-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/55 to-black/70" />
-          <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
-            <h1 className="text-xl font-bold text-white sm:text-2xl">{t('markets.fashionStyle')}</h1>
-            <p className="mt-2 max-w-[680px] text-xs text-white/90 sm:text-sm">
-              {t('pageSubtitles.fashionStyle')}
-            </p>
-          </div>
-        </section>
-
+    <section className="bg-[var(--svs-bg)] font-['Inter',sans-serif] text-[#1A1A1A]">
+      <MarketHero
+        marketKey="fashionStyle"
+        title={t('markets.fashionStyle')}
+        subtitle={t('pageSubtitles.fashionStyle')}
+        eyebrow={t('markets.fashionStyle')}
+        chips={['Apparel', 'Footwear', 'Accessories', 'Trending']}
+      />
+      <MarketTrustStrip />
+      <div className="mx-auto w-full max-w-[1280px] px-4 py-8 sm:px-6 lg:py-10">
         <div className="mt-8 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-[var(--svs-text)]">Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}</h2>
           <button
@@ -15192,7 +15215,13 @@ const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
   });
 
   return (
-  <PageFrame title={t('markets.naturalResources')} subtitle={t('pageSubtitles.naturalResources')}>
+  <MarketShowcase
+    marketKey="naturalResources"
+    title={t('markets.naturalResources')}
+    subtitle={t('pageSubtitles.naturalResources')}
+    eyebrow={t('markets.naturalResources')}
+    chips={['Minerals', 'Renewables', 'Bulk supply']}
+  >
     <CardGrid
       items={marketItems}
       buttonLabel={t('common.addToCart')}
@@ -15218,7 +15247,7 @@ const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/natural-resources-minerals', item.id))}
       metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.specification || item.sellerName || 'Resource listing'} • <SalePrice price={item.price} currency={item.currency} /></p>}
     />
-  </PageFrame>
+  </MarketShowcase>
   );
 };
 
@@ -15808,6 +15837,13 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
         >
           <Plus className="h-4 w-4" />
           <span>Add Listing</span>
+        </Link>
+        <Link
+          to="/seller/payouts"
+          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)]"
+        >
+          <Wallet className="h-4 w-4" />
+          <span>Payouts</span>
         </Link>
         <Link
           to="/property-hub/sell"
@@ -16526,6 +16562,347 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
           </div>
         </div>
       ) : null}
+    </PageFrame>
+  );
+};
+
+// ────────────────────────────────────────────────────────────────────
+//  SellerPayoutsPage
+//  Sellers see their available balance (sum of delivered-order earnings
+//  minus the 8% platform fee minus any prior payout requests) and can
+//  submit a payout request that uses the bank/mobile details captured
+//  during onboarding.
+//
+//  Payout requests are persisted to localStorage per-seller for v1 so
+//  sellers get visibility even without a dedicated `payouts` Supabase
+//  table yet. The admin team processes them manually for now; a future
+//  release wires this to a `seller_payout_requests` table + admin queue.
+// ────────────────────────────────────────────────────────────────────
+const PAYOUT_PLATFORM_FEE_RATE = 0.08;
+const PAYOUT_REQUESTS_STORAGE_KEY = 'svs-seller-payout-requests';
+
+const getStoredPayoutRequests = (sellerEmail) => {
+  if (typeof window === 'undefined' || !sellerEmail) return [];
+  try {
+    const raw = window.localStorage.getItem(PAYOUT_REQUESTS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return [];
+    const list = parsed[sellerEmail.toLowerCase()];
+    return Array.isArray(list) ? list : [];
+  } catch (_e) {
+    return [];
+  }
+};
+
+const writeStoredPayoutRequests = (sellerEmail, requests) => {
+  if (typeof window === 'undefined' || !sellerEmail) return;
+  try {
+    const raw = window.localStorage.getItem(PAYOUT_REQUESTS_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    const next = (parsed && typeof parsed === 'object') ? parsed : {};
+    next[sellerEmail.toLowerCase()] = Array.isArray(requests) ? requests : [];
+    window.localStorage.setItem(PAYOUT_REQUESTS_STORAGE_KEY, JSON.stringify(next));
+  } catch (_e) {
+    /* ignore storage quota errors */
+  }
+};
+
+const SellerPayoutsPage = ({ orders = [] }) => {
+  const navigate = useNavigate();
+  const isAuthenticated = getAuthState();
+  const userEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
+  const [myListings, setMyListings] = useState([]);
+  const [sellerOrders, setSellerOrders] = useState([]);
+  const [profile, setProfile] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [payoutRequests, setPayoutRequests] = useState(() => getStoredPayoutRequests(userEmail));
+  const [requestAmount, setRequestAmount] = useState('');
+  const [submitMessage, setSubmitMessage] = useState('');
+  const [submitMessageType, setSubmitMessageType] = useState('idle');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated || !hasSupabaseEnv || !supabase) return;
+    let isCancelled = false;
+    const load = async () => {
+      setIsLoading(true);
+      const [listingsRes, ordersRes, profileRes] = await Promise.all([
+        supabase.from(SELLER_ITEMS_TABLE).select('*').eq('seller_email', userEmail),
+        supabase.from(ORDERS_TABLE).select('user_email, order_key, reference, order_created_at, customer, items, currency, total, status').order('order_created_at', { ascending: false }),
+        supabase.from('seller_profiles').select('payout_account_holder, payout_bank_name, payout_account_number, payout_branch_code').eq('email', userEmail).maybeSingle(),
+      ]);
+      if (isCancelled) return;
+      setMyListings(((listingsRes.data) || []).map(mapSellerItemRecord));
+      setSellerOrders(((ordersRes.data) || []).map(mapOrderRecord));
+      setProfile(profileRes.data || null);
+      setIsLoading(false);
+    };
+    load();
+    return () => { isCancelled = true; };
+  }, [isAuthenticated, userEmail]);
+
+  // Visible orders contain at least one item from this seller.
+  const visibleOrders = useMemo(() => {
+    if (!myListings.length) return orders || [];
+    const myListingIds = new Set(myListings.map((l) => String(l.id)));
+    const myEmail = (userEmail || '').toLowerCase();
+    return (sellerOrders.length ? sellerOrders : (orders || [])).filter((order) => {
+      const items = Array.isArray(order.items) ? order.items : [];
+      return items.some((item) => myListingIds.has(String(item.id)) || (item.sellerEmail || '').toLowerCase() === myEmail);
+    }).map((order) => {
+      const myItems = (order.items || []).filter((item) => myListingIds.has(String(item.id)) || (item.sellerEmail || '').toLowerCase() === myEmail);
+      const sellerSubtotal = myItems.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
+      return { ...order, sellerSubtotal };
+    });
+  }, [myListings, sellerOrders, orders, userEmail]);
+
+  const grossEarnings = useMemo(
+    () => visibleOrders
+      .filter((order) => order.status === 'Delivered')
+      .reduce((sum, order) => sum + (Number(order.sellerSubtotal) || 0), 0),
+    [visibleOrders],
+  );
+
+  const platformFees = useMemo(() => grossEarnings * PAYOUT_PLATFORM_FEE_RATE, [grossEarnings]);
+  const netEarnings = useMemo(() => grossEarnings - platformFees, [grossEarnings, platformFees]);
+
+  const totalRequested = useMemo(
+    () => payoutRequests
+      .filter((r) => r.status !== 'rejected' && r.status !== 'cancelled')
+      .reduce((sum, r) => sum + (Number(r.amount) || 0), 0),
+    [payoutRequests],
+  );
+
+  const availableBalance = Math.max(0, netEarnings - totalRequested);
+
+  const sellerCurrency = useMemo(() => {
+    const tally = new Map();
+    visibleOrders.forEach((order) => {
+      const code = String(order.currency || 'USD').toUpperCase();
+      tally.set(code, (tally.get(code) || 0) + 1);
+    });
+    let best = 'USD';
+    let bestCount = -1;
+    tally.forEach((count, code) => { if (count > bestCount) { best = code; bestCount = count; } });
+    return best;
+  }, [visibleOrders]);
+
+  const hasPayoutDetails = profile && profile.payout_account_holder && profile.payout_bank_name && profile.payout_account_number;
+
+  const handleSubmitRequest = async (event) => {
+    event.preventDefault();
+    setSubmitMessage('');
+    setSubmitMessageType('idle');
+
+    const amount = Number(requestAmount);
+    if (!amount || amount <= 0) {
+      setSubmitMessage('Enter a payout amount greater than zero.');
+      setSubmitMessageType('error');
+      return;
+    }
+    if (amount > availableBalance) {
+      setSubmitMessage(`Amount exceeds available balance of ${formatSellerAmount(availableBalance, sellerCurrency)}.`);
+      setSubmitMessageType('error');
+      return;
+    }
+    if (!hasPayoutDetails) {
+      setSubmitMessage('Add your bank details on the onboarding page first.');
+      setSubmitMessageType('error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    const newRequest = {
+      id: `payout-${Date.now()}`,
+      sellerEmail: userEmail,
+      amount,
+      currency: sellerCurrency,
+      method: `${profile.payout_bank_name} •••• ${String(profile.payout_account_number).slice(-4)}`,
+      status: 'pending',
+      requestedAt: new Date().toISOString(),
+    };
+    const next = [newRequest, ...payoutRequests];
+    setPayoutRequests(next);
+    writeStoredPayoutRequests(userEmail, next);
+    setRequestAmount('');
+    setSubmitMessage('Payout request submitted. Our payouts team will review and process it within 1–3 business days.');
+    setSubmitMessageType('success');
+
+    // Fire-and-forget confirmation email. The endpoint silently returns
+    // `{ skipped: true }` when RESEND_API_KEY isn't configured, so this
+    // never blocks the UX in local/dev environments.
+    try {
+      fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'payout_requested',
+          to: userEmail,
+          payload: {
+            sellerName: profile.payout_account_holder,
+            amount,
+            currency: sellerCurrency,
+            reference: newRequest.id,
+          },
+        }),
+      }).catch(() => { /* ignore */ });
+    } catch (_e) { /* ignore */ }
+
+    setIsSubmitting(false);
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <PageFrame title="Payouts" subtitle="Sign in to view your seller payouts.">
+        <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-6 text-sm text-[var(--svs-text)]">
+          <p className="mb-4">You need to be signed in to manage your payouts.</p>
+          <Link to="/signin" className={`${cudyBluePrimaryButtonClassName} inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>Sign In</Link>
+        </div>
+      </PageFrame>
+    );
+  }
+
+  const statusBadgeClass = (status) => {
+    switch (status) {
+      case 'paid': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'processing': return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'rejected': return 'bg-rose-50 text-rose-700 border-rose-200';
+      case 'cancelled': return 'bg-slate-50 text-slate-600 border-slate-200';
+      default: return 'bg-amber-50 text-amber-700 border-amber-200';
+    }
+  };
+
+  return (
+    <PageFrame title="Payouts" subtitle="View your available balance and request payouts to your registered bank account.">
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Balance card */}
+        <section className="lg:col-span-1">
+          <div className="rounded-2xl border border-[var(--svs-border)] bg-gradient-to-br from-[#0f6674] to-[#0a3f4a] p-5 text-white shadow-[0_8px_24px_rgba(15,102,116,0.25)]">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/75">Available balance</p>
+              <Wallet className="h-5 w-5 text-white/80" />
+            </div>
+            <p className="mt-3 text-3xl font-extrabold">{formatSellerAmount(availableBalance, sellerCurrency)}</p>
+            <p className="mt-1 text-xs text-white/70">Ready to be withdrawn to your registered account.</p>
+
+            <dl className="mt-5 space-y-2 text-xs">
+              <div className="flex items-center justify-between border-t border-white/15 pt-2">
+                <dt className="text-white/70">Gross earnings (delivered)</dt>
+                <dd className="font-semibold">{formatSellerAmount(grossEarnings, sellerCurrency)}</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-white/70">Platform fee ({Math.round(PAYOUT_PLATFORM_FEE_RATE * 100)}%)</dt>
+                <dd className="font-semibold">− {formatSellerAmount(platformFees, sellerCurrency)}</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-white/70">Already requested</dt>
+                <dd className="font-semibold">− {formatSellerAmount(totalRequested, sellerCurrency)}</dd>
+              </div>
+            </dl>
+          </div>
+
+          {/* Bank details */}
+          <div className="mt-4 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold uppercase tracking-wider text-[var(--svs-muted)]">Payout account</p>
+              <Link to="/sell/onboarding" className="text-xs font-semibold text-[var(--svs-primary)] hover:underline">Edit</Link>
+            </div>
+            {hasPayoutDetails ? (
+              <div className="mt-3 space-y-1 text-sm">
+                <p className="font-semibold text-[var(--svs-text)]">{profile.payout_account_holder}</p>
+                <p className="text-[var(--svs-muted)]">{profile.payout_bank_name}</p>
+                <p className="font-mono text-xs text-[var(--svs-muted)]">•••• {String(profile.payout_account_number).slice(-4)}</p>
+                {profile.payout_branch_code ? <p className="text-xs text-[var(--svs-muted)]">Branch {profile.payout_branch_code}</p> : null}
+              </div>
+            ) : (
+              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                <p className="font-semibold">No payout account on file.</p>
+                <button type="button" onClick={() => navigate('/sell/onboarding')} className="mt-2 inline-flex items-center gap-1 font-bold text-amber-900 underline">Add bank details</button>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Request form + history */}
+        <section className="space-y-6 lg:col-span-2">
+          <form onSubmit={handleSubmitRequest} className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+            <h2 className="text-base font-bold text-[var(--svs-text)]">Request a payout</h2>
+            <p className="mt-1 text-xs text-[var(--svs-muted)]">Payouts are reviewed and disbursed within 1–3 business days.</p>
+
+            <div className="mt-4 flex flex-wrap items-end gap-3">
+              <div className="flex-1 min-w-[180px]">
+                <label className="text-xs font-semibold text-[var(--svs-muted)]" htmlFor="payout-amount">Amount ({sellerCurrency})</label>
+                <input
+                  id="payout-amount"
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  min="0"
+                  max={availableBalance}
+                  value={requestAmount}
+                  onChange={(e) => setRequestAmount(e.target.value)}
+                  placeholder="0.00"
+                  disabled={!hasPayoutDetails || availableBalance <= 0 || isSubmitting}
+                  className="mt-1 w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm font-semibold text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--svs-primary)] disabled:opacity-60"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setRequestAmount(String(availableBalance.toFixed(2)))}
+                disabled={availableBalance <= 0}
+                className="rounded-lg border border-[var(--svs-border)] px-3 py-2 text-xs font-bold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] disabled:opacity-60"
+              >
+                Use max
+              </button>
+              <button
+                type="submit"
+                disabled={!hasPayoutDetails || availableBalance <= 0 || isSubmitting}
+                className={`${cudyBluePrimaryButtonClassName} inline-flex items-center gap-2 rounded-lg bg-[var(--svs-primary)] px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60`}
+              >
+                <Send className="h-4 w-4" /> {isSubmitting ? 'Submitting…' : 'Request payout'}
+              </button>
+            </div>
+
+            {submitMessage ? (
+              <p className={`mt-3 rounded-lg border p-3 text-xs font-semibold ${submitMessageType === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-rose-200 bg-rose-50 text-rose-700'}`}>
+                {submitMessage}
+              </p>
+            ) : null}
+          </form>
+
+          {/* History */}
+          <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-[var(--svs-text)]">Payout history</h2>
+              <span className="text-xs text-[var(--svs-muted)]">{payoutRequests.length} request{payoutRequests.length === 1 ? '' : 's'}</span>
+            </div>
+            {isLoading ? (
+              <p className="mt-4 text-sm text-[var(--svs-muted)]">Loading…</p>
+            ) : payoutRequests.length === 0 ? (
+              <div className="mt-4 rounded-lg border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-6 text-center">
+                <Wallet className="mx-auto h-8 w-8 text-[var(--svs-muted)]" />
+                <p className="mt-2 text-sm font-semibold text-[var(--svs-text)]">No payout requests yet.</p>
+                <p className="mt-1 text-xs text-[var(--svs-muted)]">Once you make a request it will appear here with its current status.</p>
+              </div>
+            ) : (
+              <ul className="mt-4 divide-y divide-[var(--svs-border)]">
+                {payoutRequests.map((req) => (
+                  <li key={req.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                    <div>
+                      <p className="text-sm font-bold text-[var(--svs-text)]">{formatSellerAmount(Number(req.amount) || 0, req.currency || sellerCurrency)}</p>
+                      <p className="text-xs text-[var(--svs-muted)]">{new Date(req.requestedAt).toLocaleString()} • {req.method}</p>
+                    </div>
+                    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${statusBadgeClass(req.status)}`}>
+                      {req.status}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+      </div>
     </PageFrame>
   );
 };
@@ -18045,14 +18422,6 @@ const LotteryConfirmPage = () => {
   );
 };
 
-const LIVESTOCK_HERO_IMAGES = [
-  'https://images.pexels.com/photos/735968/pexels-photo-735968.jpeg?auto=compress&cs=tinysrgb&w=600',
-  'https://images.pexels.com/photos/4577392/pexels-photo-4577392.jpeg?auto=compress&cs=tinysrgb&w=600',
-  'https://images.pexels.com/photos/144240/goat-lamb-little-grass-144240.jpeg?auto=compress&cs=tinysrgb&w=600',
-  'https://images.pexels.com/photos/162801/sheep-flock-of-sheep-sheep-cheese-shepherd-162801.jpeg?auto=compress&cs=tinysrgb&w=600',
-  'https://images.pexels.com/photos/1300355/pexels-photo-1300355.jpeg?auto=compress&cs=tinysrgb&w=600',
-];
-
 const LIVESTOCK_TRUST_BG = 'https://images.pexels.com/photos/162801/sheep-flock-of-sheep-sheep-cheese-shepherd-162801.jpeg?auto=compress&cs=tinysrgb&w=1600';
 
 const LivestockHubPage = ({
@@ -18236,35 +18605,14 @@ const LivestockHubPage = ({
 
   return (
     <section className="bg-white">
-      {/* ── Hero ── */}
-      <div className="relative overflow-hidden">
-        <div className="grid h-[260px] grid-cols-5 sm:h-[320px] md:h-[380px]">
-          {LIVESTOCK_HERO_IMAGES.map((src, idx) => (
-            <div
-              key={src}
-              className="relative h-full w-full overflow-hidden"
-              style={{ transform: `skewX(-6deg)`, marginLeft: idx === 0 ? '-12px' : '-8px' }}
-            >
-              <img
-                src={src}
-                alt=""
-                className="absolute inset-0 h-full w-full object-cover"
-                style={{ transform: 'skewX(6deg) scale(1.15)' }}
-                loading="lazy"
-              />
-            </div>
-          ))}
-        </div>
-        <div className="absolute inset-0 bg-black/35" aria-hidden="true" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
-          <h1 className="text-2xl font-bold text-white drop-shadow sm:text-3xl md:text-4xl">
-            Livestock Online Selling &amp; Buying Market
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm text-white/90 drop-shadow sm:text-base">
-            Explore healthy, verified livestock listings from trusted farmers and sellers.
-          </p>
-        </div>
-      </div>
+      <MarketHero
+        marketKey="livestock"
+        title="Livestock Online Selling & Buying Market"
+        subtitle="Explore healthy, verified livestock listings from trusted farmers and sellers."
+        eyebrow="Livestock"
+        chips={['Verified farms', 'Health certified', 'Direct from sellers']}
+      />
+      <MarketTrustStrip />
 
       {/* ── Search bar ── */}
       <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
@@ -18756,19 +19104,12 @@ const SafetyPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds =
   });
 
   return (
-    <PageFrame
+    <MarketShowcase
+      marketKey="safety"
       title={t('markets.safety')}
       subtitle={t('pageSubtitles.safety')}
-      heroImage="https://images.pexels.com/photos/3661193/pexels-photo-3661193.jpeg?auto=compress&cs=tinysrgb&w=1600"
-      heroMediaClassName="scale-105 blur-[2px]"
-      heroOverlayClassName="bg-gradient-to-r from-black/75 via-black/65 to-black/55"
-      sectionClassName="px-0 pt-0 pb-8 sm:pt-0 sm:pb-10"
-      heroWrapperClassName="w-full max-w-none"
-      contentWrapperClassName="mx-auto w-full max-w-7xl px-4"
-      heroContainerClassName="rounded-none border-x-0 border-t-0 p-0 shadow-none"
-      heroContentClassName="flex min-h-[220px] flex-col items-center justify-center px-6 py-8 text-center sm:min-h-[260px] sm:px-8 sm:py-10"
-      titleClassName="text-xl text-white sm:text-2xl"
-      subtitleClassName="mt-2 text-xs text-white/90 sm:text-sm"
+      eyebrow={t('markets.safety')}
+      chips={['Toys', 'Kids essentials', 'Safety gear']}
     >
       <CardGrid
         items={marketItems}
@@ -18795,7 +19136,7 @@ const SafetyPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds =
         isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/safety', item.id))}
         metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • <SalePrice price={item.price} currency={item.currency} /></p>}
       />
-    </PageFrame>
+    </MarketShowcase>
   );
 };
 
@@ -27023,6 +27364,278 @@ const LogoFullscreenPage = () => {
   );
 };
 
+// ============================================================================
+// MARKET SHOWCASE — Unified stunning hero treatment for every marketplace
+// ----------------------------------------------------------------------------
+// Every market page renders a full-bleed cinematic hero (blurred image +
+// gradient overlay + centered title/subtitle + decorative chips) followed by
+// a trust strip. Each market just supplies its `marketKey` and we look up the
+// hero imagery from the central MARKET_THEMES registry. Tweaking the look in
+// one place updates every market.
+// ============================================================================
+
+const MARKET_THEMES = {
+  ecommerce: 'https://images.pexels.com/photos/5632402/pexels-photo-5632402.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  bookingsTickets: 'https://images.pexels.com/photos/1190297/pexels-photo-1190297.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  votingClients: 'https://images.pexels.com/photos/2533266/pexels-photo-2533266.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  votingProviders: 'https://images.pexels.com/photos/691046/pexels-photo-691046.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  groceries: 'https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  secondhand: 'https://images.pexels.com/photos/1078884/pexels-photo-1078884.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  fastFood: 'https://images.pexels.com/photos/1639557/pexels-photo-1639557.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  beveragesLiquors: 'https://images.pexels.com/photos/602750/pexels-photo-602750.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  wellness: 'https://images.pexels.com/photos/3865711/pexels-photo-3865711.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  traditionalMedicines: 'https://images.pexels.com/photos/4750274/pexels-photo-4750274.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  stationery: 'https://images.pexels.com/photos/159711/books-bookstore-book-reading-159711.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  informalMarket: 'https://images.pexels.com/photos/4253312/pexels-photo-4253312.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  constructionTools: 'https://images.pexels.com/photos/162553/drill-machine-tool-construction-162553.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  homeCare: 'https://images.pexels.com/photos/3768146/pexels-photo-3768146.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  hardwareSoftware: 'https://images.pexels.com/photos/3861969/pexels-photo-3861969.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  mobilityVehicles: 'https://images.pexels.com/photos/170811/pexels-photo-170811.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  fashionStyle: 'https://images.pexels.com/photos/996329/pexels-photo-996329.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  naturalResources: 'https://images.pexels.com/photos/2581922/pexels-photo-2581922.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  livestock: 'https://images.pexels.com/photos/422218/pexels-photo-422218.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  safety: 'https://images.pexels.com/photos/3661193/pexels-photo-3661193.jpeg?auto=compress&cs=tinysrgb&w=1600',
+};
+
+const MARKET_TRUST_BADGES = [
+  { icon: ShieldCheck, key: 'verifiedSellers', fallback: 'Verified sellers' },
+  { icon: CheckCircle2, key: 'buyerProtection', fallback: 'Buyer protection' },
+  { icon: Truck, key: 'fastDelivery', fallback: 'Fast delivery' },
+  { icon: Sparkles, key: 'liveSupport', fallback: '24/7 support' },
+];
+
+const MarketHero = ({ title, subtitle, marketKey = '', heroImage = '', eyebrow = '', chips = [] }) => {
+  const imageUrl = heroImage || MARKET_THEMES[marketKey] || MARKET_THEMES.ecommerce;
+  return (
+    <div className="relative isolate -mt-px overflow-hidden">
+      <div
+        className="absolute inset-0 scale-110 bg-cover bg-center blur-[2px]"
+        style={{ backgroundImage: `url(${imageUrl})` }}
+        aria-hidden="true"
+      />
+      <div
+        className="absolute inset-0 bg-gradient-to-br from-black/85 via-[#0f6674]/55 to-black/75"
+        aria-hidden="true"
+      />
+      <div
+        className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(51,185,242,0.25),transparent_55%)]"
+        aria-hidden="true"
+      />
+      <div className="relative z-10 mx-auto flex min-h-[260px] w-full max-w-6xl flex-col items-center justify-center px-6 py-10 text-center sm:min-h-[300px] sm:py-14">
+        {eyebrow ? (
+          <span className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/90 backdrop-blur sm:text-xs">
+            <Sparkles className="h-3.5 w-3.5" /> {eyebrow}
+          </span>
+        ) : null}
+        <h1 className="text-2xl font-bold leading-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)] sm:text-4xl">{title}</h1>
+        {subtitle ? (
+          <p className="mt-3 max-w-2xl text-sm text-white/90 sm:text-base">{subtitle}</p>
+        ) : null}
+        {chips.length ? (
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+            {chips.map((chip, idx) => (
+              <span
+                key={`${chip}-${idx}`}
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-medium text-white/95 backdrop-blur sm:text-xs"
+              >
+                {chip}
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+};
+
+const MarketTrustStrip = () => (
+  <div className="border-y border-[var(--svs-border)] bg-[var(--svs-surface)]/70 backdrop-blur">
+    <div className="mx-auto grid max-w-6xl grid-cols-2 gap-3 px-4 py-3 sm:grid-cols-4 sm:gap-4 sm:py-4">
+      {MARKET_TRUST_BADGES.map(({ icon: Icon, key, fallback }) => (
+        <div
+          key={key}
+          className="flex items-center gap-2 text-[11px] font-medium text-[var(--svs-text)] sm:text-xs"
+        >
+          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[#0f6674]/10 text-[#0f6674]">
+            <Icon className="h-3.5 w-3.5" />
+          </span>
+          <span className="leading-tight">{fallback}</span>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const MarketShowcase = ({
+  marketKey = '',
+  title,
+  subtitle,
+  heroImage = '',
+  eyebrow = '',
+  chips = [],
+  showTrustStrip = true,
+  contentClassName = '',
+  contentWidthClassName = 'mx-auto w-full max-w-7xl px-4 py-6 sm:py-8',
+  children,
+}) => (
+  <section className="bg-[var(--svs-bg)] text-[var(--svs-text)]">
+    <MarketHero
+      marketKey={marketKey}
+      title={title}
+      subtitle={subtitle}
+      heroImage={heroImage}
+      eyebrow={eyebrow}
+      chips={chips}
+    />
+    {showTrustStrip ? <MarketTrustStrip /> : null}
+    <div className={`${contentWidthClassName} ${contentClassName}`.trim()}>{children}</div>
+  </section>
+);
+
+// "Recently viewed" horizontal strip — fed by handleOpenItemDetails which
+// pushes a summary of every item the buyer opens. Returns null when the
+// list is empty so it never adds visual noise to first-time visitors.
+const RecentlyViewedStrip = () => {
+  const navigate = useNavigate();
+  const [items, setItems] = useState([]);
+
+  useEffect(() => {
+    const read = () => {
+      if (typeof window === 'undefined') return;
+      try {
+        const raw = window.localStorage.getItem('svs-recently-viewed');
+        const parsed = raw ? JSON.parse(raw) : [];
+        setItems(Array.isArray(parsed) ? parsed.slice(0, 12) : []);
+      } catch (_e) {
+        setItems([]);
+      }
+    };
+    read();
+    const onUpdate = () => read();
+    const onStorage = (event) => { if (event.key === 'svs-recently-viewed') read(); };
+    window.addEventListener('svs-recently-viewed-updated', onUpdate);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener('svs-recently-viewed-updated', onUpdate);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, []);
+
+  if (!items.length) return null;
+
+  const handleOpen = (item) => {
+    if (item.route) {
+      navigate(`${item.route}?focus=${encodeURIComponent(item.id)}`);
+    } else {
+      navigate(`/search?q=${encodeURIComponent(item.title)}`);
+    }
+  };
+
+  const handleClear = () => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.removeItem('svs-recently-viewed');
+    setItems([]);
+    window.dispatchEvent(new CustomEvent('svs-recently-viewed-updated'));
+  };
+
+  return (
+    <section className="bg-[var(--svs-surface-soft)] px-4 py-8">
+      <div className="mx-auto w-full max-w-7xl">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-[var(--svs-text)] sm:text-xl">Recently viewed</h2>
+            <p className="mt-0.5 text-xs text-[var(--svs-muted)]">Pick up right where you left off.</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleClear}
+            className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-1.5 text-[11px] font-semibold text-[var(--svs-muted)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
+          >
+            Clear
+          </button>
+        </div>
+        <div className="mt-4 -mx-1 flex gap-3 overflow-x-auto px-1 pb-2 [scrollbar-width:thin]">
+          {items.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => handleOpen(item)}
+              className="group flex w-[148px] shrink-0 flex-col overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] text-left shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition hover:-translate-y-0.5 hover:border-[var(--svs-primary)] hover:shadow-md sm:w-[168px]"
+            >
+              <div className="aspect-square w-full bg-[var(--svs-surface-soft)]">
+                {item.image ? (
+                  <img src={item.image} alt={item.title} loading="lazy" className="h-full w-full object-cover transition group-hover:scale-105" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-[var(--svs-muted)]">
+                    <Package className="h-8 w-8" />
+                  </div>
+                )}
+              </div>
+              <div className="p-2.5">
+                <p className="line-clamp-2 text-xs font-semibold text-[var(--svs-text)]">{item.title}</p>
+                {Number(item.price) > 0 ? (
+                  <p className="mt-1 text-sm font-bold text-[var(--svs-primary-strong)]">
+                    {formatAmountInCurrency(Number(item.price) || 0, item.currency || 'USD')}
+                  </p>
+                ) : null}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+// Friendly 404 page — shown when the router can't match a URL. Keeps users on-site
+// instead of silently redirecting to the homepage (which made debugging mistyped
+// links painful and hurt SEO crawlers that would never see a real 404).
+const NotFoundPage = () => {
+  const { t } = useTranslation();
+  return (
+    <section className="bg-[var(--svs-bg)] text-[var(--svs-text)]">
+      <div className="relative isolate overflow-hidden">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-cover bg-center opacity-20"
+          style={{ backgroundImage: 'url(https://images.pexels.com/photos/270408/pexels-photo-270408.jpeg?auto=compress&cs=tinysrgb&w=1600)' }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0f6674]/95 via-[#0a3f4a]/90 to-black/85" aria-hidden="true" />
+        <div className="relative mx-auto flex w-full max-w-3xl flex-col items-center justify-center px-4 py-20 text-center text-white sm:py-28">
+          <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-white/70">{t('errors.notFoundEyebrow', 'Error 404')}</p>
+          <h1 className="mt-3 text-5xl font-extrabold leading-tight sm:text-6xl">{t('errors.notFoundTitle', 'Page not found')}</h1>
+          <p className="mt-4 max-w-xl text-base text-white/85">
+            {t('errors.notFoundDescription', "The link you followed may be broken, or the page may have been moved. Let's get you back on track.")}
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-[#0f6674] shadow-lg transition hover:bg-white/90"
+            >
+              <Home className="h-4 w-4" />
+              {t('errors.notFoundHomeCta', 'Back to home')}
+            </Link>
+            <Link
+              to="/markets"
+              className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/10 px-6 py-3 text-sm font-bold text-white backdrop-blur transition hover:bg-white/20"
+            >
+              <Store className="h-4 w-4" />
+              {t('errors.notFoundBrowseCta', 'Browse markets')}
+            </Link>
+            <Link
+              to="/support/chat"
+              className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/10 px-6 py-3 text-sm font-bold text-white backdrop-blur transition hover:bg-white/20"
+            >
+              <MessageCircle className="h-4 w-4" />
+              {t('errors.notFoundSupportCta', 'Contact support')}
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
 const PageFrame = ({ title, subtitle, children, darkHero = false, heroImage = '', heroImages = [], heroMediaClassName = '', heroOverlayClassName = '', titleClassName = '', subtitleClassName = '', sectionClassName = '', heroWrapperClassName = '', contentWrapperClassName = '', heroContainerClassName = '', heroContentClassName = '' }) => (
   <section className={`${darkHero ? 'bg-[#121212] text-white' : 'bg-[var(--svs-bg)] text-[var(--svs-text)]'} px-4 py-8 sm:py-10 ${sectionClassName}`.trim()}>
     <div className={`${heroWrapperClassName || 'mx-auto w-full max-w-7xl'}`.trim()}>
@@ -28614,6 +29227,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/seller/upload" element={<SellerUploadPage onSellerItemCreated={onSellerItemCreated} />} />
     <Route path="/seller/dashboard" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onUpdateOrderStatus={onUpdateOrderStatus} initialView="listings" />} />
     <Route path="/seller/orders" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onUpdateOrderStatus={onUpdateOrderStatus} initialView="orders" />} />
+    <Route path="/seller/payouts" element={<SellerPayoutsPage orders={orders} />} />
     <Route path="/property-hub" element={<PropertyHubPage />} />
     <Route path="/property-hub/sell" element={<PropertySellPage />} />
     <Route path="/property-hub/category/:categoryKey" element={<PropertyCategoryPage />} />
@@ -28649,7 +29263,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/cookies" element={<CookiePolicyPage />} />
     <Route path="/cookie-policy" element={<Navigate to="/cookies" replace />} />
 
-    <Route path="*" element={<Navigate to="/" replace />} />
+    <Route path="*" element={<NotFoundPage />} />
   </Routes>
   );
 };
@@ -30194,6 +30808,35 @@ const App = () => {
 
     setReviewNotice('');
     setSelectedItemDetails(withSellerIdentity);
+    // Track for the "Recently viewed" strip on the home page. Lightweight
+    // localStorage entry — id, title, image, price, currency, route — kept
+    // to the most recent 12 items so the strip stays snappy.
+    try {
+      if (typeof window !== 'undefined' && itemDetails && (itemDetails.id || itemDetails.title)) {
+        const summary = {
+          id: itemDetails.id || `${itemDetails.title || 'item'}-${itemDetails.marketKey || ''}`,
+          title: itemDetails.title || itemDetails.name || 'Item',
+          image: itemDetails.image
+            || (Array.isArray(itemDetails.images) && itemDetails.images[0])
+            || itemDetails.poster
+            || '',
+          price: Number(itemDetails.price) || 0,
+          currency: itemDetails.currency || 'USD',
+          marketKey: itemDetails.marketKey || '',
+          route: itemDetails.route || itemDetails.marketRoute || '',
+          viewedAt: Date.now(),
+        };
+        const raw = window.localStorage.getItem('svs-recently-viewed');
+        let list = [];
+        try { list = raw ? JSON.parse(raw) : []; } catch (_e) { list = []; }
+        const cleaned = (Array.isArray(list) ? list : []).filter((x) => String(x.id) !== String(summary.id));
+        const next = [summary, ...cleaned].slice(0, 12);
+        window.localStorage.setItem('svs-recently-viewed', JSON.stringify(next));
+        window.dispatchEvent(new CustomEvent('svs-recently-viewed-updated'));
+      }
+    } catch (_e) {
+      /* ignore storage failures */
+    }
   }, []);
 
   const handleCloseItemDetails = useCallback(() => {

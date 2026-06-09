@@ -177,7 +177,7 @@ const buildSupportAgentSystemPrompt = (context = {}) => {
     '- "[Photo attachment]" without a vision summary — acknowledge that the photo was received; do NOT pretend to describe the image. Politely ask for any clarifying question.',
     '- "[Voice note Xs, transcribed] <text>" — treat the transcribed text as the user message and respond accordingly.',
     '- "[Voice note Xs]" with no transcript — politely say you couldn\'t catch the audio (browser transcription unavailable) and ask the user to type their question.',
-    '- "[Video message Xs] AI analysis (you can rely on this to answer the user): Audio transcript: \"...\". Visual summary: ..." — the system has already transcribed the audio and described a keyframe for you. Use both freely to answer the user\'s question. Do NOT say you cannot view videos.',
+    '- "[Video message Xs] AI analysis (you can rely on this to answer the user): Audio transcript: \'...\'. Visual summary: ..." - the system has already transcribed the audio and described a keyframe for you. Use both freely to answer the user\'s question. Do NOT say you cannot view videos.',
     '- "[Video message Xs]" without an analysis block — acknowledge that a short video was received; do NOT pretend to describe its contents. Ask the user what you should help confirm about it.',
     '- "[Document attachment]" — acknowledge the document was received (you cannot read its contents) and ask what they\'d like you to help with regarding it.',
     '- "[Deal status update] The user marked the deal as: <status>" — confirm the status change and outline the next action (e.g., if "agreed" suggest sending a payment request; if "paid" suggest scheduling delivery; if "cancelled" ask if you can help refund).',
@@ -442,6 +442,40 @@ app.post('/api/address-details', limits.address, async (req, res) => {
     console.error('Address details error:', error.message);
     res.status(400).json({ error: error.message || 'Unable to fetch address details.' });
   }
+});
+
+// ────────────────────────────────────────────────────────────────────
+//  Transactional email (Resend) — env-gated. Mirrors api/send-email.js
+//  so local dev works without deploying to Vercel.
+// ────────────────────────────────────────────────────────────────────
+const {
+  isConfigured: isEmailConfigured,
+  sendEmail,
+  orderConfirmationEmail,
+  passwordResetEmail,
+  payoutRequestedEmail,
+} = require('./server-utils/email');
+
+app.post('/api/send-email', limits.payments, async (req, res) => {
+  const { type, to, payload } = req.body || {};
+  if (!type || !to) return res.status(400).json({ error: 'Missing required fields: type, to' });
+  if (!isEmailConfigured()) {
+    return res.status(200).json({ ok: true, skipped: true, reason: 'RESEND_API_KEY not configured' });
+  }
+  let template;
+  try {
+    switch (type) {
+      case 'order_confirmation': template = orderConfirmationEmail(payload || {}); break;
+      case 'password_reset': template = passwordResetEmail(payload || {}); break;
+      case 'payout_requested': template = payoutRequestedEmail(payload || {}); break;
+      default: return res.status(400).json({ error: `Unknown email type: ${type}` });
+    }
+  } catch (err) {
+    return res.status(400).json({ error: `Could not build template: ${err.message}` });
+  }
+  const result = await sendEmail({ to, subject: template.subject, html: template.html, text: template.text });
+  if (result.ok === false) return res.status(502).json(result);
+  return res.status(200).json(result);
 });
 
 app.post('/api/payment-intent', limits.payments, async (req, res) => {
