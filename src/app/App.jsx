@@ -57,6 +57,11 @@ import {
   FileText,
   Printer,
   Eraser,
+  Share2,
+  Gift,
+  Copy,
+  Mail,
+  Send,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -19259,8 +19264,338 @@ const OffersPage = () => {
   );
 };
 
-const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onOpenItemDetails }) => (
+// ─────────────────────────────────────────────────────────────────────
+//  Wishlist sharing helpers
+// ─────────────────────────────────────────────────────────────────────
+// Encodes the wishlist into a compact URL-safe payload so anyone with
+// the link can open it without needing an account. We stick to ASCII
+// base64 (URL-safe variant) so it survives WhatsApp, SMS, email, etc.
+const WISHLIST_SHARE_PATH = '/wishlist/share';
+const WISHLIST_SHARE_VERSION = 1;
+const WISHLIST_SHARE_MAX_ITEMS = 30;
+
+const toUrlSafeBase64 = (str) => {
+  try {
+    if (typeof window === 'undefined') return '';
+    const utf8 = new TextEncoder().encode(str);
+    let bin = '';
+    utf8.forEach((b) => { bin += String.fromCharCode(b); });
+    return window.btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  } catch (_e) { return ''; }
+};
+
+const fromUrlSafeBase64 = (str) => {
+  try {
+    if (typeof window === 'undefined') return '';
+    const padded = String(str || '').replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(String(str).length / 4) * 4, '=');
+    const bin = window.atob(padded);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  } catch (_e) { return ''; }
+};
+
+const buildWishlistShareUrl = ({ items = [], senderName = '', note = '', occasion = '' } = {}) => {
+  const slim = (items || []).slice(0, WISHLIST_SHARE_MAX_ITEMS).map((it) => ({
+    id: String(it.id || '').slice(0, 80),
+    t: String(it.title || '').slice(0, 120),
+    p: String(it.unitPriceLabel || it.priceLabel || '').slice(0, 40),
+    m: String(it.marketName || '').slice(0, 60),
+    img: String(it.image || (it.images && it.images[0]) || '').slice(0, 400),
+    href: String(it.href || it.detailHref || '').slice(0, 200),
+  }));
+  const payload = {
+    v: WISHLIST_SHARE_VERSION,
+    n: String(senderName || '').slice(0, 60),
+    o: String(occasion || '').slice(0, 30),
+    msg: String(note || '').slice(0, 240),
+    ts: Date.now(),
+    items: slim,
+  };
+  const encoded = toUrlSafeBase64(JSON.stringify(payload));
+  if (!encoded) return '';
+  const origin = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : 'https://svs-ecommerce.com';
+  return `${origin}${WISHLIST_SHARE_PATH}?d=${encoded}`;
+};
+
+const decodeWishlistShare = (encoded) => {
+  if (!encoded) return null;
+  try {
+    const json = fromUrlSafeBase64(encoded);
+    if (!json) return null;
+    const parsed = JSON.parse(json);
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (parsed.v !== WISHLIST_SHARE_VERSION) return null;
+    if (!Array.isArray(parsed.items)) return null;
+    return {
+      senderName: String(parsed.n || ''),
+      occasion: String(parsed.o || ''),
+      note: String(parsed.msg || ''),
+      sentAt: Number(parsed.ts) || 0,
+      items: parsed.items.map((it) => ({
+        id: String(it.id || ''),
+        title: String(it.t || ''),
+        unitPriceLabel: String(it.p || ''),
+        marketName: String(it.m || ''),
+        image: String(it.img || ''),
+        href: String(it.href || ''),
+      })),
+    };
+  } catch (_e) { return null; }
+};
+
+const WISHLIST_SHARE_OCCASIONS = [
+  { value: '', label: 'No occasion' },
+  { value: 'birthday', label: '🎂 Birthday' },
+  { value: 'anniversary', label: '💍 Anniversary' },
+  { value: 'wedding', label: '💒 Wedding' },
+  { value: 'baby-shower', label: '👶 Baby shower' },
+  { value: 'graduation', label: '🎓 Graduation' },
+  { value: 'housewarming', label: '🏡 Housewarming' },
+  { value: 'holiday', label: '🎄 Holiday gift' },
+  { value: 'just-because', label: '💝 Just because' },
+];
+
+const WishlistShareModal = ({ open, onClose, wishlistItems = [] }) => {
+  const [senderName, setSenderName] = useState(() => (typeof window !== 'undefined' ? (window.localStorage.getItem('svs-wishlist-share-name') || '') : ''));
+  const [occasion, setOccasion] = useState('');
+  const [note, setNote] = useState('');
+  const [copyState, setCopyState] = useState('idle');
+  const [shareUrl, setShareUrl] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+    setShareUrl(buildWishlistShareUrl({ items: wishlistItems, senderName, note, occasion }));
+  }, [open, wishlistItems, senderName, note, occasion]);
+
+  useEffect(() => {
+    if (!open) { setCopyState('idle'); return; }
+    if (typeof window !== 'undefined' && senderName) {
+      try { window.localStorage.setItem('svs-wishlist-share-name', senderName); } catch (_e) { /* ignore */ }
+    }
+  }, [senderName, open]);
+
+  const occasionMeta = WISHLIST_SHARE_OCCASIONS.find((o) => o.value === occasion) || WISHLIST_SHARE_OCCASIONS[0];
+  const shareTitle = senderName ? `${senderName}'s wishlist` : 'My SVS wishlist';
+  const shareText = (() => {
+    const intro = senderName
+      ? (occasion ? `${senderName} shared a ${occasionMeta.label.replace(/^[^a-zA-Z]+/, '').toLowerCase()} wishlist with you on SVS.` : `${senderName} shared a wishlist with you on SVS.`)
+      : 'Check out my wishlist on SVS.';
+    return note ? `${intro}\n\n"${note}"` : intro;
+  })();
+
+  const handleCopy = useCallback(async () => {
+    if (!shareUrl) return;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = shareUrl;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'absolute';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setCopyState('copied');
+      window.setTimeout(() => setCopyState('idle'), 1800);
+    } catch (_e) {
+      setCopyState('failed');
+      window.setTimeout(() => setCopyState('idle'), 1800);
+    }
+  }, [shareUrl]);
+
+  const handleNativeShare = useCallback(async () => {
+    if (!shareUrl) return;
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ title: shareTitle, text: shareText, url: shareUrl });
+      } catch (_e) { /* user cancelled — ignore */ }
+    } else {
+      handleCopy();
+    }
+  }, [handleCopy, shareText, shareTitle, shareUrl]);
+
+  const whatsappHref = useMemo(() => (shareUrl ? `https://wa.me/?text=${encodeURIComponent(`${shareText}\n${shareUrl}`)}` : '#'), [shareText, shareUrl]);
+  const emailHref = useMemo(() => {
+    if (!shareUrl) return '#';
+    const subject = encodeURIComponent(shareTitle);
+    const body = encodeURIComponent(`${shareText}\n\n${shareUrl}`);
+    return `mailto:?subject=${subject}&body=${body}`;
+  }, [shareText, shareTitle, shareUrl]);
+  const smsHref = useMemo(() => (shareUrl ? `sms:?&body=${encodeURIComponent(`${shareText}\n${shareUrl}`)}` : '#'), [shareText, shareUrl]);
+  const telegramHref = useMemo(() => (shareUrl ? `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}` : '#'), [shareText, shareUrl]);
+
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label="Share wishlist">
+      <div className="flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-[var(--svs-surface)] shadow-2xl">
+        <div className="flex items-center justify-between border-b border-[var(--svs-border)] px-4 py-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-[var(--svs-primary)]">🎁 Share your wishlist</p>
+            <p className="truncate text-[11px] text-[var(--svs-muted)]">
+              {wishlistItems.length} item{wishlistItems.length === 1 ? '' : 's'} — anyone with the link can view (no sign-in needed).
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="ml-2 rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2 py-1 text-xs font-bold text-[var(--svs-muted)] hover:bg-[var(--svs-surface-strong,#f1f5f9)]"
+            aria-label="Close share dialog"
+          >
+            Close
+          </button>
+        </div>
+
+        <div className="space-y-3 px-4 py-3">
+          <label className="block text-xs font-semibold text-[var(--svs-text)]">
+            Your name
+            <input
+              type="text"
+              value={senderName}
+              onChange={(e) => setSenderName(e.target.value)}
+              maxLength={60}
+              placeholder="e.g. Thando"
+              className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-bg)] px-3 py-2 text-sm text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none"
+            />
+          </label>
+
+          <label className="block text-xs font-semibold text-[var(--svs-text)]">
+            Occasion (optional)
+            <select
+              value={occasion}
+              onChange={(e) => setOccasion(e.target.value)}
+              className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-bg)] px-3 py-2 text-sm text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none"
+            >
+              {WISHLIST_SHARE_OCCASIONS.map((o) => (
+                <option key={o.value || 'none'} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block text-xs font-semibold text-[var(--svs-text)]">
+            Personal note (optional)
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              maxLength={240}
+              rows={2}
+              placeholder="A short message for whoever opens this list…"
+              className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-bg)] px-3 py-2 text-sm text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none"
+            />
+            <span className="mt-1 block text-right text-[10px] text-[var(--svs-muted)]">{note.length}/240</span>
+          </label>
+
+          <div className="flex items-center gap-2 rounded-md border border-[var(--svs-border)] bg-[var(--svs-bg)] px-2 py-1.5">
+            <Share2 className="h-4 w-4 shrink-0 text-[var(--svs-primary)]" aria-hidden="true" />
+            <input
+              type="text"
+              value={shareUrl}
+              readOnly
+              className="min-w-0 flex-1 bg-transparent text-[11px] text-[var(--svs-text)] focus:outline-none"
+              onFocus={(e) => e.target.select()}
+              aria-label="Share link"
+            />
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="inline-flex items-center gap-1 rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2 py-1 text-[11px] font-bold text-[var(--svs-primary)] hover:bg-[var(--svs-surface-strong,#f1f5f9)]"
+            >
+              <Copy className="h-3 w-3" aria-hidden="true" />
+              {copyState === 'copied' ? 'Copied' : copyState === 'failed' ? 'Copy failed' : 'Copy'}
+            </button>
+          </div>
+
+          {wishlistItems.length === 0 ? (
+            <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-800">
+              Add at least one item to your wishlist before sharing.
+            </p>
+          ) : null}
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 border-t border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-3 sm:grid-cols-5">
+          <button
+            type="button"
+            onClick={handleNativeShare}
+            disabled={!shareUrl || wishlistItems.length === 0}
+            className="inline-flex flex-col items-center justify-center gap-1 rounded-md border border-[var(--svs-border)] bg-[var(--svs-bg)] px-2 py-2 text-[11px] font-bold text-[var(--svs-primary)] transition hover:bg-[var(--svs-surface-strong,#f1f5f9)] disabled:opacity-50"
+            title="Share via your device"
+          >
+            <Share2 className="h-4 w-4" aria-hidden="true" />
+            Share
+          </button>
+          <a
+            href={whatsappHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-disabled={wishlistItems.length === 0}
+            onClick={(e) => { if (wishlistItems.length === 0) e.preventDefault(); }}
+            className={`inline-flex flex-col items-center justify-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-2 text-[11px] font-bold text-emerald-700 transition hover:bg-emerald-100 ${wishlistItems.length === 0 ? 'opacity-50' : ''}`}
+            title="Share on WhatsApp"
+          >
+            <MessageCircle className="h-4 w-4" aria-hidden="true" />
+            WhatsApp
+          </a>
+          <a
+            href={emailHref}
+            aria-disabled={wishlistItems.length === 0}
+            onClick={(e) => { if (wishlistItems.length === 0) e.preventDefault(); }}
+            className={`inline-flex flex-col items-center justify-center gap-1 rounded-md border border-cyan-200 bg-cyan-50 px-2 py-2 text-[11px] font-bold text-cyan-800 transition hover:bg-cyan-100 ${wishlistItems.length === 0 ? 'opacity-50' : ''}`}
+            title="Share by email"
+          >
+            <Mail className="h-4 w-4" aria-hidden="true" />
+            Email
+          </a>
+          <a
+            href={smsHref}
+            aria-disabled={wishlistItems.length === 0}
+            onClick={(e) => { if (wishlistItems.length === 0) e.preventDefault(); }}
+            className={`inline-flex flex-col items-center justify-center gap-1 rounded-md border border-violet-200 bg-violet-50 px-2 py-2 text-[11px] font-bold text-violet-700 transition hover:bg-violet-100 ${wishlistItems.length === 0 ? 'opacity-50' : ''}`}
+            title="Share by SMS"
+          >
+            <Smartphone className="h-4 w-4" aria-hidden="true" />
+            SMS
+          </a>
+          <a
+            href={telegramHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-disabled={wishlistItems.length === 0}
+            onClick={(e) => { if (wishlistItems.length === 0) e.preventDefault(); }}
+            className={`inline-flex flex-col items-center justify-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-2 py-2 text-[11px] font-bold text-sky-700 transition hover:bg-sky-100 ${wishlistItems.length === 0 ? 'opacity-50' : ''}`}
+            title="Share on Telegram"
+          >
+            <Send className="h-4 w-4" aria-hidden="true" />
+            Telegram
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onOpenItemDetails }) => {
+  const [shareOpen, setShareOpen] = useState(false);
+  return (
   <PageFrame title="Wishlist" subtitle="Save items you want to come back to later.">
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+      <p className="text-xs font-semibold text-[var(--svs-muted)]">
+        {wishlistItems.length ? `${wishlistItems.length} saved item${wishlistItems.length === 1 ? '' : 's'}` : 'No saved items yet.'}
+      </p>
+      <button
+        type="button"
+        onClick={() => setShareOpen(true)}
+        disabled={wishlistItems.length === 0}
+        title={wishlistItems.length === 0 ? 'Add at least one item before sharing' : 'Share this wishlist with friends or family'}
+        className="inline-flex items-center gap-1.5 rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-1.5 text-xs font-bold text-[var(--svs-primary)] transition hover:bg-[var(--svs-surface-strong,#f1f5f9)] disabled:opacity-50"
+      >
+        <Gift className="h-3.5 w-3.5" aria-hidden="true" />
+        Share wishlist
+      </button>
+    </div>
     {!wishlistItems.length ? (
       <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 text-sm text-[var(--svs-text)]">
         <p>Your wishlist is empty. Save products or tickets from any market to find them quickly later.</p>
@@ -19330,8 +19665,97 @@ const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onOpen
         ))}
       </div>
     )}
+    <WishlistShareModal open={shareOpen} onClose={() => setShareOpen(false)} wishlistItems={wishlistItems} />
   </PageFrame>
-);
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────
+//  Public wishlist viewer — anyone with the link can open this.
+//  The encoded payload lives in the URL only; nothing is fetched from
+//  our backend so a recipient does not need an account.
+// ─────────────────────────────────────────────────────────────────────
+const WishlistSharePage = () => {
+  const [searchParams] = useSearchParams();
+  const data = useMemo(() => decodeWishlistShare(searchParams.get('d')), [searchParams]);
+  const occasionMeta = data ? WISHLIST_SHARE_OCCASIONS.find((o) => o.value === data.occasion) || null : null;
+  const headline = data?.senderName
+    ? `${data.senderName}'s${data.occasion ? ` ${occasionMeta?.label?.replace(/^[^a-zA-Z]+/, '').toLowerCase()}` : ''} wishlist`
+    : 'Shared wishlist';
+
+  if (!data) {
+    return (
+      <PageFrame title="Wishlist link is invalid" subtitle="The link you opened looks broken or has expired.">
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800">
+          <p>We couldn&rsquo;t read this wishlist. Ask whoever sent it to share a fresh link, or browse the markets directly.</p>
+          <Link to="/markets" className="mt-4 inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white">
+            Browse Markets
+          </Link>
+        </div>
+      </PageFrame>
+    );
+  }
+
+  const items = data.items || [];
+
+  return (
+    <PageFrame title={headline} subtitle={`A read-only wishlist shared on SVS — tap any item to view it on the marketplace.`}>
+      {data.note ? (
+        <div className="mb-4 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 text-sm text-[var(--svs-text)] shadow-sm">
+          <p className="text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">A note from {data.senderName || 'them'}</p>
+          <p className="mt-1 italic">&ldquo;{data.note}&rdquo;</p>
+        </div>
+      ) : null}
+
+      {items.length === 0 ? (
+        <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 text-sm text-[var(--svs-text)]">
+          This shared wishlist is empty.
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {items.map((item, idx) => {
+            const cardBody = (
+              <div className="flex h-full flex-col">
+                {item.image ? (
+                  <img src={item.image} alt={item.title} className="h-44 w-full object-cover" loading="lazy" />
+                ) : (
+                  <div className="h-44 w-full bg-[var(--svs-bg)]" aria-hidden="true" />
+                )}
+                <div className="flex flex-1 flex-col p-4">
+                  <h3 className="text-base font-bold text-[var(--svs-text)]">{item.title || 'Untitled item'}</h3>
+                  {item.marketName ? <p className="mt-1 text-xs text-[var(--svs-muted)]">{item.marketName}</p> : null}
+                  {item.unitPriceLabel ? <p className="mt-2 text-sm font-semibold text-[var(--svs-primary-strong)]">{item.unitPriceLabel}</p> : null}
+                  <div className="mt-auto pt-3 text-[11px] font-bold text-[var(--svs-primary)]">
+                    Tap to view &amp; buy &rarr;
+                  </div>
+                </div>
+              </div>
+            );
+            const className = 'overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-[0_4px_8px_rgba(0,0,0,0.08)] transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--svs-primary)]';
+            return item.href
+              ? <Link key={`${item.id}-${idx}`} to={item.href} className={className}>{cardBody}</Link>
+              : <Link key={`${item.id}-${idx}`} to="/markets" className={className}>{cardBody}</Link>;
+          })}
+        </div>
+      )}
+
+      <div className="mt-6 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 text-sm text-[var(--svs-text)]">
+        <p className="font-bold text-[var(--svs-primary)]">Want a wishlist of your own?</p>
+        <p className="mt-1 text-[var(--svs-muted)]">Sign up free and start saving items across all 11 SVS marketplaces. Share yours when birthdays come around.</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Link to="/signup" className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-xs font-bold text-white`}>
+            Create my account
+          </Link>
+          <Link to="/markets" className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-xs font-bold text-[var(--svs-primary)] hover:bg-[var(--svs-surface-strong,#f1f5f9)]">
+            Browse markets
+          </Link>
+        </div>
+      </div>
+    </PageFrame>
+  );
+};
+
+
 
 const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemoveCartItem, onClearBuyNowCheckout }) => {
   const navigate = useNavigate();
@@ -28009,6 +28433,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/betting-order-confirmation" element={<Navigate to="/betting-ticket-tracking" replace />} />
     <Route path="/betting-ticket-tracking" element={<BettingTicketTrackingPage orders={orders} />} />
     <Route path="/wishlist" element={<WishlistPage wishlistItems={wishlistItems} onAddToCart={onAddToCart} onRemoveWishlistItem={onRemoveWishlistItem} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/wishlist/share" element={<WishlistSharePage />} />
     <Route path="/checkout" element={<CheckoutPage cartItems={cartItems} buyNowCheckout={buyNowCheckout} onUpdateCartQuantity={onUpdateCartQuantity} onRemoveCartItem={onRemoveCartItem} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />
     <Route path="/checkout/payfast" element={<PayfastCheckoutPage buyNowCheckout={buyNowCheckout} onPlaceOrder={onPlaceOrder} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />
     <Route path="/support/chat" element={<SupportChatPage orders={orders} onPushNotificationToUser={onPushNotificationToUser} />} />
