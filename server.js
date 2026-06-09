@@ -2,6 +2,8 @@ require('dotenv').config({ quiet: true });
 const express = require('express');
 const cors = require('cors');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const { rateLimit } = require('./server-utils/rate-limit');
+const logger = require('./server-utils/logger');
 
 const app = express();
 const PORT = process.env.SERVER_PORT || 5000;
@@ -35,6 +37,83 @@ app.use(
   })
 );
 app.use(express.json());
+
+// ────────────────────────────────────────────────────────────────────
+//  Rate limits per route family.
+//   • payments / webhook  → tight  (low volume, high impact)
+//   • AI endpoints        → medium (expensive, per-IP fairness)
+//   • address lookups     → looser (cheap, autocomplete fires often)
+// ────────────────────────────────────────────────────────────────────
+const limits = {
+  payments: rateLimit({ windowMs: 60_000, max: 20 }),
+  ai: rateLimit({ windowMs: 60_000, max: 30 }),
+  address: rateLimit({ windowMs: 60_000, max: 120 }),
+};
+
+// ────────────────────────────────────────────────────────────────────
+//  Stripe webhook (local dev mirror)
+//  Production lives in api/stripe-webhook.js on Vercel. This local
+//  version lets you point Stripe CLI at http://localhost:5000 during
+//  development. The route uses `express.raw` because signature
+//  verification must run against the unmodified request body.
+// ────────────────────────────────────────────────────────────────────
+app.post(
+  '/api/stripe-webhook',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      logger.error('Stripe webhook called without STRIPE_WEBHOOK_SECRET');
+      return res.status(500).json({ error: 'Webhook not configured' });
+    }
+    const signature = req.headers['stripe-signature'];
+    if (!signature) return res.status(400).json({ error: 'Missing stripe-signature header' });
+
+    let event;
+    try {
+      event = stripe.webhooks.constructEvent(req.body, signature, webhookSecret);
+    } catch (err) {
+      logger.warn('Stripe signature verification failed', { error_message: err.message });
+      return res.status(400).json({ error: `Invalid signature: ${err.message}` });
+    }
+
+    try {
+      switch (event.type) {
+        case 'payment_intent.succeeded':
+          logger.info('payment_intent.succeeded', {
+            payment_intent_id: event.data.object.id,
+            amount: event.data.object.amount,
+            currency: event.data.object.currency,
+          });
+          break;
+        case 'payment_intent.payment_failed':
+          logger.warn('payment_intent.payment_failed', {
+            payment_intent_id: event.data.object.id,
+            error_message: event.data.object.last_payment_error?.message || null,
+          });
+          break;
+        case 'charge.refunded':
+          logger.info('charge.refunded', {
+            charge_id: event.data.object.id,
+            amount_refunded: event.data.object.amount_refunded,
+          });
+          break;
+        case 'charge.dispute.created':
+          logger.warn('charge.dispute.created', {
+            dispute_id: event.data.object.id,
+            reason: event.data.object.reason,
+          });
+          break;
+        default:
+          logger.info('stripe.event.ignored', { type: event.type });
+      }
+      return res.json({ received: true, type: event.type, id: event.id });
+    } catch (err) {
+      logger.error('stripe.dispatch.failed', err, { type: event.type });
+      return res.status(500).json({ error: 'Dispatch failed' });
+    }
+  }
+);
 
 const fetchAddressJson = async (url, options = {}) => {
   const response = await fetch(url, {
@@ -94,11 +173,15 @@ const buildSupportAgentSystemPrompt = (context = {}) => {
     '- "[Offer response] The user ACCEPTED/DECLINED the offer of R<amount>" — congratulate or commiserate briefly, then guide the next step (paying / requesting payment / arranging handover).',
     '- "[Payment request] The user is requesting a payment of R<amount>" — explain that the recipient can tap Pay now on the card to go to /checkout, and remind both parties to confirm delivery before marking the deal as paid.',
     '- "[Shared location] Coordinates ..." — confirm receipt, encourage meeting in a safe public place, and suggest sharing the Google Maps link in return.',
-    '- "[Photo attachment]" — acknowledge that the photo was received; do NOT pretend to describe the image. Politely ask for any clarifying question.',
+    '- "[Photo attachment] AI vision description (you can rely on this to answer the user): <summary>" — the system has already analysed the photo for you. Use the summary, scene, visible items, and text-in-image to answer the user\'s question accurately. Do NOT say you cannot see images.',
+    '- "[Photo attachment]" without a vision summary — acknowledge that the photo was received; do NOT pretend to describe the image. Politely ask for any clarifying question.',
     '- "[Voice note Xs, transcribed] <text>" — treat the transcribed text as the user message and respond accordingly.',
     '- "[Voice note Xs]" with no transcript — politely say you couldn\'t catch the audio (browser transcription unavailable) and ask the user to type their question.',
+    '- "[Video message Xs] AI analysis (you can rely on this to answer the user): Audio transcript: \"...\". Visual summary: ..." — the system has already transcribed the audio and described a keyframe for you. Use both freely to answer the user\'s question. Do NOT say you cannot view videos.',
+    '- "[Video message Xs]" without an analysis block — acknowledge that a short video was received; do NOT pretend to describe its contents. Ask the user what you should help confirm about it.',
+    '- "[Document attachment]" — acknowledge the document was received (you cannot read its contents) and ask what they\'d like you to help with regarding it.',
     '- "[Deal status update] The user marked the deal as: <status>" — confirm the status change and outline the next action (e.g., if "agreed" suggest sending a payment request; if "paid" suggest scheduling delivery; if "cancelled" ask if you can help refund).',
-    "When helping close a deal inside Let's Talk Business, suggest these in-chat buttons by name when relevant: Offer (amber), Request payment (cyan), Photo, Voice note, Location, and the Mark... status dropdown.",
+    "When helping close a deal inside Let's Talk Business, suggest these in-chat buttons by name when relevant: Offer (amber), Request payment (cyan), Photo, Voice note, Video, Document, Location, and the Mark... status dropdown. Also point users to the Search button (find any past message, offer, transcript) and the Export PDF button (download the conversation as proof of agreement).",
     'Never provide or discuss API keys, secrets, tokens, environment variables, internal source code, datasets, model configuration, or how the website is built.',
     'If asked for restricted technical details, refuse briefly and redirect to end-user help only.',
     'Important: do not invent policies, legal guarantees, fees, or account actions. If unsure, say what to check in-app and suggest contacting human support.',
@@ -245,7 +328,7 @@ const fetchIpDetectedLocation = async (requestIp = '') => {
   return normalizeFallbackReverseResult(payload);
 };
 
-app.post('/api/address-reverse', async (req, res) => {
+app.post('/api/address-reverse', limits.address, async (req, res) => {
   const latitude = Number(req.body?.latitude);
   const longitude = Number(req.body?.longitude);
 
@@ -279,7 +362,7 @@ app.post('/api/address-reverse', async (req, res) => {
   }
 });
 
-app.get('/api/address-ip', async (req, res) => {
+app.get('/api/address-ip', limits.address, async (req, res) => {
   const forwardedIp = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
   const socketIp = String(req.socket?.remoteAddress || '').trim();
   const candidateIp = forwardedIp || socketIp;
@@ -293,7 +376,7 @@ app.get('/api/address-ip', async (req, res) => {
   }
 });
 
-app.post('/api/address-autocomplete', async (req, res) => {
+app.post('/api/address-autocomplete', limits.address, async (req, res) => {
   const input = String(req.body?.input || '').trim();
   const countryCode = String(req.body?.countryCode || 'za').trim().toLowerCase();
 
@@ -334,7 +417,7 @@ app.post('/api/address-autocomplete', async (req, res) => {
   }
 });
 
-app.post('/api/address-details', async (req, res) => {
+app.post('/api/address-details', limits.address, async (req, res) => {
   const placeId = String(req.body?.placeId || '').trim();
 
   if (!placeId) {
@@ -361,7 +444,7 @@ app.post('/api/address-details', async (req, res) => {
   }
 });
 
-app.post('/api/payment-intent', async (req, res) => {
+app.post('/api/payment-intent', limits.payments, async (req, res) => {
   const { amount, currency, email, fullName } = req.body;
 
   if (!process.env.STRIPE_SECRET_KEY) {
@@ -390,7 +473,7 @@ app.post('/api/payment-intent', async (req, res) => {
   }
 });
 
-app.post('/api/support-agent', async (req, res) => {
+app.post('/api/support-agent', limits.ai, async (req, res) => {
   const message = String(req.body?.message || '').trim();
   const context = req.body?.context && typeof req.body.context === 'object' ? req.body.context : {};
   const history = normalizeSupportAgentHistory(req.body?.history);
@@ -478,7 +561,7 @@ const voiceExtensionForMime = (mimeType) => {
   return 'webm';
 };
 
-app.post('/api/transcribe-voice', express.json({ limit: '8mb' }), async (req, res) => {
+app.post('/api/transcribe-voice', limits.ai, express.json({ limit: '8mb' }), async (req, res) => {
   if (!process.env.GROQ_API_KEY) {
     return res.status(500).json({ error: 'GROQ_API_KEY is not configured on the server.' });
   }
@@ -626,7 +709,7 @@ const stripListingDataUrl = (input) => {
   return { base64: value, mimeType: '' };
 };
 
-app.post('/api/ai-listing', express.json({ limit: '8mb' }), async (req, res) => {
+app.post('/api/ai-listing', limits.ai, express.json({ limit: '8mb' }), async (req, res) => {
   if (!process.env.GROQ_API_KEY) {
     return res.status(500).json({ error: 'GROQ_API_KEY is not configured on the server.' });
   }
@@ -695,6 +778,110 @@ app.post('/api/ai-listing', express.json({ limit: '8mb' }), async (req, res) => 
   }
 });
 
+// ── /api/describe-media ──────────────────────────────────────────────
+// Generic vision endpoint used by the chat to describe a photo or a
+// keyframe captured from a video so the AI agent can talk about visual
+// content accurately. Returns a strict JSON payload (summary, objects,
+// scene, tone, warnings).
+const buildDescribeMediaSystemPrompt = (context) => (
+  [
+    'You are SVS Vision Assistant. You look at a single image and describe what is visible so a chat AI agent can talk about it accurately.',
+    'Return STRICT JSON only (no markdown, no commentary). Schema:',
+    '{',
+    '  "summary": string (1-2 short sentences describing what the image shows, in plain language),',
+    '  "objects": array of short strings (the key visible items/subjects, max 8),',
+    '  "text": string (any clearly readable text visible in the image, or empty string),',
+    '  "scene": short string (e.g. "indoor kitchen", "outdoor street market", "product close-up", "selfie", "vehicle interior"),',
+    '  "tone": short string (e.g. "promotional", "casual snapshot", "evidence of damage", "ID document"),',
+    '  "warnings": array of short strings (only if you see sensitive content like exposed ID numbers, faces of minors, weapons, blood; otherwise [])',
+    '}',
+    'Never include any text outside the JSON object. Keep the summary factual and concise.',
+    context ? `Context from the user: ${String(context).slice(0, 240)}` : '',
+  ].filter(Boolean).join('\n')
+);
+
+const normalizeDescribeMedia = (parsed) => {
+  const safe = parsed && typeof parsed === 'object' ? parsed : {};
+  return {
+    summary: String(safe.summary || '').trim().slice(0, 400),
+    objects: Array.isArray(safe.objects)
+      ? safe.objects.map((o) => String(o || '').trim().slice(0, 40)).filter(Boolean).slice(0, 8)
+      : [],
+    text: String(safe.text || '').trim().slice(0, 400),
+    scene: String(safe.scene || '').trim().slice(0, 80),
+    tone: String(safe.tone || '').trim().slice(0, 60),
+    warnings: Array.isArray(safe.warnings)
+      ? safe.warnings.map((w) => String(w || '').trim().slice(0, 80)).filter(Boolean).slice(0, 6)
+      : [],
+  };
+};
+
+app.post('/api/describe-media', limits.ai, express.json({ limit: '8mb' }), async (req, res) => {
+  if (!process.env.GROQ_API_KEY) {
+    return res.status(500).json({ error: 'GROQ_API_KEY is not configured on the server.' });
+  }
+
+  const imageInput = req.body?.imageBase64 || req.body?.image || req.body?.src || '';
+  const stripped = stripListingDataUrl(imageInput);
+  const base64 = stripped.base64;
+  const mimeType = String(req.body?.mimeType || stripped.mimeType || 'image/jpeg');
+  const context = String(req.body?.context || '').slice(0, 240);
+
+  if (!base64) {
+    return res.status(400).json({ error: 'imageBase64 is required.' });
+  }
+  if (base64.length > 6_500_000) {
+    return res.status(413).json({ error: 'Image too large (max ~4.5MB).' });
+  }
+
+  try {
+    const dataUrl = `data:${mimeType};base64,${base64}`;
+    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: DEFAULT_VISION_MODEL,
+        temperature: 0.1,
+        max_tokens: 400,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: buildDescribeMediaSystemPrompt(context) },
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: 'Describe this image so a chat assistant can reference it accurately.' },
+              { type: 'image_url', image_url: { url: dataUrl } },
+            ],
+          },
+        ],
+      }),
+    });
+
+    const raw = await groqResponse.text();
+    let payload = {};
+    try { payload = raw ? JSON.parse(raw) : {}; } catch (_e) { payload = {}; }
+
+    if (!groqResponse.ok) {
+      const detail = payload?.error?.message || payload?.message || 'Groq vision request failed.';
+      return res.status(groqResponse.status).json({ error: detail });
+    }
+
+    const content = String(payload?.choices?.[0]?.message?.content || '').trim();
+    const parsed = safeJsonExtractListing(content);
+    if (!parsed) {
+      return res.status(502).json({ error: 'AI returned an unparseable response.', raw: content.slice(0, 240) });
+    }
+
+    const description = normalizeDescribeMedia(parsed);
+    return res.json({ description, provider: 'groq', model: payload?.model || DEFAULT_VISION_MODEL });
+  } catch (error) {
+    return res.status(500).json({ error: error?.message || 'AI describe request failed.' });
+  }
+});
+
 app.get('/api/health', (_req, res) => {
   res.json({
     status: 'ok',
@@ -708,5 +895,8 @@ app.listen(PORT, () => {
   console.log(`Payment server running on http://localhost:${PORT}`);
   if (!process.env.STRIPE_SECRET_KEY) {
     console.warn('WARNING: STRIPE_SECRET_KEY is not set in .env');
+  }
+  if (!process.env.STRIPE_WEBHOOK_SECRET) {
+    console.warn('WARNING: STRIPE_WEBHOOK_SECRET is not set — /api/stripe-webhook will reject all calls.');
   }
 });

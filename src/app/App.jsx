@@ -53,6 +53,10 @@ import {
   Image as ImageIcon,
   Mic,
   Square,
+  Video,
+  FileText,
+  Printer,
+  Eraser,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -71,6 +75,7 @@ import SellerLandingPage from '../pages/SellerLandingPage';
 import SellerOnboardingPage from '../pages/SellerOnboardingPage';
 import SellerSigninPage from '../pages/SellerSigninPage';
 import SellerSignupPage from '../pages/SellerSignupPage';
+import { TermsOfServicePage, PrivacyPolicyPage, RefundPolicyPage, CookiePolicyPage } from '../pages/LegalPages';
 import {
   PropertyMarketPage,
   PropertyCategoryPage,
@@ -3764,6 +3769,8 @@ const footerLinks = {
     { labelKey: 'footer.contact', href: '/contact' },
     { labelKey: 'footer.terms', href: '/terms' },
     { labelKey: 'footer.privacy', href: '/privacy' },
+    { labelKey: 'footer.refunds', href: '/refunds' },
+    { labelKey: 'footer.cookies', href: '/cookies' },
   ],
 };
 
@@ -5955,6 +5962,52 @@ const requestAiListingFromImage = async ({ imageBase64, mimeType, marketKeys } =
     throw new Error('AI listing returned an empty response.');
   }
   return listing;
+};
+
+// Generic vision helper used by Let's Talk Business chat to describe a
+// photo or a keyframe captured from a video. Returns { summary, objects,
+// text, scene, tone, warnings } from the server, or throws.
+const requestImageDescription = async ({ imageBase64, mimeType, context } = {}) => {
+  const normalized = String(imageBase64 || '').trim();
+  if (!normalized) {
+    throw new Error('Image is required.');
+  }
+
+  let response;
+  try {
+    response = await fetch('/api/describe-media', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imageBase64: normalized,
+        mimeType: mimeType || 'image/jpeg',
+        context: context || '',
+      }),
+    });
+  } catch (networkError) {
+    // eslint-disable-next-line no-console
+    console.error('[describe-media] network error:', networkError);
+    throw new Error('Cannot reach AI vision service.');
+  }
+
+  const rawBody = await response.text();
+  let result = {};
+  try {
+    result = rawBody ? JSON.parse(rawBody) : {};
+  } catch (_error) {
+    result = {};
+  }
+
+  if (!response.ok) {
+    const detail = result.error || result.message || 'Image description failed.';
+    throw new Error(`${detail} (HTTP ${response.status})`);
+  }
+
+  const description = result.description && typeof result.description === 'object' ? result.description : null;
+  if (!description) {
+    throw new Error('AI vision returned an empty response.');
+  }
+  return description;
 };
 
 const getCartTotals = (cartItems) => {
@@ -20872,6 +20925,30 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   const speechRecognitionRef = useRef(null);
   const voiceTranscriptRef = useRef('');
 
+  // Search inside the active thread (Ctrl/Cmd + F when chat focused).
+  const [chatSearchOpen, setChatSearchOpen] = useState(false);
+  const [chatSearchQuery, setChatSearchQuery] = useState('');
+
+  // Video attachments — users pick an existing video file from their
+  // device (mobile camera roll, desktop file picker, etc.). Selected
+  // clip lands in `videoPreview` so they can play it back and choose to
+  // send it (which kicks off the AI transcript + vision keyframe pass).
+  const [isAnalyzingMedia, setIsAnalyzingMedia] = useState(false);
+  // { dataUrl, mimeType, durationSec, sizeBytes, name }
+  const [videoPreview, setVideoPreview] = useState(null);
+  const videoInputRef = useRef(null);
+
+  // Document attachments (PDF / DOC / spec sheets / ID copies, etc.)
+  const documentInputRef = useRef(null);
+
+  // Image annotator — opened when a photo is attached so the user can
+  // circle a defect or highlight a detail before sending.
+  const [annotatorSource, setAnnotatorSource] = useState(null); // { dataUrl, name, naturalWidth, naturalHeight }
+  const [annotatorStrokes, setAnnotatorStrokes] = useState([]);
+  const [annotatorColor, setAnnotatorColor] = useState('#ef4444');
+  const annotatorSurfaceRef = useRef(null);
+  const annotatorDrawingRef = useRef(false);
+
   const parseCardBody = useCallback((body) => {
     const raw = String(body || '');
     if (!raw.startsWith(SVS_CARD_PREFIX)) return null;
@@ -20907,6 +20984,16 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       case 'location':
         return `[Shared location] Coordinates ${card.lat}, ${card.lng}${card.label ? ` (${card.label})` : ''}. Google Maps: https://www.google.com/maps?q=${card.lat},${card.lng}`;
       case 'image':
+        if (card.visualSummary || card.visualObjects?.length || card.visualText) {
+          const bits = [];
+          if (card.visualSummary) bits.push(card.visualSummary);
+          if (card.visualScene) bits.push(`Scene: ${card.visualScene}.`);
+          if (Array.isArray(card.visualObjects) && card.visualObjects.length) {
+            bits.push(`Visible items: ${card.visualObjects.join(', ')}.`);
+          }
+          if (card.visualText) bits.push(`Text in image: "${card.visualText}".`);
+          return `[Photo attachment${card.name ? ` "${card.name}"` : ''}] AI vision description (you can rely on this to answer the user): ${bits.join(' ')}`;
+        }
         return `[Photo attachment] The user shared a photo${card.name ? ` named "${card.name}"` : ''}. (Image data is not shown to you; respond helpfully without describing the image.)`;
       case 'voice': {
         const dur = card.durationSec || 0;
@@ -20914,6 +21001,27 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
           return `[Voice note ${dur}s, transcribed] ${card.transcript.trim()}`;
         }
         return `[Voice note ${dur}s] The user sent a voice note. A live transcript was not available, so reply that you couldn't catch the audio and politely ask them to type their question.`;
+      }
+      case 'video': {
+        const dur = card.durationSec || 0;
+        const bits = [];
+        if (card.transcript && card.transcript.trim()) {
+          bits.push(`Audio transcript: "${card.transcript.trim()}".`);
+        }
+        if (card.visualSummary) bits.push(`Visual summary: ${card.visualSummary}`);
+        if (card.visualScene) bits.push(`Scene: ${card.visualScene}.`);
+        if (Array.isArray(card.visualObjects) && card.visualObjects.length) {
+          bits.push(`Visible items: ${card.visualObjects.join(', ')}.`);
+        }
+        if (card.visualText) bits.push(`Text shown on screen: "${card.visualText}".`);
+        if (bits.length) {
+          return `[Video message ${dur}s] AI analysis (you can rely on this to answer the user): ${bits.join(' ')}`;
+        }
+        return `[Video message ${dur}s] The user sent a short video. (Video content is not shown to you; respond helpfully and ask what they want you to confirm about it.)`;
+      }
+      case 'document': {
+        const kb = card.size ? Math.round(card.size / 1024) : 0;
+        return `[Document attachment] The user shared a document${card.name ? ` named "${card.name}"` : ''}${kb ? ` (${kb} KB)` : ''}. (You cannot read its contents; acknowledge receipt and ask what you should help with.)`;
       }
       case 'deal-status':
         return `[Deal status update] The user marked the deal as: ${card.status}.`;
@@ -21683,6 +21791,8 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       location: '\uD83D\uDCCD Shared a location',
       image: '\uD83D\uDDBC\uFE0F Sent a photo',
       voice: `\uD83C\uDFA4 Voice note (${card.durationSec || 0}s)`,
+      video: `\uD83C\uDFA5 Video message (${card.durationSec || 0}s)`,
+      document: `\uD83D\uDCCE Document${card.name ? `: ${card.name}` : ''}`,
       'deal-status': `\u2705 Deal status: ${card.status}`,
       'offer-response': card.accepted ? '\uD83D\uDC4D Offer accepted' : '\uD83D\uDC4E Offer declined',
     };
@@ -21781,9 +21891,24 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = String(reader.result || '');
-      if (dataUrl) {
+      if (!dataUrl) return;
+      // Open the annotator first so the user can circle defects or
+      // highlight a detail. The annotator also has a "Skip & send"
+      // shortcut that ships the original photo unchanged.
+      const probe = new Image();
+      probe.onload = () => {
+        setAnnotatorSource({
+          dataUrl,
+          name: file.name,
+          naturalWidth: probe.naturalWidth || 800,
+          naturalHeight: probe.naturalHeight || 600,
+        });
+        setAnnotatorStrokes([]);
+      };
+      probe.onerror = () => {
         sendCardMessage({ type: 'image', src: dataUrl, name: file.name });
-      }
+      };
+      probe.src = dataUrl;
     };
     reader.readAsDataURL(file);
     event.target.value = '';
@@ -21948,6 +22073,353 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     stopVoiceTracksAndTimer();
   }, [stopVoiceTracksAndTimer]);
 
+  // --- Document attachments -------------------------------------------
+  // PDF / DOC / spec sheet / ID copy etc., capped at ~3 MB so it still
+  // fits comfortably inside a Supabase message body.
+  const handleDocumentAttachmentChange = useCallback((event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 3_000_000) {
+      // eslint-disable-next-line no-alert
+      window.alert('Please choose a document smaller than 3 MB.');
+      event.target.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || '');
+      if (!dataUrl) return;
+      sendCardMessage({
+        type: 'document',
+        src: dataUrl,
+        name: file.name,
+        size: file.size,
+        mimeType: file.type || 'application/octet-stream',
+      });
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+  }, [sendCardMessage]);
+
+  // --- Video attachments ----------------------------------------------
+  // The user picks an existing video file from their device (camera
+  // roll, gallery, Downloads). The clip is read into a data URL, then
+  // its duration is probed via an offscreen <video> element so the chat
+  // card carries the right metadata. The clip lands in `videoPreview`
+  // so the user can play it back and confirm before sending — only at
+  // that point do the AI passes (Whisper transcript + vision keyframe)
+  // run.
+  const handleVideoAttachmentChange = useCallback((event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!/^video\//.test(file.type)) {
+      // eslint-disable-next-line no-alert
+      window.alert('Please choose a video file.');
+      event.target.value = '';
+      return;
+    }
+    if (file.size > 5_000_000) {
+      // eslint-disable-next-line no-alert
+      window.alert('Please choose a video smaller than 5 MB (a 10–20 second clip is usually fine).');
+      event.target.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || '');
+      if (!dataUrl) return;
+      // Probe duration with an offscreen video element; fall back to 1s
+      // if the browser cannot read the metadata.
+      const probe = document.createElement('video');
+      probe.preload = 'metadata';
+      probe.muted = true;
+      probe.playsInline = true;
+      let settled = false;
+      const finalize = (durationSec) => {
+        if (settled) return;
+        settled = true;
+        try { probe.src = ''; } catch (_e) { /* ignore */ }
+        setVideoPreview({
+          dataUrl,
+          mimeType: file.type || 'video/mp4',
+          durationSec: Math.max(1, Math.round(durationSec || 1)),
+          sizeBytes: file.size,
+          name: file.name,
+        });
+      };
+      const safety = window.setTimeout(() => finalize(1), 4000);
+      probe.onloadedmetadata = () => {
+        window.clearTimeout(safety);
+        finalize(probe.duration);
+      };
+      probe.onerror = () => {
+        window.clearTimeout(safety);
+        finalize(1);
+      };
+      probe.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+  }, []);
+
+  // --- Video preview controls ------------------------------------------
+  // After a clip is attached we hold it in `videoPreview` so the user
+  // can play it back and decide whether to send it, swap it for another
+  // file, or discard it. The expensive AI passes (Whisper transcript +
+  // vision keyframe describe) only run when the user actually hits Send.
+  const handleDiscardVideoPreview = useCallback(() => {
+    setVideoPreview(null);
+  }, []);
+
+  const handleReplaceVideoAttachment = useCallback(() => {
+    setVideoPreview(null);
+    window.setTimeout(() => { videoInputRef.current?.click(); }, 50);
+  }, []);
+
+  const handleSendVideoPreview = useCallback(async () => {
+    const clip = videoPreview;
+    if (!clip) return;
+    setVideoPreview(null);
+    setIsAnalyzingMedia(true);
+
+    const dataUrl = clip.dataUrl;
+    const mimeType = clip.mimeType || 'video/mp4';
+    const durationSec = clip.durationSec || 1;
+
+    // Helper 1: capture the midpoint frame as a JPEG data URL.
+    const captureKeyframe = () => new Promise((resolve) => {
+      try {
+        const probe = document.createElement('video');
+        probe.preload = 'auto';
+        probe.muted = true;
+        probe.playsInline = true;
+        probe.src = dataUrl;
+        let settled = false;
+        const finish = (val) => {
+          if (settled) return;
+          settled = true;
+          try { probe.src = ''; } catch (_e) { /* ignore */ }
+          resolve(val);
+        };
+        const safetyTimer = window.setTimeout(() => finish(null), 8000);
+        probe.onloadedmetadata = () => {
+          const target = Math.max(0.1, Math.min((probe.duration || durationSec) / 2, (probe.duration || durationSec) - 0.1));
+          try { probe.currentTime = target; } catch (_e) { finish(null); }
+        };
+        probe.onseeked = () => {
+          try {
+            const w = Math.max(160, Math.min(640, probe.videoWidth || 480));
+            const h = Math.max(120, Math.min(480, probe.videoHeight || 360));
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) { window.clearTimeout(safetyTimer); finish(null); return; }
+            ctx.drawImage(probe, 0, 0, w, h);
+            const url = canvas.toDataURL('image/jpeg', 0.78);
+            window.clearTimeout(safetyTimer);
+            finish(url);
+          } catch (_e) { window.clearTimeout(safetyTimer); finish(null); }
+        };
+        probe.onerror = () => { window.clearTimeout(safetyTimer); finish(null); };
+      } catch (_e) { resolve(null); }
+    });
+
+    // Helper 2: Whisper transcript of the audio track.
+    const transcribe = (async () => {
+      try {
+        const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+        const text = await requestVoiceTranscription({
+          audioBase64: base64,
+          mimeType,
+          language: (typeof navigator !== 'undefined' && navigator.language ? navigator.language.split('-')[0] : undefined),
+        });
+        return String(text || '').trim();
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn('[video] transcript failed:', e?.message || e);
+        return '';
+      }
+    })();
+
+    // Helper 3: vision describe of the captured keyframe.
+    const describe = (async () => {
+      try {
+        const keyframeUrl = await captureKeyframe();
+        if (!keyframeUrl) return null;
+        const base64 = keyframeUrl.split(',')[1] || keyframeUrl;
+        return await requestImageDescription({
+          imageBase64: base64,
+          mimeType: 'image/jpeg',
+          context: 'Midpoint frame from a video attachment sent in the SVS Let\'s Talk Business chat.',
+        });
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn('[video] vision describe failed:', e?.message || e);
+        return null;
+      }
+    })();
+
+    const [transcript, description] = await Promise.all([transcribe, describe]);
+
+    setIsAnalyzingMedia(false);
+
+    sendCardMessage({
+      type: 'video',
+      src: dataUrl,
+      durationSec,
+      mimeType,
+      name: clip.name,
+      transcript: transcript || undefined,
+      visualSummary: description?.summary || undefined,
+      visualObjects: description?.objects?.length ? description.objects : undefined,
+      visualText: description?.text || undefined,
+      visualScene: description?.scene || undefined,
+    });
+  }, [sendCardMessage, videoPreview]);
+
+  // --- Image annotator -------------------------------------------------
+  // Lets the user draw freehand strokes on a photo before sending so they
+  // can highlight a defect or feature. Strokes are kept as arrays of
+  // [x,y] in image-natural coordinates (0..naturalWidth, 0..naturalHeight)
+  // and composited onto a canvas when sending.
+  const closeAnnotator = useCallback(() => {
+    setAnnotatorSource(null);
+    setAnnotatorStrokes([]);
+    annotatorDrawingRef.current = false;
+  }, []);
+
+  const pointInImageCoords = useCallback((event) => {
+    const surface = annotatorSurfaceRef.current;
+    if (!surface || !annotatorSource) return null;
+    const rect = surface.getBoundingClientRect();
+    const clientX = event.clientX ?? event.touches?.[0]?.clientX;
+    const clientY = event.clientY ?? event.touches?.[0]?.clientY;
+    if (clientX == null || clientY == null) return null;
+    const relX = (clientX - rect.left) / rect.width;
+    const relY = (clientY - rect.top) / rect.height;
+    return [
+      Math.max(0, Math.min(1, relX)) * (annotatorSource.naturalWidth || rect.width),
+      Math.max(0, Math.min(1, relY)) * (annotatorSource.naturalHeight || rect.height),
+    ];
+  }, [annotatorSource]);
+
+  const handleAnnotatorPointerDown = useCallback((event) => {
+    event.preventDefault();
+    const pt = pointInImageCoords(event);
+    if (!pt) return;
+    annotatorDrawingRef.current = true;
+    setAnnotatorStrokes((current) => [...current, { color: annotatorColor, points: [pt] }]);
+  }, [annotatorColor, pointInImageCoords]);
+
+  const handleAnnotatorPointerMove = useCallback((event) => {
+    if (!annotatorDrawingRef.current) return;
+    const pt = pointInImageCoords(event);
+    if (!pt) return;
+    setAnnotatorStrokes((current) => {
+      if (!current.length) return current;
+      const next = current.slice();
+      const last = next[next.length - 1];
+      next[next.length - 1] = { ...last, points: [...last.points, pt] };
+      return next;
+    });
+  }, [pointInImageCoords]);
+
+  const handleAnnotatorPointerUp = useCallback(() => {
+    annotatorDrawingRef.current = false;
+  }, []);
+
+  const handleAnnotatorUndo = useCallback(() => {
+    setAnnotatorStrokes((current) => current.slice(0, -1));
+  }, []);
+
+  const handleAnnotatorClear = useCallback(() => {
+    setAnnotatorStrokes([]);
+  }, []);
+
+  // Helper: ship an image card after running the vision describe pass so
+  // the AI agent can answer questions about the photo. Vision failures
+  // are non-fatal — the card still goes through, just without a summary.
+  const sendImageCardWithVision = useCallback(async ({ src, name, annotated }) => {
+    const baseCard = { type: 'image', src, name, annotated };
+    let description = null;
+    try {
+      setIsAnalyzingMedia(true);
+      const base64 = src.includes(',') ? src.split(',')[1] : src;
+      const mimeMatch = src.match(/^data:([^;]+);base64,/);
+      description = await requestImageDescription({
+        imageBase64: base64,
+        mimeType: mimeMatch ? mimeMatch[1] : 'image/jpeg',
+        context: 'Photo attached in the SVS Let\'s Talk Business chat.',
+      });
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('[chat-image] vision describe failed:', e?.message || e);
+    } finally {
+      setIsAnalyzingMedia(false);
+    }
+    sendCardMessage({
+      ...baseCard,
+      visualSummary: description?.summary || undefined,
+      visualObjects: description?.objects?.length ? description.objects : undefined,
+      visualText: description?.text || undefined,
+      visualScene: description?.scene || undefined,
+    });
+  }, [sendCardMessage]);
+
+  const handleAnnotatorSkipSend = useCallback(() => {
+    if (!annotatorSource) return;
+    const { dataUrl, name } = annotatorSource;
+    closeAnnotator();
+    sendImageCardWithVision({ src: dataUrl, name });
+  }, [annotatorSource, closeAnnotator, sendImageCardWithVision]);
+
+  const handleAnnotatorSend = useCallback(() => {
+    if (!annotatorSource) return;
+    if (!annotatorStrokes.length) {
+      handleAnnotatorSkipSend();
+      return;
+    }
+    const probe = new Image();
+    probe.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = annotatorSource.naturalWidth || probe.naturalWidth;
+      canvas.height = annotatorSource.naturalHeight || probe.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        handleAnnotatorSkipSend();
+        return;
+      }
+      ctx.drawImage(probe, 0, 0, canvas.width, canvas.height);
+      const strokeWidth = Math.max(3, Math.round(Math.min(canvas.width, canvas.height) * 0.008));
+      ctx.lineWidth = strokeWidth;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      annotatorStrokes.forEach((stroke) => {
+        if (!stroke.points?.length) return;
+        ctx.strokeStyle = stroke.color || '#ef4444';
+        ctx.beginPath();
+        stroke.points.forEach((pt, idx) => {
+          if (idx === 0) ctx.moveTo(pt[0], pt[1]);
+          else ctx.lineTo(pt[0], pt[1]);
+        });
+        ctx.stroke();
+      });
+      let outUrl = '';
+      try {
+        outUrl = canvas.toDataURL('image/jpeg', 0.85);
+      } catch (_) {
+        try { outUrl = canvas.toDataURL('image/png'); } catch (__) { outUrl = annotatorSource.dataUrl; }
+      }
+      const name = annotatorSource.name;
+      closeAnnotator();
+      sendImageCardWithVision({ src: outUrl, name, annotated: true });
+    };
+    probe.onerror = () => handleAnnotatorSkipSend();
+    probe.src = annotatorSource.dataUrl;
+  }, [annotatorSource, annotatorStrokes, closeAnnotator, handleAnnotatorSkipSend, sendImageCardWithVision]);
+
+
   // Derive deal status from the most recent deal-status card.
   const dealStatus = useMemo(() => {
     for (let i = activeMessages.length - 1; i >= 0; i -= 1) {
@@ -21975,14 +22447,107 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     }
   }, [sendCardMessage]);
 
-  const dealStatusMeta = {
+  const dealStatusMeta = useMemo(() => ({
     discussion: { label: 'Discussion', cls: 'bg-slate-100 text-slate-700' },
     negotiating: { label: 'Negotiating', cls: 'bg-amber-100 text-amber-800' },
     agreed: { label: 'Agreed', cls: 'bg-emerald-100 text-emerald-800' },
     paid: { label: 'Paid', cls: 'bg-cyan-100 text-cyan-800' },
     closed: { label: 'Closed', cls: 'bg-slate-200 text-slate-700' },
     cancelled: { label: 'Cancelled', cls: 'bg-rose-100 text-rose-700' },
-  };
+  }), []);
+
+  // --- Search inside thread ------------------------------------------
+  // Filters the active conversation by free-text query, looking at both
+  // plain message bodies and the readable form of every card (offers,
+  // payment requests, location coords, voice transcripts, etc.).
+  const filteredMessages = useMemo(() => {
+    const q = chatSearchQuery.trim().toLowerCase();
+    if (!q) return activeMessages;
+    return activeMessages.filter((message) => {
+      const card = parseCardBody(message.body);
+      const haystack = [
+        card ? cardToReadableText(message.body) : String(message.body || ''),
+        message.senderName || '',
+        message.senderEmail || '',
+      ].join(' ').toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [activeMessages, cardToReadableText, chatSearchQuery, parseCardBody]);
+
+  // --- Export conversation -------------------------------------------
+  // Builds a printable HTML document in a new tab and triggers the
+  // browser's native print dialog so the user can "Save as PDF" without
+  // any external library. Includes all cards rendered as readable text
+  // plus inline image previews so it stands up as proof of agreement.
+  const handleExportChatToPdf = useCallback(() => {
+    if (!activeThread) return;
+    const win = window.open('', '_blank');
+    if (!win) {
+      // eslint-disable-next-line no-alert
+      window.alert('Please allow pop-ups to export the chat to PDF.');
+      return;
+    }
+    const counterpartName = resolveCounterparty(activeThread)?.name || 'Contact';
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+    const rows = activeMessages.map((m) => {
+      const mine = normalizeEmail(m.senderEmail || '') === currentUserEmail;
+      const card = parseCardBody(m.body);
+      let body = '';
+      if (card) {
+        if (card.type === 'image' && card.src) {
+          body = `<div><img src="${esc(card.src)}" style="max-width:520px;border:1px solid #d6e6f5;border-radius:8px"/></div>`;
+        } else if (card.type === 'document') {
+          const kb = card.size ? `${Math.round(card.size / 1024)} KB` : '';
+          body = `<div>&#128206; Document: <strong>${esc(card.name || 'attachment')}</strong>${kb ? ` (${kb})` : ''}</div>`;
+        } else if (card.type === 'video') {
+          body = `<div>&#127909; Video message (${card.durationSec || 0}s)</div>`;
+        } else if (card.type === 'voice') {
+          body = `<div>&#127908; Voice note (${card.durationSec || 0}s)${card.transcript ? ` &mdash; &ldquo;${esc(card.transcript)}&rdquo;` : ''}</div>`;
+        } else if (card.type === 'offer') {
+          body = `<div>&#129309; <strong>Offer:</strong> R${esc(Number(card.amount).toLocaleString())}${card.note ? ` &mdash; ${esc(card.note)}` : ''}</div>`;
+        } else if (card.type === 'offer-response') {
+          body = `<div>${card.accepted ? '&#128077; Offer accepted' : '&#128078; Offer declined'}${card.amount ? ` &middot; R${esc(Number(card.amount).toLocaleString())}` : ''}</div>`;
+        } else if (card.type === 'payment-request') {
+          body = `<div>&#128179; <strong>Payment request:</strong> R${esc(Number(card.amount).toLocaleString())}${card.note ? ` &mdash; ${esc(card.note)}` : ''}</div>`;
+        } else if (card.type === 'location') {
+          body = `<div>&#128205; ${esc(card.label || 'Shared location')} &mdash; ${esc(card.lat)}, ${esc(card.lng)}</div>`;
+        } else if (card.type === 'deal-status') {
+          body = `<div>&#9989; Deal status: <strong>${esc(card.status)}</strong></div>`;
+        } else {
+          body = `<div>${esc(cardToReadableText(m.body))}</div>`;
+        }
+      } else {
+        body = `<div>${esc(m.body).replace(/\n/g, '<br>')}</div>`;
+      }
+      return `
+        <div style="margin:0 0 14px 0;padding:10px 14px;border-radius:12px;border:1px solid ${mine ? '#0f6674' : '#d6e6f5'};background:${mine ? '#0f6674' : '#ffffff'};color:${mine ? '#ffffff' : '#1f2937'};max-width:680px;${mine ? 'margin-left:auto' : ''}">
+          <div style="font-size:11px;font-weight:600;opacity:.85;margin-bottom:4px">${esc(m.senderName || m.senderEmail || '')} &middot; ${esc(new Date(m.createdAt || Date.now()).toLocaleString())}</div>
+          ${body}
+        </div>`;
+    }).join('');
+    const header = `
+      <h1 style="color:#0f6674;font-size:22px;margin:0 0 4px 0">Let&rsquo;s Talk Business &mdash; Conversation Export</h1>
+      <h2 style="color:#0f6674;font-size:13px;font-weight:600;margin:0 0 6px 0">With ${esc(counterpartName)} &middot; ${esc(activeThread.issueType || 'General Support')}${activeThread.orderReference ? ` &middot; ${esc(activeThread.orderReference)}` : ''}</h2>
+      <p style="color:#475569;font-size:12px;margin:0 0 18px 0">Exported by ${esc(currentUserName || currentUserEmail)} on ${esc(new Date().toLocaleString())} &middot; Current deal status: <strong>${esc(dealStatusMeta[dealStatus]?.label || dealStatus)}</strong></p>
+    `;
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>SVS Chat &mdash; ${esc(counterpartName)}</title>
+      <style>
+        body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f7fbff;color:#1f2937;padding:24px;margin:0}
+        .toolbar{margin:0 0 16px 0}
+        .toolbar button{padding:8px 14px;border:0;border-radius:6px;background:#0f6674;color:#fff;font-weight:600;cursor:pointer;font-size:13px}
+        @media print{body{background:#fff;padding:0}.toolbar{display:none}}
+      </style></head><body>
+      ${header}
+      <div class="toolbar"><button onclick="window.print()">Print / Save as PDF</button></div>
+      ${rows || '<p style="color:#64748b">No messages to export.</p>'}
+      <script>setTimeout(function(){try{window.print();}catch(e){}}, 700);</script>
+    </body></html>`;
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+  }, [activeMessages, activeThread, cardToReadableText, currentUserEmail, currentUserName, dealStatus, dealStatusMeta, parseCardBody, resolveCounterparty]);
 
   return (
     <PageFrame>
@@ -22212,12 +22777,75 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                     ) : null}
                     <button
                       type="button"
+                      onClick={() => setChatSearchOpen((v) => !v)}
+                      title="Search inside this conversation"
+                      className={`hidden sm:inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11px] font-bold transition ${chatSearchOpen ? 'border-[#0f6674] bg-[#e8f7fb] text-[#0f6674]' : 'border-[#d6e6f5] bg-white text-[#0f6674] hover:bg-[#e8f7fb]'}`}
+                    >
+                      <Search className="h-3.5 w-3.5" aria-hidden="true" />
+                      Search
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleExportChatToPdf}
+                      title="Export this conversation as PDF"
+                      className="hidden sm:inline-flex items-center gap-1 rounded-lg border border-[#d6e6f5] bg-white px-2.5 py-1.5 text-[11px] font-bold text-[#0f6674] transition hover:bg-[#e8f7fb]"
+                    >
+                      <Printer className="h-3.5 w-3.5" aria-hidden="true" />
+                      Export PDF
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setMobilePanel('contacts')}
                       className="rounded-lg border border-[#d6e6f5] bg-white px-2.5 py-1.5 text-[11px] font-bold text-[#0f6674] lg:hidden"
                     >
                       Contacts
                     </button>
                   </div>
+                  {/* Mobile-friendly action row + search */}
+                  <div className="mt-2 flex items-center gap-2 sm:hidden">
+                    <button
+                      type="button"
+                      onClick={() => setChatSearchOpen((v) => !v)}
+                      className={`inline-flex flex-1 items-center justify-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11px] font-bold transition ${chatSearchOpen ? 'border-[#0f6674] bg-[#e8f7fb] text-[#0f6674]' : 'border-[#d6e6f5] bg-white text-[#0f6674]'}`}
+                    >
+                      <Search className="h-3.5 w-3.5" aria-hidden="true" />
+                      Search
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleExportChatToPdf}
+                      className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-[#d6e6f5] bg-white px-2.5 py-1.5 text-[11px] font-bold text-[#0f6674]"
+                    >
+                      <Printer className="h-3.5 w-3.5" aria-hidden="true" />
+                      Export PDF
+                    </button>
+                  </div>
+                  {chatSearchOpen ? (
+                    <div className="mt-2 flex items-center gap-2 rounded-lg border border-[#d6e6f5] bg-[#f7fbff] px-2 py-1.5">
+                      <Search className="h-3.5 w-3.5 shrink-0 text-[#0f6674]" aria-hidden="true" />
+                      <input
+                        type="text"
+                        value={chatSearchQuery}
+                        onChange={(event) => setChatSearchQuery(event.target.value)}
+                        placeholder="Search messages, offers, transcripts..."
+                        autoFocus
+                        className="flex-1 min-w-0 border-0 bg-transparent text-sm text-slate-700 outline-none"
+                      />
+                      {chatSearchQuery ? (
+                        <button
+                          type="button"
+                          onClick={() => setChatSearchQuery('')}
+                          className="rounded-md border border-[#d6e6f5] bg-white px-1.5 py-0.5 text-[10px] font-bold text-slate-500 hover:text-[#0f6674]"
+                          title="Clear search"
+                        >
+                          Clear
+                        </button>
+                      ) : null}
+                      <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        {filteredMessages.length}/{activeMessages.length}
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="flex-1 space-y-3 overflow-y-auto bg-[#f7fbff] px-3 py-3 pb-24 sm:px-6 sm:py-4 sm:pb-6">
@@ -22235,7 +22863,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                       </div>
                     </div>
                   ) : null}
-                  {activeMessages.length ? activeMessages.map((message) => {
+                  {filteredMessages.length ? filteredMessages.map((message) => {
                     const mine = normalizeEmail(message.senderEmail || '') === currentUserEmail;
                     const card = parseCardBody(message.body);
                     return (
@@ -22325,6 +22953,57 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                                     className="mt-1 max-h-64 w-full rounded-lg border border-slate-200 object-cover"
                                     loading="lazy"
                                   />
+                                  {card.annotated ? (
+                                    <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${mine ? 'bg-white/20 text-cyan-50' : 'bg-amber-100 text-amber-800'}`}>
+                                      ✏️ Annotated
+                                    </span>
+                                  ) : null}
+                                  {card.visualSummary ? (
+                                    <p className={`mt-1 text-[11px] italic ${mine ? 'text-cyan-50' : 'text-slate-600'}`}>
+                                      <Sparkles className="mr-1 inline h-3 w-3" aria-hidden="true" />
+                                      AI: {card.visualSummary}
+                                    </p>
+                                  ) : null}
+                                </a>
+                              ) : null}
+                              {card.type === 'video' ? (
+                                <div className={`rounded-lg border p-1.5 ${mine ? 'border-cyan-200/40 bg-white/10' : 'border-[#d6e6f5] bg-[#f7fbff]'}`}>
+                                  {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                                  <video controls playsInline src={card.src} className="w-full max-h-72 rounded-md bg-black" />
+                                  <div className={`mt-1 flex items-center justify-between text-[11px] ${mine ? 'text-cyan-100' : 'text-slate-500'}`}>
+                                    <span className="inline-flex items-center gap-1 font-bold">
+                                      <Video className="h-3 w-3" aria-hidden="true" /> Video message
+                                    </span>
+                                    <span>{card.durationSec || 0}s</span>
+                                  </div>
+                                  {card.transcript ? (
+                                    <p className={`mt-1 text-[11px] italic ${mine ? 'text-cyan-50' : 'text-slate-600'}`}>
+                                      🎤 &ldquo;{card.transcript}&rdquo;
+                                    </p>
+                                  ) : null}
+                                  {card.visualSummary ? (
+                                    <p className={`mt-1 text-[11px] italic ${mine ? 'text-cyan-50' : 'text-slate-600'}`}>
+                                      <Sparkles className="mr-1 inline h-3 w-3" aria-hidden="true" />
+                                      AI: {card.visualSummary}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                              {card.type === 'document' ? (
+                                <a
+                                  href={card.src}
+                                  download={card.name || 'attachment'}
+                                  className={`flex items-center gap-2 rounded-lg border p-2.5 transition hover:opacity-90 ${mine ? 'border-cyan-200/40 bg-white/10 text-white' : 'border-[#d6e6f5] bg-[#f7fbff] text-[#0f6674]'}`}
+                                >
+                                  <FileText className="h-7 w-7 flex-none" aria-hidden="true" />
+                                  <span className="min-w-0 flex-1">
+                                    <p className="truncate text-xs font-bold">{card.name || 'Document'}</p>
+                                    <p className={`text-[11px] ${mine ? 'text-cyan-100' : 'text-slate-500'}`}>
+                                      {card.size ? `${Math.round(card.size / 1024)} KB` : ''}
+                                      {card.mimeType ? ` · ${String(card.mimeType).split('/').pop().toUpperCase()}` : ''}
+                                    </p>
+                                  </span>
+                                  <Download className="h-4 w-4 flex-none" aria-hidden="true" />
                                 </a>
                               ) : null}
                               {card.type === 'voice' ? (
@@ -22361,7 +23040,9 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                     );
                   }) : (
                     <div className="rounded-xl border border-dashed border-[#c8dff0] bg-white px-4 py-6 text-center text-sm text-slate-500">
-                      Conversation created. Send your first message.
+                      {chatSearchQuery.trim() && activeMessages.length
+                        ? `No messages match "${chatSearchQuery.trim()}". Try a different word, or clear the search.`
+                        : 'Conversation created. Send your first message.'}
                     </div>
                   )}
                   {isAgentReplying ? (
@@ -22375,6 +23056,12 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                 </div>
 
                 <div className="sticky bottom-0 border-t border-[#e5eef8] bg-white/95 px-3 py-3 backdrop-blur-sm sm:static sm:bg-white sm:px-6 sm:py-4">
+                  {isAnalyzingMedia ? (
+                    <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-bold text-amber-800">
+                      <Sparkles className="h-3 w-3 animate-pulse" aria-hidden="true" />
+                      AI is analyzing your media so the agent can understand it...
+                    </div>
+                  ) : null}
                   {!isAgentThread ? (
                     /* Quick reply chips — peer chats only */
                     <div className="mb-2 flex flex-wrap gap-1.5">
@@ -22433,6 +23120,38 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                         Voice note
                       </button>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => videoInputRef.current?.click()}
+                      title="Attach a video from your device (max 5 MB)"
+                      className="inline-flex items-center gap-1 rounded-md border border-[#d6e6f5] bg-white px-2 py-1 text-[11px] font-bold text-[#0f6674] transition hover:bg-[#e8f7fb]"
+                    >
+                      <Video className="h-3.5 w-3.5" aria-hidden="true" />
+                      Video
+                    </button>
+                    <input
+                      ref={videoInputRef}
+                      type="file"
+                      accept="video/*"
+                      onChange={handleVideoAttachmentChange}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => documentInputRef.current?.click()}
+                      title="Attach a document (PDF, DOC, etc.)"
+                      className="inline-flex items-center gap-1 rounded-md border border-[#d6e6f5] bg-white px-2 py-1 text-[11px] font-bold text-[#0f6674] transition hover:bg-[#e8f7fb]"
+                    >
+                      <FileText className="h-3.5 w-3.5" aria-hidden="true" />
+                      Document
+                    </button>
+                    <input
+                      ref={documentInputRef}
+                      type="file"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt,.zip,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/csv,text/plain,application/zip"
+                      onChange={handleDocumentAttachmentChange}
+                      className="hidden"
+                    />
                     {!isAgentThread ? (
                       <>
                         <button
@@ -22628,6 +23347,195 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
           </div>
         </div>
       </section>
+
+      {/* ── Video playback review modal ──
+          After the user picks a video file it lands here so they can
+          play it back and decide to Send, swap for another clip, or
+          discard. Only when they hit Send do we run the AI transcript
+          + vision passes. */}
+      {videoPreview ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6">
+          <div className="flex w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-[#0f6674]">🎥 Review your video</p>
+                <p className="truncate text-[11px] text-slate-500">
+                  Play it back, then choose to send it, swap it for another file, or discard. Nothing is sent until you tap Send.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleDiscardVideoPreview}
+                className="ml-2 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                aria-label="Discard recording"
+              >
+                Cancel
+              </button>
+            </div>
+
+            <div className="bg-black p-2 sm:p-3">
+              {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+              <video
+                controls
+                autoPlay
+                playsInline
+                src={videoPreview.dataUrl}
+                className="block w-full max-h-[55vh] rounded-md bg-black"
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-2 border-t border-slate-200 bg-white px-4 py-2 text-[11px] font-semibold text-slate-500">
+              <span>
+                Duration: <strong className="text-slate-700">{videoPreview.durationSec}s</strong>
+              </span>
+              <span>
+                Size: <strong className="text-slate-700">{Math.max(1, Math.round(videoPreview.sizeBytes / 1024))} KB</strong>
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-white px-4 py-3">
+              <button
+                type="button"
+                onClick={handleDiscardVideoPreview}
+                className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
+              >
+                Discard
+              </button>
+              <button
+                type="button"
+                onClick={handleReplaceVideoAttachment}
+                className="inline-flex items-center gap-1 rounded-md border border-[#d6e6f5] bg-white px-3 py-1.5 text-xs font-bold text-[#0f6674] hover:bg-[#e8f7fb]"
+              >
+                <Video className="h-3.5 w-3.5" aria-hidden="true" />
+                Choose another video
+              </button>
+              <button
+                type="button"
+                onClick={handleSendVideoPreview}
+                disabled={isAnalyzingMedia}
+                className="rounded-md bg-[#0f6674] px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-60"
+              >
+                {isAnalyzingMedia ? 'Sending...' : 'Send video'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* ── Image annotator modal ── */}
+      {annotatorSource ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6">
+          <div className="flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-[#0f6674]">✏️ Mark up your photo</p>
+                <p className="truncate text-[11px] text-slate-500">Draw on the image to highlight what you want to point out, then send.</p>
+              </div>
+              <button
+                type="button"
+                onClick={closeAnnotator}
+                className="ml-2 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-600 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Color</span>
+              {['#ef4444', '#f59e0b', '#10b981', '#0f6674', '#ffffff'].map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => setAnnotatorColor(color)}
+                  aria-label={`Use ${color}`}
+                  className={`h-6 w-6 rounded-full border-2 transition ${annotatorColor === color ? 'border-[#0f6674] ring-2 ring-[#0f6674]/30' : 'border-slate-300'}`}
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+              <div className="ml-auto flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={handleAnnotatorUndo}
+                  disabled={!annotatorStrokes.length}
+                  className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] font-bold text-slate-700 disabled:opacity-40"
+                >
+                  Undo
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAnnotatorClear}
+                  disabled={!annotatorStrokes.length}
+                  className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] font-bold text-slate-700 disabled:opacity-40"
+                >
+                  <Eraser className="h-3.5 w-3.5" aria-hidden="true" />
+                  Clear
+                </button>
+              </div>
+            </div>
+
+            <div className="flex max-h-[60vh] items-center justify-center overflow-auto bg-slate-900 p-2">
+              <div
+                ref={annotatorSurfaceRef}
+                onMouseDown={handleAnnotatorPointerDown}
+                onMouseMove={handleAnnotatorPointerMove}
+                onMouseUp={handleAnnotatorPointerUp}
+                onMouseLeave={handleAnnotatorPointerUp}
+                onTouchStart={handleAnnotatorPointerDown}
+                onTouchMove={handleAnnotatorPointerMove}
+                onTouchEnd={handleAnnotatorPointerUp}
+                className="relative inline-block max-w-full select-none touch-none"
+                style={{ cursor: 'crosshair' }}
+              >
+                <img
+                  src={annotatorSource.dataUrl}
+                  alt="Annotate"
+                  draggable={false}
+                  className="block max-h-[55vh] max-w-full rounded-md"
+                />
+                <svg
+                  viewBox={`0 0 ${annotatorSource.naturalWidth || 800} ${annotatorSource.naturalHeight || 600}`}
+                  preserveAspectRatio="none"
+                  className="pointer-events-none absolute inset-0 h-full w-full"
+                >
+                  {annotatorStrokes.map((stroke, idx) => {
+                    if (!stroke.points?.length) return null;
+                    const d = stroke.points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p[0]} ${p[1]}`).join(' ');
+                    const sw = Math.max(3, Math.round(Math.min(annotatorSource.naturalWidth || 800, annotatorSource.naturalHeight || 600) * 0.008));
+                    return (
+                      <path
+                        key={`stroke-${idx}`}
+                        d={d}
+                        stroke={stroke.color || '#ef4444'}
+                        strokeWidth={sw}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        fill="none"
+                      />
+                    );
+                  })}
+                </svg>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-white px-4 py-3">
+              <button
+                type="button"
+                onClick={handleAnnotatorSkipSend}
+                className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
+              >
+                Skip &amp; send original
+              </button>
+              <button
+                type="button"
+                onClick={handleAnnotatorSend}
+                className="rounded-md bg-[#0f6674] px-3 py-1.5 text-xs font-bold text-white hover:opacity-90"
+              >
+                Send {annotatorStrokes.length ? 'annotated' : ''} photo
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </PageFrame>
   );
 };
@@ -27053,28 +27961,6 @@ const SiteFooter = () => {
             </div>
           </div>
         </div>
-
-        {/* ── Unified social media row ── */}
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5 border-t border-white/10 pt-3 sm:mt-10 sm:gap-4 sm:pt-6">
-          <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:h-11 sm:w-11">
-            <svg className="h-3.5 w-3.5 sm:h-[22px] sm:w-[22px]" fill="currentColor" viewBox="0 0 24 24"><path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" /></svg>
-          </a>
-          <a href="https://x.com" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)" className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:h-11 sm:w-11">
-            <svg className="h-3.5 w-3.5 sm:h-[22px] sm:w-[22px]" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
-          </a>
-          <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:h-11 sm:w-11">
-            <svg className="h-3.5 w-3.5 sm:h-[22px] sm:w-[22px]" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
-          </a>
-          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:h-11 sm:w-11">
-            <svg className="h-3.5 w-3.5 sm:h-[22px] sm:w-[22px]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" /></svg>
-          </a>
-          <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:h-11 sm:w-11">
-            <svg className="h-3.5 w-3.5 sm:h-[22px] sm:w-[22px]" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" /></svg>
-          </a>
-          <a href="https://wa.me" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:h-11 sm:w-11">
-            <svg className="h-3.5 w-3.5 sm:h-[22px] sm:w-[22px]" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
-          </a>
-        </div>
       </div>
 
       {/* ── Bottom Bar ── */}
@@ -27184,8 +28070,12 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/careers" element={<SimpleContentPage title={t('footer.careers')} description={t('simplePages.careers')} />} />
     <Route path="/help" element={<SimpleContentPage title={t('footer.help')} description={t('simplePages.help')} />} />
     <Route path="/contact" element={<SimpleContentPage title={t('footer.contact')} description={t('simplePages.contact')} />} />
-    <Route path="/terms" element={<SimpleContentPage title={t('footer.terms')} description={t('simplePages.terms')} />} />
-    <Route path="/privacy" element={<SimpleContentPage title={t('footer.privacy')} description={t('simplePages.privacy')} />} />
+    <Route path="/terms" element={<TermsOfServicePage />} />
+    <Route path="/privacy" element={<PrivacyPolicyPage />} />
+    <Route path="/refunds" element={<RefundPolicyPage />} />
+    <Route path="/refund-policy" element={<Navigate to="/refunds" replace />} />
+    <Route path="/cookies" element={<CookiePolicyPage />} />
+    <Route path="/cookie-policy" element={<Navigate to="/cookies" replace />} />
 
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>

@@ -1,3 +1,11 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Allow: /
+Disallow: /api/
+Disallow: /seller/dashboard
+Disallow: /seller/orders
+Disallow: /orders
+Disallow: /checkout
+Disallow: /reset-password
+
+Sitemap: https://svs-ecommerce.com/sitemap.xml
