@@ -21320,6 +21320,8 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   const [issueType, setIssueType] = useState(prefillIssueTypeFromState || 'General Support');
   const [recipientEmail, setRecipientEmail] = useState(prefillRecipientEmailFromState || SUPPORT_ADMIN_EMAIL);
   const [recipientSearchQuery, setRecipientSearchQuery] = useState(prefillRecipientNameFromState || prefillRecipientEmailFromState || '');
+  const [remoteRecipientMatches, setRemoteRecipientMatches] = useState([]);
+  const [isSearchingRecipients, setIsSearchingRecipients] = useState(false);
   const [mobilePanel, setMobilePanel] = useState('contacts');
   const [selectedOrderId, setSelectedOrderId] = useState(prefillOrderIdFromState);
   const [isRemoteChatEnabled, setIsRemoteChatEnabled] = useState(false);
@@ -21599,6 +21601,112 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     })).filter((entry) => entry.id);
   }, [orders]);
 
+  // Debounced Supabase-backed contact discovery. Lets users start a chat with
+  // anyone on the platform (sellers, buyers, agents) — not only people they've
+  // already transacted with.
+  useEffect(() => {
+    const rawTerm = String(recipientSearchQuery || '').trim();
+    if (rawTerm.length < 2) {
+      setRemoteRecipientMatches([]);
+      setIsSearchingRecipients(false);
+      return undefined;
+    }
+    if (!hasSupabaseEnv || !supabase) {
+      setRemoteRecipientMatches([]);
+      setIsSearchingRecipients(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setIsSearchingRecipients(true);
+
+    const handle = setTimeout(async () => {
+      // Escape PostgREST ILIKE wildcards/special chars
+      const safeTerm = rawTerm.replace(/[\\%_,]/g, (ch) => `\\${ch}`);
+      const pattern = `%${safeTerm}%`;
+      try {
+        const [usersRes, sellersRes, listingsRes] = await Promise.all([
+          supabase
+            .from('account_users')
+            .select('full_name,email_address')
+            .or(`full_name.ilike.${pattern},email_address.ilike.${pattern}`)
+            .limit(15),
+          supabase
+            .from('seller_profiles')
+            .select('user_email,business_name,legal_full_name')
+            .or(`business_name.ilike.${pattern},user_email.ilike.${pattern},legal_full_name.ilike.${pattern}`)
+            .limit(15),
+          supabase
+            .from('marketplace_items')
+            .select('seller_email,seller_name')
+            .or(`seller_name.ilike.${pattern},seller_email.ilike.${pattern}`)
+            .limit(20),
+        ]);
+
+        if (cancelled) return;
+
+        const sellerEmailSet = new Set();
+        (sellersRes.data || []).forEach((row) => {
+          const email = normalizeEmail(row?.user_email);
+          if (email) sellerEmailSet.add(email);
+        });
+        (listingsRes.data || []).forEach((row) => {
+          const email = normalizeEmail(row?.seller_email);
+          if (email) sellerEmailSet.add(email);
+        });
+
+        const merged = new Map();
+        const push = (email, name, role) => {
+          const normalized = normalizeEmail(email);
+          if (!normalized) return;
+          if (normalized === currentUserEmail) return;
+          const existing = merged.get(normalized);
+          // Prefer named entries over bare email, prefer seller role over generic
+          if (existing) {
+            if (!existing.name && name) existing.name = String(name);
+            if (role === 'seller' && existing.role !== 'seller') existing.role = 'seller';
+            return;
+          }
+          merged.set(normalized, {
+            email: normalized,
+            name: String(name || normalized),
+            role,
+          });
+        };
+
+        (sellersRes.data || []).forEach((row) => {
+          push(row?.user_email, row?.business_name || row?.legal_full_name, 'seller');
+        });
+        (listingsRes.data || []).forEach((row) => {
+          push(row?.seller_email, row?.seller_name, 'seller');
+        });
+        (usersRes.data || []).forEach((row) => {
+          const email = normalizeEmail(row?.email_address);
+          const role = sellerEmailSet.has(email) ? 'seller' : 'client';
+          push(row?.email_address, row?.full_name, role);
+        });
+
+        setRemoteRecipientMatches(Array.from(merged.values()));
+      } catch (error) {
+        if (!cancelled) {
+          // Soft-fail: search still works against local contacts
+          // eslint-disable-next-line no-console
+          console.warn('Contact search failed:', error);
+          setRemoteRecipientMatches([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsSearchingRecipients(false);
+        }
+      }
+    }, 280);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [recipientSearchQuery, currentUserEmail]);
+
   const recipientOptions = useMemo(() => {
     const optionMap = new Map();
     const registerOption = (email, name, role) => {
@@ -21677,10 +21785,16 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       }
     }
 
+    // Fold in any remote matches discovered by the contact search box so the
+    // user can converse with anyone on the platform, not just past contacts.
+    remoteRecipientMatches.forEach((match) => {
+      registerOption(match.email, match.name, match.role);
+    });
+
     return Array.from(optionMap.values()).sort((left, right) => (
       left.role.localeCompare(right.role) || left.name.localeCompare(right.name)
     ));
-  }, [currentRole, currentUserEmail, orders, prefillRecipientEmailFromState, prefillRecipientNameFromState, prefillRecipientRoleFromState]);
+  }, [currentRole, currentUserEmail, orders, prefillRecipientEmailFromState, prefillRecipientNameFromState, prefillRecipientRoleFromState, remoteRecipientMatches]);
 
   useEffect(() => {
     if (!recipientOptions.length) {
@@ -23025,6 +23139,13 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                     placeholder="Search by name, email, role"
                     className="mt-1 w-full rounded-lg border border-[#d6e6f5] bg-white px-3 py-2 text-sm font-medium text-slate-700"
                   />
+                  <span className="mt-1 block text-[10px] font-medium text-slate-400">
+                    {isSearchingRecipients
+                      ? 'Searching the directory...'
+                      : recipientSearchQuery.trim().length >= 2
+                        ? 'Tip: search across all buyers, sellers, and agents.'
+                        : 'Type a name, email, or business to find anyone on the platform.'}
+                  </span>
                 </label>
 
                 <div className="mt-3">
@@ -23069,9 +23190,35 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                       ))}
                     </div>
                   ) : (
-                    <p className="mt-2 text-[11px] font-semibold text-amber-700">
-                      No contacts found for "{recipientSearchQuery}".
-                    </p>
+                    <div className="mt-2 space-y-2 rounded-xl border border-dashed border-[#d6e6f5] bg-white p-3">
+                      <p className="text-[11px] font-semibold text-amber-700">
+                        {isSearchingRecipients
+                          ? 'Searching...'
+                          : `No contacts found for "${recipientSearchQuery}".`}
+                      </p>
+                      {!isSearchingRecipients && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientSearchQuery.trim()) ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const directEmail = normalizeEmail(recipientSearchQuery.trim());
+                            if (!directEmail || directEmail === currentUserEmail) return;
+                            // Inject this email as a recognised remote match so it flows through grouping/createThread
+                            setRemoteRecipientMatches((previous) => {
+                              if (previous.some((entry) => entry.email === directEmail)) return previous;
+                              return [
+                                ...previous,
+                                { email: directEmail, name: directEmail, role: 'client' },
+                              ];
+                            });
+                            setRecipientEmail(directEmail);
+                            createThread(directEmail);
+                          }}
+                          className="w-full rounded-lg bg-[#0f6674] px-3 py-2 text-xs font-bold text-white"
+                        >
+                          Start chat with {recipientSearchQuery.trim()}
+                        </button>
+                      ) : null}
+                    </div>
                   )}
                 </div>
 
