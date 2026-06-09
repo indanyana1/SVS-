@@ -22555,7 +22555,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
         <div className="border-b border-[#e5eef8] bg-gradient-to-r from-[#0f6674] via-[#0f889a] to-[#0f6674] px-4 py-4 text-white sm:px-7 sm:py-5">
           <h1 className="text-2xl font-black sm:text-3xl">Let&rsquo;s Talk Business</h1>
           <p className="mt-1 text-sm text-cyan-50">
-            Chat, negotiate, share photos &amp; location, send offers, request payment, and close the deal &mdash; all in one place. No need to switch to WhatsApp or other social platforms.
+            Chat, negotiate, share photos &amp; location, send offers, request payment, and close the deal &mdash; all in one place. No need to switch to other social platforms.
           </p>
           {selectedRecipientName ? (
             <p className="mt-2 inline-flex items-center rounded-full border border-cyan-100/30 bg-white/15 px-3 py-1 text-xs font-semibold text-cyan-50">
