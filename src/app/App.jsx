@@ -21814,11 +21814,49 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   ];
 
   useEffect(() => {
-    window.localStorage.setItem(getUserScopedStorageKey(SUPPORT_CHAT_THREADS_STORAGE_KEY, currentUserEmail), JSON.stringify(threads));
+    try {
+      window.localStorage.setItem(getUserScopedStorageKey(SUPPORT_CHAT_THREADS_STORAGE_KEY, currentUserEmail), JSON.stringify(threads));
+    } catch (storageError) {
+      // eslint-disable-next-line no-console
+      console.warn('[support-chat] could not persist threads cache:', storageError?.message || storageError);
+    }
   }, [currentUserEmail, threads]);
 
   useEffect(() => {
-    window.localStorage.setItem(getUserScopedStorageKey(SUPPORT_CHAT_MESSAGES_STORAGE_KEY, currentUserEmail), JSON.stringify(messages));
+    // localStorage has a ~5 MB per-origin cap. Voice notes / videos / photos
+    // are persisted as base64 data URLs (~1.5 MB each), so a busy thread
+    // hits the quota fast. We:
+    //   1. Strip data: URLs from any card bodies before stringifying so the
+    //      *index* of the conversation is always cached.
+    //   2. try/catch the setItem so a quota overflow can never escape into
+    //      a React render and trip the global ErrorBoundary.
+    // The full messages (with playable audio) remain in React state and on
+    // Supabase — the cache is just for fast reload while offline.
+    try {
+      const slimMessages = messages.map((message) => {
+        const raw = String(message.body || '');
+        if (!raw.startsWith(SVS_CARD_PREFIX)) return message;
+        try {
+          const card = JSON.parse(raw.slice(SVS_CARD_PREFIX.length));
+          if (card && typeof card === 'object' && typeof card.src === 'string' && card.src.startsWith('data:')) {
+            const slimCard = { ...card, src: '', srcStripped: true };
+            return { ...message, body: `${SVS_CARD_PREFIX}${JSON.stringify(slimCard)}` };
+          }
+        } catch (_) { /* keep original body */ }
+        return message;
+      });
+      window.localStorage.setItem(
+        getUserScopedStorageKey(SUPPORT_CHAT_MESSAGES_STORAGE_KEY, currentUserEmail),
+        JSON.stringify(slimMessages),
+      );
+    } catch (storageError) {
+      // Quota exceeded or storage disabled — drop the local cache rather than crash.
+      try {
+        window.localStorage.removeItem(getUserScopedStorageKey(SUPPORT_CHAT_MESSAGES_STORAGE_KEY, currentUserEmail));
+      } catch (_) { /* ignore */ }
+      // eslint-disable-next-line no-console
+      console.warn('[support-chat] could not persist message cache:', storageError?.message || storageError);
+    }
   }, [currentUserEmail, messages]);
 
   const loadRemoteChat = useCallback(async () => {
@@ -23922,8 +23960,14 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                                 <div className={`rounded-lg border p-2 ${mine ? 'border-cyan-200/40 bg-white/10' : 'border-[#d6e6f5] bg-[#f7fbff]'}`}>
                                   <div className="flex items-center gap-2">
                                     <Mic className={`h-4 w-4 flex-none ${mine ? 'text-cyan-100' : 'text-[#0f6674]'}`} aria-hidden="true" />
-                                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                                    <audio controls src={card.src} className="h-9 flex-1 min-w-0" />
+                                    {card.src ? (
+                                      // eslint-disable-next-line jsx-a11y/media-has-caption
+                                      <audio controls src={card.src} className="h-9 flex-1 min-w-0" />
+                                    ) : (
+                                      <span className={`flex-1 text-[11px] italic ${mine ? 'text-cyan-100' : 'text-slate-500'}`}>
+                                        Audio not cached — refresh to fetch from server.
+                                      </span>
+                                    )}
                                     <span className={`shrink-0 text-[11px] font-bold ${mine ? 'text-cyan-100' : 'text-slate-500'}`}>
                                       {card.durationSec || 0}s
                                     </span>
