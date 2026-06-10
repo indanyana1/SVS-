@@ -63,6 +63,7 @@ import {
   Copy,
   Mail,
   Send,
+  Reply,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -21632,6 +21633,137 @@ const BettingTicketTrackingPage = ({ orders }) => {
   );
 };
 
+// Inline reply prefix — wraps a normal text/card message body with a tiny
+// JSON header so we don't need a new column on `support_chat_messages`.
+//   Format: `[svs-reply]<json>\n<original body>`
+// `<json>` carries `{ id, senderName, snippet }` describing the message
+// being quoted. Strip it with `extractReplyMeta` before any card parsing.
+const REPLY_PREFIX = '[svs-reply]';
+const extractReplyMeta = (rawBody) => {
+  const raw = String(rawBody || '');
+  if (!raw.startsWith(REPLY_PREFIX)) return { replyTo: null, body: raw };
+  const newlineIdx = raw.indexOf('\n');
+  if (newlineIdx === -1) return { replyTo: null, body: raw };
+  try {
+    const replyTo = JSON.parse(raw.slice(REPLY_PREFIX.length, newlineIdx));
+    if (replyTo && typeof replyTo === 'object') {
+      return { replyTo, body: raw.slice(newlineIdx + 1) };
+    }
+  } catch (_) { /* malformed reply header — fall through */ }
+  return { replyTo: null, body: raw };
+};
+const buildBodyWithReply = (replyTo, innerBody) => {
+  if (!replyTo) return String(innerBody || '');
+  return `${REPLY_PREFIX}${JSON.stringify(replyTo)}\n${String(innerBody || '')}`;
+};
+
+// Swipe-left-to-reply wrapper. On touch devices the user drags any
+// message bubble to the left; once the drag passes the threshold a
+// reply icon snaps into focus and `onReply` fires on release. On desktop
+// the gesture is a no-op (mouse users get the hover Reply button on the
+// bubble itself).
+const SwipeableMessage = ({ onReply, children }) => {
+  const [dx, setDx] = useState(0);
+  const startXRef = useRef(null);
+  const startYRef = useRef(null);
+  const lockedAxisRef = useRef(null);
+  const handleTouchStart = (event) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+    startXRef.current = touch.clientX;
+    startYRef.current = touch.clientY;
+    lockedAxisRef.current = null;
+    setDx(0);
+  };
+  const handleTouchMove = (event) => {
+    if (startXRef.current == null) return;
+    const touch = event.touches[0];
+    if (!touch) return;
+    const deltaX = touch.clientX - startXRef.current;
+    const deltaY = touch.clientY - startYRef.current;
+    if (lockedAxisRef.current == null) {
+      if (Math.abs(deltaY) > 8 && Math.abs(deltaY) > Math.abs(deltaX)) {
+        lockedAxisRef.current = 'v';
+        return;
+      }
+      if (Math.abs(deltaX) > 8) {
+        lockedAxisRef.current = 'h';
+      } else {
+        return;
+      }
+    }
+    if (lockedAxisRef.current !== 'h') return;
+    // Only allow a leftward drag (negative dx). Clamp to -100px so the
+    // bubble can't be pulled off-screen.
+    const clamped = Math.max(-100, Math.min(0, deltaX));
+    setDx(clamped);
+  };
+  const handleTouchEnd = () => {
+    if (lockedAxisRef.current === 'h' && dx <= -60) {
+      onReply?.();
+    }
+    setDx(0);
+    startXRef.current = null;
+    startYRef.current = null;
+    lockedAxisRef.current = null;
+  };
+  const triggered = dx <= -60;
+  const opacity = Math.min(1, Math.abs(dx) / 60);
+  return (
+    <div
+      className="relative"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
+    >
+      <div
+        className="pointer-events-none absolute inset-y-0 right-2 flex items-center"
+        style={{ opacity }}
+        aria-hidden="true"
+      >
+        <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#0f6674]/15 text-[#0f6674] transition-transform ${triggered ? 'scale-125' : ''}`}>
+          <Reply className="h-4 w-4" />
+        </span>
+      </div>
+      <div style={{ transform: `translateX(${dx}px)`, transition: dx === 0 ? 'transform 0.18s ease-out' : 'none' }}>
+        {children}
+      </div>
+    </div>
+  );
+};
+
+// Build a short, single-line preview of any chat message — used as the
+// `snippet` on a reply quote (and shown in the reply preview chip above
+// the textarea). Strips the heavy `data:` URLs from media cards.
+const buildReplySnippetFromBody = (rawBody) => {
+  const { body: innerBody } = extractReplyMeta(rawBody);
+  if (innerBody.startsWith(SVS_CARD_PREFIX_FALLBACK)) {
+    try {
+      const card = JSON.parse(innerBody.slice(SVS_CARD_PREFIX_FALLBACK.length));
+      if (card && typeof card === 'object' && card.type) {
+        const map = {
+          offer: `\uD83E\uDD1D Offer R${card.amount || '?'}`,
+          'offer-response': card.accepted ? '\uD83D\uDC4D Offer accepted' : '\uD83D\uDC4E Offer declined',
+          'payment-request': `\uD83D\uDCB3 Payment request R${card.amount || '?'}`,
+          location: `\uD83D\uDCCD ${card.label || 'Shared location'}`,
+          image: '\uD83D\uDDBC\uFE0F Photo',
+          voice: `\uD83C\uDFA4 Voice note (${card.durationSec || 0}s)`,
+          video: `\uD83C\uDFA5 Video (${card.durationSec || 0}s)`,
+          document: `\uD83D\uDCCE ${card.name || 'Document'}`,
+          'deal-status': `\u2705 Deal status: ${card.status || ''}`,
+        };
+        return map[card.type] || 'Message card';
+      }
+    } catch (_) { /* fall through to text */ }
+  }
+  const text = String(innerBody || '').replace(/\s+/g, ' ').trim();
+  return text.length > 80 ? `${text.slice(0, 77)}\u2026` : (text || 'Message');
+};
+// Mirrors `SVS_CARD_PREFIX` defined below — kept at module scope so the
+// helper above can run without entering the React component.
+const SVS_CARD_PREFIX_FALLBACK = '[svs-card]';
+
 const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -21696,6 +21828,22 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   const [chatSearchOpen, setChatSearchOpen] = useState(false);
   const [chatSearchQuery, setChatSearchQuery] = useState('');
 
+  // Quote-reply state. When the user swipes left on a bubble (or clicks
+  // the desktop "Reply" hover button) we stash a small `{ id, senderName,
+  // snippet }` object here. The next message they send (text or card)
+  // will be wrapped with the reply header so the recipient sees a
+  // quoted-reply chip above the new message.
+  const [replyingTo, setReplyingTo] = useState(null);
+
+  // Auto-scroll plumbing. `messagesEndRef` sits at the bottom of the
+  // conversation list so we can pin the view to the latest bubble when:
+  //   - the user opens / switches a thread
+  //   - a new message arrives (sent locally OR pushed from realtime)
+  // `draftTextareaRef` is used to focus the input + scroll it into view
+  // when a reply is staged via swipe / hover button.
+  const messagesEndRef = useRef(null);
+  const draftTextareaRef = useRef(null);
+
   // Video attachments — users pick an existing video file from their
   // device (mobile camera roll, desktop file picker, etc.). Selected
   // clip lands in `videoPreview` so they can play it back and choose to
@@ -21717,7 +21865,9 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   const annotatorDrawingRef = useRef(false);
 
   const parseCardBody = useCallback((body) => {
-    const raw = String(body || '');
+    // Strip any `[svs-reply]` header first so a reply to a card still
+    // surfaces the underlying card to every existing caller.
+    const raw = extractReplyMeta(body).body;
     if (!raw.startsWith(SVS_CARD_PREFIX)) return null;
     try {
       const json = raw.slice(SVS_CARD_PREFIX.length);
@@ -21737,8 +21887,9 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   // English description so the AI agent can understand offers, payment
   // requests, location shares, photos, voice notes, status changes, etc.
   const cardToReadableText = useCallback((body) => {
-    const card = parseCardBody(body);
-    if (!card) return String(body || '');
+    const inner = extractReplyMeta(body).body;
+    const card = parseCardBody(inner);
+    if (!card) return String(inner || '');
     switch (card.type) {
       case 'offer':
         return `[Offer card] The user is offering ${card.currency || 'ZAR'} ${Number(card.amount).toLocaleString()}${card.note ? `. Note: ${card.note}` : '.'}`;
@@ -21835,12 +21986,18 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     try {
       const slimMessages = messages.map((message) => {
         const raw = String(message.body || '');
-        if (!raw.startsWith(SVS_CARD_PREFIX)) return message;
+        const meta = extractReplyMeta(raw);
+        const innerBody = meta.body;
+        if (!innerBody.startsWith(SVS_CARD_PREFIX)) return message;
         try {
-          const card = JSON.parse(raw.slice(SVS_CARD_PREFIX.length));
+          const card = JSON.parse(innerBody.slice(SVS_CARD_PREFIX.length));
           if (card && typeof card === 'object' && typeof card.src === 'string' && card.src.startsWith('data:')) {
             const slimCard = { ...card, src: '', srcStripped: true };
-            return { ...message, body: `${SVS_CARD_PREFIX}${JSON.stringify(slimCard)}` };
+            const slimInner = `${SVS_CARD_PREFIX}${JSON.stringify(slimCard)}`;
+            const slimBody = meta.replyTo
+              ? `${REPLY_PREFIX}${JSON.stringify(meta.replyTo)}\n${slimInner}`
+              : slimInner;
+            return { ...message, body: slimBody };
           }
         } catch (_) { /* keep original body */ }
         return message;
@@ -22491,6 +22648,43 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       .sort((left, right) => Date.parse(left.createdAt || '') - Date.parse(right.createdAt || ''));
   }, [activeThread, messages]);
 
+  // Pin the scroll position to the most recent bubble when the active
+  // thread changes (opening someone's chat) or a new message lands.
+  // Uses two RAFs so the scroll happens after the new bubble has been
+  // committed AND laid out — without this, the list lands one message
+  // short on slower devices.
+  useEffect(() => {
+    const target = messagesEndRef.current;
+    if (!target) return;
+    // First switch into a thread → jump instantly. Subsequent updates
+    // (new incoming / outgoing message) → smooth scroll for polish.
+    const behavior = activeMessages.length <= 1 ? 'auto' : 'smooth';
+    const raf1 = window.requestAnimationFrame(() => {
+      const raf2 = window.requestAnimationFrame(() => {
+        try {
+          target.scrollIntoView({ behavior, block: 'end' });
+        } catch (_) { /* older browsers */ }
+      });
+      // Stash the inner RAF id so we can cancel on unmount.
+      target.dataset.raf = String(raf2);
+    });
+    return () => {
+      window.cancelAnimationFrame(raf1);
+      const innerId = Number(target.dataset.raf || 0);
+      if (innerId) window.cancelAnimationFrame(innerId);
+    };
+  }, [activeMessages.length, selectedThreadId]);
+
+  // When a reply is staged (swipe-left or hover-Reply), pull the
+  // textarea into view and focus it so the user can immediately type.
+  useEffect(() => {
+    if (!replyingTo) return;
+    const node = draftTextareaRef.current;
+    if (!node) return;
+    try { node.focus({ preventScroll: false }); } catch (_) { node.focus(); }
+    try { node.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) { /* ignore */ }
+  }, [replyingTo]);
+
   // True when the active thread is the SVS Agent / Support thread.
   // The deal-closing toolkit (offers, payment requests, location, photos,
   // voice notes, status updates, quick replies) only makes sense between
@@ -22622,13 +22816,17 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     }
 
     const nowIso = new Date().toISOString();
+    // Attach the reply header (if any) so the recipient sees the quoted
+    // message above the new bubble. The header is stripped in `parseCardBody`
+    // and `extractReplyMeta` so existing consumers stay untouched.
+    const persistedBody = buildBodyWithReply(replyingTo, body);
     const nextMessage = {
       id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       threadId: thread.id,
       senderEmail: currentUserEmail,
       senderName: currentUserName,
       senderRole: currentRole,
-      body,
+      body: persistedBody,
       createdAt: nowIso,
     };
 
@@ -22643,6 +22841,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
         : candidate
     )));
     setDraftMessage('');
+    setReplyingTo(null);
 
     const updatedThread = {
       ...(thread || {}),
@@ -22683,7 +22882,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       triggerAgentReply(updatedThread, body);
     }
 
-  }, [activeThread, createThread, currentRole, currentUserEmail, currentUserName, draftMessage, isAdmin, loadRemoteChat, onPushNotificationToUser, triggerAgentReply]);
+  }, [activeThread, createThread, currentRole, currentUserEmail, currentUserName, draftMessage, isAdmin, loadRemoteChat, onPushNotificationToUser, replyingTo, triggerAgentReply]);
 
   // Generic helper: send a "card" message (offer / payment / location /
   // image / status). It builds the body, appends a message locally, syncs
@@ -22691,7 +22890,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   const sendCardMessage = useCallback(async (card) => {
     const thread = activeThread || createThread();
     if (!thread) return;
-    const body = buildCardBody(card);
+    const body = buildBodyWithReply(replyingTo, buildCardBody(card));
     const nowIso = new Date().toISOString();
     const nextMessage = {
       id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -22721,6 +22920,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
         ? { ...candidate, updatedAt: nowIso, lastMessage: preview }
         : candidate
     )));
+    setReplyingTo(null);
 
     const updatedThread = { ...(thread || {}), updatedAt: nowIso, lastMessage: preview };
     const recipientEmailLocal = normalizeEmail(
@@ -22750,7 +22950,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     if (recipientEmailLocal === SUPPORT_ADMIN_EMAIL && !isAdmin) {
       triggerAgentReply(updatedThread, cardToReadableText(body));
     }
-  }, [activeThread, buildCardBody, cardToReadableText, createThread, currentRole, currentUserEmail, currentUserName, isAdmin, loadRemoteChat, onPushNotificationToUser, triggerAgentReply]);
+  }, [activeThread, buildCardBody, cardToReadableText, createThread, currentRole, currentUserEmail, currentUserName, isAdmin, loadRemoteChat, onPushNotificationToUser, replyingTo, triggerAgentReply]);
 
   const handleSendOffer = useCallback(() => {
     const amount = Number(String(offerAmount).replace(/[^\d.]/g, ''));
@@ -23815,12 +24015,39 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                   ) : null}
                   {filteredMessages.length ? filteredMessages.map((message) => {
                     const mine = normalizeEmail(message.senderEmail || '') === currentUserEmail;
-                    const card = parseCardBody(message.body);
+                    const meta = extractReplyMeta(message.body);
+                    const innerBody = meta.body;
+                    const replyTo = meta.replyTo;
+                    const card = parseCardBody(innerBody);
+                    const startReply = () => setReplyingTo({
+                      id: message.id,
+                      senderName: mine ? 'You' : (message.senderName || message.senderEmail || 'Contact'),
+                      snippet: buildReplySnippetFromBody(message.body),
+                    });
                     return (
-                      <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                        <article className={`max-w-[92%] rounded-2xl px-3 py-2.5 shadow-sm sm:max-w-[85%] sm:px-4 sm:py-3 ${mine ? 'bg-[#0f6674] text-white' : 'border border-[#d6e6f5] bg-white text-slate-700'}`}>
-                          <p className="text-xs font-semibold opacity-90">{mine ? 'You' : (message.senderName || message.senderEmail)}</p>
-                          {card ? (
+                      <SwipeableMessage key={message.id} onReply={startReply}>
+                        <div className={`group flex ${mine ? 'justify-end' : 'justify-start'}`}>
+                          <article className={`relative max-w-[92%] rounded-2xl px-3 py-2.5 shadow-sm sm:max-w-[85%] sm:px-4 sm:py-3 ${mine ? 'bg-[#0f6674] text-white' : 'border border-[#d6e6f5] bg-white text-slate-700'}`}>
+                            <button
+                              type="button"
+                              onClick={startReply}
+                              title="Reply to this message"
+                              aria-label="Reply to this message"
+                              className={`absolute -top-2 ${mine ? '-left-2' : '-right-2'} hidden h-7 w-7 items-center justify-center rounded-full border bg-white opacity-0 shadow-sm transition group-hover:opacity-100 group-focus-within:opacity-100 sm:inline-flex ${mine ? 'border-cyan-200 text-[#0f6674] hover:bg-cyan-50' : 'border-[#d6e6f5] text-[#0f6674] hover:bg-[#f7fbff]'}`}
+                            >
+                              <Reply className="h-3.5 w-3.5" aria-hidden="true" />
+                            </button>
+                            <p className="text-xs font-semibold opacity-90">{mine ? 'You' : (message.senderName || message.senderEmail)}</p>
+                            {replyTo ? (
+                              <div className={`mt-1 mb-1.5 rounded-md border-l-2 px-2 py-1 text-[11px] ${mine ? 'border-cyan-100 bg-white/10 text-cyan-50' : 'border-[#0f6674] bg-[#f7fbff] text-slate-600'}`}>
+                                <p className={`text-[10px] font-bold uppercase tracking-wider ${mine ? 'text-cyan-100' : 'text-[#0f6674]'}`}>
+                                  <Reply className="mr-1 inline h-3 w-3" aria-hidden="true" />
+                                  Replying to {replyTo.senderName || 'a message'}
+                                </p>
+                                <p className="truncate">{replyTo.snippet || ''}</p>
+                              </div>
+                            ) : null}
+                            {card ? (
                             <div className="mt-1">
                               {card.type === 'offer' ? (
                                 <div className={`rounded-lg border ${mine ? 'border-cyan-200/40 bg-white/10' : 'border-amber-200 bg-amber-50'} p-2.5`}>
@@ -23986,13 +24213,14 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                               ) : null}
                             </div>
                           ) : (
-                            <p className="mt-1 whitespace-pre-wrap text-sm">{message.body}</p>
+                            <p className="mt-1 whitespace-pre-wrap text-sm">{innerBody}</p>
                           )}
                           <p className={`mt-1 text-[11px] ${mine ? 'text-cyan-100' : 'text-slate-400'}`}>
                             {new Date(message.createdAt || Date.now()).toLocaleString()}
                           </p>
-                        </article>
-                      </div>
+                          </article>
+                        </div>
+                      </SwipeableMessage>
                     );
                   }) : (
                     <div className="rounded-xl border border-dashed border-[#c8dff0] bg-white px-4 py-6 text-center text-sm text-slate-500">
@@ -24009,6 +24237,8 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                       </article>
                     </div>
                   ) : null}
+                  {/* Sentinel — auto-scroll target so the latest bubble is always in view. */}
+                  <div ref={messagesEndRef} aria-hidden="true" />
                 </div>
 
                 <div className="sticky bottom-0 border-t border-[#e5eef8] bg-white/95 px-3 py-3 backdrop-blur-sm sm:static sm:bg-white sm:px-6 sm:py-4">
@@ -24237,8 +24467,30 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                     </div>
                   ) : null}
 
+                  {replyingTo ? (
+                    <div className="mb-2 flex items-center gap-2 rounded-lg border-l-4 border-[#0f6674] bg-[#f7fbff] px-3 py-2">
+                      <Reply className="h-4 w-4 shrink-0 text-[#0f6674]" aria-hidden="true" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#0f6674]">
+                          Replying to {replyingTo.senderName || 'a message'}
+                        </p>
+                        <p className="truncate text-xs text-slate-600">{replyingTo.snippet || ''}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setReplyingTo(null)}
+                        title="Cancel reply"
+                        aria-label="Cancel reply"
+                        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#d6e6f5] bg-white text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                      >
+                        <X className="h-3.5 w-3.5" aria-hidden="true" />
+                      </button>
+                    </div>
+                  ) : null}
+
                   <div className="flex items-end gap-2">
                     <textarea
+                      ref={draftTextareaRef}
                       value={draftMessage}
                       onChange={(event) => setDraftMessage(event.target.value)}
                       rows={2}
