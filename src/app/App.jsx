@@ -64,6 +64,7 @@ import {
   Mail,
   Send,
   Reply,
+  Phone,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -556,9 +557,12 @@ const MARKET_FIELD_SPEC = {
       ] },
       { name: 'location', label: 'Stall / Pitch location', type: 'text', required: true, placeholder: 'e.g. Warwick Junction, Durban, KZN' },
       { name: 'brand', label: 'Trader / Stall name', type: 'text', placeholder: 'e.g. Mama Palesa Corn' },
+      { name: 'phone', label: 'Contact number', type: 'text', required: true, placeholder: 'e.g. +27 82 555 1234', helper: 'Shown in the Quick Contact dial pop-up.' },
+      { name: 'whatsapp', label: 'WhatsApp number', type: 'text', placeholder: 'Leave blank to reuse the contact number', helper: 'Used by the WhatsApp button in Quick Contact.' },
       { name: 'origin', label: 'Origin / Sourced from', type: 'text', placeholder: 'e.g. Local farm, Self-made' },
       { name: 'volume', label: 'Pack size / Portion', type: 'text', placeholder: 'e.g. 1 kg, Pack of 6, Single serving' },
       { name: 'availability', label: 'Trading days', type: 'select', options: ['Daily', 'Weekdays only', 'Weekends only', 'Market days only', 'By order'] },
+      { name: 'highlights', label: 'Highlights (one per line)', type: 'textarea', placeholder: 'Freshly harvested daily\nNo preservatives or chemicals\nBulk discounts available', helper: 'Optional. Leave blank to use sensible defaults for your category.' },
     ],
   },
 };
@@ -1879,6 +1883,141 @@ const informalMarketItems = [
   { id: 'im14', title: 'Paraffin Lamp & Wick Set', category: 'Household', sellerName: 'Rural Home Essentials', location: 'Giyani, Limpopo, South Africa', description: 'Classic tin paraffin lamp with two replacement wicks.', price: '6.50', image: 'https://images.pexels.com/photos/207985/pexels-photo-207985.jpeg?auto=compress&cs=tinysrgb&w=800' },
   { id: 'im15', title: 'Washing Powder (2 kg Bag)', category: 'Household', sellerName: 'Everyday Value Corner', location: 'Polokwane, Limpopo, South Africa', description: 'Budget laundry powder — strong clean for hand-washing.', price: '3.80', image: 'https://images.pexels.com/photos/4239013/pexels-photo-4239013.jpeg?auto=compress&cs=tinysrgb&w=800' },
 ];
+
+// --- Informal-market detail-page data builders -------------------------
+// Listings only ever store a few core fields (title, category, price,
+// image, sellerName, location). The detail page however shows highlights,
+// specifications, seller-contact buttons, etc. These helpers keep every
+// section populated even when the listing didn't supply that data — the
+// values are derived from `category` so they always feel relevant.
+
+// Stable demo phone number for items that don't carry a real one. Keyed
+// off the listing id so it stays the same across renders, and matches
+// the +27 SA dialing convention informal-market sellers use.
+const buildInformalDemoPhone = (idSeed) => {
+  const seed = String(idSeed || 'svs');
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  const seven = String(hash % 10000000).padStart(7, '0');
+  return `+27 ${seven.slice(0, 2)} ${seven.slice(2, 5)} ${seven.slice(5, 7)}${seven.slice(0, 2)}`;
+};
+
+const INFORMAL_HIGHLIGHTS_BY_CATEGORY = {
+  'Street Food': [
+    'Cooked fresh to order',
+    'No preservatives or chemicals',
+    'Made from local ingredients',
+    'Quick to-go packaging',
+    'Same-day collection only',
+  ],
+  'Fresh Produce': [
+    'Freshly harvested daily',
+    'No preservatives or chemicals',
+    'Bulk discounts available',
+    'Suitable for retail reselling',
+    'Same-day collection available',
+  ],
+  Clothing: [
+    'Locally handmade',
+    'Authentic African fabric',
+    'Wash cold to preserve colour',
+    'Multiple sizes on request',
+    'Perfect for resale or gifting',
+  ],
+  'Crafts & Décor': [
+    'Hand-crafted by local artisans',
+    'One-of-a-kind piece',
+    'Natural / eco-friendly materials',
+    'Supports township livelihoods',
+    'Custom orders welcome',
+  ],
+  Household: [
+    'Everyday spaza essential',
+    'Affordable, value-for-money pack',
+    'Long shelf life',
+    'Wholesale rates for spaza owners',
+    'Stock replenished weekly',
+  ],
+};
+
+const buildInformalHighlights = (item) => {
+  // 1. Explicit array on the item (legacy / programmatic listings)
+  if (Array.isArray(item.highlights) && item.highlights.length) return item.highlights;
+  // 2. Free-text the seller typed into the "Highlights (one per line)"
+  //    textarea on the upload form — split on newlines / bullets and trim.
+  if (typeof item.highlights === 'string' && item.highlights.trim()) {
+    const parsed = item.highlights
+      .split(/\r?\n|•|\u2022/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    if (parsed.length) return parsed.slice(0, 8);
+  }
+  // 3. Fallback to a sensible category template so the section never empty.
+  const fromCategory = INFORMAL_HIGHLIGHTS_BY_CATEGORY[item.category] || INFORMAL_HIGHLIGHTS_BY_CATEGORY['Fresh Produce'];
+  return fromCategory;
+};
+
+const buildInformalSpecs = (item) => {
+  if (item.specifications && typeof item.specifications === 'object' && !Array.isArray(item.specifications)) {
+    return item.specifications;
+  }
+  const category = item.category || 'Local goods';
+  // Prefer the seller's explicit answers from the upload form before
+  // falling back to category-driven defaults — this keeps the spec table
+  // in sync with whatever they typed for Origin / Pack size / Trading days.
+  const sellerOrigin = (() => {
+    if (item.origin && String(item.origin).trim()) return String(item.origin).trim();
+    const parts = String(item.location || '').split(',').map((part) => part.trim()).filter(Boolean);
+    if (parts.length >= 2) return `Local, ${parts[parts.length - 2]}`;
+    if (parts.length === 1) return `Local, ${parts[0]}`;
+    return 'Local trader';
+  })();
+  const packagingByCategory = {
+    'Street Food': 'Single serving / takeaway pack',
+    'Fresh Produce': '1 kg / 2 kg / bulk crates on request',
+    Clothing: 'Sold individually',
+    'Crafts & Décor': 'Wrapped & ready to gift',
+    Household: 'Standard retail pack',
+  };
+  const minimumByCategory = {
+    'Street Food': '1 portion',
+    'Fresh Produce': '1 unit (bulk pricing on 5+)',
+    Clothing: '1 piece',
+    'Crafts & Décor': '1 piece (custom orders accepted)',
+    Household: '1 pack',
+  };
+  const sellerVolume = item.volume && String(item.volume).trim()
+    ? String(item.volume).trim()
+    : (packagingByCategory[category] || 'Standard retail pack');
+  const sellerAvailability = item.availability && String(item.availability).trim()
+    ? String(item.availability).trim()
+    : 'Daily — Monday to Saturday';
+  return {
+    'Product Type': category,
+    Origin: sellerOrigin,
+    Packaging: sellerVolume,
+    'Minimum Order': minimumByCategory[category] || '1 unit',
+    Availability: sellerAvailability,
+  };
+};
+
+const buildInformalSellerContact = (item) => ({
+  phone: item.phone || buildInformalDemoPhone(item.id),
+  whatsapp: item.whatsapp || item.phone || buildInformalDemoPhone(item.id),
+});
+
+const buildInformalSellerNote = (item) => {
+  const map = {
+    'Street Food': 'Tip: cooked to order — please collect within 30 minutes for the best taste.',
+    'Fresh Produce': 'Resellers may apply for daily standing orders. Bulk crates packed by midday.',
+    Clothing: 'Please share your size before collection — alterations and custom orders welcome.',
+    'Crafts & Décor': 'Each piece is hand-finished, so small variations are normal and not defects.',
+    Household: 'Wholesale rates for registered spaza owners — message before collection.',
+  };
+  return map[item.category] || 'Message the seller before you travel — they will confirm stock and meeting point.';
+};
 
 const constructionToolsItems = [
   {
@@ -11740,17 +11879,50 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
   });
 
   const openItemDetails = useCallback((item) => {
+    // Build the rich payload the new informal-market detail layout expects:
+    // contact info (phone / whatsapp), category-driven highlights, a 5-row
+    // specifications table, a seller note, and up to 3 same-category
+    // similar listings drawn from the full catalogue.
+    const contact = buildInformalSellerContact(item);
+    const sameCategory = allItems
+      .filter((candidate) => (
+        String(candidate.id) !== String(item.id)
+        && (candidate.category || '').toLowerCase() === (item.category || '').toLowerCase()
+      ))
+      .slice(0, 3)
+      .map((candidate) => ({
+        id: candidate.id,
+        title: getTranslatedValue(t, candidate.titleKey, candidate.title),
+        image: candidate.image,
+        priceLabel: getSalePrices(candidate.price).nowPrice,
+        sellerName: candidate.normalizedVendor || candidate.sellerName || '',
+        location: candidate.location || '',
+        category: candidate.category || '',
+      }));
     onOpenItemDetails?.({
+      id: item.id,
       title: getTranslatedValue(t, item.titleKey, item.title),
       image: item.image,
       images: item.images || (item.image ? [item.image] : []),
       marketName: 'Informal Market',
-      details: `${item.normalizedCategory || item.category || 'Informal listing'} • ${item.description || item.normalizedVendor || 'Local informal seller'}`,
+      marketKey: 'informalMarket',
+      category: item.category || '',
+      sellerName: item.normalizedVendor || item.sellerName || '',
+      location: item.location || '',
+      description: item.description || '',
       priceLabel: getSalePrices(item.price).nowPrice,
+      details: `${item.normalizedCategory || item.category || 'Informal listing'} • ${item.description || item.normalizedVendor || 'Local informal seller'}`,
       cartItem: buildCartItem(item),
       wishlistItem: buildWishlistItem(item),
+      // Informal-market-specific enrichment
+      phone: contact.phone,
+      whatsapp: contact.whatsapp,
+      highlights: buildInformalHighlights(item),
+      specifications: buildInformalSpecs(item),
+      sellerNote: buildInformalSellerNote(item),
+      similarProducts: sameCategory,
     });
-  }, [onOpenItemDetails, t]);
+  }, [allItems, onOpenItemDetails, t]);
 
   const jumpToAllListings = useCallback(() => {
     allListingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -28012,6 +28184,11 @@ const ItemDetailsModal = ({
   const touchStartXRef = useRef(null);
   const itemReviewKey = useMemo(() => getProductReviewItemKey(item), [item]);
   const isAuthenticatedReviewer = Boolean(normalizeEmail(currentReviewerEmail));
+  // Quick-contact modal (Call / WhatsApp) — only used by the informal
+  // market detail layout but lives at the parent so the sheet can sit
+  // over the entire detail panel.
+  const [isQuickContactOpen, setIsQuickContactOpen] = useState(false);
+  const [reviewsExpanded, setReviewsExpanded] = useState(false);
   const averageRating = reviews.length
     ? (reviews.reduce((total, review) => total + review.rating, 0) / reviews.length).toFixed(1)
     : null;
@@ -28187,6 +28364,541 @@ const ItemDetailsModal = ({
   };
 
   // --- PROTOTYPE 6 PRODUCT DETAIL MODAL ---
+  // ============================================================
+  // Informal-market detail layout (matches the design mockup):
+  //   * full-width hero image + thumbnail strip
+  //   * three-button action row (Quick Contact / View Stall / Add to Cart)
+  //   * Product Details, Highlights, Specifications, Seller Note
+  //   * Seller Location card with embedded Google Map
+  //   * Seller Information card
+  //   * Ratings & Reviews with breakdown bars + Load More
+  //   * Similar Products grid
+  if (isInformalMarketItem) {
+    const heroImage = currentImage || item.image || '';
+    const phone = String(item.phone || '').trim();
+    const whatsapp = String(item.whatsapp || phone).trim();
+    const phoneTel = phone.replace(/[^\d+]/g, '');
+    const whatsappNumber = whatsapp.replace(/[^\d]/g, '');
+    const addressText = String(item.location || '').trim();
+    const mapEmbedSrc = addressText
+      ? `https://maps.google.com/maps?q=${encodeURIComponent(addressText)}&t=&z=13&ie=UTF8&iwloc=&output=embed`
+      : '';
+    const mapsLink = addressText ? `https://www.google.com/maps?q=${encodeURIComponent(addressText)}` : '';
+    const highlights = Array.isArray(item.highlights) ? item.highlights : [];
+    const specEntries = item.specifications && typeof item.specifications === 'object'
+      ? Object.entries(item.specifications)
+      : [];
+    const sellerNote = String(item.sellerNote || '').trim();
+    const ratingValues = reviews.length ? reviews.map((review) => Number(review.rating) || 0) : [];
+    const totalRatings = ratingValues.length;
+    const avg = totalRatings
+      ? (ratingValues.reduce((sum, value) => sum + value, 0) / totalRatings).toFixed(1)
+      : '0.0';
+    const ratingDistribution = [5, 4, 3, 2, 1].map((star) => ({
+      star,
+      count: ratingValues.filter((value) => Math.round(value) === star).length,
+    }));
+    const visibleReviews = reviewsExpanded ? reviews : reviews.slice(0, 3);
+    const similarProducts = Array.isArray(item.similarProducts) ? item.similarProducts : [];
+    const sellerLocationLabel = (() => {
+      const parts = addressText.split(',').map((part) => part.trim()).filter(Boolean);
+      if (parts.length >= 2) return `${parts[parts.length - 2]}, ${parts[parts.length - 1]}`;
+      return addressText || 'South Africa';
+    })();
+    const goToSellerChat = () => {
+      const itemKey = item.key || item.id;
+      onClose?.();
+      navigate('/support/chat', {
+        state: {
+          recipientEmail: sellerChatEmail,
+          recipientName: sellerChatName,
+          recipientRole: 'seller',
+          issueType: 'Item Enquiry',
+          itemKey,
+          itemTitle: item.title,
+          itemImage: item.image || item.images?.[0] || '',
+          itemLink: `/informal-market?item=${itemKey}`,
+        },
+      });
+    };
+    return (
+      <div
+        className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-slate-900/70 p-3 sm:p-6"
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${item.title} details`}
+      >
+        <div
+          className="my-2 w-full max-w-5xl overflow-hidden rounded-2xl border border-[#d6e6f5] bg-white shadow-2xl sm:my-6"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {/* Close button */}
+          <div className="flex items-center justify-between border-b border-[#e5eef8] bg-gradient-to-r from-[#0f6674] via-[#0f889a] to-[#0f6674] px-4 py-3 text-white">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-100">Informal Market</p>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border border-white/30 bg-white/10 p-1.5 text-white transition hover:bg-white/20"
+              aria-label="Close item details"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* HERO */}
+          <div className="px-4 pt-4 sm:px-8 sm:pt-6">
+            <div
+              className="relative w-full overflow-hidden rounded-2xl border border-[#d6e6f5] bg-[#f7fbff]"
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+            >
+              {heroImage ? (
+                <img
+                  src={heroImage}
+                  alt={item.title}
+                  className="h-72 w-full object-cover sm:h-96"
+                  loading="eager"
+                />
+              ) : (
+                <div className="flex h-72 items-center justify-center text-sm text-slate-500 sm:h-96">No image</div>
+              )}
+              <span className="absolute left-4 top-4 inline-flex items-center gap-1 rounded-full bg-emerald-500 px-3 py-1 text-[11px] font-bold text-white shadow">
+                Bulk
+              </span>
+              {hasMultipleImages ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={showPreviousImage}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full border border-[#d6e6f5] bg-white/95 p-2 text-[#0f6674] shadow"
+                    aria-label="Previous image"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={showNextImage}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full border border-[#d6e6f5] bg-white/95 p-2 text-[#0f6674] shadow"
+                    aria-label="Next image"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </>
+              ) : null}
+            </div>
+            {hasMultipleImages ? (
+              <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                {itemImages.map((url, index) => (
+                  <button
+                    key={`${url}-${index}`}
+                    type="button"
+                    onClick={() => setCurrentImageIndex(index)}
+                    className={`shrink-0 overflow-hidden rounded-lg border-2 transition ${index === currentImageIndex ? 'border-[#0f6674]' : 'border-transparent opacity-70 hover:opacity-100'}`}
+                    aria-label={`Show image ${index + 1}`}
+                  >
+                    <img src={url} alt="" className="h-16 w-20 object-cover" loading="lazy" />
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            {/* Title + price + actions */}
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl font-black text-[#0f6674] sm:text-2xl">{item.title}</h1>
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+                    Bulk
+                  </span>
+                </div>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  {item.priceLabel ? (
+                    <span className="text-2xl font-black text-slate-800">{item.priceLabel}</span>
+                  ) : null}
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
+                    Fresh
+                  </span>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => setIsQuickContactOpen(true)}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-[#0f6674] bg-white px-3 py-2 text-xs font-bold text-[#0f6674] transition hover:bg-[#e8f7fb] sm:text-sm"
+                >
+                  <Phone className="h-3.5 w-3.5" aria-hidden="true" />
+                  Quick Contact
+                </button>
+                <button
+                  type="button"
+                  onClick={goToSellerChat}
+                  disabled={!canChatSeller}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-[#0f6674] bg-white px-3 py-2 text-xs font-bold text-[#0f6674] transition hover:bg-[#e8f7fb] disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
+                >
+                  <Store className="h-3.5 w-3.5" aria-hidden="true" />
+                  View Stall
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onAddToCart?.(actionCartItem)}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#0f6674] px-3 py-2 text-xs font-bold text-white shadow transition hover:bg-[#0d5762] sm:text-sm"
+                >
+                  <ShoppingCart className="h-3.5 w-3.5" aria-hidden="true" />
+                  Add to Cart
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 border-t border-[#e5eef8]" />
+
+          {/* PRODUCT DETAILS */}
+          <section className="px-4 py-5 sm:px-8">
+            <h2 className="text-base font-black uppercase tracking-wider text-[#0f6674]">Product Details</h2>
+            <p className="mt-3 text-sm leading-relaxed text-slate-600">
+              {item.description || `Fresh ${String(item.category || 'product').toLowerCase()} sourced directly from local sellers. Available in both retail and wholesale quantities. Perfect for home cooking, restaurants, and resellers. These ${String(item.title || 'items').toLowerCase()} are handpicked daily and inspected to ensure consistent quality for maximum freshness.`}
+            </p>
+          </section>
+
+          {/* HIGHLIGHTS */}
+          {highlights.length ? (
+            <section className="border-t border-[#e5eef8] px-4 py-5 sm:px-8">
+              <h2 className="text-base font-black uppercase tracking-wider text-[#0f6674]">Highlights</h2>
+              <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+                {highlights.map((entry, idx) => (
+                  <li key={idx} className="flex items-start gap-2 text-sm text-slate-700">
+                    <span className="mt-0.5 inline-flex h-5 w-5 flex-none items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                      <Check className="h-3 w-3" />
+                    </span>
+                    {entry}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          {/* SPECIFICATIONS */}
+          {specEntries.length ? (
+            <section className="border-t border-[#e5eef8] px-4 py-5 sm:px-8">
+              <h2 className="text-base font-black uppercase tracking-wider text-[#0f6674]">Specifications</h2>
+              <table className="mt-3 w-full overflow-hidden rounded-lg border border-[#e0e7ef] text-sm">
+                <tbody>
+                  {specEntries.map(([label, value]) => (
+                    <tr key={label} className="even:bg-[#f8fbff]">
+                      <th scope="row" className="w-1/3 border-b border-[#e0e7ef] bg-[#f8fafc] px-3 py-2 text-left font-bold text-slate-700">
+                        {label}
+                      </th>
+                      <td className="border-b border-[#e0e7ef] px-3 py-2 text-slate-600">{String(value)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          ) : null}
+
+          {/* SELLER NOTE */}
+          {sellerNote ? (
+            <section className="border-t border-[#e5eef8] px-4 py-3 sm:px-8">
+              <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                <strong>Seller Note:</strong> {sellerNote}
+              </p>
+            </section>
+          ) : null}
+
+          {/* SELLER LOCATION */}
+          {addressText ? (
+            <section className="border-t border-[#e5eef8] px-4 py-5 sm:px-8">
+              <h2 className="text-base font-black uppercase tracking-wider text-[#0f6674]">Seller Location</h2>
+              <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_240px]">
+                <div className="rounded-lg border border-[#d6e6f5] bg-[#f8fbff] p-3 text-sm">
+                  <p className="font-bold text-slate-800">{sellerChatName}</p>
+                  <p className="mt-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Address</p>
+                  <p className="mt-1 text-slate-700">{addressText}</p>
+                  <p className="mt-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Phone</p>
+                  <p className="mt-1 text-slate-700">{phone}</p>
+                  {mapsLink ? (
+                    <a
+                      href={mapsLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[#0f6674] hover:underline"
+                    >
+                      <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                      Open in Google Maps
+                    </a>
+                  ) : null}
+                </div>
+                {mapEmbedSrc ? (
+                  <a
+                    href={mapsLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block overflow-hidden rounded-lg border border-[#d6e6f5]"
+                    aria-label={`Open ${sellerLocationLabel} in Google Maps`}
+                  >
+                    <iframe
+                      src={mapEmbedSrc}
+                      title={`Map of ${sellerLocationLabel}`}
+                      width="100%"
+                      height="160"
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      style={{ border: 0 }}
+                    />
+                  </a>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
+
+          {/* SELLER INFORMATION */}
+          <section className="border-t border-[#e5eef8] px-4 py-5 sm:px-8">
+            <h2 className="text-base font-black uppercase tracking-wider text-[#0f6674]">Seller Information</h2>
+            <div className="mt-3 rounded-lg border border-[#d6e6f5] bg-white p-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-gradient-to-br from-[#0f6674] to-[#0f889a] text-lg font-black text-white">
+                  {(sellerDisplayName || 'V').slice(0, 1).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold text-slate-800">{sellerDisplayName || 'Local Seller'}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">Street Vendor</p>
+                  <p className="mt-0.5 truncate text-xs text-slate-500">{sellerLocationLabel}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={goToSellerChat}
+                disabled={!canChatSeller}
+                className="mt-3 w-full rounded-lg bg-[#0f6674] px-4 py-2.5 text-sm font-bold text-white shadow transition hover:bg-[#0d5762] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Contact Seller
+              </button>
+            </div>
+          </section>
+
+          {/* RATINGS & REVIEWS */}
+          <section className="border-t border-[#e5eef8] px-4 py-5 sm:px-8">
+            <h2 className="text-base font-black uppercase tracking-wider text-[#0f6674]">Ratings &amp; Reviews</h2>
+            <div className="mt-3 grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center">
+              <div className="text-center">
+                <p className="text-3xl font-black text-slate-800">{totalRatings ? avg : '—'}</p>
+                <div className="mt-1 flex items-center justify-center gap-0.5 text-amber-400">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <Star key={s} className={`h-4 w-4 ${s <= Math.round(Number(avg) || 0) ? 'fill-amber-400' : 'fill-slate-200 text-slate-300'}`} />
+                  ))}
+                </div>
+                <p className="mt-1 text-xs text-slate-500">
+                  {totalRatings} {totalRatings === 1 ? 'review' : 'reviews'}
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                {ratingDistribution.map(({ star, count }) => {
+                  const pct = totalRatings ? (count / totalRatings) * 100 : 0;
+                  return (
+                    <div key={star} className="flex items-center gap-2 text-xs text-slate-600">
+                      <span className="w-3 text-right font-bold">{star}</span>
+                      <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-200">
+                        <div className="h-full rounded-full bg-amber-400" style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="w-8 text-right text-[10px] text-slate-400">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            {isLoadingReviews ? (
+              <p className="mt-4 text-sm text-slate-500">Loading reviews…</p>
+            ) : reviews.length ? (
+              <ul className="mt-4 space-y-3">
+                {visibleReviews.map((review, idx) => (
+                  <li key={idx} className="rounded-lg border border-[#e0e7ef] bg-white p-3">
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span className="font-bold text-slate-800">{review.reviewerName || 'Shopper'}</span>
+                      <span className="text-slate-400">
+                        {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : ''}
+                      </span>
+                      <span className="ml-auto inline-flex items-center gap-1 text-amber-500">
+                        <Star className="h-3 w-3 fill-amber-400" />
+                        <span className="font-bold">{review.rating}</span>
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm text-slate-700">{review.comment}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-4 rounded-lg border border-dashed border-[#d6e6f5] bg-[#f7fbff] px-3 py-4 text-center text-sm text-slate-500">
+                No reviews yet. Be the first to leave one below.
+              </p>
+            )}
+            {reviews.length > 3 ? (
+              <div className="mt-3 text-center">
+                <button
+                  type="button"
+                  onClick={() => setReviewsExpanded((value) => !value)}
+                  className="rounded-lg border border-[#0f6674] bg-white px-5 py-2 text-sm font-bold text-[#0f6674] transition hover:bg-[#e8f7fb]"
+                >
+                  {reviewsExpanded ? 'Show fewer reviews' : 'Load More Reviews'}
+                </button>
+              </div>
+            ) : null}
+
+            {/* Quick review form */}
+            <form className="mt-5 space-y-2 rounded-lg border border-[#e0e7ef] bg-[#f7fbff] p-3" onSubmit={handleSubmitReview}>
+              <p className="text-xs font-bold uppercase tracking-wider text-[#0f6674]">Leave a quick review</p>
+              <div className="flex flex-wrap items-center gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setRating(star)}
+                    aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
+                    className={`flex h-7 w-7 items-center justify-center rounded-full border ${rating >= star ? 'border-amber-400 bg-amber-400' : 'border-slate-300 bg-white'}`}
+                  >
+                    <Star className={`h-4 w-4 ${rating >= star ? 'fill-white text-white' : 'text-slate-300'}`} />
+                  </button>
+                ))}
+                <span className="text-xs text-slate-500">{rating ? `${rating}/5` : 'Tap to rate'}</span>
+              </div>
+              {!isAuthenticatedReviewer ? (
+                <input
+                  type="text"
+                  className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                  placeholder="Your name"
+                  value={reviewerName}
+                  onChange={(event) => setReviewerName(event.target.value)}
+                />
+              ) : null}
+              <textarea
+                className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                placeholder="Share your experience (min 6 characters)"
+                value={comment}
+                onChange={(event) => setComment(event.target.value)}
+                minLength={6}
+                rows={2}
+              />
+              {reviewError ? <p className="text-xs text-rose-600">{reviewError}</p> : null}
+              <button
+                type="submit"
+                disabled={isSubmittingReview}
+                className="rounded-md bg-[#0f6674] px-4 py-1.5 text-xs font-bold text-white shadow hover:bg-[#0d5762] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSubmittingReview ? 'Posting…' : 'Submit Review'}
+              </button>
+              {reviewNotice ? <p className="text-[11px] text-slate-500">{reviewNotice}</p> : null}
+            </form>
+          </section>
+
+          {/* SIMILAR PRODUCTS */}
+          {similarProducts.length ? (
+            <section className="border-t border-[#e5eef8] px-4 py-5 sm:px-8">
+              <h2 className="text-base font-black uppercase tracking-wider text-[#0f6674]">Similar Products</h2>
+              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {similarProducts.map((similar) => (
+                  <article key={similar.id} className="overflow-hidden rounded-lg border border-[#d6e6f5] bg-white">
+                    {similar.image ? (
+                      <img src={similar.image} alt={similar.title} className="h-24 w-full object-cover" loading="lazy" />
+                    ) : null}
+                    <div className="space-y-1 p-2">
+                      <p className="line-clamp-2 text-xs font-bold text-slate-800">{similar.title}</p>
+                      {similar.priceLabel ? (
+                        <p className="text-sm font-black text-[#0f6674]">{similar.priceLabel}</p>
+                      ) : null}
+                      {similar.sellerName ? (
+                        <p className="truncate text-[10px] text-slate-500">
+                          <Store className="mr-0.5 inline h-2.5 w-2.5" aria-hidden="true" />
+                          {similar.sellerName}
+                        </p>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={onClose}
+                        className="mt-1 w-full rounded-md bg-[#0f6674] px-2 py-1 text-[10px] font-bold text-white hover:bg-[#0d5762]"
+                      >
+                        View Details
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {/* QUICK CONTACT MODAL */}
+          {isQuickContactOpen ? (
+            <div
+              className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/60 p-4"
+              onClick={() => setIsQuickContactOpen(false)}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Quick contact"
+            >
+              <div
+                className="w-full max-w-sm rounded-2xl border border-[#d6e6f5] bg-white p-5 shadow-2xl"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <p className="text-xs font-bold uppercase tracking-wider text-[#0f6674]">Contact seller</p>
+                <div className="mt-3 flex items-center gap-3">
+                  <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-gradient-to-br from-[#0f6674] to-[#0f889a] text-sm font-black text-white">
+                    {(sellerDisplayName || 'V').slice(0, 1).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-slate-800">{sellerDisplayName || 'Local Seller'}</p>
+                    <p className="truncate text-xs text-slate-500">{sellerLocationLabel}</p>
+                  </div>
+                </div>
+                <div className="mt-4 space-y-2">
+                  {phoneTel ? (
+                    <a
+                      href={`tel:${phoneTel}`}
+                      className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#0f6674] bg-white px-4 py-2.5 text-sm font-bold text-[#0f6674] transition hover:bg-[#e8f7fb]"
+                    >
+                      <Phone className="h-4 w-4" aria-hidden="true" />
+                      Call: {phone}
+                    </a>
+                  ) : null}
+                  {whatsappNumber ? (
+                    <a
+                      href={`https://wa.me/${whatsappNumber}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#0f6674] px-4 py-2.5 text-sm font-bold text-white shadow transition hover:bg-[#0d5762]"
+                    >
+                      <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                      WhatsApp: {whatsapp}
+                    </a>
+                  ) : null}
+                </div>
+                <div className="mt-4 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsQuickContactOpen(false)}
+                    className="flex-1 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsQuickContactOpen(false);
+                      goToSellerChat();
+                    }}
+                    disabled={!canChatSeller}
+                    className="flex-1 rounded-lg bg-[#0f6674] px-4 py-2 text-sm font-bold text-white shadow transition hover:bg-[#0d5762] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Submit
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/70 p-4"
