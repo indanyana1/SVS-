@@ -22279,6 +22279,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   const [remoteRecipientMatches, setRemoteRecipientMatches] = useState([]);
   const [isSearchingRecipients, setIsSearchingRecipients] = useState(false);
   const [mobilePanel, setMobilePanel] = useState('contacts');
+  const [showNewChatPanel, setShowNewChatPanel] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState(prefillOrderIdFromState);
   const [isRemoteChatEnabled, setIsRemoteChatEnabled] = useState(false);
   const [remoteChatStatusMessage, setRemoteChatStatusMessage] = useState('Checking chat sync...');
@@ -23007,6 +23008,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       )));
       setSelectedThreadId(existing.id);
       setMobilePanel('chat');
+      setShowNewChatPanel(false);
 
       if (getAuthState() && currentUserEmail && hasSupabaseEnv && supabase) {
         supabase
@@ -23039,6 +23041,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     setThreads((current) => [nextThread, ...current]);
     setSelectedThreadId(nextThread.id);
     setMobilePanel('chat');
+    setShowNewChatPanel(false);
 
     if (getAuthState() && currentUserEmail && hasSupabaseEnv && supabase) {
       supabase
@@ -24381,12 +24384,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  const el = document.getElementById('lt-start-chat-card');
-                  if (el) {
-                    try { el.setAttribute('open', ''); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) { /* noop */ }
-                  }
-                }}
+                onClick={() => setShowNewChatPanel(true)}
                 title="Start a new chat"
                 aria-label="Start a new chat"
                 className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--svs-primary)] text-white shadow-sm transition hover:scale-105 hover:bg-[var(--svs-primary-strong)]"
@@ -24460,16 +24458,23 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
               )}
               </div>
 
-              {/* Start-chat form, collapsed by default when threads already exist. */}
-              <details id="lt-start-chat-card" open={!visibleThreads.length} className="group/start mt-4 rounded-2xl border border-[#d6e6f5] bg-white">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#0f6674]">
-                  <span className="inline-flex min-w-0 items-center gap-2">
-                    <Plus className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                    <span className="truncate">{startChatCardTitle}</span>
-                  </span>
-                  <ChevronDown className="h-4 w-4 shrink-0 transition group-open/start:rotate-180" aria-hidden="true" />
-                </summary>
-                <div className="border-t border-[var(--svs-border)] p-4">
+              {/* New-chat form moved to a full-page overlay — opens via the + button. */}
+              {showNewChatPanel ? (
+                <div className="fixed inset-0 z-[140] flex flex-col bg-white">
+                  <div className="flex items-center gap-3 border-b border-[var(--svs-border)] bg-gradient-to-r from-[var(--svs-primary)] via-[var(--svs-primary-strong)] to-[var(--svs-primary)] px-4 py-3 text-white sm:px-6 sm:py-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowNewChatPanel(false)}
+                      title="Back to conversations"
+                      aria-label="Back to conversations"
+                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25"
+                    >
+                      <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                    </button>
+                    <h2 className="min-w-0 truncate text-base font-black sm:text-lg">{startChatCardTitle}</h2>
+                  </div>
+                  <div className="flex-1 overflow-y-auto bg-[#f8fbff] p-4 sm:p-6">
+                    <div className="mx-auto w-full max-w-2xl rounded-2xl border border-[#d6e6f5] bg-white p-4 shadow-sm sm:p-6">
                   <p className={`text-[11px] font-semibold ${isRemoteChatEnabled ? 'text-emerald-700' : 'text-amber-700'}`}>
                     {isRemoteChatEnabled ? 'Live sync: ON' : 'Live sync: OFF (local fallback)'}
                   </p>
@@ -24608,8 +24613,10 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                   No available recipients yet. Complete or receive an order first to open a direct support conversation.
                 </div>
               )}
+                    </div>
+                  </div>
                 </div>
-              </details>
+              ) : null}
             </div>
           </aside>
 
