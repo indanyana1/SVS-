@@ -4896,6 +4896,76 @@ const getSellerImageStoragePaths = (urls = []) => {
     .filter(Boolean);
 };
 
+// --- Chat media storage ------------------------------------------------
+// Large chat attachments (photos, voice notes, videos, documents) used to be
+// base64-encoded straight into the message body, which broke for anything but
+// tiny files. Instead we upload the raw bytes to a public Supabase Storage
+// bucket and keep only the short public URL in the message.
+const CHAT_MEDIA_BUCKET = 'chat-media';
+
+const CHAT_MEDIA_EXT_BY_MIME = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
+  'image/heic': 'heic',
+  'audio/webm': 'webm',
+  'audio/ogg': 'ogg',
+  'audio/mp4': 'm4a',
+  'audio/mpeg': 'mp3',
+  'video/mp4': 'mp4',
+  'video/webm': 'webm',
+  'video/quicktime': 'mov',
+  'application/pdf': 'pdf',
+};
+
+// Decode a `data:` URL into a Blob without inflating it through a string copy
+// more than necessary.
+const dataUrlToBlob = (dataUrl) => {
+  const commaIndex = String(dataUrl).indexOf(',');
+  if (commaIndex === -1) throw new Error('Invalid data URL');
+  const header = dataUrl.slice(0, commaIndex);
+  const payload = dataUrl.slice(commaIndex + 1);
+  const mime = (header.match(/^data:([^;]+)/) || [])[1] || 'application/octet-stream';
+  const isBase64 = /;base64/i.test(header);
+  if (!isBase64) {
+    return new Blob([decodeURIComponent(payload)], { type: mime });
+  }
+  const binary = atob(payload);
+  const length = binary.length;
+  const bytes = new Uint8Array(length);
+  for (let i = 0; i < length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new Blob([bytes], { type: mime });
+};
+
+// Upload a `data:` URL to the chat-media bucket and return its public URL.
+// Returns null (and the caller falls back to inline) when Supabase is not
+// configured.
+const uploadChatMediaFromDataUrl = async (dataUrl, { userEmail = '', type = 'file', name = '', mimeType = '' } = {}) => {
+  if (!hasSupabaseEnv || !supabase) return null;
+  const blob = dataUrlToBlob(dataUrl);
+  const mime = mimeType || blob.type || 'application/octet-stream';
+  let ext = '';
+  if (name && name.includes('.')) {
+    ext = name.split('.').pop();
+  }
+  if (!ext) {
+    ext = CHAT_MEDIA_EXT_BY_MIME[mime] || (mime.split('/')[1] || 'bin');
+  }
+  const safeExt = String(ext || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8) || 'bin';
+  const folder = sanitizeStorageSegment(userEmail || 'user');
+  const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${safeExt}`;
+  const filePath = `${folder}/${sanitizeStorageSegment(type) || 'file'}/${fileName}`;
+  const { error: uploadError } = await supabase.storage
+    .from(CHAT_MEDIA_BUCKET)
+    .upload(filePath, blob, { cacheControl: '3600', upsert: false, contentType: mime });
+  if (uploadError) throw uploadError;
+  const { data } = supabase.storage.from(CHAT_MEDIA_BUCKET).getPublicUrl(filePath);
+  return data?.publicUrl || null;
+};
+
 const normalizeReviewComment = (value) => String(value || '')
   .replace(/\s+/g, ' ')
   .trim();
@@ -23441,7 +23511,29 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   const sendCardMessage = useCallback(async (card) => {
     const thread = activeThread || createThread();
     if (!thread) return;
-    const body = buildBodyWithReply(replyingTo, buildCardBody(card));
+
+    // Offload heavy inline media to Supabase Storage so large files are not
+    // crammed into the message body (which fails for big videos/documents).
+    // The short public URL is stored instead; AI metadata (transcript,
+    // visual summary) is already on the card and is preserved.
+    let outgoingCard = card;
+    if (card && typeof card.src === 'string' && card.src.startsWith('data:')
+      && ['image', 'voice', 'video', 'document'].includes(card.type)) {
+      try {
+        const publicUrl = await uploadChatMediaFromDataUrl(card.src, {
+          userEmail: currentUserEmail,
+          type: card.type,
+          name: card.name,
+          mimeType: card.mimeType,
+        });
+        if (publicUrl) outgoingCard = { ...card, src: publicUrl };
+      } catch (uploadError) {
+        // eslint-disable-next-line no-console
+        console.warn('[chat-media] storage upload failed, sending inline:', uploadError?.message || uploadError);
+      }
+    }
+
+    const body = buildBodyWithReply(replyingTo, buildCardBody(outgoingCard));
     const nowIso = new Date().toISOString();
     const nextMessage = {
       id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -23624,9 +23716,9 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       event.target.value = '';
       return;
     }
-    if (file.size > 1_500_000) {
+    if (file.size > 20_000_000) {
       // eslint-disable-next-line no-alert
-      window.alert('Please choose an image smaller than 1.5 MB.');
+      window.alert('Please choose an image smaller than 20 MB.');
       event.target.value = '';
       return;
     }
@@ -23661,9 +23753,8 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   }, []);
 
   // --- Voice notes -----------------------------------------------------
-  // Records mic input with MediaRecorder, encodes as a data URL, and ships
-  // it as a `voice` card so the existing chat schema is reused. Capped at
-  // ~60 s and ~1.5 MB to keep messages reasonable.
+  // Records mic input with MediaRecorder, then uploads the clip to Supabase
+  // Storage and ships it as a `voice` card. Capped at ~60 s.
   const stopVoiceTracksAndTimer = useCallback(() => {
     if (voiceTimerRef.current) {
       window.clearInterval(voiceTimerRef.current);
@@ -23875,14 +23966,14 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   }, [stopVoiceTracksAndTimer]);
 
   // --- Document attachments -------------------------------------------
-  // PDF / DOC / spec sheet / ID copy etc., capped at ~3 MB so it still
-  // fits comfortably inside a Supabase message body.
+  // PDF / DOC / spec sheet / ID copy etc. Uploaded to Supabase Storage so
+  // large files are supported (capped at 50 MB).
   const handleDocumentAttachmentChange = useCallback((event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (file.size > 3_000_000) {
+    if (file.size > 50_000_000) {
       // eslint-disable-next-line no-alert
-      window.alert('Please choose a document smaller than 3 MB.');
+      window.alert('Please choose a document smaller than 50 MB.');
       event.target.value = '';
       return;
     }
@@ -23919,9 +24010,9 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       event.target.value = '';
       return;
     }
-    if (file.size > 5_000_000) {
+    if (file.size > 100_000_000) {
       // eslint-disable-next-line no-alert
-      window.alert('Please choose a video smaller than 5 MB (a 10–20 second clip is usually fine).');
+      window.alert('Please choose a video smaller than 100 MB.');
       event.target.value = '';
       return;
     }
