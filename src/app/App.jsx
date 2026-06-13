@@ -22143,7 +22143,7 @@ const SwipeableMessage = ({ onReply, children }) => {
       onTouchCancel={handleTouchEnd}
     >
       <div
-        className="pointer-events-none absolute inset-y-0 right-2 flex items-center"
+        className="pointer-events-none absolute inset-y-0 left-2 flex items-center"
         style={{ opacity }}
         aria-hidden="true"
       >
