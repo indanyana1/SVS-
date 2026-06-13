@@ -30,3 +30,13 @@ if (rootElement) {
 }
 
 reportWebVitals();
+
+// Register the service worker so the app is installable as a PWA and the
+// "Install App" affordance can surface the native install prompt.
+if ('serviceWorker' in navigator) {
+	window.addEventListener('load', () => {
+		navigator.serviceWorker.register('/service-worker.js').catch(() => {
+			/* registration failed — app still works, just not installable */
+		});
+	});
+}

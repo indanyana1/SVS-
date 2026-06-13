@@ -53,7 +53,6 @@ import {
   MessageCircle,
   Image as ImageIcon,
   Mic,
-  Square,
   Video,
   FileText,
   Printer,
@@ -65,8 +64,12 @@ import {
   Send,
   Reply,
   Phone,
+  MoreVertical,
+  Pause,
+  Play,
+  Trash,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import logo from '../assets/icons/logo.jpeg';
@@ -4568,6 +4571,11 @@ const ORDERS_STORAGE_KEY = 'svs-orders';
 const NOTIFICATIONS_STORAGE_KEY = 'svs-notifications';
 const SUPPORT_CHAT_THREADS_STORAGE_KEY = 'svs-support-chat-threads';
 const SUPPORT_CHAT_MESSAGES_STORAGE_KEY = 'svs-support-chat-messages';
+// Per-thread read markers (threadId -> ISO of last seen message) so we can
+// scroll to the first unread bubble when a chat is opened.
+const SUPPORT_CHAT_READ_STORAGE_KEY = 'svs-support-chat-read';
+// Locally hidden message ids (Delete-for-me). Stored as a flat array.
+const SUPPORT_CHAT_HIDDEN_STORAGE_KEY = 'svs-support-chat-hidden';
 const PRODUCT_REVIEWS_STORAGE_KEY = 'svs-product-reviews';
 const SELLER_ACCESS_STORAGE_KEY = 'svs-has-seller-access';
 const SELLER_HOME_PATH_STORAGE_KEY = 'svs-seller-home-path';
@@ -4694,6 +4702,44 @@ const getStoredSupportChatThreads = (userEmail = getCurrentUserEmail()) =>
 const getStoredSupportChatMessages = (userEmail = getCurrentUserEmail()) =>
   getStoredCollection(getUserScopedStorageKey(SUPPORT_CHAT_MESSAGES_STORAGE_KEY, userEmail));
 const getStoredProductReviews = () => getStoredCollection(PRODUCT_REVIEWS_STORAGE_KEY);
+
+// Read-state map (threadId -> ISO). Stored as a JSON object, scoped per user.
+const getStoredSupportChatReadMap = (userEmail = getCurrentUserEmail()) => {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = window.localStorage.getItem(getUserScopedStorageKey(SUPPORT_CHAT_READ_STORAGE_KEY, userEmail));
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch (_) { return {}; }
+};
+const persistSupportChatReadMap = (readMap, userEmail = getCurrentUserEmail()) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(
+      getUserScopedStorageKey(SUPPORT_CHAT_READ_STORAGE_KEY, userEmail),
+      JSON.stringify(readMap || {}),
+    );
+  } catch (_) { /* ignore quota / disabled storage */ }
+};
+
+// Delete-for-me hidden message ids (array of message ids), scoped per user.
+const getStoredSupportChatHiddenIds = (userEmail = getCurrentUserEmail()) => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(getUserScopedStorageKey(SUPPORT_CHAT_HIDDEN_STORAGE_KEY, userEmail));
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((entry) => typeof entry === 'string') : [];
+  } catch (_) { return []; }
+};
+const persistSupportChatHiddenIds = (ids, userEmail = getCurrentUserEmail()) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(
+      getUserScopedStorageKey(SUPPORT_CHAT_HIDDEN_STORAGE_KEY, userEmail),
+      JSON.stringify(Array.from(new Set(ids || []))),
+    );
+  } catch (_) { /* ignore */ }
+};
 
 const createNotificationRecord = ({ title, message, href, orderId, type = 'info' }) => ({
   id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -19569,6 +19615,7 @@ const MarketsPage = () => {
           Global, National &amp; Local Markets
         </h1>
       </div>
+      <MarketsInstallHeroBanner />
       <div className="relative overflow-hidden rounded-2xl border border-[var(--svs-border)] p-6 pb-10 shadow-[0_4px_8px_rgba(0,0,0,0.1)] sm:p-8 sm:pb-12">
         {MARKETS_HERO_SLIDES.map((slideUrl, slideIndex) => (
           <div
@@ -22022,6 +22069,19 @@ const buildBodyWithReply = (replyTo, innerBody) => {
   return `${REPLY_PREFIX}${JSON.stringify(replyTo)}\n${String(innerBody || '')}`;
 };
 
+// Edit / delete markers. Encoded inside the message body so the existing
+// `support_chat_messages` schema (single `body` column) stays unchanged.
+//   - A deleted-for-everyone message has body === DELETED_TOKEN.
+//   - An edited message is prefixed with EDITED_PREFIX (stripped at render).
+const DELETED_TOKEN = '[svs-deleted]';
+const EDITED_PREFIX = '[svs-edited]';
+const isDeletedBody = (rawBody) => String(rawBody || '').trim() === DELETED_TOKEN;
+const extractEditedMeta = (rawBody) => {
+  const raw = String(rawBody || '');
+  if (raw.startsWith(EDITED_PREFIX)) return { edited: true, body: raw.slice(EDITED_PREFIX.length) };
+  return { edited: false, body: raw };
+};
+
 // Swipe-left-to-reply wrapper. On touch devices the user drags any
 // message bubble to the left; once the drag passes the threshold a
 // reply icon snaps into focus and `onReply` fires on release. On desktop
@@ -22238,12 +22298,20 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   const [paymentNote, setPaymentNote] = useState('');
   const attachmentInputRef = useRef(null);
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const [isVoicePaused, setIsVoicePaused] = useState(false);
   const [voiceElapsedSec, setVoiceElapsedSec] = useState(0);
   const mediaRecorderRef = useRef(null);
   const mediaStreamRef = useRef(null);
   const voiceChunksRef = useRef([]);
   const voiceTimerRef = useRef(null);
   const voiceStartRef = useRef(0);
+  // WhatsApp-style pause/resume + deferred send. `voiceShouldSendRef` tells
+  // the recorder's onstop handler whether to ship the note or discard it.
+  // `voiceAccumulatedMsRef` / `voiceSegmentStartRef` track elapsed time
+  // across pause/resume so the timer stays accurate.
+  const voiceShouldSendRef = useRef(false);
+  const voiceAccumulatedMsRef = useRef(0);
+  const voiceSegmentStartRef = useRef(0);
   const speechRecognitionRef = useRef(null);
   const voiceTranscriptRef = useRef('');
 
@@ -22266,6 +22334,26 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   // when a reply is staged via swipe / hover button.
   const messagesEndRef = useRef(null);
   const draftTextareaRef = useRef(null);
+  // First-unread divider target — when present we scroll here instead of
+  // the very bottom so the user lands on the first message they haven't
+  // seen yet (matches WhatsApp / Slack behaviour).
+  const unreadDividerRef = useRef(null);
+
+  // --- Read receipts (local) ------------------------------------------
+  // `readMap` records the ISO of the newest message the user has seen per
+  // thread. `readAnchor` is a frozen snapshot taken the moment a thread is
+  // opened so the "Unread messages" divider stays put while the user reads.
+  const [readMap, setReadMap] = useState(() => getStoredSupportChatReadMap(currentUserEmail));
+  const [readAnchor, setReadAnchor] = useState({ threadId: '', at: 0 });
+
+  // --- Edit / delete --------------------------------------------------
+  // `hiddenMessageIds` = delete-for-me (local only). `editingMessageId` /
+  // `editingDraft` drive the inline editor. `openMenuMessageId` controls
+  // the per-bubble action menu (edit / delete-for-me / delete-for-everyone).
+  const [hiddenMessageIds, setHiddenMessageIds] = useState(() => getStoredSupportChatHiddenIds(currentUserEmail));
+  const [editingMessageId, setEditingMessageId] = useState('');
+  const [editingDraft, setEditingDraft] = useState('');
+  const [openMenuMessageId, setOpenMenuMessageId] = useState('');
 
   // Video attachments — users pick an existing video file from their
   // device (mobile camera roll, desktop file picker, etc.). Selected
@@ -23071,21 +23159,58 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       .sort((left, right) => Date.parse(left.createdAt || '') - Date.parse(right.createdAt || ''));
   }, [activeThread, messages]);
 
-  // Pin the scroll position to the most recent bubble when the active
-  // thread changes (opening someone's chat) or a new message lands.
-  // Uses two RAFs so the scroll happens after the new bubble has been
-  // committed AND laid out — without this, the list lands one message
-  // short on slower devices.
+  // First message in the active thread that arrived AFTER the user last
+  // read it AND was sent by someone else. Frozen via `readAnchor` so the
+  // divider doesn't jump while the user is reading.
+  const firstUnreadMessageId = useMemo(() => {
+    if (!activeThread || readAnchor.threadId !== activeThread.id || !readAnchor.at) return '';
+    const firstUnread = activeMessages.find((message) => (
+      normalizeEmail(message.senderEmail || '') !== currentUserEmail
+      && Date.parse(message.createdAt || '') > readAnchor.at
+    ));
+    return firstUnread ? firstUnread.id : '';
+  }, [activeThread, activeMessages, currentUserEmail, readAnchor]);
+
+  // Freeze a read-anchor the instant a thread is opened so we know where
+  // the first unread bubble sits (before we mark everything as read).
   useEffect(() => {
-    const target = messagesEndRef.current;
+    if (!selectedThreadId) {
+      setReadAnchor({ threadId: '', at: 0 });
+      return;
+    }
+    setReadAnchor({ threadId: selectedThreadId, at: Date.parse(readMap[selectedThreadId] || '') || 0 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedThreadId]);
+
+  // Mark the active thread as read (newest visible message) and persist.
+  useEffect(() => {
+    if (!activeThread || !activeMessages.length) return;
+    const latestIso = activeMessages[activeMessages.length - 1].createdAt || new Date().toISOString();
+    setReadMap((prev) => {
+      if (Date.parse(prev[activeThread.id] || '') >= Date.parse(latestIso)) return prev;
+      const next = { ...prev, [activeThread.id]: latestIso };
+      persistSupportChatReadMap(next, currentUserEmail);
+      return next;
+    });
+  }, [activeThread, activeMessages, currentUserEmail]);
+
+  // Pin the scroll position when the active thread changes (opening a
+  // chat) or a new message lands. Prefers the first-unread divider so the
+  // user lands on their first unseen message; otherwise jumps to the
+  // newest bubble. Uses two RAFs so the scroll happens after the new
+  // bubble has been committed AND laid out.
+  useEffect(() => {
+    const target = unreadDividerRef.current || messagesEndRef.current;
     if (!target) return;
     // First switch into a thread → jump instantly. Subsequent updates
     // (new incoming / outgoing message) → smooth scroll for polish.
-    const behavior = activeMessages.length <= 1 ? 'auto' : 'smooth';
+    const landingOnUnread = Boolean(unreadDividerRef.current);
+    const behavior = (activeMessages.length <= 1 || landingOnUnread) ? 'auto' : 'smooth';
+    const block = landingOnUnread ? 'center' : 'end';
     const raf1 = window.requestAnimationFrame(() => {
       const raf2 = window.requestAnimationFrame(() => {
         try {
-          target.scrollIntoView({ behavior, block: 'end' });
+          target.scrollIntoView({ behavior, block });
         } catch (_) { /* older browsers */ }
       });
       // Stash the inner RAF id so we can cancel on unmount.
@@ -23096,7 +23221,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       const innerId = Number(target.dataset.raf || 0);
       if (innerId) window.cancelAnimationFrame(innerId);
     };
-  }, [activeMessages.length, selectedThreadId]);
+  }, [activeMessages.length, selectedThreadId, firstUnreadMessageId]);
 
   // When a reply is staged (swipe-left or hover-Reply), pull the
   // textarea into view and focus it so the user can immediately type.
@@ -23375,6 +23500,80 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     }
   }, [activeThread, buildCardBody, cardToReadableText, createThread, currentRole, currentUserEmail, currentUserName, isAdmin, loadRemoteChat, onPushNotificationToUser, replyingTo, triggerAgentReply]);
 
+  // --- Edit / delete a message ----------------------------------------
+  // Persist `hiddenMessageIds` (delete-for-me) so they stay hidden across
+  // reloads on this device.
+  useEffect(() => {
+    persistSupportChatHiddenIds(hiddenMessageIds, currentUserEmail);
+  }, [hiddenMessageIds, currentUserEmail]);
+
+  // Low-level helper: rewrite a message body locally + sync to Supabase so
+  // both sides converge (used by edit and delete-for-everyone).
+  const updateMessageBodyRemote = useCallback((messageId, nextBody) => {
+    let updatedRecord = null;
+    setMessages((current) => current.map((message) => {
+      if (message.id !== messageId) return message;
+      updatedRecord = { ...message, body: nextBody };
+      return updatedRecord;
+    }));
+    if (updatedRecord && getAuthState() && currentUserEmail && hasSupabaseEnv && supabase) {
+      supabase
+        .from(SUPPORT_CHAT_MESSAGES_TABLE)
+        .upsert([toSupportChatMessageRecord(updatedRecord)], { onConflict: 'message_key' })
+        .then(() => { loadRemoteChat(); });
+    }
+  }, [currentUserEmail, loadRemoteChat]);
+
+  // Delete for everyone — only your own messages. Replaces the body with a
+  // tombstone so both participants see "This message was deleted".
+  const handleDeleteForEveryone = useCallback((message) => {
+    if (!message || normalizeEmail(message.senderEmail || '') !== currentUserEmail) return;
+    // eslint-disable-next-line no-alert
+    if (!window.confirm('Delete this message for everyone? This cannot be undone.')) return;
+    setOpenMenuMessageId('');
+    if (editingMessageId === message.id) setEditingMessageId('');
+    updateMessageBodyRemote(message.id, DELETED_TOKEN);
+  }, [currentUserEmail, editingMessageId, updateMessageBodyRemote]);
+
+  // Delete for me — hides locally only (works for any message, incl. ones
+  // sent by the other party or the AI agent).
+  const handleDeleteForMe = useCallback((message) => {
+    if (!message) return;
+    setOpenMenuMessageId('');
+    setHiddenMessageIds((current) => (current.includes(message.id) ? current : [...current, message.id]));
+  }, []);
+
+  // Begin editing — only your own non-deleted text messages.
+  const handleBeginEditMessage = useCallback((message) => {
+    if (!message || normalizeEmail(message.senderEmail || '') !== currentUserEmail) return;
+    setOpenMenuMessageId('');
+    const editedMeta = extractEditedMeta(message.body);
+    const replyMeta = extractReplyMeta(editedMeta.body);
+    setEditingMessageId(message.id);
+    setEditingDraft(replyMeta.body);
+  }, [currentUserEmail]);
+
+  const handleCancelEditMessage = useCallback(() => {
+    setEditingMessageId('');
+    setEditingDraft('');
+  }, []);
+
+  const handleSaveEditMessage = useCallback((message) => {
+    if (!message) return;
+    const nextText = String(editingDraft || '').trim();
+    if (!nextText) return;
+    // Preserve any reply header the original message carried.
+    const editedMeta = extractEditedMeta(message.body);
+    const replyMeta = extractReplyMeta(editedMeta.body);
+    const rebuiltInner = replyMeta.replyTo
+      ? buildBodyWithReply(replyMeta.replyTo, nextText)
+      : nextText;
+    const nextBody = `${EDITED_PREFIX}${rebuiltInner}`;
+    setEditingMessageId('');
+    setEditingDraft('');
+    updateMessageBodyRemote(message.id, nextBody);
+  }, [editingDraft, updateMessageBodyRemote]);
+
   const handleSendOffer = useCallback(() => {
     const amount = Number(String(offerAmount).replace(/[^\d.]/g, ''));
     if (!amount || amount <= 0) return;
@@ -23484,6 +23683,49 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     }
   }, []);
 
+  // Fold the currently-running segment into the accumulated total so the
+  // duration stays accurate across pause/resume.
+  const finalizeVoiceSegment = useCallback(() => {
+    if (voiceSegmentStartRef.current > 0) {
+      voiceAccumulatedMsRef.current += Date.now() - voiceSegmentStartRef.current;
+      voiceSegmentStartRef.current = 0;
+    }
+  }, []);
+
+  // Send the in-progress note (WhatsApp: tap the green send button).
+  const handleSendVoiceRecording = useCallback(() => {
+    finalizeVoiceSegment();
+    voiceShouldSendRef.current = true;
+    handleStopVoiceRecording();
+  }, [finalizeVoiceSegment, handleStopVoiceRecording]);
+
+  // Discard the in-progress note (WhatsApp: tap the trash button).
+  const handleCancelVoiceRecording = useCallback(() => {
+    finalizeVoiceSegment();
+    voiceShouldSendRef.current = false;
+    handleStopVoiceRecording();
+  }, [finalizeVoiceSegment, handleStopVoiceRecording]);
+
+  // Pause the recording without finishing it.
+  const handlePauseVoiceRecording = useCallback(() => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state === 'recording') {
+      try { recorder.pause(); } catch (_) { /* ignore */ }
+      finalizeVoiceSegment();
+      setIsVoicePaused(true);
+    }
+  }, [finalizeVoiceSegment]);
+
+  // Resume a paused recording.
+  const handleResumeVoiceRecording = useCallback(() => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state === 'paused') {
+      try { recorder.resume(); } catch (_) { /* ignore */ }
+      voiceSegmentStartRef.current = Date.now();
+      setIsVoicePaused(false);
+    }
+  }, []);
+
   const handleStartVoiceRecording = useCallback(async () => {
     if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia || typeof window.MediaRecorder === 'undefined') {
       // eslint-disable-next-line no-alert
@@ -23499,7 +23741,11 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       mediaRecorderRef.current = recorder;
       voiceChunksRef.current = [];
       voiceStartRef.current = Date.now();
+      voiceAccumulatedMsRef.current = 0;
+      voiceSegmentStartRef.current = Date.now();
+      voiceShouldSendRef.current = false;
       voiceTranscriptRef.current = '';
+      setIsVoicePaused(false);
       setVoiceElapsedSec(0);
 
       // Live transcription (Chrome / Edge via webkitSpeechRecognition). If
@@ -23540,12 +23786,22 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
         }
       };
       recorder.onstop = () => {
-        const durationSec = Math.max(1, Math.round((Date.now() - voiceStartRef.current) / 1000));
+        const shouldSend = voiceShouldSendRef.current;
+        voiceShouldSendRef.current = false;
+        // Make sure any running segment is counted (covers stops that
+        // bypass the finalize helpers, e.g. unmount cleanup).
+        if (voiceSegmentStartRef.current > 0) {
+          voiceAccumulatedMsRef.current += Date.now() - voiceSegmentStartRef.current;
+          voiceSegmentStartRef.current = 0;
+        }
+        const durationSec = Math.max(1, Math.round(voiceAccumulatedMsRef.current / 1000));
         const blob = new Blob(voiceChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
         const transcript = voiceTranscriptRef.current.trim();
         stopVoiceTracksAndTimer();
         setIsRecordingVoice(false);
+        setIsVoicePaused(false);
         setVoiceElapsedSec(0);
+        if (!shouldSend) return; // user cancelled — discard
         if (!blob || blob.size === 0) return;
         if (blob.size > 1_500_000) {
           // eslint-disable-next-line no-alert
@@ -23591,19 +23847,21 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       setIsRecordingVoice(true);
 
       voiceTimerRef.current = window.setInterval(() => {
-        const elapsed = Math.round((Date.now() - voiceStartRef.current) / 1000);
+        const running = voiceSegmentStartRef.current > 0 ? (Date.now() - voiceSegmentStartRef.current) : 0;
+        const elapsed = Math.round((voiceAccumulatedMsRef.current + running) / 1000);
         setVoiceElapsedSec(elapsed);
         if (elapsed >= 60) {
-          handleStopVoiceRecording();
+          handleSendVoiceRecording();
         }
       }, 250);
     } catch (error) {
       stopVoiceTracksAndTimer();
       setIsRecordingVoice(false);
+      setIsVoicePaused(false);
       // eslint-disable-next-line no-alert
       window.alert(`Couldn\u2019t start recording: ${error?.message || 'microphone permission denied'}`);
     }
-  }, [handleStopVoiceRecording, sendCardMessage, stopVoiceTracksAndTimer]);
+  }, [handleSendVoiceRecording, sendCardMessage, stopVoiceTracksAndTimer]);
 
   // Always release the microphone if the component unmounts mid-record.
   useEffect(() => () => {
@@ -24002,8 +24260,11 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   // payment requests, location coords, voice transcripts, etc.).
   const filteredMessages = useMemo(() => {
     const q = chatSearchQuery.trim().toLowerCase();
-    if (!q) return activeMessages;
-    return activeMessages.filter((message) => {
+    const visible = hiddenMessageIds.length
+      ? activeMessages.filter((message) => !hiddenMessageIds.includes(message.id))
+      : activeMessages;
+    if (!q) return visible;
+    return visible.filter((message) => {
       const card = parseCardBody(message.body);
       const haystack = [
         card ? cardToReadableText(message.body) : String(message.body || ''),
@@ -24012,7 +24273,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       ].join(' ').toLowerCase();
       return haystack.includes(q);
     });
-  }, [activeMessages, cardToReadableText, chatSearchQuery, parseCardBody]);
+  }, [activeMessages, cardToReadableText, chatSearchQuery, hiddenMessageIds, parseCardBody]);
 
   // --- Export conversation -------------------------------------------
   // Builds a printable HTML document in a new tab and triggers the
@@ -24518,17 +24779,48 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                   ) : null}
                   {filteredMessages.length ? filteredMessages.map((message) => {
                     const mine = normalizeEmail(message.senderEmail || '') === currentUserEmail;
-                    const meta = extractReplyMeta(message.body);
+                    const deleted = isDeletedBody(message.body);
+                    const editedMeta = extractEditedMeta(message.body);
+                    const wasEdited = editedMeta.edited;
+                    const meta = extractReplyMeta(editedMeta.body);
                     const innerBody = meta.body;
                     const replyTo = meta.replyTo;
-                    const card = parseCardBody(innerBody);
+                    const card = deleted ? null : parseCardBody(innerBody);
+                    const isEditing = editingMessageId === message.id;
+                    const canEdit = mine && !deleted && !card;
+                    const menuOpen = openMenuMessageId === message.id;
+                    const showUnreadDivider = Boolean(firstUnreadMessageId) && message.id === firstUnreadMessageId;
                     const startReply = () => setReplyingTo({
                       id: message.id,
                       senderName: mine ? 'You' : (message.senderName || message.senderEmail || 'Contact'),
-                      snippet: buildReplySnippetFromBody(message.body),
+                      snippet: buildReplySnippetFromBody(editedMeta.body),
                     });
                     return (
-                      <SwipeableMessage key={message.id} onReply={startReply}>
+                      <Fragment key={message.id}>
+                        {showUnreadDivider ? (
+                          <div ref={unreadDividerRef} className="my-1 flex items-center gap-2">
+                            <span className="h-px flex-1 bg-rose-200" aria-hidden="true" />
+                            <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-rose-600">Unread messages</span>
+                            <span className="h-px flex-1 bg-rose-200" aria-hidden="true" />
+                          </div>
+                        ) : null}
+                        {deleted ? (
+                        <div className={`group flex items-end gap-2 ${mine ? 'flex-row-reverse' : 'justify-start'}`}>
+                          <span
+                            className={`flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full text-[11px] font-black text-white shadow-sm ${mine ? 'bg-[var(--svs-primary)]' : 'bg-[var(--svs-primary-strong)]'}`}
+                            aria-hidden="true"
+                          >
+                            {(mine ? (currentUserName || 'You') : (message.senderName || message.senderEmail || '?')).trim().charAt(0).toUpperCase()}
+                          </span>
+                          <article className={`relative max-w-[88%] rounded-2xl border border-dashed px-3 py-2 shadow-sm sm:max-w-[78%] ${mine ? 'rounded-br-md border-cyan-200/50 bg-[var(--svs-primary)]/70 text-white' : 'rounded-bl-md border-[var(--svs-border)] bg-[var(--svs-surface)] text-[var(--svs-muted)]'}`}>
+                            <p className="flex items-center gap-1.5 text-xs italic">
+                              <X className="h-3.5 w-3.5" aria-hidden="true" />
+                              This message was deleted
+                            </p>
+                          </article>
+                        </div>
+                        ) : (
+                      <SwipeableMessage onReply={startReply}>
                         <div className={`group flex items-end gap-2 ${mine ? 'flex-row-reverse' : 'justify-start'}`}>
                           <span
                             className={`flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full text-[11px] font-black text-white shadow-sm ${mine ? 'bg-[var(--svs-primary)]' : 'bg-[var(--svs-primary-strong)]'}`}
@@ -24546,6 +24838,64 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                             >
                               <Reply className="h-3.5 w-3.5" aria-hidden="true" />
                             </button>
+                            {/* Per-message action menu (edit / delete). */}
+                            <div className={`absolute ${mine ? 'left-1' : 'right-1'} top-1`}>
+                              <button
+                                type="button"
+                                onClick={() => setOpenMenuMessageId(menuOpen ? '' : message.id)}
+                                title="Message actions"
+                                aria-label="Message actions"
+                                aria-expanded={menuOpen}
+                                className={`inline-flex h-6 w-6 items-center justify-center rounded-full opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 ${menuOpen ? 'opacity-100' : ''} ${mine ? 'text-cyan-50 hover:bg-white/20' : 'text-[var(--svs-muted)] hover:bg-[var(--svs-surface-soft)]'}`}
+                              >
+                                <MoreVertical className="h-4 w-4" aria-hidden="true" />
+                              </button>
+                              {menuOpen ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    aria-hidden="true"
+                                    tabIndex={-1}
+                                    onClick={() => setOpenMenuMessageId('')}
+                                    className="fixed inset-0 z-20 cursor-default"
+                                  />
+                                  <div className={`absolute z-30 mt-1 w-44 overflow-hidden rounded-xl border border-[var(--svs-border)] bg-white py-1 text-left shadow-xl ${mine ? 'left-0' : 'right-0'}`}>
+                                    <button
+                                      type="button"
+                                      onClick={() => { setOpenMenuMessageId(''); startReply(); }}
+                                      className="flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)]"
+                                    >
+                                      <Reply className="h-3.5 w-3.5" aria-hidden="true" /> Reply
+                                    </button>
+                                    {canEdit ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleBeginEditMessage(message)}
+                                        className="flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)]"
+                                      >
+                                        <Pencil className="h-3.5 w-3.5" aria-hidden="true" /> Edit
+                                      </button>
+                                    ) : null}
+                                    {mine ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteForEveryone(message)}
+                                        className="flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Delete for everyone
+                                      </button>
+                                    ) : null}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteForMe(message)}
+                                      className="flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold text-[var(--svs-muted)] transition hover:bg-[var(--svs-surface-soft)]"
+                                    >
+                                      <X className="h-3.5 w-3.5" aria-hidden="true" /> Delete for me
+                                    </button>
+                                  </div>
+                                </>
+                              ) : null}
+                            </div>
                             <p className="text-xs font-semibold opacity-90">{mine ? 'You' : (message.senderName || message.senderEmail)}</p>
                             {replyTo ? (
                               <div className={`mt-1 mb-1.5 rounded-md border-l-2 px-2 py-1 text-[11px] ${mine ? 'border-cyan-100 bg-white/10 text-cyan-50' : 'border-[#0f6674] bg-[#f7fbff] text-slate-600'}`}>
@@ -24722,14 +25072,54 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                               ) : null}
                             </div>
                           ) : (
-                            <p className="mt-1 whitespace-pre-wrap text-sm">{renderChatBodyWithLinks(innerBody)}</p>
+                            isEditing ? (
+                              <div className="mt-1">
+                                <textarea
+                                  value={editingDraft}
+                                  onChange={(event) => setEditingDraft(event.target.value)}
+                                  rows={2}
+                                  autoFocus
+                                  onKeyDown={(event) => {
+                                    if (event.key === 'Enter' && !event.shiftKey) {
+                                      event.preventDefault();
+                                      handleSaveEditMessage(message);
+                                    } else if (event.key === 'Escape') {
+                                      event.preventDefault();
+                                      handleCancelEditMessage();
+                                    }
+                                  }}
+                                  className={`w-full resize-none rounded-lg border px-2 py-1.5 text-sm outline-none ${mine ? 'border-cyan-200/60 bg-white/15 text-white placeholder:text-cyan-100' : 'border-[var(--svs-border)] bg-white text-[var(--svs-text)]'}`}
+                                />
+                                <div className="mt-1.5 flex items-center justify-end gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={handleCancelEditMessage}
+                                    className={`rounded-md px-2 py-1 text-[11px] font-bold ${mine ? 'bg-white/15 text-white hover:bg-white/25' : 'border border-[var(--svs-border)] bg-white text-[var(--svs-muted)] hover:bg-[var(--svs-surface-soft)]'}`}
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSaveEditMessage(message)}
+                                    className="rounded-md bg-[var(--svs-success,#16a34a)] px-2.5 py-1 text-[11px] font-bold text-white hover:opacity-90"
+                                  >
+                                    Save
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="mt-1 whitespace-pre-wrap text-sm">{renderChatBodyWithLinks(innerBody)}</p>
+                            )
                           )}
-                          <p className={`mt-1 text-[11px] ${mine ? 'text-cyan-100' : 'text-slate-400'}`}>
-                            {new Date(message.createdAt || Date.now()).toLocaleString()}
+                          <p className={`mt-1 flex items-center gap-1 text-[11px] ${mine ? 'flex-row-reverse text-cyan-100' : 'text-slate-400'}`}>
+                            <span>{new Date(message.createdAt || Date.now()).toLocaleString()}</span>
+                            {wasEdited ? <span className="italic opacity-90">· edited</span> : null}
                           </p>
                           </article>
                         </div>
                       </SwipeableMessage>
+                        )}
+                      </Fragment>
                     );
                   }) : (
                     <div className="rounded-xl border border-dashed border-[#c8dff0] bg-white px-4 py-6 text-center text-sm text-slate-500">
@@ -24802,16 +25192,13 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                       className="hidden"
                     />
                     {isRecordingVoice ? (
-                      <button
-                        type="button"
-                        onClick={handleStopVoiceRecording}
-                        title="Stop recording and send"
-                        aria-label="Stop recording and send"
-                        className="inline-flex h-9 shrink-0 items-center justify-center gap-1 rounded-full border border-rose-300 bg-rose-50 px-2.5 text-[11px] font-bold text-rose-700 transition hover:bg-rose-100 sm:h-auto sm:rounded-md sm:px-2 sm:py-1"
+                      <span
+                        title={isVoicePaused ? 'Recording paused' : 'Recording…'}
+                        className={`inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full border px-2.5 text-[11px] font-bold sm:h-auto sm:rounded-md sm:px-2 sm:py-1 ${isVoicePaused ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-rose-300 bg-rose-50 text-rose-700'}`}
                       >
-                        <Square className="h-4 w-4 animate-pulse sm:h-3.5 sm:w-3.5" aria-hidden="true" />
-                        <span>{voiceElapsedSec}s</span>
-                      </button>
+                        <span className={`inline-block h-2.5 w-2.5 rounded-full bg-current ${isVoicePaused ? '' : 'animate-pulse'}`} aria-hidden="true" />
+                        <span>{isVoicePaused ? 'Paused' : 'Recording'}</span>
+                      </span>
                     ) : (
                       <button
                         type="button"
@@ -25012,6 +25399,61 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                     </div>
                   ) : null}
 
+                  {isRecordingVoice ? (
+                    /* WhatsApp-style voice recording bar: cancel · timer ·
+                       pause/resume · send. Replaces the text composer while
+                       a note is being captured. */
+                    <div className="flex items-center gap-2 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] p-1.5 shadow-sm sm:rounded-2xl">
+                      <button
+                        type="button"
+                        onClick={handleCancelVoiceRecording}
+                        title="Discard recording"
+                        aria-label="Discard recording"
+                        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-rose-600 transition hover:bg-rose-50 sm:h-11 sm:w-11"
+                      >
+                        <Trash className="h-5 w-5" aria-hidden="true" />
+                      </button>
+                      <div className="flex flex-1 items-center gap-2 px-1">
+                        <span className={`inline-block h-3 w-3 shrink-0 rounded-full bg-rose-500 ${isVoicePaused ? 'opacity-40' : 'animate-pulse'}`} aria-hidden="true" />
+                        <span className="font-mono text-sm font-bold tabular-nums text-[var(--svs-text)]">
+                          {`${String(Math.floor(voiceElapsedSec / 60)).padStart(2, '0')}:${String(voiceElapsedSec % 60).padStart(2, '0')}`}
+                        </span>
+                        <span className="ml-1 truncate text-xs text-[var(--svs-muted)]">
+                          {isVoicePaused ? 'Paused — tap play to resume' : 'Recording… slide to cancel'}
+                        </span>
+                      </div>
+                      {isVoicePaused ? (
+                        <button
+                          type="button"
+                          onClick={handleResumeVoiceRecording}
+                          title="Resume recording"
+                          aria-label="Resume recording"
+                          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--svs-border)] bg-white text-[var(--svs-primary-strong)] transition hover:bg-[var(--svs-surface-soft)] sm:h-11 sm:w-11"
+                        >
+                          <Play className="h-5 w-5" aria-hidden="true" />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handlePauseVoiceRecording}
+                          title="Pause recording"
+                          aria-label="Pause recording"
+                          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--svs-border)] bg-white text-[var(--svs-primary-strong)] transition hover:bg-[var(--svs-surface-soft)] sm:h-11 sm:w-11"
+                        >
+                          <Pause className="h-5 w-5" aria-hidden="true" />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleSendVoiceRecording}
+                        title="Send voice note"
+                        aria-label="Send voice note"
+                        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--svs-primary)] text-white shadow-md transition hover:scale-105 hover:bg-[var(--svs-primary-strong)] sm:h-11 sm:w-11"
+                      >
+                        <Send className="h-5 w-5" aria-hidden="true" />
+                      </button>
+                    </div>
+                  ) : (
                   <div className="flex items-end gap-1 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] p-1.5 shadow-sm focus-within:border-[var(--svs-primary)] focus-within:ring-2 focus-within:ring-[var(--svs-primary)]/20 sm:rounded-2xl">
                     <button
                       type="button"
@@ -25040,6 +25482,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                       <Send className="h-5 w-5" aria-hidden="true" />
                     </button>
                   </div>
+                  )}
                 </div>
               </>
             ) : (
@@ -30532,14 +30975,164 @@ const SiteFooter = () => {
   );
 };
 
+// --- PWA install plumbing -------------------------------------------------
+// Capture the browser's `beforeinstallprompt` once at module scope so the
+// install affordance survives route changes, and fan it out to any mounted
+// banner via a tiny listener set.
+let deferredInstallPromptEvent = null;
+const installPromptListeners = new Set();
+const notifyInstallListeners = () => {
+  installPromptListeners.forEach((listener) => { try { listener(); } catch (_) { /* ignore */ } });
+};
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    deferredInstallPromptEvent = event;
+    notifyInstallListeners();
+  });
+  window.addEventListener('appinstalled', () => {
+    deferredInstallPromptEvent = null;
+    notifyInstallListeners();
+  });
+}
+const isRunningStandalone = () => {
+  if (typeof window === 'undefined') return false;
+  try {
+    return Boolean(window.matchMedia?.('(display-mode: standalone)')?.matches)
+      || window.navigator?.standalone === true;
+  } catch (_) { return false; }
+};
+const isIosSafari = () => {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  return /iphone|ipad|ipod/i.test(ua) && !/crios|fxios|edgios/i.test(ua);
+};
+
+const usePwaInstall = () => {
+  const [canPrompt, setCanPrompt] = useState(Boolean(deferredInstallPromptEvent));
+  const [standalone, setStandalone] = useState(isRunningStandalone());
+  useEffect(() => {
+    const update = () => {
+      setCanPrompt(Boolean(deferredInstallPromptEvent));
+      setStandalone(isRunningStandalone());
+    };
+    installPromptListeners.add(update);
+    const mq = (typeof window !== 'undefined' && window.matchMedia)
+      ? window.matchMedia('(display-mode: standalone)')
+      : null;
+    if (mq?.addEventListener) mq.addEventListener('change', update);
+    else if (mq?.addListener) mq.addListener(update);
+    return () => {
+      installPromptListeners.delete(update);
+      if (mq?.removeEventListener) mq.removeEventListener('change', update);
+      else if (mq?.removeListener) mq.removeListener(update);
+    };
+  }, []);
+  const promptInstall = useCallback(async () => {
+    const event = deferredInstallPromptEvent;
+    if (!event) return false;
+    try {
+      event.prompt();
+      await event.userChoice;
+    } catch (_) { /* user dismissed or unsupported */ }
+    deferredInstallPromptEvent = null;
+    notifyInstallListeners();
+    return true;
+  }, []);
+  return { canPrompt, standalone, isIos: isIosSafari(), promptInstall };
+};
+
+// Site-wide "Install App" banner. Always visible on the website, hidden
+// only when the site is already running as the installed app (standalone).
+const InstallAppBanner = () => {
+  const { canPrompt, standalone, isIos, promptInstall } = usePwaInstall();
+  const [showHelp, setShowHelp] = useState(false);
+  if (standalone) return null;
+  const handleClick = () => {
+    if (canPrompt) { promptInstall(); return; }
+    setShowHelp((value) => !value);
+  };
+  return (
+    <div className="border-b border-[var(--svs-border)] bg-gradient-to-r from-[var(--svs-primary)] via-[var(--svs-primary-strong)] to-[var(--svs-primary)] text-white">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-1.5 px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="flex items-center gap-2">
+          <Smartphone className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" aria-hidden="true" />
+          <p className="text-[12px] font-semibold leading-tight sm:text-sm">
+            Install the SVS app for a faster, full-screen shopping &amp; chat experience.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleClick}
+          className="inline-flex shrink-0 items-center justify-center gap-1.5 self-start rounded-full bg-white px-3.5 py-1.5 text-[12px] font-extrabold text-[var(--svs-primary-strong)] shadow-sm transition hover:bg-cyan-50 sm:self-auto sm:text-sm"
+        >
+          <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
+          Install App
+        </button>
+      </div>
+      {showHelp || isIos ? (
+        <div className="mx-auto w-full max-w-7xl px-3 pb-2 sm:px-6">
+          <p className="rounded-lg bg-white/15 px-3 py-1.5 text-[11px] leading-snug text-cyan-50">
+            {isIos
+              ? 'On iPhone/iPad: tap the Share button in Safari, then choose “Add to Home Screen”.'
+              : 'To install: open your browser menu (⋮) and choose “Install app” / “Add to Home screen”.'}
+          </p>
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+// Compact install button used at the top of the Markets hero.
+const MarketsInstallHeroBanner = () => {
+  const { canPrompt, standalone, isIos, promptInstall } = usePwaInstall();
+  const [showHelp, setShowHelp] = useState(false);
+  if (standalone) return null;
+  const handleClick = () => {
+    if (canPrompt) { promptInstall(); return; }
+    setShowHelp((value) => !value);
+  };
+  return (
+    <div className="mb-4 flex flex-col gap-2 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center gap-2.5">
+        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--svs-primary)] text-white">
+          <Smartphone className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div>
+          <p className="text-sm font-extrabold text-[var(--svs-primary-strong)]">Get the SVS App</p>
+          <p className="text-[11px] text-[var(--svs-muted)]">
+            {isIos
+              ? 'In Safari: Share → “Add to Home Screen”.'
+              : 'Install for instant access, offline browsing &amp; push updates.'}
+          </p>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={handleClick}
+        className="inline-flex shrink-0 items-center justify-center gap-1.5 self-start rounded-full bg-[var(--svs-primary)] px-4 py-2 text-sm font-extrabold text-white shadow-sm transition hover:bg-[var(--svs-primary-strong)] sm:self-auto"
+      >
+        <Download className="h-4 w-4" aria-hidden="true" />
+        Install App
+      </button>
+      {showHelp && !isIos ? (
+        <p className="basis-full text-[11px] text-[var(--svs-muted)] sm:mt-1">
+          Open your browser menu (⋮) and choose “Install app” / “Add to Home screen”.
+        </p>
+      ) : null}
+    </div>
+  );
+};
+
 const FloatingSupportChatButton = () => (
   <Link
     to="/support/chat"
     aria-label="Open Let's Talk Business chat"
     title="Let's Talk Business"
-    className="fixed bottom-5 right-4 z-[130] inline-flex h-16 w-16 items-center justify-center rounded-full border-2 border-white/80 bg-[#1f4c8f] text-white shadow-[0_14px_28px_rgba(8,32,40,0.38)] transition hover:scale-105 hover:bg-[#173e78] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 sm:bottom-6 sm:right-6"
+    className="group fixed bottom-5 right-4 z-[130] inline-flex items-center gap-2 rounded-full border-2 border-white/80 bg-[#1f4c8f] py-2.5 pl-3 pr-3 text-white shadow-[0_14px_28px_rgba(8,32,40,0.38)] transition hover:scale-105 hover:bg-[#173e78] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 sm:bottom-6 sm:right-6 sm:py-3 sm:pl-4 sm:pr-5"
   >
-    <MessageCircle className="h-8 w-8" strokeWidth={2.4} />
+    <MessageCircle className="h-7 w-7 shrink-0 sm:h-8 sm:w-8" strokeWidth={2.4} />
+    <span className="text-sm font-extrabold leading-tight tracking-tight sm:text-base">Let&apos;s Talk Business</span>
   </Link>
 );
 
@@ -32313,6 +32906,7 @@ const App = () => {
 
   const appContent = (
     <>
+      {!isStandaloneShellRoute ? <InstallAppBanner /> : null}
       <AppRoutes
         cartItems={cartItems}
         wishlistItems={wishlistItems}
