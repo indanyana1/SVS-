@@ -24354,7 +24354,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   }, [activeMessages, activeThread, cardToReadableText, currentUserEmail, currentUserName, dealStatus, dealStatusMeta, parseCardBody, resolveCounterparty]);
 
   return (
-    <PageFrame>
+    <section className="bg-[var(--svs-bg)] px-4 py-4 text-[var(--svs-text)] sm:py-6">
       <section className="mx-auto w-full max-w-6xl overflow-hidden rounded-2xl border border-[#d4e3f1] bg-white shadow-[0_20px_40px_rgba(2,32,71,0.08)] sm:rounded-3xl">
         <div className="border-b border-[var(--svs-border)] bg-gradient-to-r from-[var(--svs-primary)] via-[var(--svs-primary-strong)] to-[var(--svs-primary)] px-3 py-2.5 text-white sm:px-7 sm:py-4">
           <div className="flex items-center justify-between gap-2">
@@ -25729,7 +25729,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
           </div>
         </div>
       ) : null}
-    </PageFrame>
+    </section>
   );
 };
 
