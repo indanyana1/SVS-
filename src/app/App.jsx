@@ -17222,6 +17222,46 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
     setBulkDraft((current) => (current ? { ...current, ...patch } : current));
   }, []);
 
+  // ---- AI Quick Lister: per-market hints for fields the AI usually
+  // cannot read off a photo and the seller has to fill in themselves
+  // (clothing size, packaging size, etc.). Used both for input
+  // placeholders and the "Needs your input" banner below.
+  const BULK_MARKET_FIELD_HINTS = useMemo(() => ({
+    fashionStyle:           { sizePlaceholder: 'e.g. S, M, L, XL or 30, 32, 34',  sizeRequired: true,  sizeOptions: ['XS', 'S', 'M', 'L', 'XL', 'XXL'] },
+    beautyFitnessSports:    { sizePlaceholder: 'e.g. 100ml, M, One size',          sizeRequired: false },
+    groceries:              { sizePlaceholder: 'e.g. 500g, 1L, 6-pack',            sizeRequired: true },
+    beverages:              { sizePlaceholder: 'e.g. 330ml, 500ml, 2L',            sizeRequired: true },
+    fastFood:               { sizePlaceholder: 'e.g. Small, Medium, Large',         sizeRequired: false },
+    homeCare:               { sizePlaceholder: 'e.g. 750ml, 1kg, 5L',              sizeRequired: false },
+    toysKids:               { sizePlaceholder: 'e.g. Ages 3-5, 0-12 months',        sizeRequired: false },
+    jewelleryAccessories:   { sizePlaceholder: 'e.g. 18", 7, One size',             sizeRequired: false },
+    hardwareSoftware:       { sizePlaceholder: 'e.g. 256GB, 15.6", M4 mount',       sizeRequired: false },
+    constructionTools:      { sizePlaceholder: 'e.g. 18V, 125mm, 2.5kg',            sizeRequired: false },
+    mobilityVehicles:       { sizePlaceholder: 'e.g. 195/65 R15, M, L',             sizeRequired: false },
+    stationery:             { sizePlaceholder: 'e.g. A4, 0.5mm, 100 sheets',        sizeRequired: false },
+    wellness:               { sizePlaceholder: 'e.g. 60 tablets, 100ml',            sizeRequired: false },
+    traditionalMedicines:   { sizePlaceholder: 'e.g. 50g, 100ml',                   sizeRequired: false },
+    ecommerce:              { sizePlaceholder: 'e.g. M, 42, 500ml',                 sizeRequired: false },
+  }), []);
+
+  const getBulkMissingFields = useCallback((draft) => {
+    if (!draft || draft.status !== 'ready') return [];
+    const hints = BULK_MARKET_FIELD_HINTS[draft.marketKey] || {};
+    const missing = [];
+    if (!String(draft.title || '').trim()) missing.push({ key: 'title', label: 'Title' });
+    if (!String(draft.description || '').trim()) missing.push({ key: 'description', label: 'Description' });
+    if (!String(draft.marketKey || '').trim()) missing.push({ key: 'marketKey', label: 'Market' });
+    const priceNum = Number(String(draft.price || '').replace(/[^\d.]/g, ''));
+    if (!Number.isFinite(priceNum) || priceNum <= 0) missing.push({ key: 'price', label: 'Price' });
+    if (!Number(draft.quantity) || Number(draft.quantity) < 1) missing.push({ key: 'quantity', label: 'Quantity' });
+    if (hints.sizeRequired && !String(draft.size || '').trim()) {
+      missing.push({ key: 'size', label: 'Size', hint: hints.sizePlaceholder });
+    }
+    return missing;
+  }, [BULK_MARKET_FIELD_HINTS]);
+
+  const bulkMissingFields = useMemo(() => getBulkMissingFields(bulkDraft), [bulkDraft, getBulkMissingFields]);
+
   const handleBulkFilesPick = useCallback((event) => {
     const picked = Array.from(event.target.files || []);
     event.target.value = '';
@@ -17738,33 +17778,61 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                 ) : bulkDraft.status === 'published' ? (
                   <p className="mt-3 text-xs font-semibold text-emerald-700">Published. The item is now live in {sellerMarketConfig[bulkDraft.marketKey] ? t(sellerMarketConfig[bulkDraft.marketKey].labelKey) : bulkDraft.marketKey}. Hit <span className="font-bold">List another item</span> to add the next product.</p>
                 ) : (
+                  <>
+                    {bulkDraft.status === 'ready' ? (
+                      bulkMissingFields.length ? (
+                        <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-[12px] text-amber-900">
+                          <p className="font-semibold">
+                            <span aria-hidden="true">\u270F\uFE0F</span> {bulkMissingFields.length} field{bulkMissingFields.length === 1 ? '' : 's'} need your input
+                          </p>
+                          <p className="mt-1 text-[11px] text-amber-800">
+                            AI read what it could see in your photos. The fields below can\u2019t be detected automatically \u2014 please fill them in before publishing:
+                          </p>
+                          <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                            {bulkMissingFields.map((field) => (
+                              <li
+                                key={field.key}
+                                className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900 ring-1 ring-amber-300"
+                              >
+                                {field.label}
+                                {field.hint ? <span className="font-normal text-amber-700">({field.hint})</span> : null}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : (
+                        <div className="mt-3 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-[12px] font-semibold text-emerald-800">
+                          <span aria-hidden="true">\u2728</span> AI filled in everything. Review the details and hit Publish.
+                        </div>
+                      )
+                    ) : null}
                   <div className="mt-3 grid gap-2 sm:grid-cols-2">
                     <label className="block text-[11px] font-semibold text-[var(--svs-text)] sm:col-span-2">
-                      Title
+                      <span className="flex items-center gap-1.5">Title {bulkDraft.title ? <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-700" title="Auto-filled by AI">✨ AI</span> : <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700">✏️ You</span>}</span>
                       <input
                         type="text"
                         value={bulkDraft.title}
                         onChange={(event) => updateBulkDraft({ title: event.target.value })}
-                        className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none"
+                        className={`mt-1 w-full rounded-md border bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none ${!bulkDraft.title ? 'border-amber-400 ring-2 ring-amber-200' : 'border-[var(--svs-border)]'}`}
                         disabled={bulkDraft.status === 'publishing'}
                       />
                     </label>
                     <label className="block text-[11px] font-semibold text-[var(--svs-text)] sm:col-span-2">
-                      Description
+                      <span className="flex items-center gap-1.5">Description {bulkDraft.description ? <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-700" title="Auto-filled by AI">✨ AI</span> : <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700">✏️ You</span>}</span>
                       <textarea
                         value={bulkDraft.description}
                         onChange={(event) => updateBulkDraft({ description: event.target.value })}
                         rows={4}
-                        className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none"
+                        className={`mt-1 w-full rounded-md border bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none ${!bulkDraft.description ? 'border-amber-400 ring-2 ring-amber-200' : 'border-[var(--svs-border)]'}`}
                         disabled={bulkDraft.status === 'publishing'}
                       />
                     </label>
                     <label className="block text-[11px] font-semibold text-[var(--svs-text)]">
-                      Market
+                      <span className="flex items-center gap-1.5">Market {bulkDraft.marketKey ? <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-700" title="Auto-filled by AI">✨ AI</span> : <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700">✏️ You</span>}</span>
                       <select
                         value={bulkDraft.marketKey}
                         onChange={(event) => updateBulkDraft({ marketKey: event.target.value })}
-                        className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none"
+                        className={`mt-1 w-full rounded-md border bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none ${!bulkDraft.marketKey ? 'border-amber-400 ring-2 ring-amber-200' : 'border-[var(--svs-border)]'}`}
                         disabled={bulkDraft.status === 'publishing'}
                       >
                         <option value="">Select market</option>
@@ -17776,7 +17844,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                       </select>
                     </label>
                     <label className="block text-[11px] font-semibold text-[var(--svs-text)]">
-                      Quantity
+                      <span className="flex items-center gap-1.5">Quantity <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700" title="How many units do you have in stock?">✏️ You</span></span>
                       <input
                         type="number"
                         min="0"
@@ -17786,9 +17854,10 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                         className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none"
                         disabled={bulkDraft.status === 'publishing'}
                       />
+                      <p className="mt-0.5 text-[10px] font-normal text-[var(--svs-muted)]">How many units are available for sale right now?</p>
                     </label>
                     <label className="block text-[11px] font-semibold text-[var(--svs-text)]">
-                      Price
+                      <span className="flex items-center gap-1.5">Price {bulkDraft.price ? <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-700" title="Suggested by AI — confirm or adjust">✨ AI</span> : <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700">✏️ You</span>}</span>
                       <div className="mt-1 flex gap-1">
                         <input
                           type="text"
@@ -17802,24 +17871,40 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                           inputMode="decimal"
                           value={bulkDraft.price}
                           onChange={(event) => updateBulkDraft({ price: event.target.value })}
-                          className="w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none"
+                          className={`w-full rounded-md border bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none ${!bulkDraft.price ? 'border-amber-400 ring-2 ring-amber-200' : 'border-[var(--svs-border)]'}`}
                           disabled={bulkDraft.status === 'publishing'}
                         />
                       </div>
+                      <p className="mt-0.5 text-[10px] font-normal text-[var(--svs-muted)]">AI suggests a fair retail price — always confirm or set your own.</p>
                     </label>
                     <label className="block text-[11px] font-semibold text-[var(--svs-text)]">
-                      Size
+                      <span className="flex items-center gap-1.5">Size {bulkDraft.size ? <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-700" title="Auto-filled by AI">✨ AI</span> : <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${(BULK_MARKET_FIELD_HINTS[bulkDraft.marketKey]?.sizeRequired) ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>{(BULK_MARKET_FIELD_HINTS[bulkDraft.marketKey]?.sizeRequired) ? '✏️ You' : 'Optional'}</span>}</span>
                       <input
                         type="text"
                         value={bulkDraft.size}
                         onChange={(event) => updateBulkDraft({ size: event.target.value })}
-                        placeholder="e.g. M, 42, 500ml"
-                        className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none"
+                        placeholder={BULK_MARKET_FIELD_HINTS[bulkDraft.marketKey]?.sizePlaceholder || 'e.g. M, 42, 500ml'}
+                        className={`mt-1 w-full rounded-md border bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none ${(!bulkDraft.size && BULK_MARKET_FIELD_HINTS[bulkDraft.marketKey]?.sizeRequired) ? 'border-amber-400 ring-2 ring-amber-200' : 'border-[var(--svs-border)]'}`}
                         disabled={bulkDraft.status === 'publishing'}
                       />
+                      {Array.isArray(BULK_MARKET_FIELD_HINTS[bulkDraft.marketKey]?.sizeOptions) ? (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {BULK_MARKET_FIELD_HINTS[bulkDraft.marketKey].sizeOptions.map((option) => (
+                            <button
+                              key={option}
+                              type="button"
+                              onClick={() => updateBulkDraft({ size: option })}
+                              disabled={bulkDraft.status === 'publishing'}
+                              className={`rounded-full border px-2 py-0.5 text-[10px] font-bold transition ${bulkDraft.size === option ? 'border-[var(--svs-primary)] bg-[var(--svs-primary)] text-white' : 'border-[var(--svs-border)] bg-[var(--svs-surface)] text-[var(--svs-text)] hover:bg-[var(--svs-cyan-surface)]'}`}
+                            >
+                              {option}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
                     </label>
                     <label className="block text-[11px] font-semibold text-[var(--svs-text)]">
-                      Material
+                      <span className="flex items-center gap-1.5">Material {bulkDraft.material ? <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-700" title="Auto-filled by AI">✨ AI</span> : <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-600">Optional</span>}</span>
                       <input
                         type="text"
                         value={bulkDraft.material}
@@ -17830,7 +17915,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                       />
                     </label>
                     <label className="block text-[11px] font-semibold text-[var(--svs-text)]">
-                      Condition
+                      <span className="flex items-center gap-1.5">Condition <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-700" title="Auto-filled by AI — change if needed">✨ AI</span></span>
                       <select
                         value={bulkDraft.condition}
                         onChange={(event) => updateBulkDraft({ condition: event.target.value })}
@@ -17845,7 +17930,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                       </select>
                     </label>
                     <label className="block text-[11px] font-semibold text-[var(--svs-text)]">
-                      Category
+                      <span className="flex items-center gap-1.5">Category {bulkDraft.category ? <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-700" title="Auto-filled by AI">✨ AI</span> : <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-600">Optional</span>}</span>
                       <input
                         type="text"
                         value={bulkDraft.category}
@@ -17865,6 +17950,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                       <p className="mt-1 text-[10px] font-normal text-[var(--svs-muted)]">{Math.round((bulkDraft.confidence || 0) * 100)}% confident{bulkDraft.brand ? ` \u2022 brand: ${bulkDraft.brand}` : ''}{bulkDraft.color ? ` \u2022 colour: ${bulkDraft.color}` : ''}</p>
                     </div>
                   </div>
+                  </>
                 )}
                 {bulkDraft.error ? (
                   <p className="mt-2 rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700">{bulkDraft.error}</p>
