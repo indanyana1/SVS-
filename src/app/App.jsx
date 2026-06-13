@@ -24092,45 +24092,130 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   return (
     <PageFrame>
       <section className="mx-auto w-full max-w-6xl overflow-hidden rounded-2xl border border-[#d4e3f1] bg-white shadow-[0_20px_40px_rgba(2,32,71,0.08)] sm:rounded-3xl">
-        <div className="border-b border-[#e5eef8] bg-gradient-to-r from-[#0f6674] via-[#0f889a] to-[#0f6674] px-4 py-4 text-white sm:px-7 sm:py-5">
-          <h1 className="text-2xl font-black sm:text-3xl">Let&rsquo;s Talk Business</h1>
-          <p className="mt-1 text-sm text-cyan-50">
-            Chat, negotiate, share photos &amp; location, send offers, request payment, and close the deal &mdash; all in one place. No need to switch to other social platforms.
-          </p>
-          {selectedRecipientName ? (
-            <p className="mt-2 inline-flex items-center rounded-full border border-cyan-100/30 bg-white/15 px-3 py-1 text-xs font-semibold text-cyan-50">
-              Contact: {selectedRecipientName}
-            </p>
-          ) : null}
-          <div className="mt-3 grid grid-cols-2 gap-2 lg:hidden">
-            <button
-              type="button"
-              onClick={() => setMobilePanel('contacts')}
-              className={`rounded-lg border px-3 py-2 text-xs font-bold transition ${mobilePanel === 'contacts' ? 'border-white/80 bg-white text-[#0f6674]' : 'border-white/40 bg-white/10 text-white'}`}
-            >
-              Contacts
-            </button>
-            <button
-              type="button"
-              onClick={() => setMobilePanel('chat')}
-              className={`rounded-lg border px-3 py-2 text-xs font-bold transition ${mobilePanel === 'chat' ? 'border-white/80 bg-white text-[#0f6674]' : 'border-white/40 bg-white/10 text-white'}`}
-            >
-              Conversation
-            </button>
+        <div className="border-b border-[var(--svs-border)] bg-gradient-to-r from-[var(--svs-primary)] via-[var(--svs-primary-strong)] to-[var(--svs-primary)] px-3 py-2.5 text-white sm:px-7 sm:py-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <h1 className="truncate text-base font-black sm:text-2xl">Let&rsquo;s Talk Business</h1>
+              <p className="mt-0.5 hidden text-[11px] text-cyan-50 sm:block sm:text-xs">
+                Chat, negotiate, share media, send offers &amp; close deals — all in one place.
+              </p>
+            </div>
+            {selectedRecipientName ? (
+              <span className="inline-flex max-w-[55%] items-center rounded-full border border-cyan-100/30 bg-white/15 px-2.5 py-1 text-[10px] font-semibold text-cyan-50 sm:max-w-none sm:text-xs">
+                <span className="truncate">{selectedRecipientName}</span>
+              </span>
+            ) : null}
           </div>
         </div>
 
-        <div className="grid min-h-[560px] grid-cols-1 lg:grid-cols-[320px_1fr]">
-          <aside className={`${mobilePanel === 'chat' ? 'hidden lg:block' : 'block'} border-b border-[#e5eef8] bg-[#f8fbff] p-3 sm:p-4 lg:border-b-0 lg:border-r lg:p-5`}>
-            <div className="rounded-2xl border border-[#d6e6f5] bg-white p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0f6674]">{startChatCardTitle}</p>
-              <p className={`mt-1 text-[11px] font-semibold ${isRemoteChatEnabled ? 'text-emerald-700' : 'text-amber-700'}`}>
-                {isRemoteChatEnabled ? 'Live sync: ON' : 'Live sync: OFF (local fallback)'}
-              </p>
-              <p className={`mt-1 text-[11px] ${isRemoteChatEnabled ? 'text-emerald-700/90' : 'text-amber-700/90'}`}>
-                {remoteChatStatusMessage}
-              </p>
-              {recipientOptions.length ? (
+        <div className="grid min-h-[calc(100vh-180px)] grid-cols-1 sm:min-h-[560px] lg:grid-cols-[320px_1fr]">
+          <aside className={`${mobilePanel === 'chat' ? 'hidden lg:flex' : 'flex'} flex-col border-b border-[#e5eef8] bg-[#f8fbff] lg:border-b-0 lg:border-r`}>
+            {/* Sticky "Conversations" header — mirrors the dedicated sidebar header in the inspiration screenshot. */}
+            <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-[var(--svs-border)] bg-white/95 px-3 py-2.5 backdrop-blur-sm sm:px-4 sm:py-3">
+              <div className="min-w-0">
+                <h2 className="text-sm font-black text-[var(--svs-primary-strong)] sm:text-base">Conversations</h2>
+                <p className="truncate text-[10px] font-semibold text-[var(--svs-muted)]">
+                  {visibleThreads.length} {visibleThreads.length === 1 ? 'thread' : 'threads'} · <span className={isRemoteChatEnabled ? 'text-emerald-700' : 'text-amber-700'}>{isRemoteChatEnabled ? 'Live sync' : 'Local only'}</span>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const el = document.getElementById('lt-start-chat-card');
+                  if (el) {
+                    try { el.setAttribute('open', ''); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) { /* noop */ }
+                  }
+                }}
+                title="Start a new chat"
+                aria-label="Start a new chat"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--svs-primary)] text-white shadow-sm transition hover:scale-105 hover:bg-[var(--svs-primary-strong)]"
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+
+            {/* Scrollable content: threads list first, then collapsible start-chat form. */}
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4">
+              <div className="space-y-2">
+              {visibleThreads.length ? visibleThreads.map((thread) => {
+                const isActive = thread.id === selectedThreadId;
+                const counterpart = resolveCounterparty(thread);
+                let stampText = '';
+                try {
+                  const d = new Date(thread.updatedAt || thread.createdAt || Date.now());
+                  const now = new Date();
+                  const sameDay = d.toDateString() === now.toDateString();
+                  stampText = sameDay
+                    ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    : d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+                } catch (_) { stampText = ''; }
+                return (
+                  <button
+                    key={thread.id}
+                    type="button"
+                    onClick={() => {
+                      const counterpartEmail = normalizeEmail(
+                        thread.participants?.find((participant) => normalizeEmail(participant) !== currentUserEmail) || ''
+                      );
+                      if (counterpartEmail) {
+                        setRecipientEmail(counterpartEmail);
+                      }
+                      setSelectedOrderId(String(thread.orderId || ''));
+                      setIssueType(String(thread.issueType || 'General Support'));
+                      setSelectedThreadId(thread.id);
+                      setMobilePanel('chat');
+                    }}
+                    className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition ${isActive ? 'border-[var(--svs-primary)] bg-[var(--svs-cyan-surface)] shadow-sm' : 'border-[var(--svs-border)] bg-white hover:border-[var(--svs-primary)] hover:bg-[var(--svs-surface-soft)]'}`}
+                  >
+                    <span className="relative shrink-0">
+                      <span className={`flex h-11 w-11 select-none items-center justify-center rounded-full text-sm font-black text-white shadow-sm ${isActive ? 'bg-[var(--svs-primary)]' : 'bg-gradient-to-br from-[var(--svs-primary)] to-[var(--svs-primary-strong)]'}`} aria-hidden="true">
+                        {(counterpart.name || '?').trim().charAt(0).toUpperCase()}
+                      </span>
+                      <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-[var(--svs-success)]" aria-hidden="true"></span>
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="truncate text-sm font-bold text-[var(--svs-primary-strong)]">{counterpart.name}</span>
+                        {stampText ? (
+                          <span className="shrink-0 text-[10px] font-semibold text-[var(--svs-muted)]">{stampText}</span>
+                        ) : null}
+                      </span>
+                      <span className="mt-0.5 flex items-center gap-1.5">
+                        <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${counterpart.role === 'admin' ? 'bg-[#e8f7fb] text-[#0f6674]' : counterpart.role === 'seller' ? 'bg-[#e9f8ef] text-[#0f7a46]' : 'bg-[#edf1fb] text-[#3356a8]'}`}>
+                          {getRecipientRoleLabel(counterpart.role || 'client')}
+                        </span>
+                        {thread.orderReference ? (
+                          <span className="truncate text-[10px] font-semibold text-[var(--svs-muted)]">{thread.orderReference}</span>
+                        ) : null}
+                      </span>
+                      <span className="mt-1 block truncate text-xs text-slate-600">{thread.lastMessage || 'No messages yet'}</span>
+                    </span>
+                  </button>
+                );
+              }) : (
+                <div className="rounded-xl border border-dashed border-[#c8dff0] bg-white px-3 py-5 text-center text-xs text-slate-500">
+                  No conversations yet. Tap <span className="font-bold text-[var(--svs-primary-strong)]">+</span> above to start one.
+                </div>
+              )}
+              </div>
+
+              {/* Start-chat form, collapsed by default when threads already exist. */}
+              <details id="lt-start-chat-card" open={!visibleThreads.length} className="group/start mt-4 rounded-2xl border border-[#d6e6f5] bg-white">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#0f6674]">
+                  <span className="inline-flex min-w-0 items-center gap-2">
+                    <Plus className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    <span className="truncate">{startChatCardTitle}</span>
+                  </span>
+                  <ChevronDown className="h-4 w-4 shrink-0 transition group-open/start:rotate-180" aria-hidden="true" />
+                </summary>
+                <div className="border-t border-[var(--svs-border)] p-4">
+                  <p className={`text-[11px] font-semibold ${isRemoteChatEnabled ? 'text-emerald-700' : 'text-amber-700'}`}>
+                    {isRemoteChatEnabled ? 'Live sync: ON' : 'Live sync: OFF (local fallback)'}
+                  </p>
+                  <p className={`mt-1 text-[11px] ${isRemoteChatEnabled ? 'text-emerald-700/90' : 'text-amber-700/90'}`}>
+                    {remoteChatStatusMessage}
+                  </p>
+                  {recipientOptions.length ? (
                 <>
                 <label className="mt-3 block text-xs font-semibold text-slate-600">
                   Search contact
@@ -24262,137 +24347,96 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                   No available recipients yet. Complete or receive an order first to open a direct support conversation.
                 </div>
               )}
-            </div>
-
-            <div className="mt-4 space-y-2">
-              {visibleThreads.length ? visibleThreads.map((thread) => {
-                const isActive = thread.id === selectedThreadId;
-                const counterpart = resolveCounterparty(thread);
-                return (
-                  <button
-                    key={thread.id}
-                    type="button"
-                    onClick={() => {
-                      const counterpartEmail = normalizeEmail(
-                        thread.participants?.find((participant) => normalizeEmail(participant) !== currentUserEmail) || ''
-                      );
-                      if (counterpartEmail) {
-                        setRecipientEmail(counterpartEmail);
-                      }
-                      setSelectedOrderId(String(thread.orderId || ''));
-                      setIssueType(String(thread.issueType || 'General Support'));
-                      setSelectedThreadId(thread.id);
-                      setMobilePanel('chat');
-                    }}
-                    className={`w-full rounded-xl border px-3 py-3 text-left transition ${isActive ? 'border-[#0f6674] bg-[#e8f7fb]' : 'border-[#d6e6f5] bg-white hover:border-[#0f6674]'}`}
-                  >
-                    <p className="truncate text-sm font-bold text-[#0f6674]">{counterpart.name}</p>
-                    <p className="mt-0.5 truncate text-xs text-slate-500">{thread.issueType || 'General Support'}{thread.orderReference ? ` • ${thread.orderReference}` : ''}</p>
-                    <p className="mt-1 truncate text-xs text-slate-600">{thread.lastMessage || 'No messages yet'}</p>
-                  </button>
-                );
-              }) : (
-                <div className="rounded-xl border border-dashed border-[#c8dff0] bg-white px-3 py-5 text-center text-xs text-slate-500">
-                  No conversations yet.
                 </div>
-              )}
+              </details>
             </div>
           </aside>
 
           <div className={`${mobilePanel === 'contacts' ? 'hidden lg:flex' : 'flex'} min-h-[560px] flex-col bg-white`}>
             {activeThread ? (
               <>
-                <div className="border-b border-[#e5eef8] px-4 py-3 sm:px-6 sm:py-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="truncate text-base font-bold text-[#0f6674] sm:text-lg">{resolveCounterparty(activeThread).name}</p>
-                        {!isAgentThread ? (
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${dealStatusMeta[dealStatus]?.cls || 'bg-slate-100 text-slate-700'}`}>
-                            {dealStatusMeta[dealStatus]?.label || dealStatus}
-                          </span>
-                        ) : null}
-                      </div>
-                      <p className="truncate text-xs text-slate-500">
-                        {activeThread.issueType || 'General Support'}{activeThread.orderReference ? ` • ${activeThread.orderReference}` : ''}
-                      </p>
-                      {activeThread.itemDetails ? (
-                        <div className="mt-2 flex items-center gap-2 rounded-lg bg-[#e8f7fb] px-2.5 py-1.5">
-                          {activeThread.itemDetails.itemImage ? (
-                            <img src={activeThread.itemDetails.itemImage} alt={activeThread.itemDetails.itemTitle} className="h-6 w-6 rounded object-cover" />
-                          ) : null}
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-[11px] font-semibold text-[#0f6674]">{activeThread.itemDetails.itemTitle}</p>
-                          </div>
-                          <a href={activeThread.itemDetails.itemLink} target="_blank" rel="noopener noreferrer" className="shrink-0 text-[11px] font-semibold text-[#33b9f2] hover:underline">Link →</a>
-                        </div>
-                      ) : null}
-                    </div>
-                    {recipientOptions.length ? (
-                      <label className="hidden min-w-[210px] flex-col gap-1 text-xs font-semibold text-slate-500 sm:flex">
-                        Switch contact
-                        <select
-                          value={preferredRecipientEmail}
-                          onChange={(event) => handleRecipientChange(event.target.value)}
-                          className="rounded-lg border border-[#d6e6f5] bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-[#0f6674]"
-                        >
-                          {groupedRecipientOptions.map((group) => (
-                            <optgroup key={`header-group-${group.key}`} label={group.title}>
-                              {group.items.map((option) => (
-                                <option key={`header-recipient-${option.email}`} value={option.email}>
-                                  {option.name} • {getRecipientRoleLabel(option.role)}
-                                </option>
-                              ))}
-                            </optgroup>
-                          ))}
-                        </select>
-                      </label>
-                    ) : null}
-                    <button
-                      type="button"
-                      onClick={() => setChatSearchOpen((v) => !v)}
-                      title="Search inside this conversation"
-                      className={`hidden sm:inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11px] font-bold transition ${chatSearchOpen ? 'border-[#0f6674] bg-[#e8f7fb] text-[#0f6674]' : 'border-[#d6e6f5] bg-white text-[#0f6674] hover:bg-[#e8f7fb]'}`}
-                    >
-                      <Search className="h-3.5 w-3.5" aria-hidden="true" />
-                      Search
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleExportChatToPdf}
-                      title="Export this conversation as PDF"
-                      className="hidden sm:inline-flex items-center gap-1 rounded-lg border border-[#d6e6f5] bg-white px-2.5 py-1.5 text-[11px] font-bold text-[#0f6674] transition hover:bg-[#e8f7fb]"
-                    >
-                      <Printer className="h-3.5 w-3.5" aria-hidden="true" />
-                      Export PDF
-                    </button>
+                <div className="sticky top-0 z-20 border-b border-[#e5eef8] bg-white px-3 py-2.5 sm:px-6 sm:py-3">
+                  <div className="flex items-center gap-2">
+                    {/* Mobile back-to-conversations button. */}
                     <button
                       type="button"
                       onClick={() => setMobilePanel('contacts')}
-                      className="rounded-lg border border-[#d6e6f5] bg-white px-2.5 py-1.5 text-[11px] font-bold text-[#0f6674] lg:hidden"
+                      title="Back to conversations"
+                      aria-label="Back to conversations"
+                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--svs-border)] bg-white text-[var(--svs-primary-strong)] transition hover:bg-[var(--svs-surface-soft)] lg:hidden"
                     >
-                      Contacts
+                      <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                     </button>
+
+                    {/* Avatar with online indicator. */}
+                    <div className="relative shrink-0">
+                      <span className="flex h-10 w-10 select-none items-center justify-center rounded-full bg-gradient-to-br from-[var(--svs-primary)] to-[var(--svs-primary-strong)] text-sm font-black text-white shadow-sm" aria-hidden="true">{(resolveCounterparty(activeThread).name || '?').trim().charAt(0).toUpperCase()}</span>
+                      <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-[var(--svs-success)]" title="Online"></span>
+                    </div>
+
+                    {/* Name + meta line (online, deal status, reference). */}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold text-[var(--svs-primary-strong)] sm:text-base">{resolveCounterparty(activeThread).name}</p>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[var(--svs-success)]">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[var(--svs-success)]"></span>Online
+                        </span>
+                        {!isAgentThread ? (
+                          <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${dealStatusMeta[dealStatus]?.cls || 'bg-slate-100 text-slate-700'}`}>
+                            {dealStatusMeta[dealStatus]?.label || dealStatus}
+                          </span>
+                        ) : null}
+                        {activeThread.orderReference ? (
+                          <span className="truncate text-[10px] font-semibold text-[var(--svs-muted)]">{activeThread.orderReference}</span>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {/* Right-side icon row: search, export, switch contact (lg only). */}
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setChatSearchOpen((v) => !v)}
+                        title="Search inside this conversation"
+                        aria-label="Search inside this conversation"
+                        className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition ${chatSearchOpen ? 'border-[var(--svs-primary)] bg-[var(--svs-cyan-surface)] text-[var(--svs-primary-strong)]' : 'border-[var(--svs-border)] bg-white text-[var(--svs-primary-strong)] hover:bg-[var(--svs-surface-soft)]'}`}
+                      >
+                        <Search className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleExportChatToPdf}
+                        title="Export this conversation as PDF"
+                        aria-label="Export this conversation as PDF"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--svs-border)] bg-white text-[var(--svs-primary-strong)] transition hover:bg-[var(--svs-surface-soft)]"
+                      >
+                        <Printer className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                      {recipientOptions.length ? (
+                        <label className="hidden lg:flex">
+                          <span className="sr-only">Switch contact</span>
+                          <select
+                            value={preferredRecipientEmail}
+                            onChange={(event) => handleRecipientChange(event.target.value)}
+                            title="Switch contact"
+                            className="rounded-lg border border-[var(--svs-border)] bg-white px-2 py-1.5 text-xs font-semibold text-[var(--svs-primary-strong)] shadow-sm outline-none focus:border-[var(--svs-primary)]"
+                          >
+                            {groupedRecipientOptions.map((group) => (
+                              <optgroup key={`header-group-${group.key}`} label={group.title}>
+                                {group.items.map((option) => (
+                                  <option key={`header-recipient-${option.email}`} value={option.email}>
+                                    {option.name} • {getRecipientRoleLabel(option.role)}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            ))}
+                          </select>
+                        </label>
+                      ) : null}
+                    </div>
                   </div>
-                  {/* Mobile-friendly action row + search */}
-                  <div className="mt-2 flex items-center gap-2 sm:hidden">
-                    <button
-                      type="button"
-                      onClick={() => setChatSearchOpen((v) => !v)}
-                      className={`inline-flex flex-1 items-center justify-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11px] font-bold transition ${chatSearchOpen ? 'border-[#0f6674] bg-[#e8f7fb] text-[#0f6674]' : 'border-[#d6e6f5] bg-white text-[#0f6674]'}`}
-                    >
-                      <Search className="h-3.5 w-3.5" aria-hidden="true" />
-                      Search
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleExportChatToPdf}
-                      className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-[#d6e6f5] bg-white px-2.5 py-1.5 text-[11px] font-bold text-[#0f6674]"
-                    >
-                      <Printer className="h-3.5 w-3.5" aria-hidden="true" />
-                      Export PDF
-                    </button>
-                  </div>
+
+                  {/* Inline search input (collapsible). */}
                   {chatSearchOpen ? (
                     <div className="mt-2 flex items-center gap-2 rounded-lg border border-[#d6e6f5] bg-[#f7fbff] px-2 py-1.5">
                       <Search className="h-3.5 w-3.5 shrink-0 text-[#0f6674]" aria-hidden="true" />
@@ -24419,22 +24463,58 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                       </span>
                     </div>
                   ) : null}
+
+                  {/* Linked item strip (optional, compact). */}
+                  {activeThread.itemDetails ? (
+                    <div className="mt-2 flex items-center gap-2 rounded-lg bg-[#e8f7fb] px-2.5 py-1.5">
+                      {activeThread.itemDetails.itemImage ? (
+                        <img src={activeThread.itemDetails.itemImage} alt={activeThread.itemDetails.itemTitle} className="h-6 w-6 rounded object-cover" />
+                      ) : null}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[11px] font-semibold text-[#0f6674]">{activeThread.itemDetails.itemTitle}</p>
+                      </div>
+                      <a href={activeThread.itemDetails.itemLink} target="_blank" rel="noopener noreferrer" className="shrink-0 text-[11px] font-semibold text-[#33b9f2] hover:underline">View →</a>
+                    </div>
+                  ) : null}
                 </div>
 
-                <div className="flex-1 space-y-3 overflow-y-auto bg-[#f7fbff] px-3 py-3 pb-24 sm:px-6 sm:py-4 sm:pb-6">
+                <div className="flex-1 space-y-3 overflow-y-auto bg-[var(--svs-surface-soft)] px-3 py-3 pb-24 sm:px-6 sm:py-4 sm:pb-6">
                   {activeThread?.itemDetails ? (
-                    <div className="sticky top-0 mx-0 sm:-mx-6 bg-gradient-to-b from-[#e8f7fb] to-[#f7fbff] px-3 py-3 sm:px-6 sm:py-4 border-b border-[#d6e6f5]">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-[#0f6674]">📦 Item Being Discussed</p>
-                      <div className="mt-2 flex gap-3 items-start rounded-lg border border-[#d6e6f5] bg-white p-3">
+                    <details open className="group/summary sticky top-0 z-10 mx-0 sm:-mx-6 border-b border-[var(--svs-border)] bg-gradient-to-b from-[var(--svs-cyan-surface)] to-[var(--svs-surface-soft)] px-3 py-3 sm:px-6 sm:py-3.5">
+                      <summary className="flex cursor-pointer list-none items-center justify-between">
+                        <span className="text-[12px] font-bold text-[var(--svs-primary-strong)]">Deal Summary</span>
+                        <ChevronDown className="h-4 w-4 text-[var(--svs-primary-strong)] transition group-open/summary:rotate-180" aria-hidden="true" />
+                      </summary>
+                      <div className="mt-2.5 flex items-start gap-3 rounded-lg border border-[var(--svs-border)] bg-white p-2.5">
                         {activeThread.itemDetails.itemImage ? (
-                          <img src={activeThread.itemDetails.itemImage} alt={activeThread.itemDetails.itemTitle} className="h-14 w-14 rounded-lg object-cover shrink-0" />
+                          <img src={activeThread.itemDetails.itemImage} alt={activeThread.itemDetails.itemTitle} className="h-12 w-12 shrink-0 rounded-lg object-cover" />
                         ) : null}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-bold text-[#0f6674] truncate text-sm">{activeThread.itemDetails.itemTitle}</p>
-                          <a href={activeThread.itemDetails.itemLink} target="_blank" rel="noopener noreferrer" className="inline-block mt-1 text-xs font-semibold text-[#33b9f2] hover:underline">View Item →</a>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-bold text-[var(--svs-primary-strong)]">{activeThread.itemDetails.itemTitle}</p>
+                          {activeThread.itemDetails.itemLink ? (
+                            <a href={activeThread.itemDetails.itemLink} target="_blank" rel="noopener noreferrer" className="mt-0.5 inline-block text-xs font-semibold text-[#33b9f2] hover:underline">View Item →</a>
+                          ) : null}
                         </div>
                       </div>
-                    </div>
+                      <div className="mt-2.5 grid grid-cols-2 gap-x-4 gap-y-2.5 rounded-lg border border-[var(--svs-border)] bg-white px-3 py-2.5">
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--svs-muted)]">Contact</p>
+                          <p className="mt-0.5 truncate text-xs font-semibold text-[var(--svs-text)]">{resolveCounterparty(activeThread).name}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--svs-muted)]">Topic</p>
+                          <p className="mt-0.5 truncate text-xs font-semibold text-[var(--svs-text)]">{activeThread.issueType || 'General Support'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--svs-muted)]">Reference</p>
+                          <p className="mt-0.5 truncate text-xs font-semibold text-[var(--svs-text)]">{activeThread.orderReference || '—'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--svs-muted)]">Status</p>
+                          <p className="mt-0.5 truncate text-xs font-bold text-[var(--svs-primary-strong)]">{dealStatusMeta[dealStatus]?.label || dealStatus}</p>
+                        </div>
+                      </div>
+                    </details>
                   ) : null}
                   {filteredMessages.length ? filteredMessages.map((message) => {
                     const mine = normalizeEmail(message.senderEmail || '') === currentUserEmail;
@@ -24449,8 +24529,14 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                     });
                     return (
                       <SwipeableMessage key={message.id} onReply={startReply}>
-                        <div className={`group flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                          <article className={`relative max-w-[92%] rounded-2xl px-3 py-2.5 shadow-sm sm:max-w-[85%] sm:px-4 sm:py-3 ${mine ? 'bg-[#0f6674] text-white' : 'border border-[#d6e6f5] bg-white text-slate-700'}`}>
+                        <div className={`group flex items-end gap-2 ${mine ? 'flex-row-reverse' : 'justify-start'}`}>
+                          <span
+                            className={`flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full text-[11px] font-black text-white shadow-sm ${mine ? 'bg-[var(--svs-primary)]' : 'bg-[var(--svs-primary-strong)]'}`}
+                            aria-hidden="true"
+                          >
+                            {(mine ? (currentUserName || 'You') : (message.senderName || message.senderEmail || '?')).trim().charAt(0).toUpperCase()}
+                          </span>
+                          <article className={`relative max-w-[88%] rounded-2xl px-3 py-2.5 shadow-sm sm:max-w-[78%] sm:px-4 sm:py-3 ${mine ? 'rounded-br-md bg-[var(--svs-primary)] text-white' : 'rounded-bl-md border border-[var(--svs-border)] bg-[var(--svs-surface)] text-[var(--svs-text)]'}`}>
                             <button
                               type="button"
                               onClick={startReply}
@@ -24672,34 +24758,41 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                     </div>
                   ) : null}
                   {!isAgentThread ? (
-                    /* Quick reply chips — peer chats only */
-                    <div className="mb-2 flex flex-wrap gap-1.5">
-                      {QUICK_REPLIES.map((text) => (
-                        <button
-                          key={text}
-                          type="button"
-                          onClick={() => handleQuickReply(text)}
-                          className="rounded-full border border-[#d6e6f5] bg-[#f7fbff] px-2.5 py-1 text-[11px] font-semibold text-[#0f6674] transition hover:border-[#0f6674] hover:bg-white"
-                        >
-                          {text}
-                        </button>
-                      ))}
+                    /* Quick reply chips — peer chats only. Horizontally
+                       scrollable on mobile (matches the inspiration screenshot),
+                       wrapping on desktop. */
+                    <div className="mb-2 -mx-3 overflow-x-auto px-3 sm:mx-0 sm:overflow-visible sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      <div className="flex w-max gap-1.5 sm:w-auto sm:flex-wrap">
+                        {QUICK_REPLIES.map((text) => (
+                          <button
+                            key={text}
+                            type="button"
+                            onClick={() => handleQuickReply(text)}
+                            className="shrink-0 rounded-full border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-3 py-1.5 text-[11px] font-semibold text-[var(--svs-primary-strong)] transition hover:border-[var(--svs-primary)] hover:bg-[var(--svs-primary)] hover:text-white"
+                          >
+                            {text}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   ) : null}
 
-                  {/* Action toolbar. Photo and Voice are always available
-                      (including in the SVS Agent thread). Offer, Payment,
-                      Location and Mark... only make sense between real
-                      buyers and sellers. */}
-                  <div className="mb-2 flex flex-wrap items-center gap-1">
+                  {/* Action toolbar. Icon-only on mobile (matches the
+                      compact icon row in the inspiration screenshot),
+                      icon+label pills on tablet & up. Photo / Voice are
+                      always available; Offer / Payment / Location /
+                      Mark only show in peer chats. */}
+                  <div className="mb-2 -mx-3 overflow-x-auto px-3 sm:mx-0 sm:overflow-visible sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <div className="flex w-max items-center gap-1.5 sm:w-auto sm:flex-wrap">
                     <button
                       type="button"
                       onClick={() => attachmentInputRef.current?.click()}
                       title="Attach a photo"
-                      className="inline-flex items-center gap-1 rounded-md border border-[#d6e6f5] bg-white px-2 py-1 text-[11px] font-bold text-[#0f6674] transition hover:bg-[#e8f7fb]"
+                      aria-label="Attach a photo"
+                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center gap-1 rounded-full border border-[#d6e6f5] bg-white text-[#0f6674] transition hover:bg-[#e8f7fb] sm:h-auto sm:w-auto sm:rounded-md sm:px-2 sm:py-1 sm:text-[11px] sm:font-bold"
                     >
-                      <ImageIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                      Photo
+                      <ImageIcon className="h-4 w-4 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
+                      <span className="hidden sm:inline">Photo</span>
                     </button>
                     <input
                       ref={attachmentInputRef}
@@ -24713,30 +24806,33 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                         type="button"
                         onClick={handleStopVoiceRecording}
                         title="Stop recording and send"
-                        className="inline-flex items-center gap-1 rounded-md border border-rose-300 bg-rose-50 px-2 py-1 text-[11px] font-bold text-rose-700 transition hover:bg-rose-100"
+                        aria-label="Stop recording and send"
+                        className="inline-flex h-9 shrink-0 items-center justify-center gap-1 rounded-full border border-rose-300 bg-rose-50 px-2.5 text-[11px] font-bold text-rose-700 transition hover:bg-rose-100 sm:h-auto sm:rounded-md sm:px-2 sm:py-1"
                       >
-                        <Square className="h-3.5 w-3.5 animate-pulse" aria-hidden="true" />
-                        Stop ({voiceElapsedSec}s)
+                        <Square className="h-4 w-4 animate-pulse sm:h-3.5 sm:w-3.5" aria-hidden="true" />
+                        <span>{voiceElapsedSec}s</span>
                       </button>
                     ) : (
                       <button
                         type="button"
                         onClick={handleStartVoiceRecording}
                         title="Record a voice note"
-                        className="inline-flex items-center gap-1 rounded-md border border-[#d6e6f5] bg-white px-2 py-1 text-[11px] font-bold text-[#0f6674] transition hover:bg-[#e8f7fb]"
+                        aria-label="Record a voice note"
+                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center gap-1 rounded-full border border-[#d6e6f5] bg-white text-[#0f6674] transition hover:bg-[#e8f7fb] sm:h-auto sm:w-auto sm:rounded-md sm:px-2 sm:py-1 sm:text-[11px] sm:font-bold"
                       >
-                        <Mic className="h-3.5 w-3.5" aria-hidden="true" />
-                        Voice note
+                        <Mic className="h-4 w-4 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
+                        <span className="hidden sm:inline">Voice note</span>
                       </button>
                     )}
                     <button
                       type="button"
                       onClick={() => videoInputRef.current?.click()}
                       title="Attach a video from your device (max 5 MB)"
-                      className="inline-flex items-center gap-1 rounded-md border border-[#d6e6f5] bg-white px-2 py-1 text-[11px] font-bold text-[#0f6674] transition hover:bg-[#e8f7fb]"
+                      aria-label="Attach a video"
+                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center gap-1 rounded-full border border-[#d6e6f5] bg-white text-[#0f6674] transition hover:bg-[#e8f7fb] sm:h-auto sm:w-auto sm:rounded-md sm:px-2 sm:py-1 sm:text-[11px] sm:font-bold"
                     >
-                      <Video className="h-3.5 w-3.5" aria-hidden="true" />
-                      Video
+                      <Video className="h-4 w-4 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
+                      <span className="hidden sm:inline">Video</span>
                     </button>
                     <input
                       ref={videoInputRef}
@@ -24749,10 +24845,11 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                       type="button"
                       onClick={() => documentInputRef.current?.click()}
                       title="Attach a document (PDF, DOC, etc.)"
-                      className="inline-flex items-center gap-1 rounded-md border border-[#d6e6f5] bg-white px-2 py-1 text-[11px] font-bold text-[#0f6674] transition hover:bg-[#e8f7fb]"
+                      aria-label="Attach a document"
+                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center gap-1 rounded-full border border-[#d6e6f5] bg-white text-[#0f6674] transition hover:bg-[#e8f7fb] sm:h-auto sm:w-auto sm:rounded-md sm:px-2 sm:py-1 sm:text-[11px] sm:font-bold"
                     >
-                      <FileText className="h-3.5 w-3.5" aria-hidden="true" />
-                      Document
+                      <FileText className="h-4 w-4 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
+                      <span className="hidden sm:inline">Document</span>
                     </button>
                     <input
                       ref={documentInputRef}
@@ -24767,38 +24864,41 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                           type="button"
                           onClick={() => { setOfferDraftOpen((v) => !v); setPaymentDraftOpen(false); }}
                           title="Send an offer"
-                          className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-800 transition hover:bg-amber-100"
+                          aria-label="Send an offer"
+                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center gap-1 rounded-full border border-amber-200 bg-amber-50 text-amber-800 transition hover:bg-amber-100 sm:h-auto sm:w-auto sm:rounded-md sm:px-2 sm:py-1 sm:text-[11px] sm:font-bold"
                         >
-                          <DollarSign className="h-3.5 w-3.5" aria-hidden="true" />
-                          Offer
+                          <DollarSign className="h-4 w-4 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
+                          <span className="hidden sm:inline">Offer</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => { setPaymentDraftOpen((v) => !v); setOfferDraftOpen(false); }}
                           title="Request payment"
-                          className="inline-flex items-center gap-1 rounded-md border border-cyan-200 bg-cyan-50 px-2 py-1 text-[11px] font-bold text-cyan-800 transition hover:bg-cyan-100"
+                          aria-label="Request payment"
+                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center gap-1 rounded-full border border-cyan-200 bg-cyan-50 text-cyan-800 transition hover:bg-cyan-100 sm:h-auto sm:w-auto sm:rounded-md sm:px-2 sm:py-1 sm:text-[11px] sm:font-bold"
                         >
-                          <CreditCard className="h-3.5 w-3.5" aria-hidden="true" />
-                          Request payment
+                          <CreditCard className="h-4 w-4 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
+                          <span className="hidden sm:inline">Request payment</span>
                         </button>
                         <button
                           type="button"
                           onClick={handleShareLocation}
                           title="Share your current location"
-                          className="inline-flex items-center gap-1 rounded-md border border-[#d6e6f5] bg-white px-2 py-1 text-[11px] font-bold text-[#0f6674] transition hover:bg-[#e8f7fb]"
+                          aria-label="Share your current location"
+                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center gap-1 rounded-full border border-[#d6e6f5] bg-white text-[#0f6674] transition hover:bg-[#e8f7fb] sm:h-auto sm:w-auto sm:rounded-md sm:px-2 sm:py-1 sm:text-[11px] sm:font-bold"
                         >
-                          <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
-                          Location
+                          <MapPin className="h-4 w-4 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
+                          <span className="hidden sm:inline">Location</span>
                         </button>
-                        <div className="ml-auto inline-flex items-center gap-1">
-                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500" htmlFor="lt-deal-status">Mark:</label>
+                        <div className="inline-flex shrink-0 items-center gap-1 sm:ml-auto">
+                          <label className="hidden text-[10px] font-bold uppercase tracking-wider text-slate-500 sm:inline" htmlFor="lt-deal-status">Mark:</label>
                           <select
                             id="lt-deal-status"
                             value=""
                             onChange={(event) => { if (event.target.value) handleChangeDealStatus(event.target.value); event.target.value = ''; }}
-                            className="rounded-md border border-[#d6e6f5] bg-white px-1.5 py-1 text-[11px] font-semibold text-[#0f6674]"
+                            className="h-9 rounded-full border border-[#d6e6f5] bg-white px-2.5 text-[11px] font-semibold text-[#0f6674] sm:h-auto sm:rounded-md sm:px-1.5 sm:py-1"
                           >
-                            <option value="">Update status...</option>
+                            <option value="">Status…</option>
                             <option value="negotiating">Negotiating</option>
                             <option value="agreed">Agreed</option>
                             <option value="paid">Paid</option>
@@ -24808,6 +24908,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                         </div>
                       </>
                     ) : null}
+                    </div>
                   </div>
 
                   {!isAgentThread && offerDraftOpen ? (
@@ -24911,21 +25012,32 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                     </div>
                   ) : null}
 
-                  <div className="flex items-end gap-2">
+                  <div className="flex items-end gap-1 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] p-1.5 shadow-sm focus-within:border-[var(--svs-primary)] focus-within:ring-2 focus-within:ring-[var(--svs-primary)]/20 sm:rounded-2xl">
+                    <button
+                      type="button"
+                      onClick={() => setDraftMessage((d) => `${d}${d.endsWith(' ') || !d ? '' : ' '}😊 `)}
+                      title="Add an emoji"
+                      aria-label="Add an emoji"
+                      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg leading-none transition hover:bg-[var(--svs-surface-soft)]"
+                    >
+                      <span aria-hidden="true">😊</span>
+                    </button>
                     <textarea
                       ref={draftTextareaRef}
                       value={draftMessage}
                       onChange={(event) => setDraftMessage(event.target.value)}
-                      rows={2}
-                      placeholder={isAgentThread ? 'Ask the SVS Agent anything about the site...' : 'Negotiate, share details, or close the deal here...'}
-                      className="min-h-[74px] flex-1 rounded-xl border border-[#d6e6f5] bg-[#f9fcff] px-3 py-2 text-sm text-slate-700 outline-none focus:border-[#0f6674] sm:min-h-[82px]"
+                      rows={1}
+                      placeholder={isAgentThread ? 'Ask the SVS Agent anything about the site...' : 'Type your message here...'}
+                      className="min-h-[40px] max-h-32 flex-1 resize-none border-0 bg-transparent px-2 py-2 text-sm text-[var(--svs-text)] outline-none placeholder:text-[var(--svs-muted)] sm:min-h-[44px]"
                     />
                     <button
                       type="button"
                       onClick={handleSendMessage}
-                      className="inline-flex h-11 items-center justify-center rounded-xl bg-[#0f6674] px-4 text-sm font-bold text-white transition hover:opacity-90"
+                      title="Send message"
+                      aria-label="Send message"
+                      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--svs-primary)] text-white shadow-md transition hover:scale-105 hover:bg-[var(--svs-primary-strong)] sm:h-11 sm:w-11"
                     >
-                      Send
+                      <Send className="h-5 w-5" aria-hidden="true" />
                     </button>
                   </div>
                 </div>
