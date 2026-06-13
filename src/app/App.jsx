@@ -4966,6 +4966,77 @@ const uploadChatMediaFromDataUrl = async (dataUrl, { userEmail = '', type = 'fil
   return data?.publicUrl || null;
 };
 
+// --- Realtime presence -------------------------------------------------
+// Tracks which user emails are *actually* connected (a browser/app session is
+// open) using a Supabase Realtime presence channel. The chat UI reads this so
+// it only shows "Online" for people who are genuinely present, instead of
+// faking it for every seller/buyer.
+const presenceOnlineEmails = new Set();
+const presenceListeners = new Set();
+let presenceChannel = null;
+let presenceCurrentEmail = '';
+
+const notifyPresenceListeners = () => {
+  presenceListeners.forEach((listener) => {
+    try { listener(new Set(presenceOnlineEmails)); } catch (_) { /* ignore */ }
+  });
+};
+
+const recomputePresenceFromState = (state) => {
+  presenceOnlineEmails.clear();
+  Object.values(state || {}).forEach((entries) => {
+    (entries || []).forEach((entry) => {
+      const email = normalizeEmail(entry?.email || '');
+      if (email) presenceOnlineEmails.add(email);
+    });
+  });
+  notifyPresenceListeners();
+};
+
+const leavePresence = () => {
+  if (presenceChannel) {
+    try { presenceChannel.untrack(); } catch (_) { /* ignore */ }
+    try { supabase?.removeChannel(presenceChannel); } catch (_) { /* ignore */ }
+    presenceChannel = null;
+  }
+  presenceCurrentEmail = '';
+};
+
+const joinPresence = (rawEmail) => {
+  const email = normalizeEmail(rawEmail);
+  if (!hasSupabaseEnv || !supabase || !email) return;
+  if (presenceChannel && presenceCurrentEmail === email) return;
+  // Re-join cleanly on account switch / sign-out -> sign-in.
+  leavePresence();
+  presenceCurrentEmail = email;
+  const channel = supabase.channel('svs-presence', {
+    config: { presence: { key: email } },
+  });
+  presenceChannel = channel;
+  const sync = () => recomputePresenceFromState(channel.presenceState());
+  channel
+    .on('presence', { event: 'sync' }, sync)
+    .on('presence', { event: 'join' }, sync)
+    .on('presence', { event: 'leave' }, sync)
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        channel.track({ email, online_at: new Date().toISOString() });
+      }
+    });
+};
+
+// React hook: subscribe to the live set of online emails.
+const usePresence = () => {
+  const [onlineEmails, setOnlineEmails] = useState(() => new Set(presenceOnlineEmails));
+  useEffect(() => {
+    const listener = (next) => setOnlineEmails(next);
+    presenceListeners.add(listener);
+    setOnlineEmails(new Set(presenceOnlineEmails));
+    return () => { presenceListeners.delete(listener); };
+  }, []);
+  return onlineEmails;
+};
+
 const normalizeReviewComment = (value) => String(value || '')
   .replace(/\s+/g, ' ')
   .trim();
@@ -22330,6 +22401,15 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   const prefillItemImageFromState = String(location.state?.itemImage || '').trim();
   const prefillItemLinkFromState = String(location.state?.itemLink || '').trim();
   const currentUserEmail = normalizeEmail(getCurrentUserEmail()) || GUEST_ORDER_EMAIL;
+  const onlineEmails = usePresence();
+  // The SVS Agent is an always-available bot; everyone else must really be
+  // connected (present in the Realtime presence channel) to show as online.
+  const isUserOnline = useCallback((email) => {
+    const normalized = normalizeEmail(email);
+    if (!normalized) return false;
+    if (normalized === SUPPORT_ADMIN_EMAIL) return true;
+    return onlineEmails.has(normalized);
+  }, [onlineEmails]);
   const currentUserName = (() => {
     if (typeof window === 'undefined') return 'Client';
     const storedName = String(window.localStorage.getItem('svs-user-name') || '').trim();
@@ -22935,12 +23015,11 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     return 'Contact';
   }, []);
 
-  const getRecipientPresenceLabel = useCallback((role) => {
+  const getRecipientPresenceLabel = useCallback((role, email = '') => {
+    if (isUserOnline(email)) return 'Online now';
     if (role === 'admin') return 'Online now';
-    if (role === 'seller') return 'Available';
-    if (role === 'client') return 'Active contact';
-    return 'Available';
-  }, []);
+    return 'Offline';
+  }, [isUserOnline]);
 
   const getRecipientAvatarLabel = useCallback((option) => {
     const rawName = String(option?.name || option?.email || 'C').trim();
@@ -24521,7 +24600,9 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                       <span className={`flex h-11 w-11 select-none items-center justify-center rounded-full text-sm font-black text-white shadow-sm ${isActive ? 'bg-[var(--svs-primary)]' : 'bg-gradient-to-br from-[var(--svs-primary)] to-[var(--svs-primary-strong)]'}`} aria-hidden="true">
                         {(counterpart.name || '?').trim().charAt(0).toUpperCase()}
                       </span>
-                      <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-[var(--svs-success)]" aria-hidden="true"></span>
+                      {isUserOnline(counterpart.email) ? (
+                        <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-[var(--svs-success)]" title="Online" aria-hidden="true"></span>
+                      ) : null}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center justify-between gap-2">
@@ -24602,7 +24683,8 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                           <div className="space-y-1.5">
                             {group.items.map((option) => {
                               const isSelected = normalizeEmail(recipientEmail) === option.email;
-                              const statusLabel = getRecipientPresenceLabel(option.role);
+                              const optionOnline = isUserOnline(option.email);
+                              const statusLabel = getRecipientPresenceLabel(option.role, option.email);
                               return (
                                 <button
                                   key={`recipient-${option.email}`}
@@ -24613,8 +24695,13 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                                   }}
                                   className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition ${isSelected ? 'border-[#0f6674] bg-[#e8f7fb]' : 'border-[#d6e6f5] bg-white hover:border-[#0f6674]'}`}
                                 >
-                                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-black ${option.role === 'admin' ? 'bg-[#0f6674] text-white' : option.role === 'seller' ? 'bg-[#dff6ea] text-[#0f7a46]' : 'bg-[#eef4ff] text-[#3356a8]'}`}>
+                                  <div className="relative shrink-0">
+                                  <div className={`flex h-10 w-10 items-center justify-center rounded-full text-xs font-black ${option.role === 'admin' ? 'bg-[#0f6674] text-white' : option.role === 'seller' ? 'bg-[#dff6ea] text-[#0f7a46]' : 'bg-[#eef4ff] text-[#3356a8]'}`}>
                                     {getRecipientAvatarLabel(option)}
+                                  </div>
+                                  {optionOnline ? (
+                                    <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-[var(--svs-success)]" title="Online" aria-hidden="true"></span>
+                                  ) : null}
                                   </div>
                                   <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2">
@@ -24624,7 +24711,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                                       </span>
                                     </div>
                                     <p className="truncate text-xs text-slate-500">{option.email}</p>
-                                    <p className="mt-0.5 text-[11px] font-semibold text-slate-400">{statusLabel}</p>
+                                    <p className={`mt-0.5 text-[11px] font-semibold ${optionOnline ? 'text-[var(--svs-success)]' : 'text-slate-400'}`}>{statusLabel}</p>
                                   </div>
                                 </button>
                               );
@@ -24730,16 +24817,24 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                     {/* Avatar with online indicator. */}
                     <div className="relative shrink-0">
                       <span className="flex h-10 w-10 select-none items-center justify-center rounded-full bg-gradient-to-br from-[var(--svs-primary)] to-[var(--svs-primary-strong)] text-sm font-black text-white shadow-sm" aria-hidden="true">{(resolveCounterparty(activeThread).name || '?').trim().charAt(0).toUpperCase()}</span>
-                      <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-[var(--svs-success)]" title="Online"></span>
+                      {isUserOnline(resolveCounterparty(activeThread).email) ? (
+                        <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-[var(--svs-success)]" title="Online"></span>
+                      ) : null}
                     </div>
 
                     {/* Name + meta line (online, deal status, reference). */}
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-bold text-[var(--svs-primary-strong)] sm:text-base">{resolveCounterparty(activeThread).name}</p>
                       <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[var(--svs-success)]">
-                          <span className="h-1.5 w-1.5 rounded-full bg-[var(--svs-success)]"></span>Online
-                        </span>
+                        {isUserOnline(resolveCounterparty(activeThread).email) ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[var(--svs-success)]">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[var(--svs-success)]"></span>Online
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[var(--svs-muted)]">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[var(--svs-muted)]"></span>Offline
+                          </span>
+                        )}
                         {!isAgentThread ? (
                           <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${dealStatusMeta[dealStatus]?.cls || 'bg-slate-100 text-slate-700'}`}>
                             {dealStatusMeta[dealStatus]?.label || dealStatus}
@@ -31423,6 +31518,23 @@ const App = () => {
       window.removeEventListener('storage', handleAuthChange);
     };
   }, []);
+
+  // Announce real presence to Supabase Realtime while a session is open, so
+  // the chat only marks people "Online" when they genuinely are. Leaves the
+  // channel on sign-out and when the tab/app closes.
+  useEffect(() => {
+    const email = normalizeEmail(activeUserEmail);
+    if (!email) {
+      leavePresence();
+      return undefined;
+    }
+    joinPresence(email);
+    const handleUnload = () => leavePresence();
+    window.addEventListener('pagehide', handleUnload);
+    return () => {
+      window.removeEventListener('pagehide', handleUnload);
+    };
+  }, [activeUserEmail]);
 
   useEffect(() => {
     if (!getAuthState() || !activeUserEmail || !hasSupabaseEnv || !supabase) {
