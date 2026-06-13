@@ -31129,10 +31129,9 @@ const FloatingSupportChatButton = () => (
     to="/support/chat"
     aria-label="Open Let's Talk Business chat"
     title="Let's Talk Business"
-    className="group fixed bottom-5 right-4 z-[130] inline-flex items-center gap-2 rounded-full border-2 border-white/80 bg-[#1f4c8f] py-2.5 pl-3 pr-3 text-white shadow-[0_14px_28px_rgba(8,32,40,0.38)] transition hover:scale-105 hover:bg-[#173e78] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 sm:bottom-6 sm:right-6 sm:py-3 sm:pl-4 sm:pr-5"
+    className="group fixed bottom-5 right-4 z-[130] inline-flex h-14 w-14 items-center justify-center rounded-full border-2 border-white/80 bg-[#1f4c8f] text-white shadow-[0_14px_28px_rgba(8,32,40,0.38)] transition hover:scale-105 hover:bg-[#173e78] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 sm:bottom-6 sm:right-6 sm:h-16 sm:w-16"
   >
     <MessageCircle className="h-7 w-7 shrink-0 sm:h-8 sm:w-8" strokeWidth={2.4} />
-    <span className="text-sm font-extrabold leading-tight tracking-tight sm:text-base">Let&apos;s Talk Business</span>
   </Link>
 );
 
