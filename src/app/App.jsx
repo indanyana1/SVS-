@@ -6150,13 +6150,26 @@ const requestVoiceTranscription = async ({ audioBase64, mimeType, language } = {
   return String(result.text || '').trim();
 };
 
-// Calls /api/ai-listing with a single product photo and gets back a
-// suggested listing (title, description, market, price, etc.) the
-// seller can review and tweak before publishing.
-const requestAiListingFromImage = async ({ imageBase64, mimeType, marketKeys } = {}) => {
-  const normalized = String(imageBase64 || '').trim();
-  if (!normalized) {
-    throw new Error('Product image is required.');
+// Calls /api/ai-listing with one or more product photos (all of the
+// SAME item) and gets back a suggested listing (title, description,
+// market, price, size, condition, key features, etc.) the seller can
+// review and tweak before publishing.
+const requestAiListingFromImage = async ({ imageBase64, mimeType, images, marketKeys } = {}) => {
+  // Build the images[] payload — either from the array form or the
+  // single-image legacy form.
+  const payloadImages = Array.isArray(images) && images.length
+    ? images
+        .map((img) => ({
+          imageBase64: String(img?.imageBase64 || '').trim(),
+          mimeType: img?.mimeType || 'image/jpeg',
+        }))
+        .filter((img) => img.imageBase64)
+    : (String(imageBase64 || '').trim()
+      ? [{ imageBase64: String(imageBase64).trim(), mimeType: mimeType || 'image/jpeg' }]
+      : []);
+
+  if (!payloadImages.length) {
+    throw new Error('At least one product image is required.');
   }
 
   let response;
@@ -6165,8 +6178,7 @@ const requestAiListingFromImage = async ({ imageBase64, mimeType, marketKeys } =
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        imageBase64: normalized,
-        mimeType: mimeType || 'image/jpeg',
+        images: payloadImages,
         marketKeys: Array.isArray(marketKeys) && marketKeys.length ? marketKeys : undefined,
       }),
     });
@@ -17158,64 +17170,110 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
   };
 
   // -----------------------------------------------------------------
-  // AI Bulk Lister
+  // AI Quick Lister
   // -----------------------------------------------------------------
-  // Lets a seller upload many product photos at once. Each photo is
-  // sent to /api/ai-listing (Groq vision) which returns a suggested
-  // title, description, market, price, currency and quantity. The
-  // seller can tweak each row and either publish them one-by-one or
-  // hit "Publish all ready" to push every approved row to Supabase.
-  const [bulkDrafts, setBulkDrafts] = useState([]); // [{ id, file, previewUrl, status, ... }]
+  // Lets a seller upload one or more photos of the SAME product
+  // (front, back, tag, packaging close-up, etc.) and have SVS AI fuse
+  // everything it sees across them into ONE marketplace listing.
+  // The seller reviews/edits the suggested fields and publishes a
+  // single item with all the photos attached as image_urls. After
+  // publishing, they can hit "List another item" to start a fresh
+  // draft for the next product.
+  const [bulkDraft, setBulkDraft] = useState(null); // { id, files: [{file, previewUrl}], status, title, ... } | null
   const [isBulkAnalyzing, setIsBulkAnalyzing] = useState(false);
   const [bulkMessage, setBulkMessage] = useState('');
   const bulkInputRef = useRef(null);
 
-  // Revoke object URLs when drafts unmount.
+  // Revoke any preview object URLs when the page unmounts so we don't
+  // leak memory across long seller sessions.
   useEffect(() => () => {
-    bulkDrafts.forEach((draft) => {
-      if (draft.previewUrl) {
-        try { URL.revokeObjectURL(draft.previewUrl); } catch (_e) { /* ignore */ }
-      }
-    });
+    if (bulkDraft?.files?.length) {
+      bulkDraft.files.forEach((entry) => {
+        if (entry.previewUrl) {
+          try { URL.revokeObjectURL(entry.previewUrl); } catch (_e) { /* ignore */ }
+        }
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const updateBulkDraft = useCallback((id, patch) => {
-    setBulkDrafts((current) => current.map((draft) => (draft.id === id ? { ...draft, ...patch } : draft)));
-  }, []);
+  const createEmptyBulkDraft = () => ({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    files: [],
+    status: 'pending', // pending | analyzing | ready | publishing | published | error
+    title: '',
+    description: '',
+    marketKey: '',
+    price: '',
+    currency: 'USD',
+    quantity: '1',
+    category: '',
+    brand: '',
+    color: '',
+    size: '',
+    material: '',
+    condition: 'New',
+    keyFeatures: [],
+    confidence: 0,
+    error: '',
+  });
 
-  const removeBulkDraft = useCallback((id) => {
-    setBulkDrafts((current) => {
-      const target = current.find((d) => d.id === id);
-      if (target?.previewUrl) {
-        try { URL.revokeObjectURL(target.previewUrl); } catch (_e) { /* ignore */ }
-      }
-      return current.filter((d) => d.id !== id);
-    });
+  const updateBulkDraft = useCallback((patch) => {
+    setBulkDraft((current) => (current ? { ...current, ...patch } : current));
   }, []);
 
   const handleBulkFilesPick = useCallback((event) => {
     const picked = Array.from(event.target.files || []);
-    if (!picked.length) return;
-    const next = picked.map((file) => ({
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      file,
-      previewUrl: URL.createObjectURL(file),
-      status: 'pending', // pending | analyzing | ready | publishing | published | error
-      title: '',
-      description: '',
-      marketKey: '',
-      price: '',
-      currency: 'USD',
-      quantity: '1',
-      category: '',
-      brand: '',
-      color: '',
-      confidence: 0,
-      error: '',
-    }));
-    setBulkDrafts((current) => [...current, ...next]);
     event.target.value = '';
+    if (!picked.length) return;
+
+    setBulkDraft((current) => {
+      const base = current ?? createEmptyBulkDraft();
+      // If the draft was already published, start a fresh one.
+      const draft = base.status === 'published' ? createEmptyBulkDraft() : base;
+      const existing = draft.files || [];
+      // Cap at 4 photos — Groq vision call has a payload budget.
+      const room = Math.max(0, 4 - existing.length);
+      const accepted = picked.slice(0, room).map((file) => ({
+        file,
+        previewUrl: URL.createObjectURL(file),
+      }));
+      // Adding more photos resets us to pending so the seller knows
+      // they need to re-run analysis.
+      return {
+        ...draft,
+        files: [...existing, ...accepted],
+        status: draft.status === 'ready' || draft.status === 'error' ? 'pending' : draft.status,
+        error: '',
+      };
+    });
+    setBulkMessage('');
+  }, []);
+
+  const removeBulkPhoto = useCallback((index) => {
+    setBulkDraft((current) => {
+      if (!current) return current;
+      const next = (current.files || []).slice();
+      const [removed] = next.splice(index, 1);
+      if (removed?.previewUrl) {
+        try { URL.revokeObjectURL(removed.previewUrl); } catch (_e) { /* ignore */ }
+      }
+      return { ...current, files: next };
+    });
+  }, []);
+
+  const startNewBulkDraft = useCallback(() => {
+    setBulkDraft((current) => {
+      if (current?.files?.length) {
+        current.files.forEach((entry) => {
+          if (entry.previewUrl) {
+            try { URL.revokeObjectURL(entry.previewUrl); } catch (_e) { /* ignore */ }
+          }
+        });
+      }
+      return null;
+    });
+    setBulkMessage('');
   }, []);
 
   // Downscale a photo for the AI vision call. Phone cameras often
@@ -17240,7 +17298,6 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
 
       const img = new Image();
       img.onerror = () => {
-        // Fall back to raw base64 (best effort) if decode fails.
         const raw = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
         resolve({ base64: raw, mimeType: file.type || 'image/jpeg' });
       };
@@ -17274,97 +17331,127 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
     reader.readAsDataURL(file);
   });
 
-  // Walk through every pending draft sequentially and ask the AI to
-  // fill in the fields. Sequential keeps us well under Groq's rate
-  // limits even when the seller drops 30+ photos at once.
+  // Send every photo in the current draft to the AI vision endpoint in
+  // a SINGLE request. The model fuses what it sees across all photos
+  // (logo, tag, size label, condition) into one listing JSON.
   const handleAnalyzeAll = useCallback(async () => {
     if (isBulkAnalyzing) return;
+    if (!bulkDraft || !bulkDraft.files?.length) {
+      setBulkMessage('Add at least one photo of your product first.');
+      return;
+    }
     setIsBulkAnalyzing(true);
     setBulkMessage('');
+    updateBulkDraft({ status: 'analyzing', error: '' });
+
     const marketKeys = sellerMarketOptions.map((option) => option.key);
 
-    // Read current drafts inside the loop via setState updater fn so
-    // we always see the latest list.
-    let snapshot = bulkDrafts;
-    setBulkDrafts((current) => { snapshot = current; return current; });
+    try {
+      const encoded = await Promise.all(bulkDraft.files.map(async ({ file }) => {
+        const { base64, mimeType } = await fileToBase64ForAi(file);
+        return { imageBase64: base64, mimeType: mimeType || file.type || 'image/jpeg' };
+      }));
+      const listing = await requestAiListingFromImage({ images: encoded, marketKeys });
 
-    for (const draft of snapshot) {
-      if (draft.status !== 'pending') continue;
-      updateBulkDraft(draft.id, { status: 'analyzing', error: '' });
-      try {
-        const { base64, mimeType } = await fileToBase64ForAi(draft.file);
-        const listing = await requestAiListingFromImage({
-          imageBase64: base64,
-          mimeType: mimeType || draft.file.type || 'image/jpeg',
-          marketKeys,
-        });
-        updateBulkDraft(draft.id, {
-          status: 'ready',
-          title: listing.title || '',
-          description: listing.description || '',
-          marketKey: listing.suggestedMarketKey || 'ecommerce',
-          price: listing.suggestedPrice ? String(listing.suggestedPrice) : '',
-          currency: listing.suggestedCurrency || 'USD',
-          quantity: String(listing.suggestedQuantity || 1),
-          category: listing.category || '',
-          brand: listing.brand || '',
-          color: listing.color || '',
-          confidence: listing.confidence || 0,
-        });
-      } catch (error) {
-        updateBulkDraft(draft.id, {
-          status: 'error',
-          error: error?.message || 'AI could not analyze this photo.',
-        });
-      }
+      // Build a richer description that weaves in the size/material/condition
+      // the AI extracted, so the seller doesn't have to re-type them.
+      const extras = [];
+      if (listing.size) extras.push(`Size: ${listing.size}`);
+      if (listing.material) extras.push(`Material: ${listing.material}`);
+      if (listing.condition) extras.push(`Condition: ${listing.condition}`);
+      const featureLines = Array.isArray(listing.keyFeatures) ? listing.keyFeatures : [];
+      const composedDescription = [
+        listing.description || '',
+        featureLines.length ? `Highlights:\n${featureLines.map((f) => `\u2022 ${f}`).join('\n')}` : '',
+        extras.length ? extras.join(' \u2022 ') : '',
+      ].filter(Boolean).join('\n\n');
+
+      updateBulkDraft({
+        status: 'ready',
+        title: listing.title || '',
+        description: composedDescription || listing.description || '',
+        marketKey: listing.suggestedMarketKey || 'ecommerce',
+        price: listing.suggestedPrice ? String(listing.suggestedPrice) : '',
+        currency: listing.suggestedCurrency || 'USD',
+        quantity: String(listing.suggestedQuantity || 1),
+        category: listing.category || '',
+        brand: listing.brand || '',
+        color: listing.color || '',
+        size: listing.size || '',
+        material: listing.material || '',
+        condition: listing.condition || 'New',
+        keyFeatures: featureLines,
+        confidence: listing.confidence || 0,
+        error: '',
+      });
+    } catch (error) {
+      updateBulkDraft({
+        status: 'error',
+        error: error?.message || 'AI could not analyze your photos.',
+      });
+    } finally {
+      setIsBulkAnalyzing(false);
     }
+    // sellerMarketOptions is derived from `t` + market config at module scope
+    // and is stable across renders for this hook's purposes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bulkDraft, isBulkAnalyzing, updateBulkDraft]);
 
-    setIsBulkAnalyzing(false);
-  }, [bulkDrafts, isBulkAnalyzing, updateBulkDraft]);
+  // Publish the current draft as ONE marketplace item. Uploads every
+  // photo to Supabase Storage and inserts a single row in
+  // marketplace_items with image_urls = [all uploaded URLs].
+  const publishBulkDraft = useCallback(async () => {
+    if (!bulkDraft) return;
+    const trimmedTitle = String(bulkDraft.title || '').trim();
+    const trimmedDescription = String(bulkDraft.description || '').trim();
+    const cleanedPrice = String(bulkDraft.price || '').replace(/[^\d.]/g, '');
+    const normalizedQuantity = normalizeListingQuantity(bulkDraft.quantity, NaN);
+    const market = sellerMarketConfig[bulkDraft.marketKey];
 
-  // Publish a single ready draft. Uploads the photo to Supabase
-  // Storage, then inserts a row in marketplace_items mirroring the
-  // manual form's logic.
-  const publishBulkDraft = useCallback(async (draftId) => {
-    const draft = bulkDrafts.find((d) => d.id === draftId);
-    if (!draft) return;
-    const trimmedTitle = String(draft.title || '').trim();
-    const trimmedDescription = String(draft.description || '').trim();
-    const cleanedPrice = String(draft.price || '').replace(/[^\d.]/g, '');
-    const normalizedQuantity = normalizeListingQuantity(draft.quantity, NaN);
-    const market = sellerMarketConfig[draft.marketKey];
-
+    if (!bulkDraft.files?.length) {
+      updateBulkDraft({ status: bulkDraft.status === 'ready' ? 'ready' : 'pending', error: 'Add at least one product photo.' });
+      return;
+    }
     if (!trimmedTitle || !trimmedDescription || !cleanedPrice || !market || !Number.isFinite(normalizedQuantity)) {
-      updateBulkDraft(draftId, { status: 'ready', error: 'Fill in title, description, market, price and quantity.' });
+      updateBulkDraft({ status: 'ready', error: 'Fill in title, description, market, price and quantity.' });
       return;
     }
     if (!hasSupabaseEnv || !supabase) {
-      updateBulkDraft(draftId, { status: 'ready', error: 'Supabase is not configured.' });
+      updateBulkDraft({ status: 'ready', error: 'Supabase is not configured.' });
       return;
     }
 
-    updateBulkDraft(draftId, { status: 'publishing', error: '' });
+    updateBulkDraft({ status: 'publishing', error: '' });
 
     try {
-      const fileExtension = draft.file.name.split('.').pop() || 'jpg';
-      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExtension}`;
-      const filePath = `${sanitizeStorageSegment(userEmail)}/${draft.marketKey}/${fileName}`;
-      const { error: uploadError } = await supabase.storage
-        .from(SELLER_IMAGES_BUCKET)
-        .upload(filePath, draft.file, { cacheControl: '3600', upsert: false });
-      if (uploadError) {
-        updateBulkDraft(draftId, { status: 'ready', error: `Image upload failed: ${uploadError.message}` });
-        return;
+      const uploadedImageUrls = [];
+      for (const { file } of bulkDraft.files) {
+        const fileExtension = file.name.split('.').pop() || 'jpg';
+        const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExtension}`;
+        const filePath = `${sanitizeStorageSegment(userEmail)}/${bulkDraft.marketKey}/${fileName}`;
+        // eslint-disable-next-line no-await-in-loop
+        const { error: uploadError } = await supabase.storage
+          .from(SELLER_IMAGES_BUCKET)
+          .upload(filePath, file, { cacheControl: '3600', upsert: false });
+        if (uploadError) {
+          updateBulkDraft({ status: 'ready', error: `Image upload failed: ${uploadError.message}` });
+          return;
+        }
+        const { data: publicUrlData } = supabase.storage.from(SELLER_IMAGES_BUCKET).getPublicUrl(filePath);
+        uploadedImageUrls.push(publicUrlData.publicUrl);
       }
-      const { data: publicUrlData } = supabase.storage.from(SELLER_IMAGES_BUCKET).getPublicUrl(filePath);
-      const imageUrl = publicUrlData.publicUrl;
 
-      // Build a lightweight details_json from the AI-suggested fields so
-      // market filters (brand, color, category) still work where applicable.
+      // Build a richer details_json so market filters still work where applicable.
       const detailsJson = {};
-      if (draft.brand) detailsJson.brand = draft.brand;
-      if (draft.color) detailsJson.color = draft.color;
-      if (draft.category) detailsJson.category = draft.category;
+      if (bulkDraft.brand) detailsJson.brand = bulkDraft.brand;
+      if (bulkDraft.color) detailsJson.color = bulkDraft.color;
+      if (bulkDraft.category) detailsJson.category = bulkDraft.category;
+      if (bulkDraft.size) detailsJson.size = bulkDraft.size;
+      if (bulkDraft.material) detailsJson.material = bulkDraft.material;
+      if (bulkDraft.condition) detailsJson.condition = bulkDraft.condition;
+      if (Array.isArray(bulkDraft.keyFeatures) && bulkDraft.keyFeatures.length) {
+        detailsJson.highlights = bulkDraft.keyFeatures;
+      }
 
       const { data, error } = await supabase
         .from(SELLER_ITEMS_TABLE)
@@ -17375,49 +17462,26 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
           description: trimmedDescription,
           quantity: normalizedQuantity,
           price: cleanedPrice,
-          market_key: draft.marketKey,
+          market_key: bulkDraft.marketKey,
           details_json: detailsJson,
-          image_url: imageUrl,
-          image_urls: [imageUrl],
+          image_url: uploadedImageUrls[0],
+          image_urls: uploadedImageUrls,
         })
         .select('*')
         .single();
 
       if (error) {
-        updateBulkDraft(draftId, { status: 'ready', error: getMarketplaceItemSaveErrorMessage(error.message) });
+        updateBulkDraft({ status: 'ready', error: getMarketplaceItemSaveErrorMessage(error.message) });
         return;
       }
 
       onSellerItemCreated(mapSellerItemRecord(data));
-      updateBulkDraft(draftId, { status: 'published', error: '' });
+      updateBulkDraft({ status: 'published', error: '' });
+      setBulkMessage(`Published in ${t(market.labelKey)}. Hit "List another item" to add the next product.`);
     } catch (error) {
-      updateBulkDraft(draftId, { status: 'ready', error: error?.message || 'Publish failed.' });
+      updateBulkDraft({ status: 'ready', error: error?.message || 'Publish failed.' });
     }
-  }, [bulkDrafts, onSellerItemCreated, updateBulkDraft, userEmail, userName]);
-
-  const handlePublishAllReady = useCallback(async () => {
-    const targets = bulkDrafts.filter((d) => d.status === 'ready');
-    if (!targets.length) {
-      setBulkMessage('Nothing to publish yet. Analyze some photos first.');
-      return;
-    }
-    setBulkMessage('');
-    for (const target of targets) {
-      // eslint-disable-next-line no-await-in-loop
-      await publishBulkDraft(target.id);
-    }
-    setBulkMessage(`Published ${targets.length} listing${targets.length === 1 ? '' : 's'}.`);
-  }, [bulkDrafts, publishBulkDraft]);
-
-  const handleClearPublished = useCallback(() => {
-    setBulkDrafts((current) => {
-      const removed = current.filter((d) => d.status === 'published');
-      removed.forEach((d) => {
-        if (d.previewUrl) { try { URL.revokeObjectURL(d.previewUrl); } catch (_e) { /* ignore */ } }
-      });
-      return current.filter((d) => d.status !== 'published');
-    });
-  }, []);
+  }, [bulkDraft, onSellerItemCreated, t, updateBulkDraft, userEmail, userName]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -17557,18 +17621,18 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
       ) : (
         <>
           {/* ============================================================ */}
-          {/* AI Bulk Lister — for stores like China Store Umkomaas that  */}
-          {/* need to list dozens of products in seconds. Drop in many    */}
-          {/* product photos and the AI auto-fills title, description,   */}
-          {/* market, price, currency and quantity for each one.         */}
+          {/* AI Quick Lister — upload 1-4 photos of the SAME product    */}
+          {/* (front, back, tag, packaging) and SVS AI fuses them into  */}
+          {/* ONE listing with title, description, market, price, size,  */}
+          {/* condition and key features extracted from the photos.     */}
           {/* ============================================================ */}
           <section className="mb-6 rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 via-white to-cyan-50 p-5 shadow-[0_4px_8px_rgba(0,0,0,0.06)]">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex items-start gap-2">
                 <Sparkles className="mt-0.5 h-5 w-5 text-purple-600" aria-hidden="true" />
                 <div>
-                  <h2 className="text-lg font-bold text-[var(--svs-text)]">AI Bulk Lister</h2>
-                  <p className="mt-0.5 text-xs text-[var(--svs-muted)]">Drop multiple product photos and SVS AI writes the title, description, market, price and quantity for each one. Review, edit and publish them all in seconds.</p>
+                  <h2 className="text-lg font-bold text-[var(--svs-text)]">AI Quick Lister</h2>
+                  <p className="mt-0.5 text-xs text-[var(--svs-muted)]">Upload one or more photos of the <span className="font-bold">same</span> product (front, back, size tag, packaging). SVS AI reads every photo and fills in the title, description, market, price, size, condition and key features for ONE listing. Review, edit, then publish.</p>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -17583,27 +17647,48 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                 <button
                   type="button"
                   onClick={() => bulkInputRef.current?.click()}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-purple-300 bg-white px-3 py-2 text-xs font-bold text-purple-700 transition hover:bg-purple-100"
+                  disabled={bulkDraft?.status === 'publishing' || bulkDraft?.status === 'analyzing'}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-purple-300 bg-white px-3 py-2 text-xs font-bold text-purple-700 transition hover:bg-purple-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  + Add photos
+                  {bulkDraft?.files?.length ? '+ Add more photos' : '+ Add photos'}
                 </button>
                 <button
                   type="button"
                   onClick={handleAnalyzeAll}
-                  disabled={isBulkAnalyzing || !bulkDrafts.some((d) => d.status === 'pending')}
+                  disabled={isBulkAnalyzing || !bulkDraft?.files?.length || bulkDraft?.status === 'publishing'}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
                   {isBulkAnalyzing ? 'Analyzing\u2026' : 'Analyze with AI'}
                 </button>
-                <button
-                  type="button"
-                  onClick={handlePublishAllReady}
-                  disabled={!bulkDrafts.some((d) => d.status === 'ready')}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--svs-primary)] px-3 py-2 text-xs font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Publish all ready
-                </button>
+                {bulkDraft?.status === 'ready' || bulkDraft?.status === 'error' ? (
+                  <button
+                    type="button"
+                    onClick={publishBulkDraft}
+                    disabled={bulkDraft.status === 'publishing'}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--svs-primary)] px-3 py-2 text-xs font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Publish item
+                  </button>
+                ) : null}
+                {bulkDraft?.status === 'published' ? (
+                  <button
+                    type="button"
+                    onClick={startNewBulkDraft}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 transition hover:bg-emerald-100"
+                  >
+                    + List another item
+                  </button>
+                ) : null}
+                {bulkDraft && bulkDraft.status !== 'publishing' ? (
+                  <button
+                    type="button"
+                    onClick={startNewBulkDraft}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--svs-border)] bg-white px-3 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-50"
+                  >
+                    Discard
+                  </button>
+                ) : null}
               </div>
             </div>
 
@@ -17611,158 +17696,180 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
               <p className="mt-3 rounded-lg border border-[var(--svs-border)] bg-white px-3 py-2 text-xs font-semibold text-[var(--svs-text)]">{bulkMessage}</p>
             ) : null}
 
-            {!bulkDrafts.length ? (
+            {!bulkDraft || !bulkDraft.files?.length ? (
               <div className="mt-4 rounded-xl border-2 border-dashed border-purple-200 bg-white/60 px-4 py-6 text-center text-xs text-[var(--svs-muted)]">
-                Tap <span className="font-bold text-purple-700">+ Add photos</span> and pick all the items you want to list. Each photo becomes a listing draft you can edit before publishing.
+                Tap <span className="font-bold text-purple-700">+ Add photos</span> and select all the photos of the <span className="font-bold">same</span> product (front view, back view, tag, packaging \u2014 up to 4). The AI will fuse them into one listing.
               </div>
             ) : (
-              <div className="mt-4 space-y-3">
-                {bulkDrafts.map((draft) => (
-                  <article key={draft.id} className="rounded-xl border border-[var(--svs-border)] bg-white p-3 shadow-sm">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-                      <div className="relative h-28 w-full overflow-hidden rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] sm:h-32 sm:w-32 sm:shrink-0">
-                        {draft.previewUrl ? (
-                          <img src={draft.previewUrl} alt={draft.file?.name || 'Product photo'} className="h-full w-full object-cover" loading="lazy" />
-                        ) : null}
-                        <span className={`absolute left-1 top-1 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                          draft.status === 'published' ? 'bg-emerald-600 text-white'
-                          : draft.status === 'publishing' ? 'bg-cyan-600 text-white'
-                          : draft.status === 'ready' ? 'bg-purple-600 text-white'
-                          : draft.status === 'analyzing' ? 'bg-amber-500 text-white'
-                          : draft.status === 'error' ? 'bg-rose-600 text-white'
-                          : 'bg-slate-600 text-white'
-                        }`}>{draft.status}</span>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        {draft.status === 'pending' ? (
-                          <p className="text-xs text-[var(--svs-muted)]">Waiting for AI analysis. Press <span className="font-bold">Analyze with AI</span> above to fill in the details.</p>
-                        ) : draft.status === 'analyzing' ? (
-                          <p className="text-xs text-amber-700">AI is looking at this photo\u2026</p>
-                        ) : draft.status === 'published' ? (
-                          <p className="text-xs font-semibold text-emerald-700">Published. The item is now live in {sellerMarketConfig[draft.marketKey] ? t(sellerMarketConfig[draft.marketKey].labelKey) : draft.marketKey}.</p>
-                        ) : (
-                          <div className="grid gap-2 sm:grid-cols-2">
-                            <label className="block text-[11px] font-semibold text-[var(--svs-text)] sm:col-span-2">
-                              Title
-                              <input
-                                type="text"
-                                value={draft.title}
-                                onChange={(event) => updateBulkDraft(draft.id, { title: event.target.value })}
-                                className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none"
-                                disabled={draft.status === 'publishing'}
-                              />
-                            </label>
-                            <label className="block text-[11px] font-semibold text-[var(--svs-text)] sm:col-span-2">
-                              Description
-                              <textarea
-                                value={draft.description}
-                                onChange={(event) => updateBulkDraft(draft.id, { description: event.target.value })}
-                                rows={2}
-                                className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none"
-                                disabled={draft.status === 'publishing'}
-                              />
-                            </label>
-                            <label className="block text-[11px] font-semibold text-[var(--svs-text)]">
-                              Market
-                              <select
-                                value={draft.marketKey}
-                                onChange={(event) => updateBulkDraft(draft.id, { marketKey: event.target.value })}
-                                className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none"
-                                disabled={draft.status === 'publishing'}
-                              >
-                                <option value="">Select market</option>
-                                {sellerMarketOptions.map((option) => (
-                                  <option key={option.key} value={option.key}>
-                                    {option.label || t(option.labelKey)}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <label className="block text-[11px] font-semibold text-[var(--svs-text)]">
-                              Quantity
-                              <input
-                                type="number"
-                                min="0"
-                                step="1"
-                                value={draft.quantity}
-                                onChange={(event) => updateBulkDraft(draft.id, { quantity: event.target.value })}
-                                className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none"
-                                disabled={draft.status === 'publishing'}
-                              />
-                            </label>
-                            <label className="block text-[11px] font-semibold text-[var(--svs-text)]">
-                              Price
-                              <div className="mt-1 flex gap-1">
-                                <input
-                                  type="text"
-                                  value={draft.currency}
-                                  onChange={(event) => updateBulkDraft(draft.id, { currency: event.target.value.toUpperCase().slice(0, 6) })}
-                                  className="w-16 rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none"
-                                  disabled={draft.status === 'publishing'}
-                                />
-                                <input
-                                  type="text"
-                                  inputMode="decimal"
-                                  value={draft.price}
-                                  onChange={(event) => updateBulkDraft(draft.id, { price: event.target.value })}
-                                  className="w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none"
-                                  disabled={draft.status === 'publishing'}
-                                />
-                              </div>
-                            </label>
-                            <div className="block text-[11px] font-semibold text-[var(--svs-text)]">
-                              AI confidence
-                              <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-[var(--svs-surface-soft)]">
-                                <div
-                                  className={`h-full ${draft.confidence >= 0.7 ? 'bg-emerald-500' : draft.confidence >= 0.4 ? 'bg-amber-500' : 'bg-rose-500'}`}
-                                  style={{ width: `${Math.round((draft.confidence || 0) * 100)}%` }}
-                                />
-                              </div>
-                              <p className="mt-1 text-[10px] font-normal text-[var(--svs-muted)]">{Math.round((draft.confidence || 0) * 100)}% confident{draft.brand ? ` \u2022 brand: ${draft.brand}` : ''}{draft.color ? ` \u2022 colour: ${draft.color}` : ''}</p>
-                            </div>
-                          </div>
-                        )}
-                        {draft.error ? (
-                          <p className="mt-2 rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700">{draft.error}</p>
-                        ) : null}
-                      </div>
-                      <div className="flex flex-row gap-2 sm:flex-col sm:items-stretch">
-                        {draft.status === 'ready' || draft.status === 'error' ? (
-                          <button
-                            type="button"
-                            onClick={() => publishBulkDraft(draft.id)}
-                            disabled={draft.status === 'publishing'}
-                            className="inline-flex items-center justify-center gap-1 rounded-md bg-[var(--svs-primary)] px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-60"
-                          >
-                            Publish
-                          </button>
-                        ) : null}
-                        {draft.status !== 'publishing' ? (
-                          <button
-                            type="button"
-                            onClick={() => removeBulkDraft(draft.id)}
-                            className="inline-flex items-center justify-center gap-1 rounded-md border border-[var(--svs-border)] bg-white px-3 py-1.5 text-xs font-bold text-rose-700 transition hover:bg-rose-50"
-                          >
-                            Remove
-                          </button>
-                        ) : null}
-                      </div>
+              <article className="mt-4 rounded-xl border border-[var(--svs-border)] bg-white p-3 shadow-sm">
+                {/* Photo strip */}
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-purple-700">{bulkDraft.files.length} of 4 photos &middot; <span className={`rounded px-1.5 py-0.5 text-[10px] ${
+                    bulkDraft.status === 'published' ? 'bg-emerald-600 text-white'
+                    : bulkDraft.status === 'publishing' ? 'bg-cyan-600 text-white'
+                    : bulkDraft.status === 'ready' ? 'bg-purple-600 text-white'
+                    : bulkDraft.status === 'analyzing' ? 'bg-amber-500 text-white'
+                    : bulkDraft.status === 'error' ? 'bg-rose-600 text-white'
+                    : 'bg-slate-600 text-white'
+                  }`}>{bulkDraft.status}</span></p>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {bulkDraft.files.map((entry, index) => (
+                    <div key={`${entry.previewUrl}-${index}`} className="relative h-20 w-20 overflow-hidden rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] sm:h-24 sm:w-24">
+                      <img src={entry.previewUrl} alt={`Angle ${index + 1}`} className="h-full w-full object-cover" loading="lazy" />
+                      {bulkDraft.status !== 'publishing' && bulkDraft.status !== 'analyzing' ? (
+                        <button
+                          type="button"
+                          onClick={() => removeBulkPhoto(index)}
+                          aria-label={`Remove photo ${index + 1}`}
+                          className="absolute right-0.5 top-0.5 rounded-full bg-rose-600/90 px-1.5 py-0.5 text-[10px] font-bold text-white hover:bg-rose-700"
+                        >
+                          \u00d7
+                        </button>
+                      ) : null}
                     </div>
-                  </article>
-                ))}
+                  ))}
+                </div>
 
-                {bulkDrafts.some((d) => d.status === 'published') ? (
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      onClick={handleClearPublished}
-                      className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800 transition hover:bg-emerald-100"
-                    >
-                      Clear published ({bulkDrafts.filter((d) => d.status === 'published').length})
-                    </button>
+                {bulkDraft.status === 'pending' ? (
+                  <p className="mt-3 text-xs text-[var(--svs-muted)]">Press <span className="font-bold">Analyze with AI</span> above to read these photos and fill in the listing details.</p>
+                ) : bulkDraft.status === 'analyzing' ? (
+                  <p className="mt-3 text-xs text-amber-700">AI is reading your photos\u2026 this usually takes 5\u201310 seconds.</p>
+                ) : bulkDraft.status === 'published' ? (
+                  <p className="mt-3 text-xs font-semibold text-emerald-700">Published. The item is now live in {sellerMarketConfig[bulkDraft.marketKey] ? t(sellerMarketConfig[bulkDraft.marketKey].labelKey) : bulkDraft.marketKey}. Hit <span className="font-bold">List another item</span> to add the next product.</p>
+                ) : (
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <label className="block text-[11px] font-semibold text-[var(--svs-text)] sm:col-span-2">
+                      Title
+                      <input
+                        type="text"
+                        value={bulkDraft.title}
+                        onChange={(event) => updateBulkDraft({ title: event.target.value })}
+                        className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none"
+                        disabled={bulkDraft.status === 'publishing'}
+                      />
+                    </label>
+                    <label className="block text-[11px] font-semibold text-[var(--svs-text)] sm:col-span-2">
+                      Description
+                      <textarea
+                        value={bulkDraft.description}
+                        onChange={(event) => updateBulkDraft({ description: event.target.value })}
+                        rows={4}
+                        className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none"
+                        disabled={bulkDraft.status === 'publishing'}
+                      />
+                    </label>
+                    <label className="block text-[11px] font-semibold text-[var(--svs-text)]">
+                      Market
+                      <select
+                        value={bulkDraft.marketKey}
+                        onChange={(event) => updateBulkDraft({ marketKey: event.target.value })}
+                        className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none"
+                        disabled={bulkDraft.status === 'publishing'}
+                      >
+                        <option value="">Select market</option>
+                        {sellerMarketOptions.map((option) => (
+                          <option key={option.key} value={option.key}>
+                            {option.label || t(option.labelKey)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="block text-[11px] font-semibold text-[var(--svs-text)]">
+                      Quantity
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={bulkDraft.quantity}
+                        onChange={(event) => updateBulkDraft({ quantity: event.target.value })}
+                        className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none"
+                        disabled={bulkDraft.status === 'publishing'}
+                      />
+                    </label>
+                    <label className="block text-[11px] font-semibold text-[var(--svs-text)]">
+                      Price
+                      <div className="mt-1 flex gap-1">
+                        <input
+                          type="text"
+                          value={bulkDraft.currency}
+                          onChange={(event) => updateBulkDraft({ currency: event.target.value.toUpperCase().slice(0, 6) })}
+                          className="w-16 rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none"
+                          disabled={bulkDraft.status === 'publishing'}
+                        />
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={bulkDraft.price}
+                          onChange={(event) => updateBulkDraft({ price: event.target.value })}
+                          className="w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none"
+                          disabled={bulkDraft.status === 'publishing'}
+                        />
+                      </div>
+                    </label>
+                    <label className="block text-[11px] font-semibold text-[var(--svs-text)]">
+                      Size
+                      <input
+                        type="text"
+                        value={bulkDraft.size}
+                        onChange={(event) => updateBulkDraft({ size: event.target.value })}
+                        placeholder="e.g. M, 42, 500ml"
+                        className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none"
+                        disabled={bulkDraft.status === 'publishing'}
+                      />
+                    </label>
+                    <label className="block text-[11px] font-semibold text-[var(--svs-text)]">
+                      Material
+                      <input
+                        type="text"
+                        value={bulkDraft.material}
+                        onChange={(event) => updateBulkDraft({ material: event.target.value })}
+                        placeholder="e.g. 100% Cotton"
+                        className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none"
+                        disabled={bulkDraft.status === 'publishing'}
+                      />
+                    </label>
+                    <label className="block text-[11px] font-semibold text-[var(--svs-text)]">
+                      Condition
+                      <select
+                        value={bulkDraft.condition}
+                        onChange={(event) => updateBulkDraft({ condition: event.target.value })}
+                        className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none"
+                        disabled={bulkDraft.status === 'publishing'}
+                      >
+                        <option value="New">New</option>
+                        <option value="Like new">Like new</option>
+                        <option value="Used - good">Used - good</option>
+                        <option value="Used - fair">Used - fair</option>
+                        <option value="For parts">For parts</option>
+                      </select>
+                    </label>
+                    <label className="block text-[11px] font-semibold text-[var(--svs-text)]">
+                      Category
+                      <input
+                        type="text"
+                        value={bulkDraft.category}
+                        onChange={(event) => updateBulkDraft({ category: event.target.value })}
+                        className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none"
+                        disabled={bulkDraft.status === 'publishing'}
+                      />
+                    </label>
+                    <div className="block text-[11px] font-semibold text-[var(--svs-text)] sm:col-span-2">
+                      AI confidence
+                      <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-[var(--svs-surface-soft)]">
+                        <div
+                          className={`h-full ${bulkDraft.confidence >= 0.7 ? 'bg-emerald-500' : bulkDraft.confidence >= 0.4 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                          style={{ width: `${Math.round((bulkDraft.confidence || 0) * 100)}%` }}
+                        />
+                      </div>
+                      <p className="mt-1 text-[10px] font-normal text-[var(--svs-muted)]">{Math.round((bulkDraft.confidence || 0) * 100)}% confident{bulkDraft.brand ? ` \u2022 brand: ${bulkDraft.brand}` : ''}{bulkDraft.color ? ` \u2022 colour: ${bulkDraft.color}` : ''}</p>
+                    </div>
                   </div>
+                )}
+                {bulkDraft.error ? (
+                  <p className="mt-2 rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700">{bulkDraft.error}</p>
                 ) : null}
-              </div>
+              </article>
             )}
           </section>
 
@@ -21936,6 +22043,64 @@ const buildReplySnippetFromBody = (rawBody) => {
 // helper above can run without entering the React component.
 const SVS_CARD_PREFIX_FALLBACK = '[svs-card]';
 
+// Matches either a full http(s) URL or an in-app route path like
+// "/signup" or "/sell/onboarding". The lookbehind prevents matching
+// slashes that sit inside another word (e.g. "n/a", "24/7").
+const CHAT_URL_OR_PATH_REGEX = /(https?:\/\/[^\s)]+|(?<![\w/])\/[a-zA-Z][a-zA-Z0-9_-]*(?:\/[a-zA-Z0-9_-]+)*\/?)/g;
+const CHAT_LINK_CLASS = 'font-semibold text-[#0f6674] underline underline-offset-2 hover:text-[#0a4d58]';
+
+// Render a plain-text message body, converting URL paths and full URLs
+// into clickable links. Returns an array of strings and React elements
+// suitable for a <p> child. Honours `whitespace-pre-wrap` on the parent.
+const renderChatBodyWithLinks = (text) => {
+  const src = String(text || '');
+  if (!src) return null;
+  if (!CHAT_URL_OR_PATH_REGEX.test(src)) return src;
+  CHAT_URL_OR_PATH_REGEX.lastIndex = 0;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+  let key = 0;
+  while ((match = CHAT_URL_OR_PATH_REGEX.exec(src)) !== null) {
+    if (match.index > lastIndex) parts.push(src.slice(lastIndex, match.index));
+    const token = match[0];
+    // Strip trailing punctuation so the period/comma at the end of a
+    // sentence is not swallowed into the link target.
+    let cleanToken = token;
+    let trailing = '';
+    while (cleanToken && /[.,;:!?)\]'"]/.test(cleanToken.slice(-1))) {
+      trailing = cleanToken.slice(-1) + trailing;
+      cleanToken = cleanToken.slice(0, -1);
+    }
+    if (!cleanToken) {
+      parts.push(token);
+    } else if (/^https?:\/\//i.test(cleanToken)) {
+      parts.push(
+        <a
+          key={`u${key++}`}
+          href={cleanToken}
+          target="_blank"
+          rel="noreferrer"
+          className={CHAT_LINK_CLASS}
+        >
+          {cleanToken}
+        </a>,
+      );
+      if (trailing) parts.push(trailing);
+    } else {
+      parts.push(
+        <Link key={`p${key++}`} to={cleanToken} className={CHAT_LINK_CLASS}>
+          {cleanToken}
+        </Link>,
+      );
+      if (trailing) parts.push(trailing);
+    }
+    lastIndex = match.index + token.length;
+  }
+  if (lastIndex < src.length) parts.push(src.slice(lastIndex));
+  return parts;
+};
+
 const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -24385,7 +24550,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                               ) : null}
                             </div>
                           ) : (
-                            <p className="mt-1 whitespace-pre-wrap text-sm">{innerBody}</p>
+                            <p className="mt-1 whitespace-pre-wrap text-sm">{renderChatBodyWithLinks(innerBody)}</p>
                           )}
                           <p className={`mt-1 text-[11px] ${mine ? 'text-cyan-100' : 'text-slate-400'}`}>
                             {new Date(message.createdAt || Date.now()).toLocaleString()}

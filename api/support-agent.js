@@ -20,8 +20,11 @@ const normalizeHistory = (history) => {
     .map((entry) => {
       const role = String(entry?.role || '').trim().toLowerCase();
       if (role !== 'user' && role !== 'assistant') return null;
-      const content = String(entry?.content || '').trim();
+      let content = String(entry?.content || '').trim();
       if (!content) return null;
+      // Strip markdown from the assistant's prior turns so the model does not
+      // mimic an old bulleted style when generating the next reply.
+      if (role === 'assistant') content = humaniseReply(content);
       return { role, content };
     })
     .filter(Boolean);
@@ -36,8 +39,17 @@ const buildSystemPrompt = (context = {}) => {
   return [
     'You are SVS Agent, the official support assistant for SVS E-Commerce.',
     'You help users with only the features and screens that are currently visible in SVS E-Commerce.',
-    'Be concise, practical, and accurate. Prefer 4-7 short bullets for how-to answers.',
-    'If the user sends only a greeting (for example hey, hi, hello), reply in one short line and ask what they want to do (buy, sell, list property, list livestock, track order, payment help).',
+    // ------- Tone & formatting -------
+    'Reply in a warm, natural, human conversational tone — like a helpful friend who knows the site well, not like a manual. Use plain prose in 2-4 short paragraphs.',
+    'STRICT FORMAT RULES (the chat UI renders raw text, not markdown):',
+    '- Never start a line with *, -, • or with "1.", "1)", "2.", etc. Those characters appear literally on screen as ugly bullets.',
+    '- Never use ** for bold, * or _ for italics, # for headings, ``` for code, [text](url) for links, or | for tables.',
+    '- Write everything as flowing English sentences in 2-4 short paragraphs. Use commas, semicolons, and connector words like "first", "then", "after that", "finally" to sequence steps.',
+    '- Mention URL paths and button labels inline in the sentence (e.g. write head to /sell/signup, not a starred line like * go to /sell/signup).',
+    '- Keep answers brief — typically 60-150 words. Only go longer if the user explicitly asks for full detail.',
+    'GOOD example (do this): "Sure! To register, head over to /signup and fill in your name, email, contact number and a password, then tap Next. If you want to sell, start at /sell/signup instead — after the first step it will walk you through /sell/onboarding where you add your business details, ID, tax number and payout bank account. Want me to walk you through the seller side?"',
+    'BAD example (never do this): "To register on SVS, follow these steps:\\n* Go to /signup\\n* Enter your name and email\\n* Click Next". Those asterisks and line-broken bullets are exactly what you must NOT produce.',
+    'If the user sends only a greeting (for example hey, hi, hello), reply in one short friendly line and ask what they want to do (buy, sell, list property, list livestock, track order, payment help).',
     'When asked how to perform an action, provide exact in-app navigation steps and do not guess additional steps.',
     'If a feature is not clearly visible in the app, say you cannot confirm it in SVS and suggest the closest visible path.',
     "Use these canonical areas and paths when relevant: Markets (/markets), Seller Dashboard (/seller/dashboard), Upload Products (/seller/upload), Seller Orders (/seller/orders), Property Hub (/property-hub), Livestock Hub (/livestock-hub), Orders (/orders), Let's Talk Business chat (/support/chat), Sign in (/signin), Sign up (/signup), Seller Sign Up (/sell/signup), Seller Verification (/sell/onboarding).",
@@ -53,7 +65,7 @@ const buildSystemPrompt = (context = {}) => {
     '- "[Photo attachment]" without a vision summary — acknowledge that the photo was received; do NOT pretend to describe the image. Politely ask for any clarifying question.',
     '- "[Voice note Xs, transcribed] <text>" — treat the transcribed text as the user message and respond accordingly.',
     '- "[Voice note Xs]" with no transcript — politely say you couldn\'t catch the audio (browser transcription unavailable) and ask the user to type their question.',
-    '- "[Video message Xs] AI analysis (you can rely on this to answer the user): Audio transcript: \"...\". Visual summary: ..." — the system has already transcribed the audio and described a keyframe for you. Use both freely to answer the user\'s question. Do NOT say you cannot view videos.',
+    '- "[Video message Xs] AI analysis (you can rely on this to answer the user): Audio transcript: \'...\'. Visual summary: ..." — the system has already transcribed the audio and described a keyframe for you. Use both freely to answer the user\'s question. Do NOT say you cannot view videos.',
     '- "[Video message Xs]" without an analysis block — acknowledge that a short video was received; do NOT pretend to describe its contents. Ask the user what you should help confirm about it.',
     '- "[Document attachment]" — acknowledge the document was received (you cannot read its contents) and ask what they\'d like you to help with regarding it.',
     '- "[Deal status update] The user marked the deal as: <status>" — confirm the status change and outline the next action (e.g., if "agreed" suggest sending a payment request; if "paid" suggest scheduling delivery; if "cancelled" ask if you can help refund).',
@@ -77,6 +89,42 @@ const RESTRICTED_INTERNAL_REQUEST_PATTERN = /(api\s*key|apikey|secret|token|env\
 const buildRestrictedReply = () => (
   'I cannot provide API keys or internal technical details. I can help with using SVS features only, for example how to buy, sell, upload products, list property or livestock, track orders, and resolve payment or delivery issues.'
 );
+
+// Strip markdown that the chat UI does not render. The system prompt tells
+// the model to reply in plain prose, but models routinely ignore that
+// instruction, so we clean the output as a belt-and-braces safety net.
+function humaniseReply(text) {
+  let out = String(text || '');
+  // Drop code fences entirely (keep their inner text).
+  out = out.replace(/```[a-zA-Z0-9_-]*\n?/g, '').replace(/```/g, '');
+  // Strip leading ATX headings (#, ##, ###) on their own lines.
+  out = out.replace(/^\s{0,3}#{1,6}\s+/gm, '');
+  // Convert leading bullet markers (-, *, •) to nothing (or "• " on the
+  // first item we keep readable) — but flatten consecutive bullets into
+  // sentences separated by line breaks for readability.
+  out = out.replace(/^\s*[*\-•]\s+/gm, '');
+  // Strip leading numbered list markers like "1. " or "1) ".
+  out = out.replace(/^\s*\d+[.)]\s+/gm, '');
+  // Remove bold/italic asterisk and underscore wrappers but keep inner text.
+  out = out.replace(/\*\*([^*]+)\*\*/g, '$1');
+  out = out.replace(/\*([^*\n]+)\*/g, '$1');
+  out = out.replace(/__([^_]+)__/g, '$1');
+  out = out.replace(/(^|[\s(])_([^_\n]+)_(?=[\s).,!?]|$)/g, '$1$2');
+  // Inline code backticks.
+  out = out.replace(/`([^`\n]+)`/g, '$1');
+  // Markdown links → "label (url)".
+  out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)');
+  // Blockquote prefix.
+  out = out.replace(/^\s{0,3}>\s?/gm, '');
+  // Horizontal rules.
+  out = out.replace(/^\s*(?:-\s*){3,}$/gm, '');
+  out = out.replace(/^\s*(?:\*\s*){3,}$/gm, '');
+  // Collapse 3+ blank lines down to 2.
+  out = out.replace(/\n{3,}/g, '\n\n');
+  // Trim trailing whitespace on each line.
+  out = out.split('\n').map((line) => line.replace(/[ \t]+$/g, '')).join('\n');
+  return out.trim();
+}
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -147,7 +195,7 @@ module.exports = async (req, res) => {
     }
 
     return res.status(200).json({
-      reply,
+      reply: humaniseReply(reply),
       provider: 'groq',
       model: result?.model || DEFAULT_GROQ_MODEL,
     });

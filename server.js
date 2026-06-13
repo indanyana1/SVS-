@@ -144,8 +144,11 @@ const normalizeSupportAgentHistory = (history) => {
     .map((entry) => {
       const role = String(entry?.role || '').trim().toLowerCase();
       if (role !== 'user' && role !== 'assistant') return null;
-      const content = String(entry?.content || '').trim();
+      let content = String(entry?.content || '').trim();
       if (!content) return null;
+      // Strip markdown from the assistant's prior turns so the model does not
+      // mimic an old bulleted style when generating the next reply.
+      if (role === 'assistant') content = humaniseSupportReply(content);
       return { role, content };
     })
     .filter(Boolean);
@@ -160,8 +163,17 @@ const buildSupportAgentSystemPrompt = (context = {}) => {
   return [
     'You are SVS Agent, the official support assistant for SVS E-Commerce.',
     'You help users with only the features and screens that are currently visible in SVS E-Commerce.',
-    'Be concise, practical, and accurate. Prefer 4-7 short bullets for how-to answers.',
-    'If the user sends only a greeting (for example hey, hi, hello), reply in one short line and ask what they want to do (buy, sell, list property, list livestock, track order, payment help).',
+    // ------- Tone & formatting -------
+    'Reply in a warm, natural, human conversational tone — like a helpful friend who knows the site well, not like a manual. Use plain prose in 2-4 short paragraphs.',
+    'STRICT FORMAT RULES (the chat UI renders raw text, not markdown):',
+    '- Never start a line with *, -, • or with "1.", "1)", "2.", etc. Those characters appear literally on screen as ugly bullets.',
+    '- Never use ** for bold, * or _ for italics, # for headings, ``` for code, [text](url) for links, or | for tables.',
+    '- Write everything as flowing English sentences in 2-4 short paragraphs. Use commas, semicolons, and connector words like "first", "then", "after that", "finally" to sequence steps.',
+    '- Mention URL paths and button labels inline in the sentence (e.g. write head to /sell/signup, not a starred line like * go to /sell/signup).',
+    '- Keep answers brief — typically 60-150 words. Only go longer if the user explicitly asks for full detail.',
+    'GOOD example (do this): "Sure! To register, head over to /signup and fill in your name, email, contact number and a password, then tap Next. If you want to sell, start at /sell/signup instead — after the first step it will walk you through /sell/onboarding where you add your business details, ID, tax number and payout bank account. Want me to walk you through the seller side?"',
+    'BAD example (never do this): "To register on SVS, follow these steps:\\n* Go to /signup\\n* Enter your name and email\\n* Click Next". Those asterisks and line-broken bullets are exactly what you must NOT produce.',
+    'If the user sends only a greeting (for example hey, hi, hello), reply in one short friendly line and ask what they want to do (buy, sell, list property, list livestock, track order, payment help).',
     'When asked how to perform an action, provide exact in-app navigation steps and do not guess additional steps.',
     'If a feature is not clearly visible in the app, say you cannot confirm it in SVS and suggest the closest visible path.',
     "Use these canonical areas and paths when relevant: Markets (/markets), Seller Dashboard (/seller/dashboard), Upload Products (/seller/upload), Seller Orders (/seller/orders), Property Hub (/property-hub), Livestock Hub (/livestock-hub), Orders (/orders), Let's Talk Business chat (/support/chat), Sign in (/signin), Sign up (/signup), Seller Sign Up (/sell/signup), Seller Verification (/sell/onboarding).",
@@ -200,6 +212,40 @@ const RESTRICTED_INTERNAL_REQUEST_PATTERN = /(api\s*key|apikey|secret|token|env\
 const buildRestrictedSupportReply = () => (
   'I cannot provide API keys or internal technical details. I can help with using SVS features only, for example how to buy, sell, upload products, list property or livestock, track orders, and resolve payment or delivery issues.'
 );
+
+// Strip markdown that the chat UI does not render. The system prompt tells
+// the model to reply in plain prose, but models routinely ignore that
+// instruction, so we clean the output as a belt-and-braces safety net.
+function humaniseSupportReply(text) {
+  let out = String(text || '');
+  // Drop code fences entirely (keep their inner text).
+  out = out.replace(/```[a-zA-Z0-9_-]*\n?/g, '').replace(/```/g, '');
+  // Strip leading ATX headings (#, ##, ###) on their own lines.
+  out = out.replace(/^\s{0,3}#{1,6}\s+/gm, '');
+  // Drop leading bullet markers (-, *, •).
+  out = out.replace(/^\s*[*\-•]\s+/gm, '');
+  // Strip leading numbered list markers like "1. " or "1) ".
+  out = out.replace(/^\s*\d+[.)]\s+/gm, '');
+  // Remove bold/italic asterisk and underscore wrappers but keep inner text.
+  out = out.replace(/\*\*([^*]+)\*\*/g, '$1');
+  out = out.replace(/\*([^*\n]+)\*/g, '$1');
+  out = out.replace(/__([^_]+)__/g, '$1');
+  out = out.replace(/(^|[\s(])_([^_\n]+)_(?=[\s).,!?]|$)/g, '$1$2');
+  // Inline code backticks.
+  out = out.replace(/`([^`\n]+)`/g, '$1');
+  // Markdown links → "label (url)".
+  out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)');
+  // Blockquote prefix.
+  out = out.replace(/^\s{0,3}>\s?/gm, '');
+  // Horizontal rules.
+  out = out.replace(/^\s*(?:-\s*){3,}$/gm, '');
+  out = out.replace(/^\s*(?:\*\s*){3,}$/gm, '');
+  // Collapse 3+ blank lines down to 2.
+  out = out.replace(/\n{3,}/g, '\n\n');
+  // Trim trailing whitespace on each line.
+  out = out.split('\n').map((line) => line.replace(/[ \t]+$/g, '')).join('\n');
+  return out.trim();
+}
 
 const buildOsmIdentifier = (result) => {
   const typePrefix = String(result.osm_type || '').trim().charAt(0).toUpperCase();
@@ -566,7 +612,7 @@ app.post('/api/support-agent', limits.ai, async (req, res) => {
     }
 
     return res.json({
-      reply,
+      reply: humaniseSupportReply(reply),
       provider: 'groq',
       model: payload?.model || DEFAULT_GROQ_MODEL,
     });
@@ -678,19 +724,25 @@ const SUPPORTED_LISTING_MARKET_KEYS = [
 
 const buildAiListingSystemPrompt = (marketKeys) => (
   [
-    'You are SVS Listing Assistant. You look at a single product photo and write a marketplace listing for it.',
+    'You are SVS Listing Assistant. You look at one or more photos of a SINGLE product (e.g. front view, back view, tag, packaging close-up) and write ONE marketplace listing that fuses everything you see across all of them.',
+    'IMPORTANT: All photos belong to the SAME product. Do not list each photo separately. Combine what you see (logo, tag, size label, material label, colour, condition) into one cohesive listing.',
+    'Read any visible text on labels, tags, packaging or stickers and extract size, material, brand, model, country of origin, batch, etc.',
     'Return STRICT JSON only. No prose, no markdown fences. Schema:',
     '{',
-    '  "title": string (3-8 words, the product name + key descriptor),',
-    '  "description": string (1-3 short sentences highlighting what the product is, what it is used for, and 2-3 key features the photo shows),',
+    '  "title": string (3-8 words, the product name + key descriptor, e.g. "Nike Hyverse Dri-Fit Training Jogger"),',
+    '  "description": string (2-4 short sentences describing what the product is, who it is for, and 3-5 key features you observed across the photos),',
     '  "suggestedMarketKey": one of ' + JSON.stringify(marketKeys) + ',',
     '  "suggestedPrice": number (a sensible retail price in the suggested currency, no currency symbol),',
     '  "suggestedCurrency": ISO-4217 string (USD, ZAR, EUR, etc; default ZAR if local-looking African product, USD otherwise),',
-    '  "suggestedQuantity": integer (default 1, or higher if photo clearly shows multiple identical units),',
-    '  "category": short string (optional generic category like "Soft drinks" or "T-Shirts"),',
-    '  "brand": short string (only if a brand is clearly readable in the photo, otherwise empty string),',
-    '  "color": short string (dominant colour visible, optional),',
-    '  "confidence": number 0-1 (how confident you are this is a real listable product photo)',
+    '  "suggestedQuantity": integer (default 1; only set higher if a photo clearly shows multiple identical units, e.g. a stack of the same shirt),',
+    '  "category": short string (specific category like "Joggers", "Soft drinks", "Smartphones"),',
+    '  "brand": short string (only if a brand is clearly readable on any photo, otherwise empty string),',
+    '  "color": short string (dominant or named colour visible, e.g. "Black", "Navy blue"),',
+    '  "size": short string (size read from a tag/label, e.g. "M", "42", "500ml", "XL", empty if unknown),',
+    '  "material": short string (material read from a label, e.g. "100% Polyester", "Cotton", "Leather", empty if unknown),',
+    '  "condition": one of ["New", "Like new", "Used - good", "Used - fair", "For parts"] (default "New" if it looks new/packaged),',
+    '  "keyFeatures": array of 3-6 short bullet strings (each a single feature or selling point read off the photos, no leading dashes or asterisks),',
+    '  "confidence": number 0-1 (how confident you are this is a real listable product photo set)',
     '}',
     'Pick the BEST single marketKey from the list. Do not invent keys.',
     'If you cannot tell what the product is, set confidence < 0.4 and still return your best guess for the rest.',
@@ -714,6 +766,8 @@ const safeJsonExtractListing = (text) => {
   return null;
 };
 
+const ALLOWED_LISTING_CONDITIONS = ['New', 'Like new', 'Used - good', 'Used - fair', 'For parts'];
+
 const normalizeListingResult = (parsed, allowedMarketKeys) => {
   const safe = parsed && typeof parsed === 'object' ? parsed : {};
   const allowedSet = new Set(allowedMarketKeys);
@@ -721,9 +775,17 @@ const normalizeListingResult = (parsed, allowedMarketKeys) => {
   const priceNumber = Number(safe.suggestedPrice);
   const quantityNumber = Math.max(1, Math.round(Number(safe.suggestedQuantity) || 1));
   const confidenceNumber = Math.min(1, Math.max(0, Number(safe.confidence) || 0));
+  const conditionRaw = String(safe.condition || '').trim();
+  const condition = ALLOWED_LISTING_CONDITIONS.find((c) => c.toLowerCase() === conditionRaw.toLowerCase()) || 'New';
+  const keyFeatures = Array.isArray(safe.keyFeatures)
+    ? safe.keyFeatures
+        .map((f) => String(f || '').trim().replace(/^[-*•\s]+/, '').slice(0, 120))
+        .filter(Boolean)
+        .slice(0, 6)
+    : [];
   return {
     title: String(safe.title || '').trim().slice(0, 120) || 'Untitled product',
-    description: String(safe.description || '').trim().slice(0, 600),
+    description: String(safe.description || '').trim().slice(0, 800),
     suggestedMarketKey: marketKey,
     suggestedPrice: Number.isFinite(priceNumber) && priceNumber > 0 ? priceNumber : 0,
     suggestedCurrency: String(safe.suggestedCurrency || 'USD').trim().toUpperCase().slice(0, 6) || 'USD',
@@ -731,6 +793,10 @@ const normalizeListingResult = (parsed, allowedMarketKeys) => {
     category: String(safe.category || '').trim().slice(0, 60),
     brand: String(safe.brand || '').trim().slice(0, 60),
     color: String(safe.color || '').trim().slice(0, 40),
+    size: String(safe.size || '').trim().slice(0, 40),
+    material: String(safe.material || '').trim().slice(0, 80),
+    condition,
+    keyFeatures,
     confidence: confidenceNumber,
   };
 };
@@ -748,16 +814,28 @@ app.post('/api/ai-listing', limits.ai, express.json({ limit: '8mb' }), async (re
     return res.status(500).json({ error: 'GROQ_API_KEY is not configured on the server.' });
   }
 
-  const imageInput = req.body?.imageBase64 || req.body?.image || req.body?.src || '';
-  const stripped = stripListingDataUrl(imageInput);
-  const base64 = stripped.base64;
-  const mimeType = String(req.body?.mimeType || stripped.mimeType || 'image/jpeg');
+  // Accept either a single-image payload (legacy) or images: [{imageBase64, mimeType}, ...]
+  // (preferred). All images are treated as different angles of the SAME product
+  // and fused into one listing.
+  const rawImages = Array.isArray(req.body?.images) && req.body.images.length
+    ? req.body.images
+    : [{ imageBase64: req.body?.imageBase64 || req.body?.image || req.body?.src || '', mimeType: req.body?.mimeType }];
 
-  if (!base64) {
-    return res.status(400).json({ error: 'imageBase64 is required.' });
+  const images = rawImages.slice(0, 4).map((entry) => {
+    const stripped = stripListingDataUrl(entry?.imageBase64 || entry?.image || entry?.src || '');
+    return {
+      base64: stripped.base64,
+      mimeType: String(entry?.mimeType || stripped.mimeType || 'image/jpeg'),
+    };
+  }).filter((img) => img.base64);
+
+  if (!images.length) {
+    return res.status(400).json({ error: 'images[] or imageBase64 is required.' });
   }
-  if (base64.length > 6_500_000) {
-    return res.status(413).json({ error: 'Image too large (max ~4.5MB).' });
+
+  const totalBase64Length = images.reduce((sum, img) => sum + img.base64.length, 0);
+  if (totalBase64Length > 6_500_000) {
+    return res.status(413).json({ error: 'Total image payload too large (max ~4.5MB across all photos).' });
   }
 
   const marketKeys = Array.isArray(req.body?.marketKeys) && req.body.marketKeys.length
@@ -765,7 +843,18 @@ app.post('/api/ai-listing', limits.ai, express.json({ limit: '8mb' }), async (re
     : SUPPORTED_LISTING_MARKET_KEYS;
 
   try {
-    const dataUrl = `data:${mimeType};base64,${base64}`;
+    const userContent = [
+      {
+        type: 'text',
+        text: images.length > 1
+          ? `Here are ${images.length} photos of the SAME product (different angles or close-ups). Fuse them into ONE listing JSON.`
+          : 'Look at this product photo and produce the listing JSON.',
+      },
+      ...images.map((img) => ({
+        type: 'image_url',
+        image_url: { url: `data:${img.mimeType};base64,${img.base64}` },
+      })),
+    ];
     const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -775,17 +864,11 @@ app.post('/api/ai-listing', limits.ai, express.json({ limit: '8mb' }), async (re
       body: JSON.stringify({
         model: DEFAULT_VISION_MODEL,
         temperature: 0.1,
-        max_tokens: 600,
+        max_tokens: 900,
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: buildAiListingSystemPrompt(marketKeys) },
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: 'Look at this product photo and produce the listing JSON.' },
-              { type: 'image_url', image_url: { url: dataUrl } },
-            ],
-          },
+          { role: 'user', content: userContent },
         ],
       }),
     });
