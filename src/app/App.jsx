@@ -64,7 +64,6 @@ import {
   Send,
   Reply,
   Phone,
-  MoreVertical,
   Pause,
   Play,
   Trash,
@@ -17370,6 +17369,11 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
   const [isBulkAnalyzing, setIsBulkAnalyzing] = useState(false);
   const [bulkMessage, setBulkMessage] = useState('');
   const bulkInputRef = useRef(null);
+  // Hard idempotency guard. Even if the Publish button is double-tapped
+  // before React re-renders with `status: 'publishing'`, this ref blocks
+  // the second invocation immediately so we never insert duplicate
+  // marketplace_items rows for the same draft.
+  const publishInFlightRef = useRef(null);
 
   // Revoke any preview object URLs when the page unmounts so we don't
   // leak memory across long seller sessions.
@@ -17629,6 +17633,12 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
   // marketplace_items with image_urls = [all uploaded URLs].
   const publishBulkDraft = useCallback(async () => {
     if (!bulkDraft) return;
+    // Idempotency lock: if a publish is already in-flight for this draft,
+    // ignore the second click. This survives rapid double-taps that would
+    // otherwise create duplicate listings before React re-renders the
+    // disabled button.
+    if (publishInFlightRef.current === bulkDraft.id) return;
+    publishInFlightRef.current = bulkDraft.id;
     const trimmedTitle = String(bulkDraft.title || '').trim();
     const trimmedDescription = String(bulkDraft.description || '').trim();
     const cleanedPrice = String(bulkDraft.price || '').replace(/[^\d.]/g, '');
@@ -17637,14 +17647,17 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
 
     if (!bulkDraft.files?.length) {
       updateBulkDraft({ status: bulkDraft.status === 'ready' ? 'ready' : 'pending', error: 'Add at least one product photo.' });
+      publishInFlightRef.current = null;
       return;
     }
     if (!trimmedTitle || !trimmedDescription || !cleanedPrice || !market || !Number.isFinite(normalizedQuantity)) {
       updateBulkDraft({ status: 'ready', error: 'Fill in title, description, market, price and quantity.' });
+      publishInFlightRef.current = null;
       return;
     }
     if (!hasSupabaseEnv || !supabase) {
       updateBulkDraft({ status: 'ready', error: 'Supabase is not configured.' });
+      publishInFlightRef.current = null;
       return;
     }
 
@@ -17707,6 +17720,10 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
       setBulkMessage(`Published in ${t(market.labelKey)}. Hit "List another item" to add the next product.`);
     } catch (error) {
       updateBulkDraft({ status: 'ready', error: error?.message || 'Publish failed.' });
+    } finally {
+      // Always release the idempotency lock so the seller can retry or
+      // start a fresh draft after publishing this one.
+      publishInFlightRef.current = null;
     }
   }, [bulkDraft, onSellerItemCreated, t, updateBulkDraft, userEmail, userName]);
 
@@ -22223,12 +22240,12 @@ const extractEditedMeta = (rawBody) => {
   return { edited: false, body: raw };
 };
 
-// Swipe-left-to-reply wrapper. On touch devices the user drags any
-// message bubble to the left; once the drag passes the threshold a
+// Swipe-right-to-reply wrapper. On touch devices the user drags any
+// message bubble to the right; once the drag passes the threshold a
 // reply icon snaps into focus and `onReply` fires on release. On desktop
-// the gesture is a no-op (mouse users get the hover Reply button on the
-// bubble itself).
-const SwipeableMessage = ({ onReply, children }) => {
+// the gesture is a no-op (mouse users get the top-right Reply button on
+// the bubble itself, plus long-press / double-click for the menu).
+const SwipeableMessage = ({ onReply, elevated = false, children }) => {
   const [dx, setDx] = useState(0);
   const startXRef = useRef(null);
   const startYRef = useRef(null);
@@ -22259,13 +22276,13 @@ const SwipeableMessage = ({ onReply, children }) => {
       }
     }
     if (lockedAxisRef.current !== 'h') return;
-    // Only allow a leftward drag (negative dx). Clamp to -100px so the
+    // Only allow a rightward drag (positive dx). Clamp to +100px so the
     // bubble can't be pulled off-screen.
-    const clamped = Math.max(-100, Math.min(0, deltaX));
+    const clamped = Math.min(100, Math.max(0, deltaX));
     setDx(clamped);
   };
   const handleTouchEnd = () => {
-    if (lockedAxisRef.current === 'h' && dx <= -60) {
+    if (lockedAxisRef.current === 'h' && dx >= 60) {
       onReply?.();
     }
     setDx(0);
@@ -22273,11 +22290,11 @@ const SwipeableMessage = ({ onReply, children }) => {
     startYRef.current = null;
     lockedAxisRef.current = null;
   };
-  const triggered = dx <= -60;
+  const triggered = dx >= 60;
   const opacity = Math.min(1, Math.abs(dx) / 60);
   return (
     <div
-      className="relative"
+      className={`relative ${elevated ? 'z-40' : ''}`}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -24988,6 +25005,37 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                       senderName: mine ? 'You' : (message.senderName || message.senderEmail || 'Contact'),
                       snippet: buildReplySnippetFromBody(editedMeta.body),
                     });
+                    // Long-press detection so touch users can also pop the
+                    // three-dots menu. Holding the bubble ~500ms opens the
+                    // menu; any move beyond ~10px cancels (so the swipe-to-
+                    // reply gesture stays unblocked).
+                    const longPressTimerRef = { current: null };
+                    const longPressStartRef = { current: null };
+                    const handleLongPressStart = (event) => {
+                      const touch = event.touches?.[0];
+                      longPressStartRef.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
+                      longPressTimerRef.current = window.setTimeout(() => {
+                        setOpenMenuMessageId(message.id);
+                      }, 500);
+                    };
+                    const handleLongPressMove = (event) => {
+                      if (!longPressStartRef.current || !longPressTimerRef.current) return;
+                      const touch = event.touches?.[0];
+                      if (!touch) return;
+                      const moveX = touch.clientX - longPressStartRef.current.x;
+                      const moveY = touch.clientY - longPressStartRef.current.y;
+                      if (Math.abs(moveX) > 10 || Math.abs(moveY) > 10) {
+                        window.clearTimeout(longPressTimerRef.current);
+                        longPressTimerRef.current = null;
+                      }
+                    };
+                    const handleLongPressEnd = () => {
+                      if (longPressTimerRef.current) {
+                        window.clearTimeout(longPressTimerRef.current);
+                        longPressTimerRef.current = null;
+                      }
+                      longPressStartRef.current = null;
+                    };
                     return (
                       <Fragment key={message.id}>
                         {showUnreadDivider ? (
@@ -25013,35 +25061,39 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                           </article>
                         </div>
                         ) : (
-                      <SwipeableMessage onReply={startReply}>
-                        <div className={`group flex items-end gap-2 ${mine ? 'flex-row-reverse' : 'justify-start'}`}>
+                      <SwipeableMessage onReply={startReply} elevated={menuOpen}>
+                        <div className={`group flex items-end gap-2 ${menuOpen ? 'relative z-40' : ''} ${mine ? 'flex-row-reverse' : 'justify-start'}`}>
                           <span
                             className={`flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full text-[11px] font-black text-white shadow-sm ${mine ? 'bg-[var(--svs-primary)]' : 'bg-[var(--svs-primary-strong)]'}`}
                             aria-hidden="true"
                           >
                             {(mine ? (currentUserName || 'You') : (message.senderName || message.senderEmail || '?')).trim().charAt(0).toUpperCase()}
                           </span>
-                          <article className={`relative max-w-[88%] rounded-2xl px-3 py-2.5 shadow-sm sm:max-w-[78%] sm:px-4 sm:py-3 ${mine ? 'rounded-br-md bg-[var(--svs-primary)] text-white' : 'rounded-bl-md border border-[var(--svs-border)] bg-[var(--svs-surface)] text-[var(--svs-text)]'}`}>
-                            <button
-                              type="button"
-                              onClick={startReply}
-                              title="Reply to this message"
-                              aria-label="Reply to this message"
-                              className={`absolute -top-2 ${mine ? '-left-2' : '-right-2'} hidden h-7 w-7 items-center justify-center rounded-full border bg-white opacity-0 shadow-sm transition group-hover:opacity-100 group-focus-within:opacity-100 sm:inline-flex ${mine ? 'border-cyan-200 text-[#0f6674] hover:bg-cyan-50' : 'border-[#d6e6f5] text-[#0f6674] hover:bg-[#f7fbff]'}`}
-                            >
-                              <Reply className="h-3.5 w-3.5" aria-hidden="true" />
-                            </button>
-                            {/* Per-message action menu (edit / delete). */}
-                            <div className={`absolute ${mine ? 'left-1' : 'right-1'} top-1`}>
+                          <article
+                            className={`relative max-w-[88%] rounded-2xl px-3 py-2.5 pr-8 shadow-sm sm:max-w-[78%] sm:px-4 sm:py-3 sm:pr-9 ${mine ? 'rounded-br-md bg-[var(--svs-primary)] text-white' : 'rounded-bl-md border border-[var(--svs-border)] bg-[var(--svs-surface)] text-[var(--svs-text)]'}`}
+                            onDoubleClick={() => setOpenMenuMessageId(message.id)}
+                            onTouchStart={handleLongPressStart}
+                            onTouchMove={handleLongPressMove}
+                            onTouchEnd={handleLongPressEnd}
+                            onTouchCancel={handleLongPressEnd}
+                          >
+                            {/* WhatsApp-style message action affordance.
+                                A single dropdown chevron sits in the
+                                bubble's top-right corner.  Clicking it
+                                opens the actions menu below.  The same
+                                menu also opens on long-press (~500 ms)
+                                or a double click anywhere on the bubble,
+                                and swipe-right triggers a quick reply. */}
+                            <div className="absolute right-1 top-1 z-10">
                               <button
                                 type="button"
                                 onClick={() => setOpenMenuMessageId(menuOpen ? '' : message.id)}
                                 title="Message actions"
                                 aria-label="Message actions"
                                 aria-expanded={menuOpen}
-                                className={`inline-flex h-6 w-6 items-center justify-center rounded-full opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 ${menuOpen ? 'opacity-100' : ''} ${mine ? 'text-cyan-50 hover:bg-white/20' : 'text-[var(--svs-muted)] hover:bg-[var(--svs-surface-soft)]'}`}
+                                className={`inline-flex h-6 w-6 items-center justify-center rounded-full transition ${menuOpen ? 'opacity-100' : 'opacity-60 group-hover:opacity-100 group-focus-within:opacity-100'} ${mine ? 'text-cyan-50 hover:bg-white/15' : 'text-[var(--svs-muted)] hover:bg-[var(--svs-surface-soft)]'}`}
                               >
-                                <MoreVertical className="h-4 w-4" aria-hidden="true" />
+                                <ChevronDown className="h-4 w-4" aria-hidden="true" />
                               </button>
                               {menuOpen ? (
                                 <>
@@ -25052,7 +25104,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                                     onClick={() => setOpenMenuMessageId('')}
                                     className="fixed inset-0 z-20 cursor-default"
                                   />
-                                  <div className={`absolute z-30 mt-1 w-44 overflow-hidden rounded-xl border border-[var(--svs-border)] bg-white py-1 text-left shadow-xl ${mine ? 'left-0' : 'right-0'}`}>
+                                  <div className="absolute right-0 top-full z-30 mt-1 w-44 overflow-hidden rounded-xl border border-[var(--svs-border)] bg-white py-1 text-left shadow-xl">
                                     <button
                                       type="button"
                                       onClick={() => { setOpenMenuMessageId(''); startReply(); }}
@@ -25084,6 +25136,16 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                                       className="flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold text-[var(--svs-muted)] transition hover:bg-[var(--svs-surface-soft)]"
                                     >
                                       <X className="h-3.5 w-3.5" aria-hidden="true" /> Delete for me
+                                    </button>
+                                    {/* Escape hatch — close the menu
+                                        without performing any action. */}
+                                    <div className="my-1 border-t border-[var(--svs-border)]" aria-hidden="true" />
+                                    <button
+                                      type="button"
+                                      onClick={() => setOpenMenuMessageId('')}
+                                      className="flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold text-[var(--svs-muted)] transition hover:bg-[var(--svs-surface-soft)]"
+                                    >
+                                      <X className="h-3.5 w-3.5" aria-hidden="true" /> Cancel
                                     </button>
                                   </div>
                                 </>
