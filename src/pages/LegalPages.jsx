@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatInBuyerCurrency, useBuyerCurrency } from '../lib/buyerCurrency';
 
 /**
  * Legal pages for SVS E-Commerce. These render proper Privacy, Terms,
@@ -64,6 +65,10 @@ const PageWrap = ({ title, subtitle, children }) => (
 //  Terms of Service
 // ─────────────────────────────────────────────────────────────────────
 export const TermsOfServicePage = () => {
+  // Re-render when the buyer's selected currency changes so the liability
+  // cap below is shown and converted in their chosen currency.
+  useBuyerCurrency();
+  const liabilityCap = formatInBuyerCurrency(1000, 'ZAR', { decimals: 0 });
   const toc = [
     { id: 'terms-acceptance', title: '1. Acceptance of terms' },
     { id: 'terms-account', title: '2. Your account' },
@@ -93,7 +98,18 @@ export const TermsOfServicePage = () => {
           related service (collectively, the &ldquo;Platform&rdquo;) you confirm that you have read, understood and
           accepted these Terms together with our Privacy Policy, Refund Policy and Cookie Policy.
         </p>
-        <p>If you do not accept any part of these Terms, please stop using the Platform.</p>
+        <p>
+          If you have any questions or concerns about any part of these Terms, we&rsquo;re happy to help &mdash; just
+          email us at{' '}
+          <a href={`mailto:${CONTACT_EMAIL}`} className="font-semibold text-[var(--svs-primary)] hover:underline">
+            {CONTACT_EMAIL}
+          </a>{' '}
+          or{' '}
+          <a href="/support/chat" className="font-semibold text-[var(--svs-primary)] hover:underline">
+            chat with the SVS Agent
+          </a>{' '}
+          and we&rsquo;ll gladly walk you through them.
+        </p>
       </Section>
 
       <Section id="terms-account" title="2. Your account">
@@ -142,10 +158,11 @@ export const TermsOfServicePage = () => {
 
       <Section id="terms-payments" title="6. Payments & fees">
         <p>
-          Payments are processed by trusted third-party providers (such as Stripe and PayFast). We never store your
-          full card details. {COMPANY_NAME} may charge service fees, listing fees, or commissions; the applicable fees
-          are displayed before you complete a transaction. Payouts to sellers are made on the schedule set out in your
-          seller dashboard, subject to verification and anti-fraud checks.
+          Payments are processed securely through trusted, PCI-DSS compliant third-party payment providers. We never
+          store your full card details. {COMPANY_NAME} charges a small transaction fee &mdash; typically between 1 and
+          10 cents per item listed and purchased &mdash; together with any applicable service, listing or commission
+          fees. All applicable fees are shown clearly before you complete a transaction. Payouts to sellers are made
+          on the schedule set out in your seller dashboard, subject to verification and anti-fraud checks.
         </p>
       </Section>
 
@@ -179,7 +196,7 @@ export const TermsOfServicePage = () => {
         </p>
         <p>
           Our total aggregate liability for any claim relating to the Platform will not exceed the greater of (a) the
-          amount you paid us in the 12 months before the claim, or (b) ZAR 1,000.
+          amount you paid us in the 12 months before the claim, or (b) {liabilityCap}.
         </p>
       </Section>
 
@@ -294,7 +311,7 @@ export const PrivacyPolicyPage = () => {
         <ListBlock
           items={[
             'With sellers, so they can fulfil your orders (name, delivery address, contact details).',
-            'With payment processors (Stripe, PayFast) to charge your card or pay out earnings.',
+            'With secure third-party payment processors to charge your card or pay out earnings.',
             'With shipping carriers and home-care providers to deliver goods or services.',
             'With service providers (cloud hosting, email, analytics, AI APIs) who act on our behalf under contract.',
             'With authorities if required by law, court order, or to protect rights, property or safety.',
