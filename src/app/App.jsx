@@ -76,6 +76,7 @@ import { createAddressLookupSessionToken, lookupAddressDetails, lookupAddressSug
 import { DEFAULT_LANGUAGE_CODE, getLanguageByCode, isRtlLanguage, SUPPORTED_LANGUAGES } from '../lib/languages';
 import { embeddedCardCheckoutEnabled, getStripeInstance, startCardPayment, stripeCurrency } from '../lib/payments';
 import { hasSupabaseEnv, supabase } from '../lib/supabase';
+import { buildShareLink, ensureUserHandle, lookupAccountByHandle } from '../lib/userHandles';
 import useNearbyLocation from '../hooks/useLocation';
 import SigninPage from '../pages/SigninPage';
 import ForgotPasswordPage from '../pages/ForgotPasswordPage';
@@ -7077,8 +7078,8 @@ const PriceFilterPanel = ({
       </div>
       {isPriceFilterOpen ? (
         <div className="mt-2.5 space-y-2.5 border-t border-[var(--svs-border)] pt-2.5">
-          <div className="grid gap-3 lg:grid-cols-[5cm] lg:items-start">
-            <div className="w-full max-w-[5cm] space-y-2.5" role="group" aria-label="Price range slider">
+          <div className="grid gap-3 lg:items-start">
+            <div className="w-full space-y-2.5" role="group" aria-label="Price range slider">
               <div className="flex justify-start">
                 <span className="inline-flex items-center gap-2 rounded-full bg-[var(--svs-surface-soft)] px-2 py-1 text-[11px] font-semibold text-[var(--svs-text)] sm:text-xs">
                   <span className="text-[var(--svs-muted)]">Selected range:</span>
@@ -7086,9 +7087,9 @@ const PriceFilterPanel = ({
                 </span>
               </div>
               <div className="relative px-1 py-2">
-                <div className="h-1.5 rounded-full bg-[var(--svs-border)]" />
+                <div className="h-2.5 rounded-full bg-[var(--svs-border)]" />
                 <div
-                  className="pointer-events-none absolute top-2 h-1.5 rounded-full bg-[var(--svs-primary)]"
+                  className="pointer-events-none absolute top-2 h-2.5 rounded-full bg-[var(--svs-primary)]"
                   style={{ left: `${sliderTrackStart}%`, width: `${Math.max(sliderTrackEnd - sliderTrackStart, 0)}%` }}
                   aria-hidden="true"
                 />
@@ -20668,6 +20669,145 @@ const WishlistSharePage = () => {
 };
 
 
+// ─────────────────────────────────────────────────────────────────────
+// /u/:handle — Per-user shareable profile link.
+// Resolves a handle (set up via supabase/user-handles.sql + the
+// userHandles.js helper) to a real account and offers a one-click
+// "Chat with them" CTA that lands in /support/chat with the recipient
+// pre-selected.  Works for anyone — registered or not (anonymous
+// visitors get nudged to sign in first).
+// ─────────────────────────────────────────────────────────────────────
+const UserProfileLinkPage = () => {
+  const { handle = '' } = useParams();
+  const navigate = useNavigate();
+  const [status, setStatus] = useState('loading'); // 'loading' | 'found' | 'notfound' | 'self'
+  const [profile, setProfile] = useState(null);
+  const cleanedHandle = String(handle || '').trim().toLowerCase();
+  const myEmail = (typeof window !== 'undefined' && window.localStorage.getItem('svs-user-email')) || '';
+  const isSignedIn = Boolean(myEmail);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!cleanedHandle) {
+      setStatus('notfound');
+      return () => {};
+    }
+    setStatus('loading');
+    lookupAccountByHandle(cleanedHandle).then((row) => {
+      if (cancelled) return;
+      if (!row || !row.email_address) {
+        setStatus('notfound');
+        return;
+      }
+      setProfile({
+        email: String(row.email_address || '').toLowerCase(),
+        name: row.full_name || row.email_address || cleanedHandle,
+        handle: row.user_handle || cleanedHandle,
+      });
+      if (String(row.email_address || '').toLowerCase() === String(myEmail || '').toLowerCase()) {
+        setStatus('self');
+      } else {
+        setStatus('found');
+      }
+    });
+    return () => { cancelled = true; };
+  }, [cleanedHandle, myEmail]);
+
+  const openChat = () => {
+    if (!profile?.email) return;
+    if (!isSignedIn) {
+      navigate('/signin', {
+        state: { redirectTo: `/u/${cleanedHandle}` },
+      });
+      return;
+    }
+    navigate('/support/chat', {
+      state: {
+        recipientEmail: profile.email,
+        recipientName: profile.name,
+        issueType: 'Direct Message',
+      },
+    });
+  };
+
+  if (status === 'loading') {
+    return (
+      <PageFrame title="Loading profile…" subtitle="Resolving the share link.">
+        <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 text-sm text-[var(--svs-muted)]">
+          <p>Looking up <span className="font-mono font-bold text-[var(--svs-primary-strong)]">{cleanedHandle || 'profile'}</span>…</p>
+        </div>
+      </PageFrame>
+    );
+  }
+
+  if (status === 'notfound') {
+    return (
+      <PageFrame title="Profile link not found" subtitle="The share link you opened doesn't match any active account.">
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800">
+          <p>We couldn&rsquo;t find anyone with the handle <span className="font-mono font-bold">{cleanedHandle || '(empty)'}</span>. Double-check the link, or ask the sender for a fresh one.</p>
+          <Link to="/markets" className="mt-4 inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white">
+            Browse Markets
+          </Link>
+        </div>
+      </PageFrame>
+    );
+  }
+
+  if (status === 'self') {
+    return (
+      <PageFrame title="This is your link" subtitle="People who open it will be able to chat directly with you.">
+        <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 text-sm text-[var(--svs-text)]">
+          <p className="font-bold text-[var(--svs-primary-strong)]">{profile?.name}</p>
+          <p className="mt-1 break-all text-xs text-[var(--svs-muted)]">{buildShareLink(profile?.handle)}</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => navigator.clipboard?.writeText(buildShareLink(profile?.handle))}
+              className="inline-flex items-center gap-2 rounded-md bg-[var(--svs-primary)] px-3 py-2 text-xs font-bold text-white"
+            >
+              <Copy className="h-3.5 w-3.5" aria-hidden="true" /> Copy my link
+            </button>
+            <Link to="/support/chat" className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-xs font-bold text-[var(--svs-primary)]">
+              Open my inbox
+            </Link>
+          </div>
+        </div>
+      </PageFrame>
+    );
+  }
+
+  return (
+    <PageFrame title={`Chat with ${profile?.name || 'this person'}`} subtitle="They shared this link so you can start a direct conversation on SVS.">
+      <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[var(--svs-primary)] text-lg font-black text-white">
+            {(profile?.name || '?').trim().charAt(0).toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-base font-bold text-[var(--svs-primary-strong)] sm:text-lg">{profile?.name}</h2>
+            <p className="truncate text-xs text-[var(--svs-muted)]">@{profile?.handle}</p>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={openChat}
+            className="inline-flex items-center gap-2 rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-[var(--svs-primary-strong)]"
+          >
+            <Reply className="h-4 w-4" aria-hidden="true" />
+            {isSignedIn ? `Chat with ${profile?.name?.split(' ')[0] || 'them'}` : 'Sign in to chat'}
+          </button>
+          <Link to="/markets" className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-xs font-bold text-[var(--svs-primary)]">
+            Browse marketplaces
+          </Link>
+        </div>
+        {!isSignedIn ? (
+          <p className="mt-3 text-[11px] text-[var(--svs-muted)]">You'll be redirected back here after signing in.</p>
+        ) : null}
+      </div>
+    </PageFrame>
+  );
+};
 
 const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemoveCartItem, onClearBuyNowCheckout }) => {
   const navigate = useNavigate();
@@ -24569,15 +24709,53 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                   {visibleThreads.length} {visibleThreads.length === 1 ? 'thread' : 'threads'} · <span className={isRemoteChatEnabled ? 'text-emerald-700' : 'text-amber-700'}>{isRemoteChatEnabled ? 'Live sync' : 'Local only'}</span>
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowNewChatPanel(true)}
-                title="Start a new chat"
-                aria-label="Start a new chat"
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--svs-primary)] text-white shadow-sm transition hover:scale-105 hover:bg-[var(--svs-primary-strong)]"
-              >
-                <Plus className="h-4 w-4" aria-hidden="true" />
-              </button>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setShowNewChatPanel(true)}
+                  title="Start a new chat"
+                  aria-label="Start a new chat"
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--svs-primary)] text-white shadow-sm transition hover:scale-105 hover:bg-[var(--svs-primary-strong)]"
+                >
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!currentUserEmail) {
+                      window.alert?.('Sign in first so we can mint your personal chat link.');
+                      return;
+                    }
+                    const { handle, error } = await ensureUserHandle(currentUserEmail, currentUserName);
+                    if (!handle) {
+                      window.alert?.(error || 'Could not generate your share link right now. Please try again in a moment.');
+                      return;
+                    }
+                    const url = buildShareLink(handle);
+                    try {
+                      if (navigator.share) {
+                        await navigator.share({
+                          title: 'Chat with me on SVS',
+                          text: 'Open this link to chat with me on SVS E-Commerce:',
+                          url,
+                        });
+                        return;
+                      }
+                    } catch (_) { /* user cancelled or share unsupported — fall through to clipboard */ }
+                    try {
+                      await navigator.clipboard?.writeText(url);
+                      window.alert?.(`Your personal chat link was copied:\n${url}`);
+                    } catch (_) {
+                      window.prompt?.('Copy your personal chat link:', url);
+                    }
+                  }}
+                  title="Share my personal chat link"
+                  aria-label="Share my personal chat link"
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#d6e6f5] bg-white text-[var(--svs-primary-strong)] shadow-sm transition hover:scale-105 hover:bg-[#eef6fb]"
+                >
+                  <Share2 className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
             </div>
 
             {/* Scrollable content: threads list first, then collapsible start-chat form. */}
@@ -28938,16 +29116,16 @@ const MarketHero = ({ title, subtitle, marketKey = '', heroImage = '', eyebrow =
   return (
     <div className="relative isolate -mt-px overflow-hidden">
       <div
-        className="absolute inset-0 scale-110 bg-cover bg-center blur-[2px]"
+        className="absolute inset-0 scale-110 bg-cover bg-center blur-[1px]"
         style={{ backgroundImage: `url(${imageUrl})` }}
         aria-hidden="true"
       />
       <div
-        className="absolute inset-0 bg-gradient-to-br from-black/85 via-[#0f6674]/55 to-black/75"
+        className="absolute inset-0 bg-gradient-to-br from-black/55 via-[#0f6674]/35 to-black/50"
         aria-hidden="true"
       />
       <div
-        className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(51,185,242,0.25),transparent_55%)]"
+        className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(51,185,242,0.18),transparent_55%)]"
         aria-hidden="true"
       />
       <div className="relative z-10 mx-auto flex min-h-[260px] w-full max-w-6xl flex-col items-center justify-center px-6 py-10 text-center sm:min-h-[300px] sm:py-14">
@@ -28956,9 +29134,9 @@ const MarketHero = ({ title, subtitle, marketKey = '', heroImage = '', eyebrow =
             <Sparkles className="h-3.5 w-3.5" /> {eyebrow}
           </span>
         ) : null}
-        <h1 className="text-2xl font-bold leading-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)] sm:text-4xl">{title}</h1>
+        <h1 className="text-2xl font-bold leading-tight text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.65)] sm:text-4xl">{title}</h1>
         {subtitle ? (
-          <p className="mt-3 max-w-2xl text-sm text-white/90 sm:text-base">{subtitle}</p>
+          <p className="mt-3 max-w-2xl text-sm text-white/90 drop-shadow-[0_1px_6px_rgba(0,0,0,0.55)] sm:text-base">{subtitle}</p>
         ) : null}
         {chips.length ? (
           <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
@@ -31162,27 +31340,7 @@ const SiteFooter = () => {
       {/* ── Main Footer Grid — compact 4 columns on mobile so it mirrors the desktop layout, then scales up on larger screens ── */}
       <div className="mx-auto w-full max-w-7xl px-3 pt-6 pb-5 sm:px-6 sm:pt-[60px] sm:pb-10 sm:px-8">
         <div className="grid grid-cols-4 gap-2 sm:gap-10">
-          {/* Column 1 – Brand */}
-          <div>
-            <h3 className="whitespace-nowrap text-[10px] font-bold sm:text-xl">SVS E-Commerce</h3>
-            <ul className="mt-1.5 space-y-1 text-[9px] leading-snug text-slate-200 sm:mt-3 sm:space-y-2 sm:text-base">
-              <li>{t('site.tagline', { defaultValue: 'Your one-stop marketplace for everything you need – from groceries to tickets!' })}</li>
-            </ul>
-          </div>
-
-          {/* Column 2 – Quick Links */}
-          <div>
-            <h4 className="whitespace-nowrap text-[10px] font-bold uppercase tracking-wide sm:text-sm">{t('footer.quickLinks')}</h4>
-            <ul className="mt-1.5 space-y-1 text-[9px] sm:mt-4 sm:space-y-2 sm:text-sm">
-              {footerLinks.quick.map((item) => (
-                <li key={item.href}>
-                  <Link to={item.href} className="text-slate-200 transition hover:text-white hover:underline">{t(item.labelKey)}</Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Column 3 – Support */}
+          {/* Column 1 – Support */}
           <div>
             <h4 className="whitespace-nowrap text-[10px] font-bold uppercase tracking-wide sm:text-sm">{t('footer.support')}</h4>
             <ul className="mt-1.5 space-y-1 text-[9px] sm:mt-4 sm:space-y-2 sm:text-sm">
@@ -31194,7 +31352,15 @@ const SiteFooter = () => {
             </ul>
           </div>
 
-          {/* Column 4 – Subscribe to Offers */}
+          {/* Column 2 – Brand */}
+          <div>
+            <h3 className="whitespace-nowrap text-[10px] font-bold sm:text-xl">SVS E-Commerce</h3>
+            <ul className="mt-1.5 space-y-1 text-[9px] leading-snug text-slate-200 sm:mt-3 sm:space-y-2 sm:text-base">
+              <li>{t('site.tagline', { defaultValue: 'Your one-stop marketplace for everything you need – from groceries to tickets!' })}</li>
+            </ul>
+          </div>
+
+          {/* Column 3 – Subscribe to Offers */}
           <div>
             <h4 className="text-[10px] font-bold uppercase leading-tight tracking-wide sm:whitespace-nowrap sm:text-sm">{t('footer.subscribe')}</h4>
             <p className="mt-1.5 text-[9px] leading-snug text-slate-300 sm:mt-3 sm:text-sm">{t('footer.subscribeText')}</p>
@@ -31212,6 +31378,18 @@ const SiteFooter = () => {
                 Subscribe
               </button>
             </div>
+          </div>
+
+          {/* Column 4 – Quick Links */}
+          <div>
+            <h4 className="whitespace-nowrap text-[10px] font-bold uppercase tracking-wide sm:text-sm">{t('footer.quickLinks')}</h4>
+            <ul className="mt-1.5 space-y-1 text-[9px] sm:mt-4 sm:space-y-2 sm:text-sm">
+              {footerLinks.quick.map((item) => (
+                <li key={item.href}>
+                  <Link to={item.href} className="text-slate-200 transition hover:text-white hover:underline">{t(item.labelKey)}</Link>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </div>
@@ -31415,6 +31593,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/checkout" element={<CheckoutPage cartItems={cartItems} buyNowCheckout={buyNowCheckout} onUpdateCartQuantity={onUpdateCartQuantity} onRemoveCartItem={onRemoveCartItem} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />
     <Route path="/checkout/payfast" element={<PayfastCheckoutPage buyNowCheckout={buyNowCheckout} onPlaceOrder={onPlaceOrder} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />
     <Route path="/support/chat" element={<SupportChatPage orders={orders} onPushNotificationToUser={onPushNotificationToUser} />} />
+    <Route path="/u/:handle" element={<UserProfileLinkPage />} />
     <Route path="/search" element={<SearchResultsPage sellerItems={sellerItems} />} />
 
     <Route path="/e-commerce" element={<ECommercePage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />

@@ -187,12 +187,12 @@ select {
 }
 
 .svs-range-slider::-webkit-slider-runnable-track {
-  height: 8px;
+  height: 10px;
   background: transparent;
 }
 
 .svs-range-slider::-moz-range-track {
-  height: 8px;
+  height: 10px;
   background: transparent;
   border: 0;
 }
@@ -200,9 +200,9 @@ select {
 .svs-range-slider::-webkit-slider-thumb {
   appearance: none;
   -webkit-appearance: none;
-  margin-top: -3px;
-  height: 14px;
-  width: 14px;
+  margin-top: -4px;
+  height: 18px;
+  width: 18px;
   border-radius: 999px;
   border: 2px solid #ffffff;
   background: var(--svs-primary);
@@ -210,8 +210,8 @@ select {
 }
 
 .svs-range-slider::-moz-range-thumb {
-  height: 14px;
-  width: 14px;
+  height: 18px;
+  width: 18px;
   border-radius: 999px;
   border: 2px solid #ffffff;
   background: var(--svs-primary);

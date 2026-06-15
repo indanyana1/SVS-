@@ -92,6 +92,32 @@ a[role="button"],
 }
 
 /* ============================================================
+   GLOBAL READABILITY BOOST
+   Lift the smallest text sizes site-wide so copy is bigger and
+   a touch bolder — easier to read for low-vision users without
+   per-page edits. Applies on every viewport. Large headings are
+   handled separately by the typography damper below.
+   ============================================================ */
+.text-base { font-size: 1.0625rem !important; line-height: 1.6 !important; }   /* 16 -> 17px */
+.text-sm   { font-size: 0.9375rem !important; line-height: 1.55 !important; }  /* 14 -> 15px */
+.text-xs   { font-size: 0.8125rem !important; line-height: 1.5 !important; }   /* 12 -> 13px */
+.text-\[10px\],
+[class*="text-[10px]"] { font-size: 0.75rem  !important; line-height: 1.45 !important; } /* 10 -> 12px */
+.text-\[11px\],
+[class*="text-[11px]"] { font-size: 0.8125rem !important; line-height: 1.45 !important; } /* 11 -> 13px */
+.text-\[12px\],
+[class*="text-[12px]"] { font-size: 0.8125rem !important; line-height: 1.5 !important; }  /* 12 -> 13px */
+.text-\[13px\],
+[class*="text-[13px]"] { font-size: 0.875rem  !important; line-height: 1.5 !important; }  /* 13 -> 14px */
+
+/* Nudge default body weight up slightly for crisper legibility. */
+body {
+  font-weight: 450;
+}
+/* Keep muted helper/label text from looking too thin. */
+.font-medium { font-weight: 600 !important; }
+
+/* ============================================================
    MOBILE TYPOGRAPHY DAMPER
    The codebase has many hard-coded large desktop sizes
    (text-4xl, text-5xl, text-6xl, text-[46px], etc.).

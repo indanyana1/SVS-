@@ -53,7 +53,7 @@ const PageWrap = ({ title, subtitle, children }) => (
       <header className="mb-6 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-sm sm:p-6">
         <h1 className="text-2xl font-black text-[var(--svs-primary)] sm:text-3xl">{title}</h1>
         <p className="mt-2 text-sm text-[var(--svs-muted)] sm:text-[15px]">{subtitle}</p>
-        <p className="mt-3 text-xs font-semibold text-[var(--svs-muted)]">Last updated: {LAST_UPDATED}</p>
+        <p className="mt-3 text-xs font-semibold text-[var(--svs-muted)]">Last updated: <span className="font-bold text-[var(--svs-text)]">{LAST_UPDATED}</span></p>
       </header>
       {children}
     </div>

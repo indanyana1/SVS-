@@ -1384,3 +1384,20 @@ create policy "chat-media owner delete"
   on storage.objects for delete to authenticated
   using (bucket_id = 'chat-media' and owner = auth.uid());
 
+-- ------------------------------------------------------------
+-- >>> user-handles.sql
+-- ------------------------------------------------------------
+-- Per-user shareable handles. Adds a public, URL-friendly `user_handle`
+-- to account_users so every registered person gets a profile link they
+-- can share (e.g. /u/jane-doe-4f2a) that opens a 1-to-1 chat with them.
+
+alter table public.account_users
+  add column if not exists user_handle text;
+
+create unique index if not exists account_users_user_handle_unique
+  on public.account_users (lower(user_handle))
+  where user_handle is not null;
+
+create index if not exists account_users_user_handle_idx
+  on public.account_users (user_handle);
+
