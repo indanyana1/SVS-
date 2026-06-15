@@ -226,7 +226,7 @@ export const TermsOfServicePage = () => {
 
       <Section id="terms-contact" title="13. Contact">
         <p>
-          Questions about these Terms? Email us at <a className="text-[var(--svs-primary)] underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+          Questions about these Terms? Email us at <a className="text-[var(--svs-primary)] underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> or <a className="font-semibold text-[var(--svs-primary)] underline" href="/support/chat">chat with the SVS Agent</a>.
         </p>
       </Section>
     </PageWrap>
