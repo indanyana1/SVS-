@@ -67,6 +67,10 @@ import {
   Pause,
   Play,
   Trash,
+  Pin,
+  Forward,
+  CheckCheck,
+  Timer,
 } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -4741,6 +4745,36 @@ const persistSupportChatHiddenIds = (ids, userEmail = getCurrentUserEmail()) => 
   } catch (_) { /* ignore */ }
 };
 
+// Pinned conversations are a personal preference (like WhatsApp), so they are
+// stored locally per user rather than synced to the shared thread row.
+const SUPPORT_CHAT_PINNED_THREADS_STORAGE_KEY = 'svs-support-chat-pinned-threads';
+const getStoredPinnedThreadIds = (userEmail = getCurrentUserEmail()) => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(getUserScopedStorageKey(SUPPORT_CHAT_PINNED_THREADS_STORAGE_KEY, userEmail));
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((entry) => typeof entry === 'string') : [];
+  } catch (_) { return []; }
+};
+const persistPinnedThreadIds = (ids, userEmail = getCurrentUserEmail()) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(
+      getUserScopedStorageKey(SUPPORT_CHAT_PINNED_THREADS_STORAGE_KEY, userEmail),
+      JSON.stringify(Array.from(new Set(ids || []))),
+    );
+  } catch (_) { /* ignore */ }
+};
+
+// Quick-reaction palette offered when long-pressing / opening a message menu.
+const CHAT_REACTION_EMOJIS = ['\uD83D\uDC4D', '\u2764\uFE0F', '\uD83D\uDE02', '\uD83D\uDE2E', '\uD83D\uDE22', '\uD83D\uDE4F'];
+// Disappearing-message timer presets (label + milliseconds). 0 = off.
+const CHAT_DISAPPEAR_OPTIONS = [
+  { label: 'Off', ms: 0 },
+  { label: '24h', ms: 24 * 60 * 60 * 1000 },
+  { label: '7d', ms: 7 * 24 * 60 * 60 * 1000 },
+];
+
 const createNotificationRecord = ({ title, message, href, orderId, type = 'info' }) => ({
   id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   type,
@@ -4827,6 +4861,7 @@ const mapSupportChatMessageRecord = (record) => ({
   senderName: String(record.sender_name || ''),
   senderRole: String(record.sender_role || 'client'),
   body: String(record.body || ''),
+  metadata: record.metadata && typeof record.metadata === 'object' ? record.metadata : {},
   createdAt: record.created_at || new Date().toISOString(),
 });
 
@@ -4837,6 +4872,7 @@ const toSupportChatMessageRecord = (message) => ({
   sender_name: message.senderName || null,
   sender_role: message.senderRole || 'client',
   body: message.body || '',
+  metadata: message.metadata && typeof message.metadata === 'object' ? message.metadata : {},
   created_at: message.createdAt || new Date().toISOString(),
 });
 
@@ -22663,6 +22699,14 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   const [editingDraft, setEditingDraft] = useState('');
   const [openMenuMessageId, setOpenMenuMessageId] = useState('');
 
+  // --- WhatsApp-style extras ------------------------------------------
+  // `forwardingMessage` = the message staged for forwarding (opens a thread
+  // picker). `disappearMs` = active disappearing-message timer in ms (0=off).
+  // `pinnedThreadIds` = personal pinned conversations (local per user).
+  const [forwardingMessage, setForwardingMessage] = useState(null);
+  const [disappearMs, setDisappearMs] = useState(0);
+  const [pinnedThreadIds, setPinnedThreadIds] = useState(() => getStoredPinnedThreadIds(currentUserEmail));
+
   // Video attachments — users pick an existing video file from their
   // device (mobile camera roll, desktop file picker, etc.). Selected
   // clip lands in `videoPreview` so they can play it back and choose to
@@ -22875,7 +22919,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     if (threadKeys.length) {
       const { data: messageRows, error: messageError } = await supabase
         .from(SUPPORT_CHAT_MESSAGES_TABLE)
-        .select('message_key, thread_key, sender_email, sender_name, sender_role, body, created_at')
+        .select('message_key, thread_key, sender_email, sender_name, sender_role, body, metadata, created_at')
         .in('thread_key', threadKeys)
         .order('created_at', { ascending: true })
         .limit(3000);
@@ -23409,8 +23453,13 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
 
   const visibleThreads = useMemo(() => {
     const filtered = threads.filter((thread) => Array.isArray(thread?.participants) && thread.participants.includes(currentUserEmail));
-    return filtered.sort((left, right) => Date.parse(right.updatedAt || '') - Date.parse(left.updatedAt || ''));
-  }, [currentUserEmail, threads]);
+    return filtered.sort((left, right) => {
+      const leftPinned = pinnedThreadIds.includes(left.id) ? 1 : 0;
+      const rightPinned = pinnedThreadIds.includes(right.id) ? 1 : 0;
+      if (leftPinned !== rightPinned) return rightPinned - leftPinned;
+      return Date.parse(right.updatedAt || '') - Date.parse(left.updatedAt || '');
+    });
+  }, [currentUserEmail, threads, pinnedThreadIds]);
 
   useEffect(() => {
     if (!visibleThreads.length) {
@@ -23502,6 +23551,31 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       return next;
     });
   }, [activeThread, activeMessages, currentUserEmail]);
+
+  // Remote read receipts — when the active thread is on screen, stamp every
+  // message from the other party with our email under `metadata.readBy` so the
+  // sender sees the blue double-tick. Batched into a single upsert; naturally
+  // idempotent (skips messages already marked), so it won't loop.
+  useEffect(() => {
+    if (!activeThread || !activeMessages.length) return;
+    if (!getAuthState() || !currentUserEmail || !hasSupabaseEnv || !supabase) return;
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+    const toMark = activeMessages.filter((message) => (
+      normalizeEmail(message.senderEmail || '') !== currentUserEmail
+      && !(Array.isArray(message.metadata?.readBy) && message.metadata.readBy.includes(currentUserEmail))
+    ));
+    if (!toMark.length) return;
+    const records = toMark.map((message) => toSupportChatMessageRecord({
+      ...message,
+      metadata: { ...(message.metadata || {}), readBy: [...(message.metadata?.readBy || []), currentUserEmail] },
+    }));
+    let cancelled = false;
+    supabase
+      .from(SUPPORT_CHAT_MESSAGES_TABLE)
+      .upsert(records, { onConflict: 'message_key' })
+      .then(() => { if (!cancelled) loadRemoteChat(); });
+    return () => { cancelled = true; };
+  }, [activeThread, activeMessages, currentUserEmail, loadRemoteChat]);
 
   // Pin the scroll position when the active thread changes (opening a
   // chat) or a new message lands. Prefers the first-unread divider so the
@@ -23684,6 +23758,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       senderName: currentUserName,
       senderRole: currentRole,
       body: persistedBody,
+      metadata: disappearMs > 0 ? { expiresAt: new Date(Date.now() + disappearMs).toISOString() } : {},
       createdAt: nowIso,
     };
 
@@ -23739,7 +23814,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       triggerAgentReply(updatedThread, body);
     }
 
-  }, [activeThread, createThread, currentRole, currentUserEmail, currentUserName, draftMessage, isAdmin, loadRemoteChat, onPushNotificationToUser, replyingTo, triggerAgentReply]);
+  }, [activeThread, createThread, currentRole, currentUserEmail, currentUserName, disappearMs, draftMessage, isAdmin, loadRemoteChat, onPushNotificationToUser, replyingTo, triggerAgentReply]);
 
   // Generic helper: send a "card" message (offer / payment / location /
   // image / status). It builds the body, appends a message locally, syncs
@@ -23778,6 +23853,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       senderName: currentUserName,
       senderRole: currentRole,
       body,
+      metadata: disappearMs > 0 ? { expiresAt: new Date(Date.now() + disappearMs).toISOString() } : {},
       createdAt: nowIso,
     };
     const previewByType = {
@@ -23829,7 +23905,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     if (recipientEmailLocal === SUPPORT_ADMIN_EMAIL && !isAdmin) {
       triggerAgentReply(updatedThread, cardToReadableText(body));
     }
-  }, [activeThread, buildCardBody, cardToReadableText, createThread, currentRole, currentUserEmail, currentUserName, isAdmin, loadRemoteChat, onPushNotificationToUser, replyingTo, triggerAgentReply]);
+  }, [activeThread, buildCardBody, cardToReadableText, createThread, currentRole, currentUserEmail, currentUserName, disappearMs, isAdmin, loadRemoteChat, onPushNotificationToUser, replyingTo, triggerAgentReply]);
 
   // --- Edit / delete a message ----------------------------------------
   // Persist `hiddenMessageIds` (delete-for-me) so they stay hidden across
@@ -23855,8 +23931,119 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     }
   }, [currentUserEmail, loadRemoteChat]);
 
-  // Delete for everyone — only your own messages. Replaces the body with a
-  // tombstone so both participants see "This message was deleted".
+  // Low-level helper: merge new metadata onto a message locally + sync to
+  // Supabase. Powers reactions, pins, read receipts and disappearing timers.
+  const updateMessageMetadataRemote = useCallback((messageId, patch) => {
+    let updatedRecord = null;
+    setMessages((current) => current.map((message) => {
+      if (message.id !== messageId) return message;
+      const nextMetadata = { ...(message.metadata || {}), ...(typeof patch === 'function' ? patch(message.metadata || {}) : patch) };
+      updatedRecord = { ...message, metadata: nextMetadata };
+      return updatedRecord;
+    }));
+    if (updatedRecord && getAuthState() && currentUserEmail && hasSupabaseEnv && supabase) {
+      supabase
+        .from(SUPPORT_CHAT_MESSAGES_TABLE)
+        .upsert([toSupportChatMessageRecord(updatedRecord)], { onConflict: 'message_key' })
+        .then(() => { loadRemoteChat(); });
+    }
+  }, [currentUserEmail, loadRemoteChat]);
+
+  // Toggle an emoji reaction on a message (one entry per user per emoji).
+  const handleToggleReaction = useCallback((message, emoji) => {
+    if (!message || !emoji) return;
+    setOpenMenuMessageId('');
+    updateMessageMetadataRemote(message.id, (meta) => {
+      const reactions = { ...(meta.reactions || {}) };
+      const list = Array.isArray(reactions[emoji]) ? reactions[emoji].slice() : [];
+      const idx = list.indexOf(currentUserEmail);
+      if (idx === -1) list.push(currentUserEmail);
+      else list.splice(idx, 1);
+      if (list.length) reactions[emoji] = list;
+      else delete reactions[emoji];
+      return { reactions };
+    });
+  }, [currentUserEmail, updateMessageMetadataRemote]);
+
+  // Pin / unpin a message for everyone in the thread.
+  const handleTogglePinMessage = useCallback((message) => {
+    if (!message) return;
+    setOpenMenuMessageId('');
+    updateMessageMetadataRemote(message.id, (meta) => ({ pinned: !meta.pinned }));
+  }, [updateMessageMetadataRemote]);
+
+  // Pin / unpin a conversation (personal, local-only preference).
+  const handleTogglePinThread = useCallback((threadId) => {
+    if (!threadId) return;
+    setPinnedThreadIds((current) => {
+      const next = current.includes(threadId)
+        ? current.filter((id) => id !== threadId)
+        : [threadId, ...current];
+      persistPinnedThreadIds(next, currentUserEmail);
+      return next;
+    });
+  }, [currentUserEmail]);
+
+  // Begin forwarding a message — opens the thread picker overlay.
+  const handleStartForward = useCallback((message) => {
+    if (!message) return;
+    setOpenMenuMessageId('');
+    setForwardingMessage(message);
+  }, []);
+
+  // Complete a forward into the chosen target thread. Strips reply/edited
+  // wrappers so only the underlying text/card is carried over, and tags the
+  // new message as forwarded.
+  const handleConfirmForward = useCallback((targetThread) => {
+    const message = forwardingMessage;
+    if (!message || !targetThread) { setForwardingMessage(null); return; }
+    const editedMeta = extractEditedMeta(message.body);
+    const replyMeta = extractReplyMeta(editedMeta.body);
+    const innerBody = replyMeta.body;
+    const nowIso = new Date().toISOString();
+    const nextMessage = {
+      id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      threadId: targetThread.id,
+      senderEmail: currentUserEmail,
+      senderName: currentUserName,
+      senderRole: currentRole,
+      body: innerBody,
+      metadata: { forwarded: true },
+      createdAt: nowIso,
+    };
+    const preview = `\u21AA\uFE0F ${buildReplySnippetFromBody(editedMeta.body)}`;
+    setMessages((current) => [...current, nextMessage]);
+    setThreads((current) => current.map((candidate) => (
+      candidate.id === targetThread.id
+        ? { ...candidate, updatedAt: nowIso, lastMessage: preview }
+        : candidate
+    )));
+    const updatedThread = { ...targetThread, updatedAt: nowIso, lastMessage: preview };
+    if (getAuthState() && currentUserEmail && hasSupabaseEnv && supabase) {
+      supabase
+        .from(SUPPORT_CHAT_THREADS_TABLE)
+        .upsert([toSupportChatThreadRecord(updatedThread)], { onConflict: 'thread_key' })
+        .then(() => supabase
+          .from(SUPPORT_CHAT_MESSAGES_TABLE)
+          .upsert([toSupportChatMessageRecord(nextMessage)], { onConflict: 'message_key' }))
+        .then(() => { loadRemoteChat(); });
+    }
+    const recipientEmailLocal = normalizeEmail(
+      (updatedThread.participants || []).find((p) => normalizeEmail(p) !== currentUserEmail) || ''
+    );
+    if (recipientEmailLocal && recipientEmailLocal !== SUPPORT_ADMIN_EMAIL) {
+      onPushNotificationToUser?.(recipientEmailLocal, {
+        type: 'chat',
+        title: `Forwarded message from ${currentUserName || 'SVS user'}`,
+        message: preview,
+        href: '/support/chat',
+        orderId: updatedThread.orderId || null,
+      });
+    }
+    setForwardingMessage(null);
+    setSelectedThreadId(targetThread.id);
+  }, [currentRole, currentUserEmail, currentUserName, forwardingMessage, loadRemoteChat, onPushNotificationToUser]);
+
   const handleDeleteForEveryone = useCallback((message) => {
     if (!message || normalizeEmail(message.senderEmail || '') !== currentUserEmail) return;
     // eslint-disable-next-line no-alert
@@ -24590,9 +24777,15 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   // payment requests, location coords, voice transcripts, etc.).
   const filteredMessages = useMemo(() => {
     const q = chatSearchQuery.trim().toLowerCase();
+    const now = Date.now();
+    const notExpired = (message) => {
+      const exp = message.metadata?.expiresAt;
+      return !exp || Date.parse(exp) > now;
+    };
+    const base = activeMessages.filter(notExpired);
     const visible = hiddenMessageIds.length
-      ? activeMessages.filter((message) => !hiddenMessageIds.includes(message.id))
-      : activeMessages;
+      ? base.filter((message) => !hiddenMessageIds.includes(message.id))
+      : base;
     if (!q) return visible;
     return visible.filter((message) => {
       const card = parseCardBody(message.body);
@@ -24773,9 +24966,10 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                     ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                     : d.toLocaleDateString([], { month: 'short', day: 'numeric' });
                 } catch (_) { stampText = ''; }
+                const isPinnedThread = pinnedThreadIds.includes(thread.id);
                 return (
+                  <div key={thread.id} className="group/thread relative">
                   <button
-                    key={thread.id}
                     type="button"
                     onClick={() => {
                       const counterpartEmail = normalizeEmail(
@@ -24789,7 +24983,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                       setSelectedThreadId(thread.id);
                       setMobilePanel('chat');
                     }}
-                    className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition ${isActive ? 'border-[var(--svs-primary)] bg-[var(--svs-cyan-surface)] shadow-sm' : 'border-[var(--svs-border)] bg-white hover:border-[var(--svs-primary)] hover:bg-[var(--svs-surface-soft)]'}`}
+                    className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 pr-9 text-left transition ${isActive ? 'border-[var(--svs-primary)] bg-[var(--svs-cyan-surface)] shadow-sm' : 'border-[var(--svs-border)] bg-white hover:border-[var(--svs-primary)] hover:bg-[var(--svs-surface-soft)]'}`}
                   >
                     <span className="relative shrink-0">
                       <span className={`flex h-11 w-11 select-none items-center justify-center rounded-full text-sm font-black text-white shadow-sm ${isActive ? 'bg-[var(--svs-primary)]' : 'bg-gradient-to-br from-[var(--svs-primary)] to-[var(--svs-primary-strong)]'}`} aria-hidden="true">
@@ -24801,7 +24995,10 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center justify-between gap-2">
-                        <span className="truncate text-sm font-bold text-[var(--svs-primary-strong)]">{counterpart.name}</span>
+                        <span className="flex min-w-0 items-center gap-1 truncate text-sm font-bold text-[var(--svs-primary-strong)]">
+                          {isPinnedThread ? <Pin className="h-3 w-3 flex-none text-amber-500" aria-label="Pinned" /> : null}
+                          <span className="truncate">{counterpart.name}</span>
+                        </span>
                         {stampText ? (
                           <span className="shrink-0 text-[10px] font-semibold text-[var(--svs-muted)]">{stampText}</span>
                         ) : null}
@@ -24817,6 +25014,16 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                       <span className="mt-1 block truncate text-xs text-slate-600">{thread.lastMessage || 'No messages yet'}</span>
                     </span>
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTogglePinThread(thread.id)}
+                    title={isPinnedThread ? 'Unpin conversation' : 'Pin conversation'}
+                    aria-label={isPinnedThread ? 'Unpin conversation' : 'Pin conversation'}
+                    className={`absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full transition ${isPinnedThread ? 'text-amber-500 opacity-100 hover:bg-amber-50' : 'text-[var(--svs-muted)] opacity-0 hover:bg-[var(--svs-surface-soft)] group-hover/thread:opacity-100 focus:opacity-100'}`}
+                  >
+                    <Pin className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                  </div>
                 );
               }) : (
                 <div className="rounded-xl border border-dashed border-[#c8dff0] bg-white px-3 py-5 text-center text-xs text-slate-500">
@@ -25165,6 +25372,34 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                       </div>
                     </details>
                   ) : null}
+                  {(() => {
+                    const pinned = filteredMessages.filter((m) => m.metadata?.pinned);
+                    if (!pinned.length) return null;
+                    return (
+                      <div className="sticky top-0 z-10 mb-1 space-y-1">
+                        {pinned.map((m) => {
+                          const pm = extractReplyMeta(extractEditedMeta(m.body).body);
+                          return (
+                            <div key={`pin-${m.id}`} className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50/95 px-2.5 py-1.5 shadow-sm backdrop-blur-sm">
+                              <Pin className="h-3.5 w-3.5 flex-none text-amber-600" aria-hidden="true" />
+                              <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-amber-900">
+                                {buildReplySnippetFromBody(pm.body || m.body)}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleTogglePinMessage(m)}
+                                className="flex-none rounded-full p-0.5 text-amber-600 transition hover:bg-amber-100"
+                                aria-label="Unpin message"
+                                title="Unpin"
+                              >
+                                <X className="h-3.5 w-3.5" aria-hidden="true" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                   {filteredMessages.length ? filteredMessages.map((message) => {
                     const mine = normalizeEmail(message.senderEmail || '') === currentUserEmail;
                     const deleted = isDeletedBody(message.body);
@@ -25283,12 +25518,45 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                                     className="fixed inset-0 z-20 cursor-default"
                                   />
                                   <div className="absolute right-0 top-full z-30 mt-1 w-44 overflow-hidden rounded-xl border border-[var(--svs-border)] bg-white py-1 text-left shadow-xl">
+                                    {/* Quick emoji reactions row */}
+                                    <div className="flex items-center justify-between px-2 py-1.5">
+                                      {CHAT_REACTION_EMOJIS.map((emoji) => {
+                                        const reacted = Array.isArray(message.metadata?.reactions?.[emoji])
+                                          && message.metadata.reactions[emoji].includes(currentUserEmail);
+                                        return (
+                                          <button
+                                            key={emoji}
+                                            type="button"
+                                            onClick={() => handleToggleReaction(message, emoji)}
+                                            className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-base transition hover:scale-110 ${reacted ? 'bg-[var(--svs-cyan-surface)] ring-1 ring-[var(--svs-primary)]' : 'hover:bg-[var(--svs-surface-soft)]'}`}
+                                            aria-label={`React ${emoji}`}
+                                          >
+                                            {emoji}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                    <div className="my-1 border-t border-[var(--svs-border)]" aria-hidden="true" />
                                     <button
                                       type="button"
                                       onClick={() => { setOpenMenuMessageId(''); startReply(); }}
                                       className="flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)]"
                                     >
                                       <Reply className="h-3.5 w-3.5" aria-hidden="true" /> Reply
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleStartForward(message)}
+                                      className="flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)]"
+                                    >
+                                      <Forward className="h-3.5 w-3.5" aria-hidden="true" /> Forward
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleTogglePinMessage(message)}
+                                      className="flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)]"
+                                    >
+                                      <Pin className="h-3.5 w-3.5" aria-hidden="true" /> {message.metadata?.pinned ? 'Unpin' : 'Pin'}
                                     </button>
                                     {canEdit ? (
                                       <button
@@ -25547,7 +25815,42 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                           <p className={`mt-1 flex items-center gap-1 text-[11px] ${mine ? 'flex-row-reverse text-cyan-100' : 'text-slate-400'}`}>
                             <span>{new Date(message.createdAt || Date.now()).toLocaleString()}</span>
                             {wasEdited ? <span className="italic opacity-90">· edited</span> : null}
+                            {message.metadata?.forwarded ? (
+                              <span className="inline-flex items-center gap-0.5 italic opacity-90">
+                                <Forward className="h-3 w-3" aria-hidden="true" /> forwarded
+                              </span>
+                            ) : null}
+                            {message.metadata?.expiresAt ? (
+                              <Timer className="h-3 w-3 opacity-90" aria-label="Disappearing message" />
+                            ) : null}
+                            {mine ? (() => {
+                              const readByOthers = Array.isArray(message.metadata?.readBy)
+                                && message.metadata.readBy.some((email) => normalizeEmail(email) !== currentUserEmail);
+                              return readByOthers
+                                ? <CheckCheck className="h-3.5 w-3.5 text-sky-300" aria-label="Read" />
+                                : <CheckCheck className="h-3.5 w-3.5 opacity-80" aria-label="Sent" />;
+                            })() : null}
                           </p>
+                          {message.metadata?.reactions && Object.keys(message.metadata.reactions).length ? (
+                            <div className={`mt-1 flex flex-wrap gap-1 ${mine ? 'justify-end' : 'justify-start'}`}>
+                              {Object.entries(message.metadata.reactions).map(([emoji, emails]) => {
+                                const list = Array.isArray(emails) ? emails : [];
+                                if (!list.length) return null;
+                                const reacted = list.includes(currentUserEmail);
+                                return (
+                                  <button
+                                    key={emoji}
+                                    type="button"
+                                    onClick={() => handleToggleReaction(message, emoji)}
+                                    className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-bold shadow-sm transition ${reacted ? 'bg-[var(--svs-cyan-surface)] text-[var(--svs-primary-strong)] ring-1 ring-[var(--svs-primary)]' : 'bg-white text-slate-600 ring-1 ring-[var(--svs-border)]'}`}
+                                  >
+                                    <span className="text-sm leading-none">{emoji}</span>
+                                    <span>{list.length}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ) : null}
                           </article>
                         </div>
                       </SwipeableMessage>
@@ -25572,6 +25875,54 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                   {/* Sentinel — auto-scroll target so the latest bubble is always in view. */}
                   <div ref={messagesEndRef} aria-hidden="true" />
                 </div>
+
+                {forwardingMessage ? (
+                  <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+                    <div className="w-full max-w-md overflow-hidden rounded-t-2xl border border-[var(--svs-border)] bg-white shadow-2xl sm:rounded-2xl">
+                      <div className="flex items-center justify-between border-b border-[var(--svs-border)] px-4 py-3">
+                        <p className="flex items-center gap-2 text-sm font-black text-[var(--svs-text)]">
+                          <Forward className="h-4 w-4 text-[var(--svs-primary)]" aria-hidden="true" /> Forward to…
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setForwardingMessage(null)}
+                          className="rounded-full p-1 text-[var(--svs-muted)] transition hover:bg-[var(--svs-surface-soft)]"
+                          aria-label="Cancel forward"
+                        >
+                          <X className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                      </div>
+                      <div className="max-h-[55vh] overflow-y-auto py-1">
+                        {visibleThreads.filter((t) => t.id !== forwardingMessage.threadId).length ? (
+                          visibleThreads
+                            .filter((t) => t.id !== forwardingMessage.threadId)
+                            .map((thread) => {
+                              const counterparty = resolveCounterparty(thread);
+                              return (
+                                <button
+                                  key={thread.id}
+                                  type="button"
+                                  onClick={() => handleConfirmForward(thread)}
+                                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-[var(--svs-surface-soft)]"
+                                >
+                                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--svs-primary-strong)] text-xs font-black text-white">
+                                    {(counterparty.name || '?').trim().charAt(0).toUpperCase()}
+                                  </span>
+                                  <span className="min-w-0 flex-1">
+                                    <span className="block truncate text-sm font-bold text-[var(--svs-text)]">{counterparty.name}</span>
+                                    <span className="block truncate text-[11px] text-[var(--svs-muted)]">{thread.issueType || thread.lastMessage || 'Conversation'}</span>
+                                  </span>
+                                  <Send className="h-4 w-4 flex-none text-[var(--svs-primary)]" aria-hidden="true" />
+                                </button>
+                              );
+                            })
+                        ) : (
+                          <p className="px-4 py-6 text-center text-sm text-[var(--svs-muted)]">No other conversations to forward to yet.</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
 
                 <div className="sticky bottom-0 border-t border-[#e5eef8] bg-white/95 px-3 py-3 backdrop-blur-sm sm:static sm:bg-white sm:px-6 sm:py-4">
                   {isAnalyzingMedia ? (
@@ -25607,6 +25958,22 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                       Mark only show in peer chats. */}
                   <div className="mb-2 -mx-3 overflow-x-auto px-3 sm:mx-0 sm:overflow-visible sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     <div className="flex w-max items-center gap-1.5 sm:w-auto sm:flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const idx = CHAT_DISAPPEAR_OPTIONS.findIndex((opt) => opt.ms === disappearMs);
+                        const next = CHAT_DISAPPEAR_OPTIONS[(idx + 1) % CHAT_DISAPPEAR_OPTIONS.length];
+                        setDisappearMs(next.ms);
+                      }}
+                      title={disappearMs > 0 ? `Disappearing messages: ${CHAT_DISAPPEAR_OPTIONS.find((o) => o.ms === disappearMs)?.label}` : 'Turn on disappearing messages'}
+                      aria-label="Disappearing messages timer"
+                      className={`inline-flex h-9 shrink-0 items-center justify-center gap-1 rounded-full border px-2 transition sm:h-auto sm:rounded-md sm:py-1 sm:text-[11px] sm:font-bold ${disappearMs > 0 ? 'border-[var(--svs-primary)] bg-[var(--svs-primary)] text-white' : 'border-[#d6e6f5] bg-white text-[#0f6674] hover:bg-[#e8f7fb]'}`}
+                    >
+                      <Timer className="h-4 w-4 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
+                      <span className={disappearMs > 0 ? 'inline' : 'hidden sm:inline'}>
+                        {disappearMs > 0 ? CHAT_DISAPPEAR_OPTIONS.find((o) => o.ms === disappearMs)?.label : 'Timer'}
+                      </span>
+                    </button>
                     <button
                       type="button"
                       onClick={() => attachmentInputRef.current?.click()}

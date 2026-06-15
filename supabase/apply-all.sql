@@ -1281,8 +1281,12 @@ create table if not exists public.support_chat_messages (
   sender_name text,
   sender_role text not null default 'client',
   body text not null,
+  metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
 );
+
+alter table public.support_chat_messages
+  add column if not exists metadata jsonb not null default '{}'::jsonb;
 
 create index if not exists support_chat_messages_thread_created_idx
   on public.support_chat_messages (thread_key, created_at asc);
