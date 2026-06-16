@@ -2026,6 +2026,13 @@ const stationeryItems = [
 // Picks" band at the bottom of the stationery page.
 const STATIONERY_FEATURED_IDS = ['s1', 's15', 's16'];
 
+// Seller-listed items in these categories are treated as office essentials and
+// can be promoted into the Featured band even without a curated flag.
+const STATIONERY_ESSENTIAL_CATEGORIES = new Set([
+  'Computers & Accessories',
+  'Filing & Storage',
+]);
+
 // Maps the seller-listing stationery category options onto the StationeryPage
 // filter taxonomy (Product Category + Product Type) so items added through the
 // seller UI slot into the same filters as the curated catalogue.
@@ -12131,8 +12138,21 @@ const StationeryPage = ({ onToggleWishlist, wishlistItemIds = [], sellerItems = 
 
   const featuredItems = useMemo(() => {
     const byId = new Map(marketItems.map((item) => [item.id, item]));
-    return STATIONERY_FEATURED_IDS.map((id) => byId.get(id)).filter(Boolean);
-  }, [marketItems]);
+    const curated = STATIONERY_FEATURED_IDS.map((id) => byId.get(id)).filter(Boolean);
+    const usedIds = new Set(curated.map((item) => item.id));
+    // Promote important seller-listed essentials into the Featured band:
+    // high-value office equipment or computing/filing stock that buyers treat
+    // as must-have purchases. Priced in the buyer's currency so the threshold
+    // stays fair across listings stored in different currencies.
+    const essentialThreshold = convertAmount(40, 'USD', buyerCurrencyCode);
+    const sellerEssentials = marketItems
+      .filter((item) => String(item.id || '').startsWith('seller-')
+        && !usedIds.has(item.id)
+        && (STATIONERY_ESSENTIAL_CATEGORIES.has(item.category)
+          || getItemPriceValue(item) >= essentialThreshold))
+      .sort((a, b) => getItemPriceValue(b) - getItemPriceValue(a));
+    return [...curated, ...sellerEssentials].slice(0, 6);
+  }, [marketItems, getItemPriceValue, buyerCurrencyCode]);
 
   const hasActiveFilters = Boolean(searchQuery)
     || selectedCategories.length || selectedBrands.length || selectedTypes.length
