@@ -1404,4 +1404,3 @@ create unique index if not exists account_users_user_handle_unique
 
 create index if not exists account_users_user_handle_idx
   on public.account_users (user_handle);
-
