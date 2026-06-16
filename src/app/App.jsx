@@ -6833,7 +6833,6 @@ const MinimalCheckoutShell = ({ title, badge = null, children }) => {
       <header className="border-b border-[var(--svs-border)] bg-[var(--svs-surface)]/95 backdrop-blur-sm">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
-            <ClickableLogo className="h-10 w-auto" roundedClassName="rounded-lg" />
             <h1 className="truncate text-2xl font-black text-[var(--svs-text)]">{title}</h1>
           </div>
 
@@ -8496,8 +8495,6 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
       </a>
       <header className="fixed top-0 z-50 w-full border-b border-[var(--svs-border)] bg-[var(--svs-nav-bg)]/95 text-[var(--svs-nav-text)] backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-7xl items-center gap-2 px-3 py-3 sm:gap-3 sm:px-4">
-          <ClickableLogo className="h-10 w-auto" roundedClassName="rounded-lg" />
-
           <button
             type="button"
             onClick={() => setMobileOpen((prev) => !prev)}
@@ -8728,7 +8725,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
             ) : null}
           </form>
 
-          <div className="ml-auto flex items-center gap-1.5 text-[var(--svs-nav-text)] sm:gap-3">
+          <div className="ml-auto flex items-center gap-2.5 text-[var(--svs-nav-text)] sm:gap-4">
             <div className="hidden items-center gap-3 lg:flex">
               <div className="relative" ref={desktopLanguageMenuRef}>
                 <button
@@ -8776,16 +8773,16 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
             </div>
             {!isSellerConsoleRoute ? (
               <>
-                <Link to="/checkout" aria-label="Open cart and checkout" className="relative rounded-full p-1.5 transition hover:bg-[var(--svs-cyan-surface)]">
-                  <ShoppingCart className={`h-5 w-5 ${cudyBluePrimaryIconClassName}`} />
+                <Link to="/checkout" aria-label="Open cart and checkout" className="relative rounded-full p-2 transition hover:bg-[var(--svs-cyan-surface)]">
+                  <ShoppingCart className={`h-6 w-6 ${cudyBluePrimaryIconClassName}`} />
                   {cartItemCount > 0 ? (
                     <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[var(--svs-primary)] px-1 text-[10px] font-bold text-white">
                       {cartItemCount}
                     </span>
                   ) : null}
                 </Link>
-                <Link to="/wishlist" aria-label="Open wishlist" className="relative rounded-full p-1.5 transition hover:bg-[var(--svs-cyan-surface)]">
-                  <Heart className={`h-5 w-5 ${cudyBluePrimaryIconClassName}`} />
+                <Link to="/wishlist" aria-label="Open wishlist" className="relative rounded-full p-2 transition hover:bg-[var(--svs-cyan-surface)]">
+                  <Heart className={`h-6 w-6 ${cudyBluePrimaryIconClassName}`} />
                   {wishlistItemCount > 0 ? (
                     <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[var(--svs-primary)] px-1 text-[10px] font-bold text-white">
                       {wishlistItemCount}
@@ -8801,9 +8798,9 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                 onClick={() => {
                   setIsNotificationsOpen((prev) => !prev);
                 }}
-                className="relative rounded-full p-1.5 transition hover:bg-[var(--svs-cyan-surface)]"
+                className="relative rounded-full p-2 transition hover:bg-[var(--svs-cyan-surface)]"
               >
-                <Bell className={`h-5 w-5 ${cudyBluePrimaryIconClassName}`} />
+                <Bell className={`h-6 w-6 ${cudyBluePrimaryIconClassName}`} />
                 {unreadNotificationsCount > 0 ? (
                   <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
                     {unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount}
@@ -8887,9 +8884,9 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
 
                   setProfileOpen((prev) => !prev);
                 }}
-                className="rounded-full bg-[var(--svs-cyan-surface)] p-1.5"
+                className="rounded-full bg-[var(--svs-cyan-surface)] p-2"
               >
-                <User className="h-5 w-5" />
+                <User className="h-6 w-6" />
               </button>
 
               {isAuthenticated && profileOpen ? (
@@ -12263,6 +12260,10 @@ const StationeryPage = ({ onToggleWishlist, wishlistItemIds = [], sellerItems = 
       wishlistItem: buildWishlistItem(item),
     });
   };
+
+  // Open a listing's details automatically when arrived at via a ?focus= link
+  // (e.g. the trending hero on the Markets page or the recently-viewed strip).
+  useListingFocusFromQuery(filteredItems, openDetails);
 
   const renderFilterGroup = (label, options, selection, setSelection) => (
     <div>
@@ -20464,12 +20465,205 @@ const MARKETS_HERO_SLIDES = [
   'https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=1600',
 ];
 
-const MarketsPage = () => {
+// Live carousel of trending products listed by sellers through the seller UI.
+// Reads straight from storage-backed seller items, auto-advances every 15s and
+// supports manual swipe / arrow / dot navigation. When storage is empty (e.g.
+// after the pre-launch wipe) the parent falls back to the branded hero.
+const TrendingSellerHero = ({ items }) => {
+  const { t } = useTranslation();
+  // Subscribe to buyer currency so prices re-render when the shopper switches it.
+  useBuyerCurrency();
+  const [activeIndex, setActiveIndex] = useState(0);
+  const touchStartXRef = useRef(null);
+  const touchDeltaXRef = useRef(0);
+
+  const slideCount = items.length;
+
+  // Keep the active slide in range whenever the underlying list changes.
+  useEffect(() => {
+    setActiveIndex((previous) => (previous >= slideCount ? 0 : previous));
+  }, [slideCount]);
+
+  // Auto-advance every 15 seconds. Re-arming on activeIndex changes means a
+  // manual swipe/click always grants the full dwell time before the next slide.
+  useEffect(() => {
+    if (slideCount <= 1) {
+      return undefined;
+    }
+    const intervalId = setInterval(() => {
+      setActiveIndex((previous) => (previous + 1) % slideCount);
+    }, 15000);
+    return () => clearInterval(intervalId);
+  }, [slideCount, activeIndex]);
+
+  const goTo = useCallback(
+    (index) => {
+      if (slideCount === 0) {
+        return;
+      }
+      setActiveIndex(((index % slideCount) + slideCount) % slideCount);
+    },
+    [slideCount],
+  );
+
+  const handleTouchStart = (event) => {
+    touchStartXRef.current = event.touches[0].clientX;
+    touchDeltaXRef.current = 0;
+  };
+
+  const handleTouchMove = (event) => {
+    if (touchStartXRef.current === null) {
+      return;
+    }
+    touchDeltaXRef.current = event.touches[0].clientX - touchStartXRef.current;
+  };
+
+  const handleTouchEnd = () => {
+    const delta = touchDeltaXRef.current;
+    if (Math.abs(delta) > 40) {
+      goTo(activeIndex + (delta < 0 ? 1 : -1));
+    }
+    touchStartXRef.current = null;
+    touchDeltaXRef.current = 0;
+  };
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-2xl border border-[var(--svs-border)] shadow-[0_4px_8px_rgba(0,0,0,0.1)]"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      role="region"
+      aria-roledescription="carousel"
+      aria-label={t('marketsPage.trending.regionLabel', { defaultValue: 'Trending listings' })}
+    >
+      <div
+        className="flex transition-transform duration-700 ease-in-out"
+        style={{ transform: `translateX(-${activeIndex * 100}%)` }}
+      >
+        {items.map((item, index) => {
+          const marketConfig = sellerMarketConfig[item.marketKey];
+          const route = marketConfig?.route || '/markets';
+          const marketLabel = marketConfig?.label
+            || (marketConfig?.labelKey ? t(marketConfig.labelKey) : 'SVS Market');
+          // Link straight to the item's detail view. Secondhand has a dedicated
+          // product route; every other market opens details via the ?focus= key.
+          const itemDetailsLink = item.marketKey === 'secondhand'
+            ? `/secondhand-central/product/${item.id}`
+            : `${route}?focus=${encodeURIComponent(item.id)}`;
+          const priceLabel = getSalePrices(
+            item.price,
+            getItemSaleDiscountRate(item),
+            item.currency || null,
+          ).nowPrice;
+          return (
+            <div
+              key={item.id || index}
+              className="relative h-[360px] w-full shrink-0 sm:h-[400px]"
+            >
+              <div
+                className="absolute inset-0 bg-cover bg-center"
+                style={{ backgroundImage: `url('${item.image}')` }}
+                aria-hidden="true"
+              />
+              <div
+                className="absolute inset-0 bg-black/30"
+                aria-hidden="true"
+              />
+              <div
+                className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/20 to-black/15"
+                aria-hidden="true"
+              />
+              <div className="relative z-10 mx-auto flex h-full max-w-md flex-col items-center justify-center gap-1.5 px-12 pb-14 pt-6 text-center">
+                <span className="inline-flex max-w-full items-center gap-1 truncate rounded-full border border-white/30 bg-white/15 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
+                  <Sparkles className="h-3 w-3 shrink-0" />
+                  <span className="truncate">
+                    {t('marketsPage.trending.badge', { defaultValue: 'Trending' })}
+                    {' • '}
+                    {marketLabel}
+                  </span>
+                </span>
+                <h2 className="line-clamp-2 text-base font-bold leading-tight text-white [text-shadow:0_2px_8px_rgba(0,0,0,0.9)] sm:text-lg">
+                  {item.title}
+                </h2>
+                <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5">
+                  {priceLabel ? (
+                    <span className="text-sm font-black text-white [text-shadow:0_2px_8px_rgba(0,0,0,0.9)] sm:text-base">{priceLabel}</span>
+                  ) : null}
+                  {item.sellerName ? (
+                    <span className="text-[10px] font-semibold text-white/85 [text-shadow:0_1px_6px_rgba(0,0,0,0.9)] sm:text-[11px]">
+                      {t('marketsPage.trending.bySeller', { sellerName: item.sellerName, defaultValue: `by ${item.sellerName}` })}
+                    </span>
+                  ) : null}
+                </div>
+                <Link
+                  to={itemDetailsLink}
+                  className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-[var(--svs-primary)] px-4 py-1.5 text-xs font-extrabold text-white shadow-md transition hover:bg-[var(--svs-primary-strong)]"
+                >
+                  {t('marketsPage.trending.viewItem', { defaultValue: 'View item' })}
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {slideCount > 1 ? (
+        <>
+          <button
+            type="button"
+            onClick={() => goTo(activeIndex - 1)}
+            aria-label={t('marketsPage.trending.previous', { defaultValue: 'Previous trending listing' })}
+            className="absolute left-2 top-1/2 z-20 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm transition hover:bg-black/60 sm:left-3 sm:h-10 sm:w-10"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => goTo(activeIndex + 1)}
+            aria-label={t('marketsPage.trending.next', { defaultValue: 'Next trending listing' })}
+            className="absolute right-2 top-1/2 z-20 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm transition hover:bg-black/60 sm:right-3 sm:h-10 sm:w-10"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+          <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 gap-1.5">
+            {items.map((item, index) => (
+              <button
+                key={`trending-dot-${item.id || index}`}
+                type="button"
+                onClick={() => goTo(index)}
+                aria-label={t('marketsPage.trending.goToSlide', { index: index + 1, defaultValue: `Go to trending listing ${index + 1}` })}
+                className={`h-1.5 rounded-full transition-all duration-500 ${
+                  index === activeIndex ? 'w-6 bg-white' : 'w-1.5 bg-white/50'
+                }`}
+              />
+            ))}
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+};
+
+const MarketsPage = ({ sellerItems = [] }) => {
   const { t } = useTranslation();
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
 
+  // Trending = most recently listed seller products that carry an image and
+  // title, newest first, capped so the carousel stays snappy.
+  const trendingSellerItems = useMemo(() => {
+    return (Array.isArray(sellerItems) ? sellerItems : [])
+      .filter((item) => item && item.image && (item.title || item.titleKey))
+      .slice()
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+      .slice(0, 8);
+  }, [sellerItems]);
+
+  const hasTrendingItems = trendingSellerItems.length > 0;
+
   useEffect(() => {
-    if (MARKETS_HERO_SLIDES.length <= 1) {
+    if (hasTrendingItems || MARKETS_HERO_SLIDES.length <= 1) {
       return undefined;
     }
 
@@ -20478,7 +20672,7 @@ const MarketsPage = () => {
     }, 3000);
 
     return () => clearInterval(intervalId);
-  }, []);
+  }, [hasTrendingItems]);
 
   const orderedMarketLinks = useMemo(
     () => {
@@ -20507,42 +20701,45 @@ const MarketsPage = () => {
           Global, National &amp; Local Markets
         </h1>
       </div>
-      <MarketsInstallHeroBanner />
-      <div className="relative overflow-hidden rounded-2xl border border-[var(--svs-border)] p-6 pb-10 shadow-[0_4px_8px_rgba(0,0,0,0.1)] sm:p-8 sm:pb-12">
-        {MARKETS_HERO_SLIDES.map((slideUrl, slideIndex) => (
+      {hasTrendingItems ? (
+        <TrendingSellerHero items={trendingSellerItems} />
+      ) : (
+        <div className="relative overflow-hidden rounded-2xl border border-[var(--svs-border)] p-6 pb-10 shadow-[0_4px_8px_rgba(0,0,0,0.1)] sm:p-8 sm:pb-12">
+          {MARKETS_HERO_SLIDES.map((slideUrl, slideIndex) => (
+            <div
+              key={slideUrl}
+              className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out"
+              style={{
+                backgroundImage: `url('${slideUrl}')`,
+                opacity: slideIndex === activeHeroSlide ? 1 : 0,
+              }}
+              aria-hidden="true"
+            />
+          ))}
           <div
-            key={slideUrl}
-            className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out"
-            style={{
-              backgroundImage: `url('${slideUrl}')`,
-              opacity: slideIndex === activeHeroSlide ? 1 : 0,
-            }}
+            className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/55 to-black/30"
             aria-hidden="true"
           />
-        ))}
-        <div
-          className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/55 to-black/30"
-          aria-hidden="true"
-        />
-        <div className="relative z-10">
-          <div className="mt-6 flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-white/30 bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">{t('marketsPage.tags.superService')}</span>
-            <span className="rounded-full border border-white/30 bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">{t('marketsPage.tags.superShopping')}</span>
-            <span className="rounded-full border border-white/30 bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">{t('marketsPage.tags.intelligentPlatform')}</span>
-          </div>
-          <div className="mt-5 flex gap-1.5" aria-hidden="true">
-            {MARKETS_HERO_SLIDES.map((slideUrl, slideIndex) => (
-              <span
-                key={`indicator-${slideUrl}`}
-                className={`h-1.5 rounded-full transition-all duration-500 ${
-                  slideIndex === activeHeroSlide ? 'w-6 bg-white' : 'w-1.5 bg-white/50'
-                }`}
-              />
-            ))}
-          </div>
+          <div className="relative z-10">
+            <div className="mt-6 flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-white/30 bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">{t('marketsPage.tags.superService')}</span>
+              <span className="rounded-full border border-white/30 bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">{t('marketsPage.tags.superShopping')}</span>
+              <span className="rounded-full border border-white/30 bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">{t('marketsPage.tags.intelligentPlatform')}</span>
+            </div>
+            <div className="mt-5 flex gap-1.5" aria-hidden="true">
+              {MARKETS_HERO_SLIDES.map((slideUrl, slideIndex) => (
+                <span
+                  key={`indicator-${slideUrl}`}
+                  className={`h-1.5 rounded-full transition-all duration-500 ${
+                    slideIndex === activeHeroSlide ? 'w-6 bg-white' : 'w-1.5 bg-white/50'
+                  }`}
+                />
+              ))}
+            </div>
 
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="mt-6 grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-3">
         {gridMarketLinks.map((market, index) => {
@@ -30095,19 +30292,6 @@ const SimpleContentPage = ({ title, description }) => (
   </PageFrame>
 );
 
-const ClickableLogo = ({ className = 'h-10 w-auto', roundedClassName = 'rounded-lg' }) => {
-  return (
-    <Link
-      to="/logo"
-      className={`shrink-0 transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--svs-primary)] focus:ring-offset-2 ${roundedClassName}`.trim()}
-      aria-label="Open SVS logo page"
-      title="Tap to view logo full screen"
-    >
-      <img src={logo} alt="SVS E-Commerce" className={`${className} ${roundedClassName}`.trim()} />
-    </Link>
-  );
-};
-
 const LogoFullscreenPage = () => {
   const navigate = useNavigate();
 
@@ -32576,47 +32760,6 @@ const InstallAppBanner = () => {
   );
 };
 
-// Compact install button used at the top of the Markets hero.
-const MarketsInstallHeroBanner = () => {
-  const { canPrompt, standalone, isIos, promptInstall } = usePwaInstall();
-  const [showHelp, setShowHelp] = useState(false);
-  if (standalone) return null;
-  const handleClick = () => {
-    if (canPrompt) { promptInstall(); return; }
-    setShowHelp((value) => !value);
-  };
-  return (
-    <div className="mb-4 flex flex-col gap-2 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-center gap-2.5">
-        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--svs-primary)] text-white">
-          <Smartphone className="h-5 w-5" aria-hidden="true" />
-        </span>
-        <div>
-          <p className="text-sm font-extrabold text-[var(--svs-primary-strong)]">Get the SVS App</p>
-          <p className="text-[11px] text-[var(--svs-muted)]">
-            {isIos
-              ? 'In Safari: Share → “Add to Home Screen”.'
-              : 'Install for instant access, offline browsing &amp; push updates.'}
-          </p>
-        </div>
-      </div>
-      <button
-        type="button"
-        onClick={handleClick}
-        className="inline-flex shrink-0 items-center justify-center gap-1.5 self-start rounded-full bg-[var(--svs-primary)] px-4 py-2 text-sm font-extrabold text-white shadow-sm transition hover:bg-[var(--svs-primary-strong)] sm:self-auto"
-      >
-        <Download className="h-4 w-4" aria-hidden="true" />
-        Install App
-      </button>
-      {showHelp && !isIos ? (
-        <p className="basis-full text-[11px] text-[var(--svs-muted)] sm:mt-1">
-          Open your browser menu (⋮) and choose “Install app” / “Add to Home screen”.
-        </p>
-      ) : null}
-    </div>
-  );
-};
-
 const FloatingSupportChatButton = () => (
   <Link
     to="/support/chat"
@@ -32635,7 +32778,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
   <Routes>
     <Route path="/" element={<HomePage />} />
     <Route path="/logo" element={<LogoFullscreenPage />} />
-    <Route path="/markets" element={<MarketsPage />} />
+    <Route path="/markets" element={<MarketsPage sellerItems={sellerItems} />} />
     <Route path="/offers" element={<OffersPage />} />
     <Route path="/orders" element={<OrdersPage orders={orders} cartItems={cartItems} onCancelOrder={onCancelOrder} />} />
     <Route path="/orders/:orderId/track" element={<TrackOrderPage orders={orders} onAdminSetOrderStatus={onAdminSetOrderStatus} />} />
