@@ -335,6 +335,9 @@ const MARKET_FIELD_SPEC = {
       { name: 'availability', label: 'Availability', type: 'select', options: ['Morning', 'Afternoon', 'Evening', 'Full Day', 'By Appointment'] },
       { name: 'serviceArea', label: 'Service area / City', type: 'text', required: true, placeholder: 'e.g. Cape Town, Durban, Lagos' },
       { name: 'brand', label: 'Provider name / Brand', type: 'text', placeholder: 'e.g. SVS Cleaners' },
+      { name: 'languages', label: 'Languages spoken', type: 'text', placeholder: 'e.g. English, Zulu, French' },
+      { name: 'servicesOffered', label: 'Services offered', type: 'text', placeholder: 'e.g. Nursing Care, Wound Care, Medication Management' },
+      { name: 'certifications', label: 'Certifications & qualifications', type: 'textarea', placeholder: 'One per line, e.g. Registered Nurse (RN)\nCPR & First Aid Certified' },
     ],
   },
   // Aligned with WellnessPage. Page renders CardGrid; filter facets used elsewhere
@@ -3179,9 +3182,11 @@ const homeCareRelatedProviders = [
   },
 ];
 
-const HomeCareProviderDetailPage = () => {
+const HomeCareProviderDetailPage = ({ sellerItems = [] }) => {
   const navigate = useNavigate();
   const { providerId } = useParams();
+  // Subscribe to buyer currency so seller-listed prices format correctly.
+  useBuyerCurrency();
   const carouselRef = useRef(null);
   const [bookingSelection, setBookingSelection] = useState('');
   const [selectedOptions, setSelectedOptions] = useState(() => {
@@ -3195,6 +3200,46 @@ const HomeCareProviderDetailPage = () => {
   });
 
   const activeProvider = useMemo(() => {
+    // Seller-listed services carry all their captured profile fields. Resolve
+    // them first so a real listing renders a full profile from collected data.
+    const sellerHomeCareItems = getSellerItemsForMarket(sellerItems, 'homeCare');
+    const sellerItem = sellerHomeCareItems.find((item) => `seller-home-care-${item.id}` === providerId);
+    if (sellerItem) {
+      const splitList = (value) => String(value || '')
+        .split(/[\n,]/)
+        .map((entry) => entry.trim())
+        .filter(Boolean);
+      const languages = splitList(sellerItem.languages);
+      const servicesOffered = splitList(sellerItem.servicesOffered);
+      const certifications = splitList(sellerItem.certifications);
+      const priceLabel = sellerItem.price
+        ? getSalePrices(sellerItem.price, getItemSaleDiscountRate(sellerItem), sellerItem.currency || null).nowPrice
+        : '';
+      const billingCycle = sellerItem.serviceType || 'Service';
+      return {
+        name: sellerItem.title || 'Home-Care Service',
+        badge: sellerItem.category ? `${sellerItem.category} Specialist` : 'Home-Care Service',
+        ratingLabel: 'New',
+        experienceLevel: sellerItem.experience || 'Experienced provider',
+        serviceType: sellerItem.serviceType || 'Flexible',
+        location: sellerItem.serviceArea || sellerItem.location || sellerItem.sellerName || 'SVS Seller',
+        image: sellerItem.image || 'https://images.pexels.com/photos/3846022/pexels-photo-3846022.jpeg?auto=compress&cs=tinysrgb&w=1200',
+        aboutText: sellerItem.description || 'This provider has not added an about section yet.',
+        languages: languages.length ? languages : ['English'],
+        servicesOffered: servicesOffered.length ? servicesOffered : (sellerItem.category ? [sellerItem.category] : []),
+        certifications: certifications.length ? certifications : (sellerItem.experience ? [sellerItem.experience] : []),
+        availabilityWindow: sellerItem.availability || '',
+        pricingSections: priceLabel
+          ? [{
+            id: 'seller-service',
+            title: 'Service Pricing',
+            options: [{ id: 'seller-service-option', label: billingCycle, price: priceLabel, defaultSelected: true }],
+          }]
+          : [],
+        isSellerListing: true,
+      };
+    }
+
     const providerFromMainList = homeCareProviders.find((provider) => provider.id === providerId);
     if (providerFromMainList) {
       return {
@@ -3228,7 +3273,7 @@ const HomeCareProviderDetailPage = () => {
     }
 
     return homeCareProviderDetailPrototype;
-  }, [providerId]);
+  }, [providerId, sellerItems]);
 
   const toggleOption = (optionId) => {
     setSelectedOptions((current) => ({
@@ -3348,7 +3393,7 @@ const HomeCareProviderDetailPage = () => {
         <section className="border-b border-[#E5E7EB] py-8">
           <h2 className="text-[20px] font-bold text-[#0052CC]">Certifications &amp; Experience</h2>
           <ul className="mt-4 space-y-2 text-sm text-[#334155]">
-            {Array.isArray(homeCareCertifications) && homeCareCertifications.map((item) => (
+            {(Array.isArray(activeProvider.certifications) && activeProvider.certifications.length ? activeProvider.certifications : homeCareCertifications).map((item) => (
               <li key={`cert-${item}`} className="flex items-start gap-2">
                 <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#16A34A] text-xs font-bold text-white">✓</span>
                 <span>{typeof item === 'object' ? JSON.stringify(item) : item}</span>
@@ -3360,7 +3405,7 @@ const HomeCareProviderDetailPage = () => {
         <section className="border-b border-[#E5E7EB] py-8">
           <h2 className="text-[20px] font-bold text-[#0052CC]">Services &amp; Pricing</h2>
           <div className="mt-5 space-y-4">
-            {Array.isArray(homeCarePricingSections) && homeCarePricingSections.map((section) => (
+            {(Array.isArray(activeProvider.pricingSections) && activeProvider.pricingSections.length ? activeProvider.pricingSections : homeCarePricingSections).map((section) => (
               <article key={section.id} className="rounded-xl border border-[#E5E7EB] bg-[#F0F9FF] p-4">
                 <h3 className="text-lg font-bold text-[#0f172a]">{typeof section.title === 'object' ? JSON.stringify(section.title) : section.title}</h3>
                 <div className="mt-4 space-y-3">
@@ -14815,7 +14860,7 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
   );
 };
 
-const HomeCarePage = ({ sellerItems = [], onOpenItemDetails }) => {
+const HomeCarePage = ({ sellerItems = [] }) => {
   const [selectedCountry, setSelectedCountry] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
   const [selectedAvailability, setSelectedAvailability] = useState('Any');
@@ -14930,22 +14975,6 @@ const HomeCarePage = ({ sellerItems = [], onOpenItemDetails }) => {
   ]);
 
   const handleOpenProvider = (provider) => {
-    if (provider.isSellerListing) {
-      const sourceItem = provider.sourceItem;
-
-      onOpenItemDetails?.({
-        title: sourceItem?.title || provider.name,
-        image: sourceItem?.image || provider.image,
-        images: sourceItem?.images || (sourceItem?.image ? [sourceItem.image] : []),
-        marketName: 'Book @ Home-Care Services',
-        details: provider.experience || provider.location,
-        priceLabel: sourceItem?.price ? getSalePrices(sourceItem.price).nowPrice : '',
-        cartItem: null,
-        wishlistItem: null,
-      });
-      return;
-    }
-
     navigate(`/home-care/provider/${provider.id}`);
   };
 
@@ -19072,6 +19101,9 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
     availability: '',
     serviceArea: '',
     bookings: '',
+    languages: '',
+    servicesOffered: '',
+    certifications: '',
     description: '',
   }));
   const [imageFiles, setImageFiles] = useState([]);
@@ -19211,7 +19243,8 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
     setMessageType('success');
     setFormData({
       title: '', category: '', brand: '', currency: '', price: '', serviceType: '',
-      professionalPreference: '', experience: '', availability: '', serviceArea: '', bookings: '', description: '',
+      professionalPreference: '', experience: '', availability: '', serviceArea: '', bookings: '',
+      languages: '', servicesOffered: '', certifications: '', description: '',
     });
     setImageFiles([]);
     setIsSubmitting(false);
@@ -19321,6 +19354,27 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
               <div className="sm:col-span-2">
                 <label htmlFor="hc-serviceArea" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Service area / City <span className="text-rose-500">*</span></label>
                 <input id="hc-serviceArea" name="serviceArea" value={formData.serviceArea} onChange={handleChange} required placeholder="e.g. Cape Town, Durban, Lagos" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+            </div>
+
+            {/* Profile details shown on the listing page */}
+            <h2 className="mt-6 text-base font-bold text-[var(--svs-text)]">Profile details</h2>
+            <p className="mt-0.5 text-xs text-[var(--svs-muted)]">These appear on your public service profile so buyers can trust and book you.</p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="hc-languages" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Languages spoken</label>
+                <input id="hc-languages" name="languages" value={formData.languages} onChange={handleChange} placeholder="e.g. English, Zulu, French" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+                <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Separate with commas.</p>
+              </div>
+              <div>
+                <label htmlFor="hc-servicesOffered" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Services offered</label>
+                <input id="hc-servicesOffered" name="servicesOffered" value={formData.servicesOffered} onChange={handleChange} placeholder="e.g. Nursing Care, Wound Care" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+                <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Separate with commas.</p>
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="hc-certifications" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Certifications &amp; qualifications</label>
+                <textarea id="hc-certifications" name="certifications" value={formData.certifications} onChange={handleChange} rows={3} placeholder="One per line, e.g. Registered Nurse (RN), CPR & First Aid Certified" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+                <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Add one per line.</p>
               </div>
             </div>
 
@@ -33187,8 +33241,8 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/secondhand-central" element={<SecondHandPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/secondhand-central/product/:itemId" element={<SecondHandProductDetailPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} />} />
     <Route path="/secondhand-central/:categoryKey" element={<SecondHandPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
-    <Route path="/home-care" element={<HomeCarePage sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} />} />
-    <Route path="/home-care/provider/:providerId" element={<HomeCareProviderDetailPage />} />
+    <Route path="/home-care" element={<HomeCarePage sellerItems={sellerItems} />} />
+    <Route path="/home-care/provider/:providerId" element={<HomeCareProviderDetailPage sellerItems={sellerItems} />} />
     <Route path="/hardware-software" element={<HardwareSoftwarePage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/mobility-vehicles" element={<MobilityVehiclesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/natural-resources-minerals" element={<NaturalResourcesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
