@@ -8647,7 +8647,13 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
           >
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
-              type="search"
+              type="text"
+              inputMode="search"
+              enterKeyHint="search"
+              dir="auto"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               onFocus={() => setIsSearchFocused(true)}
@@ -26253,7 +26259,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
         <div className="border-b border-[var(--svs-border)] bg-gradient-to-r from-[var(--svs-primary)] via-[var(--svs-primary-strong)] to-[var(--svs-primary)] px-3 py-2.5 text-white sm:px-7 sm:py-4">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <h1 className="truncate text-base font-black sm:text-2xl">Let&rsquo;s Talk Business</h1>
+              <h1 className="truncate text-lg font-black sm:text-3xl">Let&rsquo;s Talk Business</h1>
               <p className="mt-0.5 hidden text-[11px] text-cyan-50 sm:block sm:text-xs">
                 Chat, negotiate, share media, send offers &amp; close deals — all in one place.
               </p>
@@ -33209,14 +33215,14 @@ const InstallAppBanner = () => {
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-1.5 px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div className="flex items-center gap-2">
           <Smartphone className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" aria-hidden="true" />
-          <p className="text-[12px] font-semibold leading-tight sm:text-sm">
+          <p className="text-[11px] font-semibold leading-tight sm:text-xs">
             Install the SVS app for a faster, full-screen shopping &amp; chat experience.
           </p>
         </div>
         <button
           type="button"
           onClick={handleClick}
-          className="inline-flex shrink-0 items-center justify-center gap-1.5 self-start rounded-full bg-white px-3.5 py-1.5 text-[12px] font-extrabold text-[var(--svs-primary-strong)] shadow-sm transition hover:bg-cyan-50 sm:self-auto sm:text-sm"
+          className="inline-flex shrink-0 items-center justify-center gap-1.5 self-start rounded-full bg-white px-3.5 py-1.5 text-[11px] font-extrabold text-[var(--svs-primary-strong)] shadow-sm transition hover:bg-cyan-50 sm:self-auto sm:text-xs"
         >
           <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
           Install App
