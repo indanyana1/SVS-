@@ -2026,6 +2026,39 @@ const stationeryItems = [
 // Picks" band at the bottom of the stationery page.
 const STATIONERY_FEATURED_IDS = ['s1', 's15', 's16'];
 
+// Maps the seller-listing stationery category options onto the StationeryPage
+// filter taxonomy (Product Category + Product Type) so items added through the
+// seller UI slot into the same filters as the curated catalogue.
+const STATIONERY_SELLER_CATEGORY_MAP = {
+  Pens: { category: 'Writing Instruments', productType: 'Pens & Pencils' },
+  Pencils: { category: 'Writing Instruments', productType: 'Pens & Pencils' },
+  Books: { category: 'Paper Products', productType: 'Notebooks & Journals' },
+  'Notebooks & Paper': { category: 'Paper Products', productType: 'Notebooks & Journals' },
+  'Invoice Books': { category: 'Paper Products', productType: 'Paper Products' },
+  'Office Supplies': { category: 'Office Supplies', productType: 'Desk Accessories' },
+  'Art & Craft': { category: 'School Supplies', productType: 'Art & Drawing Supplies' },
+  'Storage & Filing': { category: 'Filing & Storage', productType: 'Filing & Organization' },
+  'Printing & Toner': { category: 'Computers & Accessories', productType: 'Desk Accessories' },
+  'School Sets': { category: 'School Supplies', productType: 'Pens & Pencils' },
+};
+
+// Normalizes a seller-created stationery listing so it carries every filter
+// dimension the StationeryPage sidebar relies on (category, productType,
+// requirement). Seller listings only capture category/brand/colour/pack size,
+// so we derive the missing fields from the chosen category and fall back to
+// sensible defaults — ensuring seller items appear in and respond to every
+// filter group, not just Product Category and Brand.
+const normalizeStationerySellerItem = (item) => {
+  if (!String(item?.id || '').startsWith('seller-')) return item;
+  const mapping = STATIONERY_SELLER_CATEGORY_MAP[item.category] || null;
+  return {
+    ...item,
+    category: mapping?.category || item.category || 'Office Supplies',
+    productType: item.productType || mapping?.productType || 'Desk Accessories',
+    requirement: item.requirement || 'Individual Purchase',
+  };
+};
+
 // Builds the rich item-detail payload for a stationery product so the detail
 // modal shows Product Overview, Key Highlights, a Product Details table and
 // reviews — mirroring the prototype. Values are derived from the listing
@@ -11980,8 +12013,12 @@ const TraditionalMedicinesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wis
 
 const StationeryPage = ({ onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
-  useBuyerCurrency();
-  const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'stationery'), ...stationeryItems], [sellerItems]);
+  const { code: buyerCurrencyCode } = useBuyerCurrency();
+  const formatPriceCap = (amount) => formatAmountInCurrency(amount, buyerCurrencyCode);
+  const marketItems = useMemo(() => [
+    ...getSellerItemsForMarket(sellerItems, 'stationery').map(normalizeStationerySellerItem),
+    ...stationeryItems,
+  ], [sellerItems]);
 
   const buildCartItem = (item) => createCartItem({
     ...item,
@@ -11996,10 +12033,16 @@ const StationeryPage = ({ onToggleWishlist, wishlistItemIds = [], sellerItems = 
     details: `${item.category || 'Seller item'} • ${item.sellerName || 'Ready for school and office use'}`,
   });
 
-  const parsePrice = (value) => {
-    const n = Number(String(value ?? '').replace(/[^0-9.]/g, ''));
-    return Number.isFinite(n) ? n : 0;
-  };
+  // Resolve every item's price into the buyer's selected currency (applying
+  // the same sale discount shown on the cards) so seller listings priced in
+  // ZAR/NGN/etc. sort and filter on equal footing with the USD catalogue.
+  const getItemPriceValue = useCallback(
+    (item) => getNumericPriceValue(item.price, SALE_DISCOUNT_RATE, item.currency || null),
+    // Recompute when the buyer currency changes; getNumericPriceValue reads the
+    // active currency from module state, so the dependency isn't visible to lint.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [buyerCurrencyCode],
+  );
 
   // Order option lists so the prototype's familiar groupings appear first,
   // with any extra values (e.g. from seller listings) appended afterwards.
@@ -12025,9 +12068,9 @@ const StationeryPage = ({ onToggleWishlist, wishlistItemIds = [], sellerItems = 
   ), [marketItems]);
 
   const priceCeiling = useMemo(() => {
-    const max = marketItems.reduce((highest, item) => Math.max(highest, parsePrice(item.price)), 0);
+    const max = marketItems.reduce((highest, item) => Math.max(highest, getItemPriceValue(item)), 0);
     return Math.max(50, Math.ceil(max / 10) * 10);
-  }, [marketItems]);
+  }, [marketItems, getItemPriceValue]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategories, setSelectedCategories] = useState([]);
@@ -12035,6 +12078,7 @@ const StationeryPage = ({ onToggleWishlist, wishlistItemIds = [], sellerItems = 
   const [selectedTypes, setSelectedTypes] = useState([]);
   const [selectedRequirements, setSelectedRequirements] = useState([]);
   const [maxPrice, setMaxPrice] = useState(null);
+  const [sortBy, setSortBy] = useState('featured');
   const [showFilters, setShowFilters] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const resultsRef = useRef(null);
@@ -12057,11 +12101,33 @@ const StationeryPage = ({ onToggleWishlist, wishlistItemIds = [], sellerItems = 
         && matchesGroup(selectedBrands, item.brand)
         && matchesGroup(selectedTypes, item.productType)
         && matchesGroup(selectedRequirements, item.requirement)
-        && parsePrice(item.price) <= activePriceCap;
+        && getItemPriceValue(item) <= activePriceCap;
     });
-  }, [marketItems, searchQuery, selectedCategories, selectedBrands, selectedTypes, selectedRequirements, activePriceCap]);
+  }, [marketItems, searchQuery, selectedCategories, selectedBrands, selectedTypes, selectedRequirements, activePriceCap, getItemPriceValue]);
 
-  const visibleItems = showAll ? filteredItems : filteredItems.slice(0, 6);
+  const getItemRating = useCallback((item) => getProductReviewSummary(
+    productReviewSummaryMap,
+    getCollectionItemId('/stationery-office', item.id),
+  ).averageRating, [productReviewSummaryMap]);
+
+  const sortedItems = useMemo(() => {
+    const items = [...filteredItems];
+    switch (sortBy) {
+      case 'price-asc':
+        return items.sort((a, b) => getItemPriceValue(a) - getItemPriceValue(b));
+      case 'price-desc':
+        return items.sort((a, b) => getItemPriceValue(b) - getItemPriceValue(a));
+      case 'rating-desc':
+        return items.sort((a, b) => getItemRating(b) - getItemRating(a));
+      case 'name-asc':
+        return items.sort((a, b) => getTranslatedValue(t, a.titleKey, a.title)
+          .localeCompare(getTranslatedValue(t, b.titleKey, b.title)));
+      default:
+        return items;
+    }
+  }, [filteredItems, sortBy, getItemRating, getItemPriceValue, t]);
+
+  const visibleItems = showAll ? sortedItems : sortedItems.slice(0, 6);
 
   const featuredItems = useMemo(() => {
     const byId = new Map(marketItems.map((item) => [item.id, item]));
@@ -12079,6 +12145,7 @@ const StationeryPage = ({ onToggleWishlist, wishlistItemIds = [], sellerItems = 
     setSelectedTypes([]);
     setSelectedRequirements([]);
     setMaxPrice(null);
+    setSortBy('featured');
     setShowAll(false);
   };
 
@@ -12262,8 +12329,8 @@ const StationeryPage = ({ onToggleWishlist, wishlistItemIds = [], sellerItems = 
             aria-label="Maximum price"
           />
           <div className="mt-1 flex items-center justify-between text-[11px] font-semibold text-slate-500">
-            <span>{formatAmountInCurrency(0)}</span>
-            <span>Up to {formatAmountInCurrency(activePriceCap)}</span>
+            <span>{formatPriceCap(0)}</span>
+            <span>Up to {formatPriceCap(activePriceCap)}</span>
           </div>
         </div>
 
@@ -12289,9 +12356,26 @@ const StationeryPage = ({ onToggleWishlist, wishlistItemIds = [], sellerItems = 
 
       {/* Results */}
       <div ref={resultsRef}>
-        <p className="mb-3 text-xs font-semibold text-slate-500">
-          Showing {visibleItems.length} of {filteredItems.length} product{filteredItems.length === 1 ? '' : 's'}
-        </p>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs font-semibold text-slate-500">
+            Showing {visibleItems.length} of {filteredItems.length} product{filteredItems.length === 1 ? '' : 's'}
+          </p>
+          <label className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+            <span className="hidden sm:inline">Sort by</span>
+            <select
+              value={sortBy}
+              onChange={(event) => { setSortBy(event.target.value); setShowAll(false); }}
+              className="rounded-full border border-[#e0e7ef] bg-white py-1.5 pl-3 pr-7 text-xs font-semibold text-[#0f6674] shadow-sm outline-none transition focus:border-[#0f6674] focus:ring-2 focus:ring-[#0f6674]/20"
+              aria-label="Sort products"
+            >
+              <option value="featured">Featured</option>
+              <option value="price-asc">Price: Low to High</option>
+              <option value="price-desc">Price: High to Low</option>
+              <option value="rating-desc">Top Rated</option>
+              <option value="name-asc">Name: A to Z</option>
+            </select>
+          </label>
+        </div>
         {filteredItems.length ? (
           <>
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
