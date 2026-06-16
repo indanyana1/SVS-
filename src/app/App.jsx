@@ -26910,12 +26910,12 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                       >
                         <Trash className="h-5 w-5" aria-hidden="true" />
                       </button>
-                      <div className="flex flex-1 items-center gap-2 px-1">
+                      <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
                         <span className={`inline-block h-3 w-3 shrink-0 rounded-full bg-rose-500 ${isVoicePaused ? 'opacity-40' : 'animate-pulse'}`} aria-hidden="true" />
-                        <span className="font-mono text-sm font-bold tabular-nums text-[var(--svs-text)]">
+                        <span className="shrink-0 font-mono text-sm font-bold tabular-nums text-[var(--svs-text)]">
                           {`${String(Math.floor(voiceElapsedSec / 60)).padStart(2, '0')}:${String(voiceElapsedSec % 60).padStart(2, '0')}`}
                         </span>
-                        <span className="ml-1 truncate text-xs text-[var(--svs-muted)]">
+                        <span className="ml-1 hidden truncate text-xs text-[var(--svs-muted)] sm:inline">
                           {isVoicePaused ? 'Paused — tap play to resume' : 'Recording… slide to cancel'}
                         </span>
                       </div>
