@@ -5671,6 +5671,18 @@ const getGroceriesListingDetailsText = (item = {}) => {
 
 const SALE_DISCOUNT_RATE = 0.2;
 
+// Real seller listings carry an explicit `currency` and a `seller-` id, and
+// must be shown and charged at exactly the price the seller set (currency
+// converted only). The artificial "was/now" sale markdown is a demo device
+// reserved for the static placeholder catalogue, which never carries a
+// currency. Applying that markdown to a real listing under-prices it by
+// SALE_DISCOUNT_RATE and makes the buyer-facing price differ from what the
+// seller entered — the cause of price inconsistencies across every market.
+const isSellerListingItem = (item) => Boolean(
+  item && (item.currency || String(item.id || '').startsWith('seller-')),
+);
+const getItemSaleDiscountRate = (item) => (isSellerListingItem(item) ? 0 : SALE_DISCOUNT_RATE);
+
 const formatSaleAmount = (amount, decimals) => new Intl.NumberFormat('en-US', {
   minimumFractionDigits: decimals,
   maximumFractionDigits: decimals,
@@ -6294,7 +6306,7 @@ const useMarketplacePriceFilter = (items = [], boundsItems = null) => {
 
   const sourceForBounds = Array.isArray(boundsItems) && boundsItems.length ? boundsItems : items;
   const availablePrices = useMemo(() => sourceForBounds
-    .map((item) => getNumericPriceValue(item?.price, SALE_DISCOUNT_RATE, item?.currency || null))
+    .map((item) => getNumericPriceValue(item?.price, getItemSaleDiscountRate(item), item?.currency || null))
     // eslint-disable-next-line react-hooks/exhaustive-deps
     .filter((price) => Number.isFinite(price) && price >= 0), [sourceForBounds, buyerCurrencyCode]);
   const minimumAvailablePrice = availablePrices.length ? Math.min(...availablePrices) : 0;
@@ -6316,7 +6328,7 @@ const useMarketplacePriceFilter = (items = [], boundsItems = null) => {
   }, [maxPriceInput, minPriceInput]);
 
   const filteredItems = useMemo(() => items.filter((item) => {
-    const numericPrice = getNumericPriceValue(item?.price, SALE_DISCOUNT_RATE, item?.currency || null);
+    const numericPrice = getNumericPriceValue(item?.price, getItemSaleDiscountRate(item), item?.currency || null);
 
     if (normalizedBounds.minimumPrice !== null && numericPrice < normalizedBounds.minimumPrice) {
       return false;
@@ -6950,6 +6962,10 @@ const createSavedItem = ({ id, title, image, price, currency = null, route, mark
   const sourceCurrency = currency
     || detectCurrencyFromPriceString(String(price ?? ''))
     || _fxState.buyerCurrency;
+  // Seller listings are charged at exactly the price the seller set (currency
+  // converted only); the artificial sale markdown applies only to the static
+  // demo catalogue, so the buyer pays what the seller actually listed.
+  const discountRate = (currency || String(id || '').startsWith('seller-')) ? 0 : SALE_DISCOUNT_RATE;
   return {
     id: getCollectionItemId(route, id),
     sku: id,
@@ -6961,8 +6977,8 @@ const createSavedItem = ({ id, title, image, price, currency = null, route, mark
     sellerName,
     sellerEmail: normalizeEmail(sellerEmail),
     availableQuantity: String(id || '').startsWith('seller-') ? normalizeListingQuantity(availableQuantity, 0) : null,
-    unitPrice: getNumericPriceValue(price, SALE_DISCOUNT_RATE, sourceCurrency),
-    unitPriceLabel: getSalePrices(price, SALE_DISCOUNT_RATE, sourceCurrency).nowPrice,
+    unitPrice: getNumericPriceValue(price, discountRate, sourceCurrency),
+    unitPriceLabel: getSalePrices(price, discountRate, sourceCurrency).nowPrice,
     unitPriceCurrency: _fxState.buyerCurrency,
   };
 };
@@ -7299,7 +7315,22 @@ const getSalePrices = (price, discountRate = SALE_DISCOUNT_RATE, sourceCurrency 
 const SalePrice = ({ price, currency = null, className = '', wasClassName = '', nowClassName = '' }) => {
   const { t } = useTranslation();
   useBuyerCurrency();
-  const { wasPrice, nowPrice } = getSalePrices(price, SALE_DISCOUNT_RATE, currency);
+  // A provided currency marks a real seller listing, which is shown at exactly
+  // the price the seller set (currency converted only) with no artificial
+  // "was/now" markdown. Static demo items carry no currency and keep the sale.
+  const isRealListing = Boolean(currency);
+  const discountRate = isRealListing ? 0 : SALE_DISCOUNT_RATE;
+  const { wasPrice, nowPrice } = getSalePrices(price, discountRate, currency);
+
+  if (isRealListing) {
+    return (
+      <span className={`inline-flex items-center gap-2 ${className}`.trim()}>
+        <span className={`font-bold text-[var(--svs-primary-strong)] ${nowClassName}`.trim()}>
+          {nowPrice}
+        </span>
+      </span>
+    );
+  }
 
   return (
     <span className={`inline-flex items-center gap-2 ${className}`.trim()}>
@@ -9580,7 +9611,7 @@ const ECommercePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
             images: item.images || (item.image ? [item.image] : []),
             marketName: t('markets.ecommerce'),
             details: item.subtitle || item.description || item.sellerName,
-            priceLabel: getSalePrices(item.price).nowPrice,
+            priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
             cartItem: buildCartItem(item),
             wishlistItem,
           });
@@ -10544,7 +10575,7 @@ const VotingClientsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIt
             images: item.images || (item.image ? [item.image] : []),
             marketName: t('markets.votingClients'),
             details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Beauty, fitness & sports'}`,
-            priceLabel: getSalePrices(item.price).nowPrice,
+            priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
             cartItem: buildCartItem(item),
             wishlistItem,
           });
@@ -10600,7 +10631,7 @@ const VotingProvidersPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
             images: item.images || (item.image ? [item.image] : []),
             marketName: t('markets.votingProviders'),
             details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Jewellery & accessories'}`,
-            priceLabel: getSalePrices(item.price).nowPrice,
+            priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
             cartItem: buildCartItem(item),
             wishlistItem,
           });
@@ -10795,7 +10826,7 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
                       <div className="flex flex-1 flex-col p-3 sm:p-5">
                         <h3 className="mb-1 text-sm font-bold leading-tight text-[#0f6674] group-hover:text-[#33b9f2] sm:text-xl">{itemTitle}</h3>
                         <div className="mb-2 hidden text-base font-medium text-[#374151] sm:block">{getGroceriesListingMetaText(item)}</div>
-                        <div className="mb-2 text-base font-bold text-[#0f6674] sm:text-lg">{getSalePrices(item.price).nowPrice}</div>
+                        <div className="mb-2 text-base font-bold text-[#0f6674] sm:text-lg">{getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice}</div>
                         {availableQuantity !== null ? (
                           <p className="mb-2 hidden text-xs text-[#0f6674]/70 sm:block">
                             Quantity: {availableQuantity}
@@ -11425,7 +11456,7 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
   // and so the slider scale matches the displayed prices.
   const priceMax = useMemo(() => {
     const max = marketItems.reduce((m, i) => {
-      const n = getNumericPriceValue(i?.price, SALE_DISCOUNT_RATE, i?.currency || null);
+      const n = getNumericPriceValue(i?.price, getItemSaleDiscountRate(i), i?.currency || null);
       return Number.isFinite(n) && n > m ? n : m;
     }, 0);
     return Math.max(20, Math.ceil(max));
@@ -11476,7 +11507,7 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
       || availabilities.some(a => selectedAvailability.includes(a))
     );
     const matchPrice = (() => {
-      const n = getNumericPriceValue(item?.price, SALE_DISCOUNT_RATE, item?.currency || null);
+      const n = getNumericPriceValue(item?.price, getItemSaleDiscountRate(item), item?.currency || null);
       return Number.isFinite(n) && n >= priceRange[0] && n <= priceRange[1];
     })();
     const matchSearch = !search || item.title.toLowerCase().includes(search.toLowerCase());
@@ -11971,7 +12002,7 @@ const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
           images: item.images || (item.image ? [item.image] : []),
           marketName: t('markets.wellness'),
           details: item.description || item.sellerName,
-          priceLabel: getSalePrices(item.price).nowPrice,
+          priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
           cartItem: buildCartItem(item),
           wishlistItem,
         });
@@ -12027,7 +12058,7 @@ const TraditionalMedicinesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wis
           images: item.images || (item.image ? [item.image] : []),
           marketName: t('markets.traditionalMedicines'),
           details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Traditional herbal listing'}`,
-          priceLabel: getSalePrices(item.price).nowPrice,
+          priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
           cartItem: buildCartItem(item),
           wishlistItem,
         });
@@ -12065,7 +12096,7 @@ const StationeryPage = ({ onToggleWishlist, wishlistItemIds = [], sellerItems = 
   // the same sale discount shown on the cards) so seller listings priced in
   // ZAR/NGN/etc. sort and filter on equal footing with the USD catalogue.
   const getItemPriceValue = useCallback(
-    (item) => getNumericPriceValue(item.price, SALE_DISCOUNT_RATE, item.currency || null),
+    (item) => getNumericPriceValue(item.price, getItemSaleDiscountRate(item), item.currency || null),
     // Recompute when the buyer currency changes; getNumericPriceValue reads the
     // active currency from module state, so the dependency isn't visible to lint.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -12206,7 +12237,7 @@ const StationeryPage = ({ onToggleWishlist, wishlistItemIds = [], sellerItems = 
         id: other.id,
         title: getTranslatedValue(t, other.titleKey, other.title),
         image: other.image,
-        price: getSalePrices(other.price, SALE_DISCOUNT_RATE, other.currency).nowPrice,
+        price: getSalePrices(other.price, getItemSaleDiscountRate(other), other.currency).nowPrice,
         productType: other.productType,
         category: other.category,
         brand: other.brand,
@@ -12221,7 +12252,7 @@ const StationeryPage = ({ onToggleWishlist, wishlistItemIds = [], sellerItems = 
       images: item.images || (item.image ? [item.image] : []),
       marketName: t('markets.stationery'),
       details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Ready for school and office use'}`,
-      priceLabel: getSalePrices(item.price).nowPrice,
+      priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
       productType: item.productType,
       category: item.category,
       brand: item.brand,
@@ -12789,7 +12820,7 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
         id: candidate.id,
         title: getTranslatedValue(t, candidate.titleKey, candidate.title),
         image: candidate.image,
-        priceLabel: getSalePrices(candidate.price).nowPrice,
+        priceLabel: getSalePrices(candidate.price, getItemSaleDiscountRate(candidate), candidate.currency || null).nowPrice,
         sellerName: candidate.normalizedVendor || candidate.sellerName || '',
         location: candidate.location || '',
         category: candidate.category || '',
@@ -12805,7 +12836,7 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
       sellerName: item.normalizedVendor || item.sellerName || '',
       location: item.location || '',
       description: item.description || '',
-      priceLabel: getSalePrices(item.price).nowPrice,
+      priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
       details: `${item.normalizedCategory || item.category || 'Informal listing'} • ${item.description || item.normalizedVendor || 'Local informal seller'}`,
       cartItem: buildCartItem(item),
       wishlistItem: buildWishlistItem(item),
@@ -14648,7 +14679,7 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
         images: item.images || (item.image ? [item.image] : []),
         marketName: t('markets.constructionTools'),
         details: buildDetailsText(item),
-        priceLabel: getSalePrices(item.price).nowPrice,
+        priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
         detailsTable: {
           Category: item.category || 'Construction',
           Subcategory: item.subcategory || 'General',
@@ -15287,7 +15318,7 @@ const HardwareSoftwareFilterCheckbox = ({ label, checked, onChange }) => (
 );
 
 const HardwareSoftwareProductCard = ({ item, isWishlisted, onAddToCart, onToggleWishlist, onOpenDetails, reviewSummary }) => {
-  const { nowPrice } = getSalePrices(item.price, SALE_DISCOUNT_RATE, item.currency);
+  const { nowPrice } = getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency);
   const rating = reviewSummary?.average || item.rating || 4.8;
   const reviewsCount = reviewSummary?.count || item.reviewsCount || 145;
   return (
@@ -15598,7 +15629,7 @@ const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       images: item.images || (item.image ? [item.image] : []),
       marketName: t('markets.hardwareSoftware'),
       details: item.description || item.subtitle || item.sellerName,
-      priceLabel: getSalePrices(item.price, SALE_DISCOUNT_RATE, item.currency).nowPrice,
+      priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency).nowPrice,
       priceUnit: item.priceUnit,
       productType: item.productType,
       category: item.category,
@@ -15788,7 +15819,7 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
           images: item.images || (item.image ? [item.image] : []),
           marketName: t('markets.mobilityVehicles'),
           details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Transport listing'}`,
-          priceLabel: getSalePrices(item.price).nowPrice,
+          priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
           cartItem: buildCartItem(item),
           wishlistItem,
         });
@@ -16131,7 +16162,7 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
         images: item.images || (item.image ? [item.image] : []),
         marketName: t('markets.fashionStyle'),
         details: buildDetailsText(item),
-        priceLabel: getSalePrices(item.price).nowPrice,
+        priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
         sizeOptions: getItemSizeOptions(item),
         defaultSelectedSize: item.selectedSize || getItemSizeOptions(item)[0] || '',
         detailsTable: {
@@ -16307,7 +16338,7 @@ const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
           images: item.images || (item.image ? [item.image] : []),
           marketName: t('markets.naturalResources'),
           details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Resource listing'}`,
-          priceLabel: getSalePrices(item.price).nowPrice,
+          priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
           cartItem: buildCartItem(item),
           wishlistItem,
         });
@@ -20401,7 +20432,7 @@ const SafetyPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds =
             images: item.images || (item.image ? [item.image] : []),
             marketName: t('markets.safety'),
             details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Toys & kids'}`,
-            priceLabel: getSalePrices(item.price).nowPrice,
+            priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
             cartItem: buildCartItem(item),
             wishlistItem,
           });
