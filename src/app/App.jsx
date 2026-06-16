@@ -1829,44 +1829,241 @@ const groceries = [
   },
 ];
 
+// Stationery & Office Equipment catalogue. Each item carries the four filter
+// dimensions surfaced in the StationeryPage sidebar: `category` (Product
+// Category), `brand`, `productType` and `requirement` (Business Requirement)
+// so the listing can be filtered exactly like the prototype.
+const STATIONERY_IMG = {
+  pens: 'https://images.pexels.com/photos/261763/pexels-photo-261763.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  books: 'https://images.pexels.com/photos/159711/books-bookstore-book-reading-159711.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  invoice: 'https://images.pexels.com/photos/669365/pexels-photo-669365.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  desk: 'https://images.pexels.com/photos/355952/pexels-photo-355952.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  pencils: 'https://images.pexels.com/photos/207666/pexels-photo-207666.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  printer: 'https://images.pexels.com/photos/4792733/pexels-photo-4792733.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  chair: 'https://images.pexels.com/photos/1957478/pexels-photo-1957478.jpeg?auto=compress&cs=tinysrgb&w=1200',
+};
+
 const stationeryItems = [
   {
     id: 's1',
-    title: 'Executive Ballpoint Pen Set',
-    category: 'Pens',
-    description: 'Smooth-writing pens for school, office, and front-desk use.',
-    price: '6.99',
-    image:
-      'https://images.pexels.com/photos/261763/pexels-photo-261763.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    title: 'Parker Jotter Ballpoint Pen Set',
+    category: 'Writing Instruments',
+    brand: 'Parker',
+    productType: 'Pens & Pencils',
+    requirement: 'Individual Purchase',
+    description: 'Refined stainless-steel ballpoint pens for executives, gifting, and front-desk use.',
+    price: '12.99',
+    image: STATIONERY_IMG.pens,
   },
   {
     id: 's2',
-    title: 'A4 Hardcover Exercise Books Pack',
-    category: 'Books',
-    description: 'Durable ruled books for class notes, stock records, and admin work.',
-    price: '9.50',
-    image:
-      'https://images.pexels.com/photos/159711/books-bookstore-book-reading-159711.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    title: 'Moleskine Classic Hardcover Notebook',
+    category: 'Paper Products',
+    brand: 'Moleskine',
+    productType: 'Notebooks & Journals',
+    requirement: 'Individual Purchase',
+    description: 'Premium hardcover notebook with ribbon bookmark and elastic closure for notes and journaling.',
+    price: '19.99',
+    image: STATIONERY_IMG.books,
   },
   {
     id: 's3',
-    title: 'Duplicate Invoice Book',
-    category: 'Invoice Books',
-    description: 'Carbonless duplicate pages for retail, delivery, and field sales.',
-    price: '4.25',
-    image:
-      'https://images.pexels.com/photos/669365/pexels-photo-669365.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    title: 'Sakura Pigma Micron Fineliner Pens',
+    category: 'Writing Instruments',
+    brand: 'Sakura',
+    productType: 'Art & Drawing Supplies',
+    requirement: 'Individual Purchase',
+    description: 'Archival-quality ultra-fine micron pens for drawing, technical work, and detailed lettering.',
+    price: '15.50',
+    image: STATIONERY_IMG.pencils,
   },
   {
     id: 's4',
-    title: 'Desk Stationery Essentials Bundle',
+    title: 'Post-it Super Sticky Notes 3x3 (12 Pack)',
     category: 'Office Supplies',
-    description: 'Stapler, sticky notes, paper clips, and markers in one pack.',
-    price: '12.99',
-    image:
-      'https://images.pexels.com/photos/355952/pexels-photo-355952.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    brand: '3M',
+    productType: 'Sticky Notes & Labels',
+    requirement: 'Bulk Orders',
+    description: 'Bold-colour sticky notes that stick strong and re-stick for reminders, planning, and admin work.',
+    price: '8.99',
+    image: STATIONERY_IMG.desk,
+  },
+  {
+    id: 's5',
+    title: 'Dell Whiteboard Marker Set',
+    category: 'Office Supplies',
+    brand: 'Dell',
+    productType: 'Markers & Highlighters',
+    requirement: 'Corporate Purchase',
+    description: 'Low-odour dry-erase markers in assorted colours for boardrooms, classrooms, and planning walls.',
+    price: '9.99',
+    image: STATIONERY_IMG.desk,
+  },
+  {
+    id: 's6',
+    title: 'Staples Hanging File Folder Set',
+    category: 'Filing & Storage',
+    brand: 'Staples',
+    productType: 'Filing & Organization',
+    requirement: 'Corporate Purchase',
+    description: 'Durable hanging folders with tabs and inserts to keep invoices, contracts, and records tidy.',
+    price: '14.99',
+    image: STATIONERY_IMG.invoice,
+  },
+  {
+    id: 's7',
+    title: 'Faber-Castell Colour Pencils (24)',
+    category: 'School Supplies',
+    brand: 'Faber-Castell',
+    productType: 'Art & Drawing Supplies',
+    requirement: 'School Purchase',
+    description: 'Bright, break-resistant colour pencils ideal for classrooms, projects, and creative work.',
+    price: '11.50',
+    image: STATIONERY_IMG.pencils,
+  },
+  {
+    id: 's8',
+    title: 'BIC Cristal Ballpoint Pens (50)',
+    category: 'Writing Instruments',
+    brand: 'BIC',
+    productType: 'Pens & Pencils',
+    requirement: 'Bulk Orders',
+    description: 'Reliable everyday pens in a value bulk box for schools, offices, and busy front desks.',
+    price: '7.99',
+    image: STATIONERY_IMG.pens,
+  },
+  {
+    id: 's9',
+    title: 'Pilot G2 Gel Pens (12)',
+    category: 'Writing Instruments',
+    brand: 'Pilot',
+    productType: 'Pens & Pencils',
+    requirement: 'Individual Purchase',
+    description: 'Smooth retractable gel pens with comfortable grip for everyday writing and note-taking.',
+    price: '10.99',
+    image: STATIONERY_IMG.pens,
+  },
+  {
+    id: 's10',
+    title: 'Pentel EnerGel Highlighter Set (6)',
+    category: 'Office Supplies',
+    brand: 'Pentel',
+    productType: 'Markers & Highlighters',
+    requirement: 'Individual Purchase',
+    description: 'Quick-dry chisel-tip highlighters in vivid colours for studying and document review.',
+    price: '6.50',
+    image: STATIONERY_IMG.desk,
+  },
+  {
+    id: 's11',
+    title: 'Sharpie Permanent Markers (12)',
+    category: 'Office Supplies',
+    brand: 'Sharpie',
+    productType: 'Markers & Highlighters',
+    requirement: 'Bulk Orders',
+    description: 'Bold permanent markers that write on almost any surface for labelling and signage.',
+    price: '9.50',
+    image: STATIONERY_IMG.desk,
+  },
+  {
+    id: 's12',
+    title: 'Staedtler Triangular Pencils (12)',
+    category: 'School Supplies',
+    brand: 'Staedtler',
+    productType: 'Pens & Pencils',
+    requirement: 'School Purchase',
+    description: 'Ergonomic triangular HB pencils that encourage correct grip for young learners.',
+    price: '5.99',
+    image: STATIONERY_IMG.pencils,
+  },
+  {
+    id: 's13',
+    title: 'Oxford A4 Notebooks (5 Pack)',
+    category: 'Paper Products',
+    brand: 'Oxford',
+    productType: 'Notebooks & Journals',
+    requirement: 'School Purchase',
+    description: 'Optik-paper spiral notebooks with sturdy covers for class notes and study sessions.',
+    price: '13.99',
+    image: STATIONERY_IMG.books,
+  },
+  {
+    id: 's14',
+    title: 'Staples Desk Organiser Caddy',
+    category: 'Office Supplies',
+    brand: 'Staples',
+    productType: 'Desk Accessories',
+    requirement: 'Corporate Purchase',
+    description: 'Mesh desk organiser with compartments for pens, sticky notes, and small office tools.',
+    price: '16.99',
+    image: STATIONERY_IMG.desk,
+  },
+  {
+    id: 's15',
+    title: 'HP LaserJet Pro M404n Printer',
+    category: 'Computers & Accessories',
+    brand: 'HP',
+    productType: 'Desk Accessories',
+    requirement: 'Corporate Purchase',
+    description: 'Fast, reliable mono laser printer built for high-volume office and back-office printing.',
+    price: '289.00',
+    image: STATIONERY_IMG.printer,
+  },
+  {
+    id: 's16',
+    title: 'ErgoMax Adjustable Office Chair',
+    category: 'Office Supplies',
+    brand: 'ErgoMax',
+    productType: 'Desk Accessories',
+    requirement: 'Corporate Purchase',
+    description: 'Ergonomic office chair with adjustable lumbar support and armrests for all-day comfort.',
+    price: '159.00',
+    image: STATIONERY_IMG.chair,
   },
 ];
+
+// Curated highlights shown in the dark "Featured Office Essentials & Top
+// Picks" band at the bottom of the stationery page.
+const STATIONERY_FEATURED_IDS = ['s1', 's15', 's16'];
+
+// Builds the rich item-detail payload for a stationery product so the detail
+// modal shows Product Overview, Key Highlights, a Product Details table and
+// reviews — mirroring the prototype. Values are derived from the listing
+// fields with sensible category-aware fallbacks so every section stays
+// populated even for sparse seller listings.
+const buildStationeryDetailPayload = (item) => {
+  const productType = item.productType || item.category || 'Office supplies';
+  const brand = item.brand || 'SVS Marketplace';
+  const description = item.description || '';
+
+  const productOverview = item.productOverview
+    || `${description ? `${description} ` : ''}The ${item.title} is a dependable everyday-use ${String(productType).toLowerCase()} option from ${brand}, crafted for school, office, and business needs. It balances quality, comfort, and value so it performs reliably whether you're stocking a classroom, running a front desk, or kitting out a busy team.`;
+
+  const keyHighlights = Array.isArray(item.keyHighlights) && item.keyHighlights.length
+    ? item.keyHighlights
+    : [
+      `Trusted ${brand} quality built for daily use`,
+      `Ideal for ${String(item.requirement || 'individual and bulk').toLowerCase()} buyers`,
+      'Comfortable, consistent performance from first use',
+      'Neat, professional finish for school and office',
+      'Backed by SVS buyer protection and easy returns',
+    ];
+
+  const technicalSpecs = item.technicalSpecs && typeof item.technicalSpecs === 'object'
+    ? item.technicalSpecs
+    : {
+      'Brand': brand,
+      'Category': item.category || '—',
+      'Product Type': productType,
+      'Best For': item.requirement || 'Individual Purchase',
+      'Colour': item.color || 'Assorted',
+      'Pack Size': item.volume || item.packSize || 'Standard pack',
+      'Material': item.material || 'Premium-grade materials',
+      'Warranty': item.warranty || 'SVS satisfaction guarantee',
+    };
+
+  return { productOverview, keyHighlights, technicalSpecs, specsTitle: 'Product Details' };
+};
 
 const informalMarketItems = [
   /* ── Street Food ── */
@@ -11781,9 +11978,11 @@ const TraditionalMedicinesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wis
   );
 };
 
-const StationeryPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
+const StationeryPage = ({ onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
+  useBuyerCurrency();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'stationery'), ...stationeryItems], [sellerItems]);
+
   const buildCartItem = (item) => createCartItem({
     ...item,
     route: '/stationery-office',
@@ -11797,6 +11996,221 @@ const StationeryPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
     details: `${item.category || 'Seller item'} • ${item.sellerName || 'Ready for school and office use'}`,
   });
 
+  const parsePrice = (value) => {
+    const n = Number(String(value ?? '').replace(/[^0-9.]/g, ''));
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  // Order option lists so the prototype's familiar groupings appear first,
+  // with any extra values (e.g. from seller listings) appended afterwards.
+  const orderOptions = (values, preferred) => {
+    const present = Array.from(new Set(values.filter(Boolean)));
+    const inPreferred = preferred.filter((option) => present.includes(option));
+    const extras = present.filter((option) => !preferred.includes(option)).sort((a, b) => a.localeCompare(b));
+    return [...inPreferred, ...extras];
+  };
+
+  const categoryOptions = useMemo(() => orderOptions(
+    marketItems.map((item) => item.category),
+    ['Office Supplies', 'Writing Instruments', 'Paper Products', 'Filing & Storage', 'Computers & Accessories', 'School Supplies'],
+  ), [marketItems]);
+  const brandOptions = useMemo(() => orderOptions(marketItems.map((item) => item.brand), []), [marketItems]);
+  const typeOptions = useMemo(() => orderOptions(
+    marketItems.map((item) => item.productType),
+    ['Pens & Pencils', 'Notebooks & Journals', 'Paper Products', 'Markers & Highlighters', 'Art & Drawing Supplies', 'Desk Accessories', 'Filing & Organization', 'Sticky Notes & Labels'],
+  ), [marketItems]);
+  const requirementOptions = useMemo(() => orderOptions(
+    marketItems.map((item) => item.requirement),
+    ['Individual Purchase', 'Corporate Purchase', 'School Purchase', 'Bulk Orders'],
+  ), [marketItems]);
+
+  const priceCeiling = useMemo(() => {
+    const max = marketItems.reduce((highest, item) => Math.max(highest, parsePrice(item.price)), 0);
+    return Math.max(50, Math.ceil(max / 10) * 10);
+  }, [marketItems]);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [selectedBrands, setSelectedBrands] = useState([]);
+  const [selectedTypes, setSelectedTypes] = useState([]);
+  const [selectedRequirements, setSelectedRequirements] = useState([]);
+  const [maxPrice, setMaxPrice] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const resultsRef = useRef(null);
+
+  const activePriceCap = maxPrice == null ? priceCeiling : maxPrice;
+
+  const toggleValue = (collection, setCollection, value) => {
+    setShowAll(false);
+    setCollection(collection.includes(value) ? collection.filter((entry) => entry !== value) : [...collection, value]);
+  };
+  const matchesGroup = (selection, value) => selection.length === 0 || selection.includes(value);
+
+  const filteredItems = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return marketItems.filter((item) => {
+      const matchesQuery = !query || [item.title, item.brand, item.category, item.productType, item.description, item.sellerName]
+        .some((field) => String(field || '').toLowerCase().includes(query));
+      return matchesQuery
+        && matchesGroup(selectedCategories, item.category)
+        && matchesGroup(selectedBrands, item.brand)
+        && matchesGroup(selectedTypes, item.productType)
+        && matchesGroup(selectedRequirements, item.requirement)
+        && parsePrice(item.price) <= activePriceCap;
+    });
+  }, [marketItems, searchQuery, selectedCategories, selectedBrands, selectedTypes, selectedRequirements, activePriceCap]);
+
+  const visibleItems = showAll ? filteredItems : filteredItems.slice(0, 6);
+
+  const featuredItems = useMemo(() => {
+    const byId = new Map(marketItems.map((item) => [item.id, item]));
+    return STATIONERY_FEATURED_IDS.map((id) => byId.get(id)).filter(Boolean);
+  }, [marketItems]);
+
+  const hasActiveFilters = Boolean(searchQuery)
+    || selectedCategories.length || selectedBrands.length || selectedTypes.length
+    || selectedRequirements.length || maxPrice != null;
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setSelectedCategories([]);
+    setSelectedBrands([]);
+    setSelectedTypes([]);
+    setSelectedRequirements([]);
+    setMaxPrice(null);
+    setShowAll(false);
+  };
+
+  const applyFilters = () => {
+    setShowFilters(false);
+    if (resultsRef.current) {
+      resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const openDetails = (item) => {
+    const similarProducts = marketItems
+      .filter((other) => other.id !== item.id
+        && (other.category === item.category || other.productType === item.productType || other.brand === item.brand))
+      .slice(0, 6)
+      .map((other) => ({
+        id: other.id,
+        title: getTranslatedValue(t, other.titleKey, other.title),
+        image: other.image,
+        price: getSalePrices(other.price, SALE_DISCOUNT_RATE, other.currency).nowPrice,
+        productType: other.productType,
+        category: other.category,
+        brand: other.brand,
+        sellerName: other.sellerName,
+        rating: other.rating || 4.8,
+        reviewsCount: other.reviewsCount || 145,
+      }));
+    onOpenItemDetails?.({
+      ...buildStationeryDetailPayload(item),
+      title: getTranslatedValue(t, item.titleKey, item.title),
+      image: item.image,
+      images: item.images || (item.image ? [item.image] : []),
+      marketName: t('markets.stationery'),
+      details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Ready for school and office use'}`,
+      priceLabel: getSalePrices(item.price).nowPrice,
+      productType: item.productType,
+      category: item.category,
+      brand: item.brand,
+      sellerName: item.sellerName,
+      similarProducts,
+      detailVariant: 'electronics',
+      cartItem: buildCartItem(item),
+      wishlistItem: buildWishlistItem(item),
+    });
+  };
+
+  const renderFilterGroup = (label, options, selection, setSelection) => (
+    <div>
+      <h3 className="mb-2 text-sm font-bold text-[#0f6674]">{label}</h3>
+      <div className="max-h-52 space-y-1.5 overflow-y-auto pr-1 [scrollbar-width:thin]">
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+          <input
+            type="checkbox"
+            checked={selection.length === 0}
+            onChange={() => { setShowAll(false); setSelection([]); }}
+            className="h-4 w-4 rounded border-slate-300 text-[#0f6674] focus:ring-[#0f6674]"
+          />
+          All
+        </label>
+        {options.map((option) => (
+          <label key={option} className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+            <input
+              type="checkbox"
+              checked={selection.includes(option)}
+              onChange={() => toggleValue(selection, setSelection, option)}
+              className="h-4 w-4 rounded border-slate-300 text-[#0f6674] focus:ring-[#0f6674]"
+            />
+            {option}
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderProductCard = (item) => {
+    const title = getTranslatedValue(t, item.titleKey, item.title);
+    const reviewKey = getCollectionItemId('/stationery-office', item.id);
+    const reviewSummary = getProductReviewSummary(productReviewSummaryMap, reviewKey);
+    const hasReviews = reviewSummary.reviewCount > 0;
+    const ratingLabel = hasReviews ? reviewSummary.averageRating.toFixed(1) : '0.0';
+    const isWishlisted = wishlistItemIds.includes(reviewKey);
+    const metaLine = [item.brand, item.category].filter(Boolean).join(' · ');
+
+    return (
+      <article
+        key={item.id}
+        id={`listing-${item.id}`}
+        role="button"
+        tabIndex={0}
+        onClick={() => openDetails(item)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openDetails(item); }
+        }}
+        className="group flex flex-col overflow-hidden rounded-2xl border border-[#e0e7ef] bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+      >
+        <div className="relative">
+          <img src={item.image} alt={title} loading="lazy" className="aspect-[4/3] w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+          <button
+            type="button"
+            onClick={(event) => { event.stopPropagation(); onToggleWishlist(buildWishlistItem(item)); }}
+            aria-pressed={isWishlisted}
+            aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+            className={`absolute right-2 top-2 rounded-full border border-[#e0e7ef] bg-white/90 p-1.5 text-[#e11d48] shadow transition ${isWishlisted ? 'bg-rose-50' : 'hover:bg-[#e0f7fa]'}`}
+          >
+            <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-current' : ''}`} />
+          </button>
+        </div>
+        <div className="flex flex-1 flex-col p-3 sm:p-4">
+          <h3 className="line-clamp-2 text-sm font-bold leading-tight text-[#0f6674] group-hover:text-[#33b9f2] sm:text-base">{title}</h3>
+          <div className="mt-1.5">
+            <SalePrice price={item.price} currency={item.currency} nowClassName="text-base" />
+          </div>
+          {metaLine ? (
+            <p className="mt-1.5 text-[11px] font-semibold text-slate-500 sm:text-xs">{metaLine}</p>
+          ) : null}
+          <div className="mt-1.5 flex items-center gap-1 text-[11px] text-slate-500 sm:text-xs">
+            <Star className={`h-3.5 w-3.5 text-amber-500 ${hasReviews ? 'fill-current' : ''}`} />
+            <span className="font-semibold text-[#0f6674]">{ratingLabel}</span>
+            <span>({reviewSummary.reviewCount} review{reviewSummary.reviewCount === 1 ? '' : 's'})</span>
+          </div>
+          <button
+            type="button"
+            onClick={(event) => { event.stopPropagation(); openDetails(item); }}
+            className="mt-3 w-full rounded-full bg-[#0f6674] px-3 py-2 text-xs font-semibold text-white shadow transition hover:bg-[#33b9f2] sm:text-sm"
+          >
+            {t('common.viewDetails')}
+          </button>
+        </div>
+      </article>
+    );
+  };
+
   return (
   <MarketShowcase
     marketKey="stationery"
@@ -11805,31 +12219,152 @@ const StationeryPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
     eyebrow={t('markets.stationery')}
     chips={['School', 'Office supplies', 'Bulk orders']}
   >
-    <CardGrid
-      items={marketItems}
-      buttonLabel={t('common.addToCart')}
-      secondaryButtonLabel={t('common.viewDetails')}
-      reviewSummaryMap={productReviewSummaryMap}
-      getItemReviewKey={(item) => getCollectionItemId('/stationery-office', item.id)}
-      onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-      onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
-      onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
-      onOpenItemDetails={(item) => {
-        const wishlistItem = buildWishlistItem(item);
-        onOpenItemDetails?.({
-          title: getTranslatedValue(t, item.titleKey, item.title),
-          image: item.image,
-          images: item.images || (item.image ? [item.image] : []),
-          marketName: t('markets.stationery'),
-          details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Ready for school and office use'}`,
-          priceLabel: getSalePrices(item.price).nowPrice,
-          cartItem: buildCartItem(item),
-          wishlistItem,
-        });
-      }}
-      isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/stationery-office', item.id))}
-      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • <SalePrice price={item.price} currency={item.currency} /></p>}
-    />
+    {/* Search */}
+    <div className="relative mb-5">
+      <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+      <input
+        type="search"
+        value={searchQuery}
+        onChange={(event) => { setSearchQuery(event.target.value); setShowAll(false); }}
+        placeholder="Search pens, notebooks, printers, office supplies…"
+        className="w-full rounded-full border border-[#e0e7ef] bg-white py-3 pl-12 pr-4 text-sm text-slate-700 shadow-sm outline-none transition focus:border-[#0f6674] focus:ring-2 focus:ring-[#0f6674]/20"
+      />
+    </div>
+
+    {/* Mobile filter toggle */}
+    <button
+      type="button"
+      onClick={() => setShowFilters((current) => !current)}
+      className="mb-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#0f6674] bg-white px-4 py-2.5 text-sm font-semibold text-[#0f6674] shadow-sm lg:hidden"
+    >
+      <Filter className="h-4 w-4" />
+      {showFilters ? 'Hide filters' : 'Show filters'}
+    </button>
+
+    <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
+      {/* Filter sidebar */}
+      <aside className={`${showFilters ? 'block' : 'hidden'} space-y-5 self-start rounded-2xl border border-[#e0e7ef] bg-white p-4 shadow-sm lg:block`}>
+        {renderFilterGroup('Product Category', categoryOptions, selectedCategories, setSelectedCategories)}
+        {renderFilterGroup('Brand', brandOptions, selectedBrands, setSelectedBrands)}
+        {renderFilterGroup('Product Type', typeOptions, selectedTypes, setSelectedTypes)}
+
+        {/* Price Range */}
+        <div>
+          <h3 className="mb-2 text-sm font-bold text-[#0f6674]">Price Range</h3>
+          <input
+            type="range"
+            min={0}
+            max={priceCeiling}
+            step={1}
+            value={activePriceCap}
+            onChange={(event) => { setMaxPrice(Number(event.target.value)); setShowAll(false); }}
+            className="w-full accent-[#0f6674]"
+            aria-label="Maximum price"
+          />
+          <div className="mt-1 flex items-center justify-between text-[11px] font-semibold text-slate-500">
+            <span>{formatAmountInCurrency(0)}</span>
+            <span>Up to {formatAmountInCurrency(activePriceCap)}</span>
+          </div>
+        </div>
+
+        {renderFilterGroup('Business Requirement', requirementOptions, selectedRequirements, setSelectedRequirements)}
+
+        <button
+          type="button"
+          onClick={applyFilters}
+          className="w-full rounded-full bg-[#0f6674] px-4 py-2.5 text-sm font-bold text-white shadow transition hover:bg-[#33b9f2]"
+        >
+          Apply Filter
+        </button>
+        {hasActiveFilters ? (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="w-full rounded-full border border-[#e0e7ef] bg-white px-4 py-2 text-xs font-semibold text-slate-500 transition hover:border-[#0f6674] hover:text-[#0f6674]"
+          >
+            Clear all filters
+          </button>
+        ) : null}
+      </aside>
+
+      {/* Results */}
+      <div ref={resultsRef}>
+        <p className="mb-3 text-xs font-semibold text-slate-500">
+          Showing {visibleItems.length} of {filteredItems.length} product{filteredItems.length === 1 ? '' : 's'}
+        </p>
+        {filteredItems.length ? (
+          <>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              {visibleItems.map(renderProductCard)}
+            </div>
+            {filteredItems.length > 6 ? (
+              <div className="mt-6 flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => setShowAll((current) => !current)}
+                  className="rounded-full border border-[#0f6674] bg-white px-8 py-2.5 text-sm font-bold text-[#0f6674] shadow-sm transition hover:bg-[#0f6674] hover:text-white"
+                >
+                  {showAll ? 'Show less' : 'View All'}
+                </button>
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-[#e0e7ef] bg-[#f8fafc] px-6 py-12 text-center text-sm text-slate-500">
+            No products match your filters yet. Try clearing a filter or widening the price range.
+          </div>
+        )}
+      </div>
+    </div>
+
+    {/* Featured Office Essentials & Top Picks */}
+    {featuredItems.length ? (
+      <section className="mt-10 rounded-3xl bg-gradient-to-br from-[#0c4a52] via-[#0f6674] to-[#0a3f4a] p-5 text-white shadow-lg sm:p-8">
+        <h2 className="text-lg font-extrabold sm:text-2xl">Featured Office Essentials &amp; Top Picks</h2>
+        <p className="mt-1 text-sm text-cyan-100/80">Hand-picked equipment and supplies trusted by busy teams.</p>
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+          {featuredItems.map((item) => {
+            const title = getTranslatedValue(t, item.titleKey, item.title);
+            const reviewKey = getCollectionItemId('/stationery-office', item.id);
+            const reviewSummary = getProductReviewSummary(productReviewSummaryMap, reviewKey);
+            const hasReviews = reviewSummary.reviewCount > 0;
+            const ratingLabel = hasReviews ? reviewSummary.averageRating.toFixed(1) : '0.0';
+            const metaLine = [item.brand, item.category].filter(Boolean).join(' · ');
+            return (
+              <article
+                key={item.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => openDetails(item)}
+                onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openDetails(item); } }}
+                className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-md transition hover:-translate-y-0.5 hover:bg-white/10"
+              >
+                <img src={item.image} alt={title} loading="lazy" className="aspect-[16/10] w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                <div className="flex flex-1 flex-col p-3 sm:p-4">
+                  <h3 className="line-clamp-2 text-sm font-bold leading-tight text-white sm:text-base">{title}</h3>
+                  {metaLine ? <p className="mt-1 text-[11px] font-semibold text-cyan-200/80">{metaLine}</p> : null}
+                  <div className="mt-1.5 flex items-center gap-1 text-[11px] text-white/70">
+                    <Star className={`h-3.5 w-3.5 text-amber-400 ${hasReviews ? 'fill-current' : ''}`} />
+                    <span className="font-semibold text-white">{ratingLabel}</span>
+                    <span>({reviewSummary.reviewCount} review{reviewSummary.reviewCount === 1 ? '' : 's'})</span>
+                  </div>
+                  <div className="mt-2">
+                    <SalePrice price={item.price} currency={item.currency} wasClassName="text-cyan-100/50" nowClassName="text-white" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(event) => { event.stopPropagation(); openDetails(item); }}
+                    className="mt-3 w-full rounded-full bg-white px-3 py-2 text-xs font-bold text-[#0f6674] shadow transition hover:bg-cyan-50 sm:text-sm"
+                  >
+                    {t('common.viewDetails')}
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+    ) : null}
   </MarketShowcase>
   );
 };
@@ -30752,7 +31287,7 @@ const ItemDetailsModal = ({
             ) : null}
             {item.technicalSpecs && Object.keys(item.technicalSpecs).length ? (
               <div className="rounded-2xl bg-[var(--svs-primary)]/5 p-5">
-                <h3 className="text-lg font-bold text-[var(--svs-primary-strong)]">Technical Specifications</h3>
+                <h3 className="text-lg font-bold text-[var(--svs-primary-strong)]">{item.specsTitle || 'Technical Specifications'}</h3>
                 <table className="mt-3 w-full text-[15px] text-slate-700">
                   <tbody>
                     {Object.entries(item.technicalSpecs).map(([key, value]) => (
