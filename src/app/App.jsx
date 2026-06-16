@@ -21264,10 +21264,10 @@ const MarketsPage = ({ sellerItems = [] }) => {
                 </div>
                 {/* Center: market name perfectly centered on the image */}
                 <div className="flex flex-1 flex-col items-center justify-center px-1 text-center sm:items-start sm:px-0 sm:text-left">
-                  <div className="inline-flex flex-col items-center gap-1 rounded-xl border border-white/20 bg-black/55 px-2.5 py-1.5 backdrop-blur-sm sm:items-start sm:gap-1.5 sm:rounded-2xl sm:px-3 sm:py-2">
-                    <p className={marketTitleClassName}>{market.label || t(market.labelKey)}</p>
+                  <div className="inline-flex flex-col items-center gap-1 rounded-xl border border-transparent bg-transparent px-2.5 py-1.5 sm:items-start sm:gap-1.5 sm:rounded-2xl sm:px-3 sm:py-2">
+                    <p className={`${marketTitleClassName} [text-shadow:0_2px_8px_rgba(0,0,0,0.9)]`}>{market.label || t(market.labelKey)}</p>
                     {marketShortDescriptions[market.href] ? (
-                      <p className="text-[11px] leading-snug text-white/90 line-clamp-2 sm:text-xs">
+                      <p className="text-[11px] leading-snug text-white/90 line-clamp-2 [text-shadow:0_1px_6px_rgba(0,0,0,0.9)] sm:text-xs">
                         {marketShortDescriptions[market.href]}
                       </p>
                     ) : null}
