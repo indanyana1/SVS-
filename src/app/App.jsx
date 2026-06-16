@@ -20809,10 +20809,29 @@ const TrendingSellerHero = ({ items }) => {
   // Subscribe to buyer currency so prices re-render when the shopper switches it.
   useBuyerCurrency();
   const [activeIndex, setActiveIndex] = useState(0);
+  // Images that failed to load are dropped so we never advertise an empty,
+  // grey slide for a listing whose photo is broken or missing.
+  const [failedImages, setFailedImages] = useState(() => new Set());
   const touchStartXRef = useRef(null);
   const touchDeltaXRef = useRef(0);
 
-  const slideCount = items.length;
+  const visibleItems = useMemo(
+    () => (Array.isArray(items) ? items : []).filter((item) => item && item.image && !failedImages.has(item.image)),
+    [items, failedImages],
+  );
+
+  const slideCount = visibleItems.length;
+
+  const handleImageError = useCallback((src) => {
+    setFailedImages((previous) => {
+      if (previous.has(src)) {
+        return previous;
+      }
+      const next = new Set(previous);
+      next.add(src);
+      return next;
+    });
+  }, []);
 
   // Keep the active slide in range whenever the underlying list changes.
   useEffect(() => {
@@ -20862,6 +20881,11 @@ const TrendingSellerHero = ({ items }) => {
     touchDeltaXRef.current = 0;
   };
 
+  // If every listing's image failed to load there is nothing worth showing.
+  if (slideCount === 0) {
+    return null;
+  }
+
   return (
     <div
       className="relative overflow-hidden rounded-2xl border border-[var(--svs-border)] shadow-[0_4px_8px_rgba(0,0,0,0.1)]"
@@ -20876,7 +20900,7 @@ const TrendingSellerHero = ({ items }) => {
         className="flex transition-transform duration-700 ease-in-out"
         style={{ transform: `translateX(-${activeIndex * 100}%)` }}
       >
-        {items.map((item, index) => {
+        {visibleItems.map((item, index) => {
           const marketConfig = sellerMarketConfig[item.marketKey];
           const route = marketConfig?.route || '/markets';
           const marketLabel = marketConfig?.label
@@ -20900,6 +20924,15 @@ const TrendingSellerHero = ({ items }) => {
                 className="absolute inset-0 bg-cover bg-center"
                 style={{ backgroundImage: `url('${item.image}')` }}
                 aria-hidden="true"
+              />
+              {/* Hidden probe: if the photo can't load we drop this slide so an
+                  empty grey panel is never advertised. */}
+              <img
+                src={item.image}
+                alt=""
+                aria-hidden="true"
+                className="hidden"
+                onError={() => handleImageError(item.image)}
               />
               <div
                 className="absolute inset-0 bg-black/30"
@@ -20963,7 +20996,7 @@ const TrendingSellerHero = ({ items }) => {
             <ChevronRight className="h-5 w-5" />
           </button>
           <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 gap-1.5">
-            {items.map((item, index) => (
+            {visibleItems.map((item, index) => (
               <button
                 key={`trending-dot-${item.id || index}`}
                 type="button"
