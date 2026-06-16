@@ -828,7 +828,7 @@ const createSellerListingFormState = () => ({
   title: '',
   description: '',
   price: '',
-  currency: 'USD',
+  currency: '',
   quantity: '',
   marketKey: '',
   ...EMPTY_GROCERIES_LISTING_FIELDS,
@@ -7859,7 +7859,7 @@ const CurrencyPickerField = ({
   const searchRef = useRef(null);
 
   const selected = useMemo(() => (
-    SUPPORTED_CURRENCIES.find((entry) => entry.code === value) || SUPPORTED_CURRENCIES.find((entry) => entry.code === 'USD') || SUPPORTED_CURRENCIES[0]
+    SUPPORTED_CURRENCIES.find((entry) => entry.code === value) || null
   ), [value]);
 
   useEffect(() => {
@@ -7907,8 +7907,8 @@ const CurrencyPickerField = ({
         aria-expanded={open}
         aria-label={ariaLabel}
       >
-        <span className="text-base leading-none">{selected?.flag || '🏳️'}</span>
-        <span className="font-medium">{selected?.code || 'USD'}</span>
+        <span className="text-base leading-none">{selected?.flag || '�'}</span>
+        <span className={`font-medium ${selected ? '' : 'text-[var(--svs-muted)]'}`}>{selected?.code || 'Select'}</span>
         <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[var(--svs-muted)]" />
       </button>
       {open ? (
@@ -18455,6 +18455,12 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
       return;
     }
 
+    if (!SUPPORTED_CURRENCIES.some((entry) => entry.code === formData.currency)) {
+      setMessage('Select the currency you want to sell this item in before publishing your listing.');
+      setMessageType('error');
+      return;
+    }
+
     const validationMessage = getSellerListingValidationMessage(formData);
 
     if (validationMessage) {
@@ -18873,7 +18879,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                   <CurrencyPickerField
                     id="seller-currency"
                     name="currency"
-                    value={formData.currency || 'USD'}
+                    value={formData.currency}
                     onChange={handleChange}
                     ariaLabel="Listing currency"
                   />
