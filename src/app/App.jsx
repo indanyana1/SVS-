@@ -21164,7 +21164,7 @@ const MarketsPage = ({ sellerItems = [] }) => {
       )}
 
       <div className="mt-6 grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-3">
-        {gridMarketLinks.map((market, index) => {
+        {gridMarketLinks.map((market) => {
           const isFastFood = market.href === '/fast-food';
           const isFashion = market.href === '/fashion-style';
           const isBookings = market.href === '/tickets' || market.href === '/home-care';
@@ -21188,14 +21188,11 @@ const MarketsPage = ({ sellerItems = [] }) => {
           const isJewelleryAccessories = market.href === '/voting-providers';
           const isDirectLinks = market.href === '/retailer-direct-links';
           const isInformalMarket = market.href === '/informal-market';
-          const marketDisplayNumber = String(index + 1).padStart(2, '0');
           const useBookingsPreset = isBookings;
           const overlayClassName = useBookingsPreset
             ? 'absolute inset-0 bg-gradient-to-t from-[#041a26]/70 via-[#0f6f84]/35 to-[#14b8a6]/15'
             : 'absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent';
-          const marketLabelClassName = 'inline-flex rounded-lg border border-white/35 bg-black/55 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-white shadow-[0_1px_6px_rgba(0,0,0,0.8)] backdrop-blur-sm sm:text-xs';
           const marketTitleClassName = 'text-base font-bold leading-tight text-white drop-shadow line-clamp-3 sm:text-lg sm:line-clamp-none';
-          const badgeClassName = 'svs-berkshire-swash inline-flex items-center justify-center rounded-full border border-white/50 bg-black/60 px-2 py-0.5 text-xs text-white shadow-[0_2px_8px_rgba(0,0,0,0.65)] backdrop-blur-sm sm:px-2 sm:py-1 sm:text-sm';
           const hasHeroImage = isFastFood || isFashion || isBookings || isBeverages || isGroceries || isMobility || isEcommerce || isElectronics || isBetting || isConstruction || isLivestock || isHomeCare || isNaturalResources || isWellness || isStationery || isProperty || isHerbs || isSecondhand || isBeautyFitnessSports || isToysKids || isJewelleryAccessories || isDirectLinks || isInformalMarket;
           const heroImageUrl = isFastFood
             ? 'https://images.pexels.com/photos/2983101/pexels-photo-2983101.jpeg?auto=compress&cs=tinysrgb&w=1200'
@@ -21257,11 +21254,6 @@ const MarketsPage = ({ sellerItems = [] }) => {
               />
               <div className={overlayClassName} aria-hidden="true" />
               <div className="relative z-10 flex h-full flex-col p-3 sm:p-5">
-                {/* Top row: label + SVS badge */}
-                <div className="flex items-start justify-between gap-2 sm:gap-3">
-                  <p className={marketLabelClassName}>{t('marketsPage.marketLabel', { number: marketDisplayNumber })}</p>
-                  <span className={badgeClassName}>SVS</span>
-                </div>
                 {/* Center: market name perfectly centered on the image */}
                 <div className="flex flex-1 flex-col items-center justify-center px-1 text-center sm:items-start sm:px-0 sm:text-left">
                   <div className="inline-flex flex-col items-center gap-1 rounded-xl border border-transparent bg-transparent px-2.5 py-1.5 sm:items-start sm:gap-1.5 sm:rounded-2xl sm:px-3 sm:py-2">
@@ -21281,11 +21273,6 @@ const MarketsPage = ({ sellerItems = [] }) => {
             to={market.href}
             className="group relative flex aspect-[4/5] flex-col rounded-xl border border-[var(--svs-border)] bg-gradient-to-br from-[#0c2a32] via-[#0f6674] to-[#33b9f2] p-3 shadow-[0_4px_8px_rgba(0,0,0,0.1)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_12px_22px_rgba(0,168,232,0.2)] sm:aspect-auto sm:rounded-2xl sm:p-5"
           >
-            {/* Top: label + SVS badge */}
-            <div className="flex items-start justify-between gap-2 sm:gap-3">
-              <p className={marketLabelClassName}>{t('marketsPage.marketLabel', { number: marketDisplayNumber })}</p>
-              <span className={badgeClassName}>SVS</span>
-            </div>
             {/* Center: title + tagline */}
             <div className="flex flex-1 flex-col items-center justify-center px-1 text-center sm:items-start sm:px-0 sm:text-left">
               <p className="text-base font-bold leading-tight text-white drop-shadow line-clamp-3 sm:text-lg sm:line-clamp-none">{market.label || t(market.labelKey)}</p>
