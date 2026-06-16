@@ -5090,6 +5090,54 @@ const createNotificationRecord = ({ title, message, href, orderId, type = 'info'
   read: false,
 });
 
+// Plays a short two-tone chime whenever a new notification arrives. Uses the
+// Web Audio API so no audio asset needs to ship, and fails silently when the
+// browser blocks autoplay or has no audio support.
+let notificationAudioContext = null;
+const playNotificationSound = () => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) {
+      return;
+    }
+    if (!notificationAudioContext) {
+      notificationAudioContext = new AudioContextClass();
+    }
+    const context = notificationAudioContext;
+    if (context.state === 'suspended') {
+      context.resume().catch(() => {});
+    }
+    const now = context.currentTime;
+    const masterGain = context.createGain();
+    masterGain.gain.setValueAtTime(0.0001, now);
+    masterGain.connect(context.destination);
+
+    // Two ascending notes for a friendly "ding-dong" feel.
+    [
+      { frequency: 880, start: 0, duration: 0.18 },
+      { frequency: 1174.66, start: 0.16, duration: 0.28 },
+    ].forEach(({ frequency, start, duration }) => {
+      const oscillator = context.createOscillator();
+      const noteGain = context.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(frequency, now + start);
+      noteGain.gain.setValueAtTime(0.0001, now + start);
+      noteGain.gain.exponentialRampToValueAtTime(0.18, now + start + 0.02);
+      noteGain.gain.exponentialRampToValueAtTime(0.0001, now + start + duration);
+      oscillator.connect(noteGain);
+      noteGain.connect(masterGain);
+      oscillator.start(now + start);
+      oscillator.stop(now + start + duration + 0.02);
+    });
+    masterGain.gain.setValueAtTime(1, now);
+  } catch {
+    // Ignore audio errors (autoplay policy, unsupported context, etc.).
+  }
+};
+
 const mapNotificationRecord = (record) => ({
   id: String(record.notification_key || record.id || `notif-${Date.now()}`),
   type: String(record.type || 'info'),
@@ -33289,6 +33337,9 @@ const App = () => {
   })));
 
   const [notifications, setNotifications] = useState(getStoredNotifications);
+  // Tracks the set of notification ids already seen so a chime only plays for
+  // genuinely new arrivals, never on first load or when marking items read.
+  const seenNotificationIdsRef = useRef(null);
   const [sellerItems, setSellerItems] = useState([]);
   const [productReviews, setProductReviews] = useState([]);
   const [productReviewSummaryMap, setProductReviewSummaryMap] = useState(() => buildProductReviewSummaryMap(getStoredProductReviews()));
@@ -33491,6 +33542,35 @@ const App = () => {
     window.localStorage.removeItem(NOTIFICATIONS_STORAGE_KEY);
     window.localStorage.setItem(getUserScopedStorageKey(NOTIFICATIONS_STORAGE_KEY, activeUserEmail), JSON.stringify(notifications));
   }, [activeUserEmail, notifications]);
+
+  // Play a chime whenever an unread notification appears that we have not seen
+  // before. The first run only seeds the baseline so existing stored
+  // notifications never trigger a sound on page load.
+  useEffect(() => {
+    const currentIds = new Set(notifications.map((notification) => notification.id));
+
+    if (seenNotificationIdsRef.current === null) {
+      seenNotificationIdsRef.current = currentIds;
+      return;
+    }
+
+    const previousIds = seenNotificationIdsRef.current;
+    const hasNewUnread = notifications.some(
+      (notification) => !notification.read && !previousIds.has(notification.id),
+    );
+
+    seenNotificationIdsRef.current = currentIds;
+
+    if (hasNewUnread) {
+      playNotificationSound();
+    }
+  }, [notifications]);
+
+  // Reset the seen-notifications baseline when switching accounts so a new
+  // user's existing notifications do not chime on load.
+  useEffect(() => {
+    seenNotificationIdsRef.current = null;
+  }, [activeUserEmail]);
 
   const pushNotificationToUser = useCallback((userEmail, notificationPayload) => {
     const notification = createNotificationRecord(notificationPayload);
