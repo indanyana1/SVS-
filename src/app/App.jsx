@@ -10,6 +10,7 @@ import {
   ClipboardList,
   Flag,
   Heart,
+  HeartHandshake,
   HelpCircle,
   Home,
   LayoutDashboard,
@@ -326,7 +327,7 @@ const MARKET_FIELD_SPEC = {
       { name: 'category', label: 'Service category', type: 'select', required: true, options: [
         'Elderly Care', 'Nursing Care', 'Physiotherapist', 'Baby Care', 'Post-Surgery Care',
         'Home Attendant', 'Electrician', 'Plumber', 'Carpenter', 'AC Repair & Servicing',
-        'Cleaning Services', 'Pest Control', 'Appliances Repairing', 'Home Painter',
+        'Cleaning Services', 'Pest Control', 'Appliances Repairing', 'Home Painter', 'Other',
       ] },
       { name: 'serviceType', label: 'Billing cycle', type: 'select', options: ['Hourly', 'Daily', 'Weekly', 'Monthly'] },
       { name: 'professionalPreference', label: 'Professional preference', type: 'select', options: ['Any', 'Male', 'Female'] },
@@ -773,7 +774,7 @@ const marketShortDescriptions = {
 
 const sellerMarketOptions = [
   { key: 'beverages', labelKey: 'markets.beverages', route: '/beverages-liquors' },
-  { key: 'homeCare', labelKey: 'markets.homeCare', route: '/home-care' },
+  { key: 'homeCare', labelKey: 'markets.homeCare', route: '/home-care', externalSellRoute: '/home-care/sell' },
   { key: 'tickets', labelKey: 'markets.tickets', route: '/tickets' },
   { key: 'constructionTools', labelKey: 'markets.constructionTools', route: '/building-construction-tools' },
   { key: 'hardwareSoftware', labelKey: 'markets.hardwareSoftware', route: '/hardware-software' },
@@ -14837,12 +14838,12 @@ const HomeCarePage = ({ sellerItems = [], onOpenItemDetails }) => {
       name: item.title || 'Home-Care Service',
       image: item.image || 'https://images.pexels.com/photos/3846022/pexels-photo-3846022.jpeg?auto=compress&cs=tinysrgb&w=1200',
       category: item.category || 'Book @ Home-Care Services',
-      location: item.sellerName || 'SVS Seller',
-      experience: item.description || 'Seller listed service',
+      location: item.serviceArea || item.sellerName || 'SVS Seller',
+      experience: item.experience || item.description || 'Seller listed service',
       experienceYears: 0,
-      serviceType: 'Flexible',
-      availabilityWindow: 'Any',
-      professionalPreference: 'Any',
+      serviceType: item.serviceType || 'Flexible',
+      availabilityWindow: item.availability || 'Any',
+      professionalPreference: item.professionalPreference || 'Any',
       buttonLabel: 'View Service',
       isSellerListing: true,
       sourceItem: item,
@@ -16952,6 +16953,13 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
           <Building2 className="h-4 w-4" />
           <span>Property Listings</span>
         </Link>
+        <Link
+          to="/home-care/sell"
+          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)]"
+        >
+          <HeartHandshake className="h-4 w-4" />
+          <span>Home-Care Listings</span>
+        </Link>
       </nav>
 
       <p className="mt-6 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--svs-muted)]">Other</p>
@@ -19040,6 +19048,333 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
           </section>
         </div>
         </>
+      )}
+    </PageFrame>
+  );
+};
+
+// Dedicated listing flow for Book @ Home-Care Services — mirrors the standalone
+// property listing page. Services are framed differently from products (billing
+// cycle, professional preference, availability, service area) and persist to the
+// same marketplace_items storage with market_key 'homeCare' so they surface on
+// the Home-Care market exactly like other seller listings.
+const HomeCareSellPage = ({ onSellerItemCreated }) => {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState(() => ({
+    title: '',
+    category: '',
+    brand: '',
+    currency: '',
+    price: '',
+    serviceType: '',
+    professionalPreference: '',
+    experience: '',
+    availability: '',
+    serviceArea: '',
+    bookings: '',
+    description: '',
+  }));
+  const [imageFiles, setImageFiles] = useState([]);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState('idle');
+  const isAuthenticated = getAuthState();
+  const userEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
+  const userName = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-name') || 'SVS Seller');
+
+  const fieldOptions = (name) => (MARKET_FIELD_SPEC.homeCare.fields.find((field) => field.name === name)?.options || []);
+
+  useEffect(() => {
+    if (!imageFiles.length) {
+      setImagePreviewUrls([]);
+      return undefined;
+    }
+    const nextUrls = imageFiles.map((file) => URL.createObjectURL(file));
+    setImagePreviewUrls(nextUrls);
+    return () => {
+      nextUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [imageFiles]);
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setFormData((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleImagePick = (event) => {
+    const pickedFiles = Array.from(event.target.files || []);
+    if (!pickedFiles.length) {
+      return;
+    }
+    setImageFiles((current) => [...current, ...pickedFiles]);
+    event.target.value = '';
+  };
+
+  const handleRemoveSelectedImage = (indexToRemove) => {
+    setImageFiles((current) => current.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!isAuthenticated) {
+      navigate('/signin');
+      return;
+    }
+
+    const trimmedTitle = formData.title.trim();
+    const trimmedDescription = formData.description.trim();
+    const rawPrice = formData.price.trim();
+    const cleanedPrice = rawPrice.replace(/[^\d.]/g, '');
+    const trimmedPrice = cleanedPrice || rawPrice;
+
+    if (!trimmedTitle || !formData.category.trim() || !formData.serviceArea.trim() || !trimmedPrice || !trimmedDescription) {
+      setMessage('Add a service title, category, service area, price and description before publishing.');
+      setMessageType('error');
+      return;
+    }
+
+    if (!SUPPORTED_CURRENCIES.some((entry) => entry.code === formData.currency)) {
+      setMessage('Select the currency you want to be paid in before publishing your service.');
+      setMessageType('error');
+      return;
+    }
+
+    if (!hasSupabaseEnv || !supabase) {
+      setMessage('Supabase is not configured. Add the environment values first so listings can be stored.');
+      setMessageType('error');
+      return;
+    }
+
+    if (!imageFiles.length) {
+      setMessage('Add at least one photo of your service before publishing.');
+      setMessageType('error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setMessage('');
+    setMessageType('idle');
+
+    const uploadedImageUrls = [];
+
+    for (const imageFile of imageFiles) {
+      const fileExtension = imageFile.name.split('.').pop() || 'jpg';
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExtension}`;
+      const filePath = `${sanitizeStorageSegment(userEmail)}/homeCare/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(SELLER_IMAGES_BUCKET)
+        .upload(filePath, imageFile, { cacheControl: '3600', upsert: false });
+
+      if (uploadError) {
+        setMessage(`Image upload failed: ${uploadError.message}. Make sure the ${SELLER_IMAGES_BUCKET} bucket exists and allows uploads.`);
+        setMessageType('error');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const { data: publicUrlData } = supabase.storage.from(SELLER_IMAGES_BUCKET).getPublicUrl(filePath);
+      uploadedImageUrls.push(publicUrlData.publicUrl);
+    }
+
+    const detailsJson = buildSellerItemDetailsJson({ ...formData, marketKey: 'homeCare' });
+    const normalizedBookings = normalizeListingQuantity(formData.bookings, 99);
+
+    const { data, error } = await supabase
+      .from(SELLER_ITEMS_TABLE)
+      .insert({
+        seller_email: userEmail,
+        seller_name: formData.brand.trim() || userName,
+        title: trimmedTitle,
+        description: trimmedDescription,
+        quantity: Number.isFinite(normalizedBookings) ? normalizedBookings : 99,
+        price: trimmedPrice,
+        market_key: 'homeCare',
+        details_json: detailsJson,
+        image_url: uploadedImageUrls[0],
+        image_urls: uploadedImageUrls,
+      })
+      .select('*')
+      .single();
+
+    if (error) {
+      setMessage(getMarketplaceItemSaveErrorMessage(error.message));
+      setMessageType('error');
+      setIsSubmitting(false);
+      return;
+    }
+
+    onSellerItemCreated(mapSellerItemRecord(data));
+    setMessage('Service published successfully to Book @ Home-Care Services.');
+    setMessageType('success');
+    setFormData({
+      title: '', category: '', brand: '', currency: '', price: '', serviceType: '',
+      professionalPreference: '', experience: '', availability: '', serviceArea: '', bookings: '', description: '',
+    });
+    setImageFiles([]);
+    setIsSubmitting(false);
+
+    setTimeout(() => {
+      navigate('/home-care');
+    }, 700);
+  };
+
+  return (
+    <PageFrame title="List a Home-Care Service" subtitle="Add your service so buyers can find and book you on the Book @ Home-Care Services market. Listings are stored across sessions.">
+      <div className="mb-5">
+        <Link to="/seller/dashboard" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--svs-primary)] hover:underline">
+          <ChevronLeft className="h-4 w-4" /> Back to My Store
+        </Link>
+      </div>
+      {!isAuthenticated ? (
+        <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 text-sm text-[var(--svs-text)]">
+          <p>Sign in first to list your home-care service.</p>
+          <Link to="/signin" className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
+            Sign In
+          </Link>
+        </div>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <form onSubmit={handleSubmit} className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
+            {/* Service basics */}
+            <h2 className="text-base font-bold text-[var(--svs-text)]">Service details</h2>
+            <p className="mt-0.5 text-xs text-[var(--svs-muted)]">Tell buyers what you offer so they can filter providers by category, availability and area.</p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label htmlFor="hc-title" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Service title</label>
+                <input id="hc-title" name="title" value={formData.title} onChange={handleChange} required placeholder="e.g. Professional Elderly Home Care" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+              <div>
+                <label htmlFor="hc-category" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Service category <span className="text-rose-500">*</span></label>
+                <select id="hc-category" name="category" value={formData.category} onChange={handleChange} required className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none">
+                  <option value="">Select service category</option>
+                  {fieldOptions('category').map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="hc-brand" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Provider name / Brand</label>
+                <input id="hc-brand" name="brand" value={formData.brand} onChange={handleChange} placeholder="e.g. SVS Care Pros" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+            </div>
+
+            {/* Pricing */}
+            <h2 className="mt-6 text-base font-bold text-[var(--svs-text)]">Pricing &amp; availability</h2>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="hc-price" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Price <span className="text-rose-500">*</span></label>
+                <div className="flex gap-2">
+                  <CurrencyPickerField id="hc-currency" name="currency" value={formData.currency} onChange={handleChange} ariaLabel="Listing currency" />
+                  <input id="hc-price" name="price" value={formData.price} onChange={handleChange} required placeholder="350" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+                </div>
+                <p className="mt-1 text-[11px] text-[var(--svs-muted)]">You will always be paid in your listing currency. Buyers see prices auto-converted to their selected currency.</p>
+              </div>
+              <div>
+                <label htmlFor="hc-serviceType" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Billing cycle</label>
+                <select id="hc-serviceType" name="serviceType" value={formData.serviceType} onChange={handleChange} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none">
+                  <option value="">Select billing cycle</option>
+                  {fieldOptions('serviceType').map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="hc-availability" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Availability</label>
+                <select id="hc-availability" name="availability" value={formData.availability} onChange={handleChange} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none">
+                  <option value="">Select availability</option>
+                  {fieldOptions('availability').map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="hc-bookings" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Bookings available</label>
+                <input id="hc-bookings" name="bookings" type="number" min="0" step="1" value={formData.bookings} onChange={handleChange} placeholder="99" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+                <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Optional. How many bookings you can take. Leave blank for unlimited.</p>
+              </div>
+            </div>
+
+            {/* Professional details */}
+            <h2 className="mt-6 text-base font-bold text-[var(--svs-text)]">Provider &amp; coverage</h2>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="hc-professionalPreference" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Professional preference</label>
+                <select id="hc-professionalPreference" name="professionalPreference" value={formData.professionalPreference} onChange={handleChange} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none">
+                  <option value="">Select professional preference</option>
+                  {fieldOptions('professionalPreference').map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="hc-experience" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Experience</label>
+                <select id="hc-experience" name="experience" value={formData.experience} onChange={handleChange} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none">
+                  <option value="">Select experience</option>
+                  {fieldOptions('experience').map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="hc-serviceArea" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Service area / City <span className="text-rose-500">*</span></label>
+                <input id="hc-serviceArea" name="serviceArea" value={formData.serviceArea} onChange={handleChange} required placeholder="e.g. Cape Town, Durban, Lagos" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="mt-6">
+              <label htmlFor="hc-description" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Description <span className="text-rose-500">*</span></label>
+              <textarea id="hc-description" name="description" value={formData.description} onChange={handleChange} rows={4} required placeholder="Describe the service, what's included, your qualifications and what makes you reliable." className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+            </div>
+
+            {/* Photos */}
+            <div className="mt-6">
+              <label htmlFor="hc-image" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Service photos</label>
+              <input id="hc-image" type="file" accept="image/*" multiple onChange={handleImagePick} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              <p className="mt-1 text-xs text-[var(--svs-muted)]">Tap to add a photo. On mobile, add images one by one. On desktop, you can also pick multiple at once.</p>
+              {imageFiles.length ? (
+                <div className="mt-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-2 text-xs text-[var(--svs-muted)]">
+                  <p className="font-semibold text-[var(--svs-text)]">{imageFiles.length} image{imageFiles.length === 1 ? '' : 's'} selected</p>
+                  {imagePreviewUrls.length ? (
+                    <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {imagePreviewUrls.map((previewUrl, index) => (
+                        <div key={`${previewUrl}-${index}`} className="relative overflow-hidden rounded-md border border-[var(--svs-border)] bg-white">
+                          <img src={previewUrl} alt={`Selected preview ${index + 1}`} className="h-24 w-full object-cover" loading="lazy" />
+                          <button type="button" onClick={() => handleRemoveSelectedImage(index)} className="absolute right-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700">x</button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+
+            {message ? (
+              <div className={`mt-4 rounded-lg px-4 py-3 text-sm ${messageType === 'error' ? 'border border-rose-200 bg-rose-50 text-rose-700' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+                {message}
+              </div>
+            ) : null}
+
+            <button type="submit" disabled={isSubmitting} className={`${cudyBluePrimaryButtonClassName} mt-5 rounded-lg bg-[var(--svs-primary)] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70`}>
+              {isSubmitting ? 'Publishing service\u2026' : 'Publish Service'}
+            </button>
+          </form>
+
+          <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
+            <h2 className="text-xl font-bold text-[var(--svs-text)]">Listing Tips</h2>
+            <div className="mt-4 space-y-3 text-sm text-[var(--svs-muted)]">
+              <p>Pick the most accurate service category so buyers can filter and find you fast.</p>
+              <p>Set the service area / city so local buyers know you cover them.</p>
+              <p>Add your experience and availability to build buyer trust.</p>
+              <p>Use a clean, friendly photo of you or your team at work.</p>
+              <p>Set a realistic price in your billing cycle so quotes are clear.</p>
+              <p>After publishing, you can edit or remove the service anytime from My Store.</p>
+            </div>
+          </section>
+        </div>
       )}
     </PageFrame>
   );
@@ -32830,6 +33165,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/seller/payouts" element={<SellerPayoutsPage orders={orders} />} />
     <Route path="/property-hub" element={<PropertyHubPage />} />
     <Route path="/property-hub/sell" element={<PropertySellPage />} />
+    <Route path="/home-care/sell" element={<HomeCareSellPage onSellerItemCreated={onSellerItemCreated} />} />
     <Route path="/property-hub/category/:categoryKey" element={<PropertyCategoryPage />} />
     <Route path="/property-hub/listing/:listingId" element={<PropertyDetailPage />} />
     <Route path="/property-hub/visit/:listingId" element={<PropertyVisitStatusPage />} />
