@@ -8544,6 +8544,14 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
     setIsSearchFocused(false);
   };
 
+  const handleCloseSearchSuggestions = () => {
+    setQuery('');
+    setIsSearchFocused(false);
+    if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  };
+
   const handleQuickResultSelect = (item) => {
     if (item?.route) {
       navigate(item.route);
@@ -8670,15 +8678,25 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
               </button>
             </div>
             {isSearchFocused || query.trim() ? (
-              <div className="absolute left-1/2 top-[calc(100%+8px)] z-[85] w-[min(94vw,40rem)] -translate-x-1/2 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3 shadow-2xl sm:left-0 sm:right-0 sm:w-auto sm:translate-x-0">
-                <p className="mb-3 flex flex-wrap items-center gap-1.5 px-1 text-[11px] text-[var(--svs-muted)]">
-                  <Sparkles className="h-3.5 w-3.5 text-[var(--svs-primary)]" />
-                  <span className="font-semibold text-[var(--svs-text)]">AI-assisted</span>
-                  <span aria-hidden>•</span>
-                  <span>Understands natural language</span>
-                  <span aria-hidden>•</span>
-                  <span>Searches our directory, the web, and AI engines</span>
-                </p>
+              <div className="fixed inset-x-2 top-[68px] z-[85] max-h-[80vh] overflow-y-auto rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3 shadow-2xl sm:absolute sm:inset-x-auto sm:left-0 sm:right-0 sm:top-[calc(100%+8px)] sm:max-h-none sm:w-auto sm:overflow-visible">
+                <div className="mb-3 flex items-start justify-between gap-2 px-1">
+                  <p className="flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--svs-muted)]">
+                    <Sparkles className="h-3.5 w-3.5 text-[var(--svs-primary)]" />
+                    <span className="font-semibold text-[var(--svs-text)]">AI-assisted</span>
+                    <span aria-hidden>•</span>
+                    <span>Understands natural language</span>
+                    <span aria-hidden>•</span>
+                    <span>Searches our directory, the web, and AI engines</span>
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleCloseSearchSuggestions}
+                    aria-label="Close search suggestions"
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--svs-muted)] transition hover:bg-[var(--svs-surface-soft)] hover:text-[var(--svs-primary-strong)]"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
 
                 {!query.trim() ? (
                   <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3">
