@@ -23309,6 +23309,11 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   const isAdmin = currentUserEmail === SUPPORT_ADMIN_EMAIL;
   const hasSellerAccess = getSellerAccessState();
   const currentRole = isAdmin ? 'admin' : (hasSellerAccess ? 'seller' : 'client');
+  // Offers and payment requests are denominated in the buyer's selected
+  // currency so the toolbar icon, amount prefix and sent card all stay in
+  // sync with whatever currency the shopper is browsing in.
+  const { code: businessCurrencyCode } = useBuyerCurrency();
+  const businessCurrencySymbol = getCurrencyDefinition(businessCurrencyCode).symbol;
   const [threads, setThreads] = useState(() => getStoredSupportChatThreads(currentUserEmail));
   const [messages, setMessages] = useState(() => getStoredSupportChatMessages(currentUserEmail));
   const [selectedThreadId, setSelectedThreadId] = useState('');
@@ -24792,20 +24797,20 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   const handleSendOffer = useCallback(() => {
     const amount = Number(String(offerAmount).replace(/[^\d.]/g, ''));
     if (!amount || amount <= 0) return;
-    sendCardMessage({ type: 'offer', amount, currency: 'ZAR', note: offerNote.trim(), status: 'pending' });
+    sendCardMessage({ type: 'offer', amount, currency: businessCurrencyCode, note: offerNote.trim(), status: 'pending' });
     setOfferAmount('');
     setOfferNote('');
     setOfferDraftOpen(false);
-  }, [offerAmount, offerNote, sendCardMessage]);
+  }, [offerAmount, offerNote, sendCardMessage, businessCurrencyCode]);
 
   const handleSendPaymentRequest = useCallback(() => {
     const amount = Number(String(paymentAmount).replace(/[^\d.]/g, ''));
     if (!amount || amount <= 0) return;
-    sendCardMessage({ type: 'payment-request', amount, currency: 'ZAR', note: paymentNote.trim(), link: '/checkout' });
+    sendCardMessage({ type: 'payment-request', amount, currency: businessCurrencyCode, note: paymentNote.trim(), link: '/checkout' });
     setPaymentAmount('');
     setPaymentNote('');
     setPaymentDraftOpen(false);
-  }, [paymentAmount, paymentNote, sendCardMessage]);
+  }, [paymentAmount, paymentNote, sendCardMessage, businessCurrencyCode]);
 
   const handleShareLocation = useCallback(() => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
@@ -26751,7 +26756,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                           aria-label="Send an offer"
                           className="inline-flex h-9 w-9 shrink-0 items-center justify-center gap-1 rounded-full border border-amber-200 bg-amber-50 text-amber-800 transition hover:bg-amber-100 sm:h-auto sm:w-auto sm:rounded-md sm:px-2 sm:py-1 sm:text-[11px] sm:font-bold"
                         >
-                          <DollarSign className="h-4 w-4 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
+                          <span className="text-sm font-bold leading-none sm:text-xs" aria-hidden="true">{businessCurrencySymbol}</span>
                           <span className="hidden sm:inline">Offer</span>
                         </button>
                         <button
@@ -26800,7 +26805,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                       <p className="text-[11px] font-bold uppercase tracking-wider text-amber-800">Send an offer</p>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <div className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-white px-2 py-1">
-                          <span className="text-xs font-bold text-amber-800">R</span>
+                          <span className="text-xs font-bold text-amber-800">{businessCurrencySymbol}</span>
                           <input
                             type="number"
                             min="0"
@@ -26840,7 +26845,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                       <p className="text-[11px] font-bold uppercase tracking-wider text-cyan-800">Request payment</p>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <div className="inline-flex items-center gap-1 rounded-md border border-cyan-300 bg-white px-2 py-1">
-                          <span className="text-xs font-bold text-cyan-800">R</span>
+                          <span className="text-xs font-bold text-cyan-800">{businessCurrencySymbol}</span>
                           <input
                             type="number"
                             min="0"
@@ -26952,15 +26957,6 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                     </div>
                   ) : (
                   <div className="flex items-end gap-1 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] p-1.5 shadow-sm focus-within:border-[var(--svs-primary)] focus-within:ring-2 focus-within:ring-[var(--svs-primary)]/20 sm:rounded-2xl">
-                    <button
-                      type="button"
-                      onClick={() => setDraftMessage((d) => `${d}${d.endsWith(' ') || !d ? '' : ' '}😊 `)}
-                      title="Add an emoji"
-                      aria-label="Add an emoji"
-                      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg leading-none transition hover:bg-[var(--svs-surface-soft)]"
-                    >
-                      <span aria-hidden="true">😊</span>
-                    </button>
                     <textarea
                       ref={draftTextareaRef}
                       value={draftMessage}
