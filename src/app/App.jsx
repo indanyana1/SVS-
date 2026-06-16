@@ -348,15 +348,24 @@ const MARKET_FIELD_SPEC = {
       { name: 'suitableFor', label: 'Suitable for', type: 'select', options: ['Adults', 'Kids', 'Infants', 'Seniors', 'All Ages'] },
     ],
   },
-  // Aligned with StationeryPage. Static items use category: Pens, Books, Invoice Books, Office Supplies.
+  // Aligned with StationeryPage filter facets: category (Product Category),
+  // productType (Product Type) and requirement (Best For) drive the four sidebar
+  // filters, while colour, pack size, material and warranty populate the
+  // Product Details table on the listing's detail page. Collecting every
+  // dimension lets seller listings respond to all filters and render a full
+  // detail card exactly like the curated catalogue.
   stationery: {
     title: 'Stationery and Office Supplies Listing Details',
-    helper: 'Pick a category, brand, and any colour or pack size details so buyers can filter.',
+    helper: 'Pick the category, product type, brand and who it is best for so buyers can filter, then add colour, pack size, material and warranty for the product details.',
     fields: [
-      { name: 'category', label: 'Category', type: 'select', required: true, options: ['Pens', 'Pencils', 'Books', 'Notebooks & Paper', 'Invoice Books', 'Office Supplies', 'Art & Craft', 'Storage & Filing', 'Printing & Toner', 'School Sets', 'Other'] },
-      { name: 'brand', label: 'Brand', type: 'text', placeholder: 'e.g. Bic, Pilot, Croxley' },
+      { name: 'category', label: 'Product category', type: 'select', required: true, options: ['Office Supplies', 'Writing Instruments', 'Paper Products', 'Filing & Storage', 'Computers & Accessories', 'School Supplies', 'Art & Craft', 'Printing & Toner', 'Other'] },
+      { name: 'productType', label: 'Product type', type: 'select', required: true, options: ['Pens & Pencils', 'Notebooks & Journals', 'Paper Products', 'Markers & Highlighters', 'Art & Drawing Supplies', 'Sticky Notes & Labels', 'Filing & Organization', 'Desk Accessories', 'Other'] },
+      { name: 'requirement', label: 'Best for', type: 'select', required: true, options: ['Individual Purchase', 'Corporate Purchase', 'School Purchase', 'Bulk Orders'] },
+      { name: 'brand', label: 'Brand', type: 'text', required: true, placeholder: 'e.g. Bic, Pilot, Croxley, HP' },
       { name: 'color', label: 'Colour', type: 'text', placeholder: 'e.g. Blue, Assorted' },
-      { name: 'volume', label: 'Pack size', type: 'text', placeholder: 'e.g. Pack of 12' },
+      { name: 'volume', label: 'Pack size', type: 'text', placeholder: 'e.g. Pack of 12, Single' },
+      { name: 'material', label: 'Material', type: 'text', placeholder: 'e.g. Plastic, Steel, Premium-grade' },
+      { name: 'warranty', label: 'Warranty', type: 'text', placeholder: 'e.g. 12 months, SVS guarantee' },
     ],
   },
   // Aligned with FastFoodPage filter dimensions: categories (from static items),
@@ -1833,14 +1842,26 @@ const groceries = [
 // dimensions surfaced in the StationeryPage sidebar: `category` (Product
 // Category), `brand`, `productType` and `requirement` (Business Requirement)
 // so the listing can be filtered exactly like the prototype.
+// Each key maps to a real product photo that matches the specific item, so the
+// listing cards show the actual kind of product rather than a generic stock
+// image. URLs use the Pexels CDN compressed format.
 const STATIONERY_IMG = {
-  pens: 'https://images.pexels.com/photos/261763/pexels-photo-261763.jpeg?auto=compress&cs=tinysrgb&w=1200',
-  books: 'https://images.pexels.com/photos/159711/books-bookstore-book-reading-159711.jpeg?auto=compress&cs=tinysrgb&w=1200',
-  invoice: 'https://images.pexels.com/photos/669365/pexels-photo-669365.jpeg?auto=compress&cs=tinysrgb&w=1200',
-  desk: 'https://images.pexels.com/photos/355952/pexels-photo-355952.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  parkerPens: 'https://images.pexels.com/photos/11889667/pexels-photo-11889667.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  notebook: 'https://images.pexels.com/photos/867483/pexels-photo-867483.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  fineliner: 'https://images.pexels.com/photos/998586/pexels-photo-998586.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  stickyNotes: 'https://images.pexels.com/photos/6991385/pexels-photo-6991385.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  whiteboardMarkers: 'https://images.pexels.com/photos/19236197/pexels-photo-19236197.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  fileFolders: 'https://images.pexels.com/photos/265024/pexels-photo-265024.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  colourPencils: 'https://images.pexels.com/photos/194098/pexels-photo-194098.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  bicPens: 'https://images.pexels.com/photos/965118/pexels-photo-965118.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  gelPens: 'https://images.pexels.com/photos/6187589/pexels-photo-6187589.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  highlighters: 'https://images.pexels.com/photos/5554666/pexels-photo-5554666.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  permanentMarkers: 'https://images.pexels.com/photos/6192511/pexels-photo-6192511.jpeg?auto=compress&cs=tinysrgb&w=1200',
   pencils: 'https://images.pexels.com/photos/207666/pexels-photo-207666.jpeg?auto=compress&cs=tinysrgb&w=1200',
-  printer: 'https://images.pexels.com/photos/4792733/pexels-photo-4792733.jpeg?auto=compress&cs=tinysrgb&w=1200',
-  chair: 'https://images.pexels.com/photos/1957478/pexels-photo-1957478.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  oxfordNotebooks: 'https://images.pexels.com/photos/5861185/pexels-photo-5861185.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  deskCaddy: 'https://images.pexels.com/photos/14525781/pexels-photo-14525781.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  printer: 'https://images.pexels.com/photos/4792283/pexels-photo-4792283.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  chair: 'https://images.pexels.com/photos/5483245/pexels-photo-5483245.jpeg?auto=compress&cs=tinysrgb&w=1200',
 };
 
 const stationeryItems = [
@@ -1853,7 +1874,7 @@ const stationeryItems = [
     requirement: 'Individual Purchase',
     description: 'Refined stainless-steel ballpoint pens for executives, gifting, and front-desk use.',
     price: '12.99',
-    image: STATIONERY_IMG.pens,
+    image: STATIONERY_IMG.parkerPens,
   },
   {
     id: 's2',
@@ -1864,7 +1885,7 @@ const stationeryItems = [
     requirement: 'Individual Purchase',
     description: 'Premium hardcover notebook with ribbon bookmark and elastic closure for notes and journaling.',
     price: '19.99',
-    image: STATIONERY_IMG.books,
+    image: STATIONERY_IMG.notebook,
   },
   {
     id: 's3',
@@ -1875,7 +1896,7 @@ const stationeryItems = [
     requirement: 'Individual Purchase',
     description: 'Archival-quality ultra-fine micron pens for drawing, technical work, and detailed lettering.',
     price: '15.50',
-    image: STATIONERY_IMG.pencils,
+    image: STATIONERY_IMG.fineliner,
   },
   {
     id: 's4',
@@ -1886,7 +1907,7 @@ const stationeryItems = [
     requirement: 'Bulk Orders',
     description: 'Bold-colour sticky notes that stick strong and re-stick for reminders, planning, and admin work.',
     price: '8.99',
-    image: STATIONERY_IMG.desk,
+    image: STATIONERY_IMG.stickyNotes,
   },
   {
     id: 's5',
@@ -1897,7 +1918,7 @@ const stationeryItems = [
     requirement: 'Corporate Purchase',
     description: 'Low-odour dry-erase markers in assorted colours for boardrooms, classrooms, and planning walls.',
     price: '9.99',
-    image: STATIONERY_IMG.desk,
+    image: STATIONERY_IMG.whiteboardMarkers,
   },
   {
     id: 's6',
@@ -1908,7 +1929,7 @@ const stationeryItems = [
     requirement: 'Corporate Purchase',
     description: 'Durable hanging folders with tabs and inserts to keep invoices, contracts, and records tidy.',
     price: '14.99',
-    image: STATIONERY_IMG.invoice,
+    image: STATIONERY_IMG.fileFolders,
   },
   {
     id: 's7',
@@ -1919,7 +1940,7 @@ const stationeryItems = [
     requirement: 'School Purchase',
     description: 'Bright, break-resistant colour pencils ideal for classrooms, projects, and creative work.',
     price: '11.50',
-    image: STATIONERY_IMG.pencils,
+    image: STATIONERY_IMG.colourPencils,
   },
   {
     id: 's8',
@@ -1930,7 +1951,7 @@ const stationeryItems = [
     requirement: 'Bulk Orders',
     description: 'Reliable everyday pens in a value bulk box for schools, offices, and busy front desks.',
     price: '7.99',
-    image: STATIONERY_IMG.pens,
+    image: STATIONERY_IMG.bicPens,
   },
   {
     id: 's9',
@@ -1941,7 +1962,7 @@ const stationeryItems = [
     requirement: 'Individual Purchase',
     description: 'Smooth retractable gel pens with comfortable grip for everyday writing and note-taking.',
     price: '10.99',
-    image: STATIONERY_IMG.pens,
+    image: STATIONERY_IMG.gelPens,
   },
   {
     id: 's10',
@@ -1952,7 +1973,7 @@ const stationeryItems = [
     requirement: 'Individual Purchase',
     description: 'Quick-dry chisel-tip highlighters in vivid colours for studying and document review.',
     price: '6.50',
-    image: STATIONERY_IMG.desk,
+    image: STATIONERY_IMG.highlighters,
   },
   {
     id: 's11',
@@ -1963,7 +1984,7 @@ const stationeryItems = [
     requirement: 'Bulk Orders',
     description: 'Bold permanent markers that write on almost any surface for labelling and signage.',
     price: '9.50',
-    image: STATIONERY_IMG.desk,
+    image: STATIONERY_IMG.permanentMarkers,
   },
   {
     id: 's12',
@@ -1985,7 +2006,7 @@ const stationeryItems = [
     requirement: 'School Purchase',
     description: 'Optik-paper spiral notebooks with sturdy covers for class notes and study sessions.',
     price: '13.99',
-    image: STATIONERY_IMG.books,
+    image: STATIONERY_IMG.oxfordNotebooks,
   },
   {
     id: 's14',
@@ -1996,7 +2017,7 @@ const stationeryItems = [
     requirement: 'Corporate Purchase',
     description: 'Mesh desk organiser with compartments for pens, sticky notes, and small office tools.',
     price: '16.99',
-    image: STATIONERY_IMG.desk,
+    image: STATIONERY_IMG.deskCaddy,
   },
   {
     id: 's15',
