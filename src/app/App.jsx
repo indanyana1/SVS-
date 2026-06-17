@@ -449,6 +449,9 @@ const MARKET_FIELD_SPEC = {
       { name: 'powerSource', label: 'Power source', type: 'select', options: ['Manual', 'Corded Electric', 'Cordless Battery', 'Pneumatic', 'Petrol / Diesel'] },
       { name: 'material', label: 'Material', type: 'select', options: ['Steel', 'Stainless Steel', 'Aluminium', 'Wood', 'Plastic', 'Composite', 'Concrete', 'Rubber'] },
       { name: 'projectType', label: 'Project type', type: 'select', options: ['DIY / Home', 'Residential', 'Commercial', 'Industrial', 'Infrastructure'] },
+      { name: 'packaging', label: 'Packaging size', type: 'select', options: ['Each / Per unit', '25kg', '40kg', '50kg', '1 Ton', '5 Ton', 'Other'], helper: 'Pick a bag/bulk size for materials (cement, sand) so buyers can filter by packaging. Use "Each / Per unit" for tools.' },
+      { name: 'specification', label: 'Specification', type: 'text', placeholder: 'e.g. 2200 W, 230 mm disc, 42.5 N grade' },
+      { name: 'highlights', label: 'Key highlights (one per line)', type: 'textarea', placeholder: 'High-strength construction grade\nWeather & moisture resistant\nProfessional and DIY use', helper: 'Optional. Shown as the bullet list on the product detail page. Leave blank to auto-generate from brand, material and project type.' },
       { name: 'warranty', label: 'Warranty', type: 'text', placeholder: 'e.g. 12 months' },
       { name: 'condition', label: 'Condition', type: 'select', options: ['Brand New', 'Refurbished', 'Used'] },
     ],
@@ -2976,6 +2979,9 @@ const constructionBrandOptions = [
 const constructionPowerSourceOptions = ['All', 'Manual', 'Corded Electric', 'Cordless Battery', 'Pneumatic', 'Petrol / Diesel'];
 const constructionMaterialOptions = ['All', 'Steel', 'Stainless Steel', 'Aluminium', 'Wood', 'Plastic', 'Composite', 'Concrete', 'Rubber'];
 const constructionProjectTypes = ['All', 'DIY / Home', 'Residential', 'Commercial', 'Industrial', 'Infrastructure'];
+// Common bag / bulk pack sizes shoppers filter by for cement, aggregates and
+// other building materials. Rendered as quick-pick chips in the filter panel.
+const constructionPackagingOptions = ['25kg', '40kg', '50kg', '1 Ton', '5 Ton'];
 
 const homeCareProviders = [
   {
@@ -14579,15 +14585,17 @@ const RetailerDirectLinksPage = () => {
 
 const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategories, setSelectedCategories] = useState(['All']);
   const [selectedSubcategories, setSelectedSubcategories] = useState([]);
   const [selectedBrand, setSelectedBrand] = useState('All');
   const [selectedPowerSource, setSelectedPowerSource] = useState('All');
   const [selectedMaterial, setSelectedMaterial] = useState('All');
   const [selectedProjectType, setSelectedProjectType] = useState('All');
+  const [selectedPackaging, setSelectedPackaging] = useState([]);
   const [showOnSaleOnly, setShowOnSaleOnly] = useState(false);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-  const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(true);
+  const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(false);
   const [showAllRelated, setShowAllRelated] = useState(false);
   const productsSectionRef = useRef(null);
   const relatedSectionRef = useRef(null);
@@ -14617,10 +14625,32 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
     const powerSourceMatch = selectedPowerSource === 'All' || matchesField(item.powerSource, [selectedPowerSource]);
     const materialMatch = selectedMaterial === 'All' || matchesField(item.material || item.specification, [selectedMaterial]);
     const projectTypeMatch = selectedProjectType === 'All' || matchesField(item.projectType, [selectedProjectType]);
-    const saleMatch = !showOnSaleOnly || true;
+    // Packaging is matched space-insensitively so "25kg" also matches "25 kg",
+    // and tonnage labels match "1 Ton", "1ton", or "1t". Seller listings may
+    // store packaging across any of these fields, so we scan all of them.
+    const packagingHaystack = `${item.packaging || ''} ${item.packagingSize || ''} ${item.size || ''} ${item.unit || ''} ${item.specification || ''} ${item.subcategory || ''} ${item.title || ''} ${item.description || ''}`
+      .toLowerCase()
+      .replace(/\s+/g, '');
+    const packagingMatch = !selectedPackaging.length
+      || selectedPackaging.some((pack) => {
+        const token = String(pack).toLowerCase().replace(/\s+/g, '');
+        if (packagingHaystack.includes(token)) return true;
+        // Treat "1 Ton" / "5 Ton" the same as "1t" / "5t".
+        const tonMatch = token.match(/^(\d+(?:\.\d+)?)ton$/);
+        if (tonMatch) return packagingHaystack.includes(`${tonMatch[1]}t`);
+        return false;
+      });
+    const itemOnSale = Boolean(item.discount) || getItemSaleDiscountRate(item) > 0;
+    const saleMatch = !showOnSaleOnly || itemOnSale;
 
-    return categoryMatch && subcategoryMatch && brandMatch && powerSourceMatch && materialMatch && projectTypeMatch && saleMatch;
-  }), [marketItems, selectedCategories, selectedSubcategories, selectedBrand, selectedPowerSource, selectedMaterial, selectedProjectType, showOnSaleOnly]);
+    const query = searchQuery.trim().toLowerCase();
+    const searchMatch = !query
+      || [item.title, item.category, item.subcategory, item.brand, item.powerSource, item.material, item.projectType, item.specification, item.description, item.sellerName, item.packaging, item.packagingSize, item.size]
+        .filter(Boolean)
+        .some((field) => String(field).toLowerCase().includes(query));
+
+    return categoryMatch && subcategoryMatch && brandMatch && powerSourceMatch && materialMatch && projectTypeMatch && packagingMatch && saleMatch && searchMatch;
+  }), [marketItems, selectedCategories, selectedSubcategories, selectedBrand, selectedPowerSource, selectedMaterial, selectedProjectType, selectedPackaging, showOnSaleOnly, searchQuery]);
 
   const toggleMulti = (value, list, setter, exclusiveValue) => {
     if (exclusiveValue && value === exclusiveValue) {
@@ -14640,7 +14670,9 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
     setSelectedPowerSource('All');
     setSelectedMaterial('All');
     setSelectedProjectType('All');
+    setSelectedPackaging([]);
     setShowOnSaleOnly(false);
+    setSearchQuery('');
   };
 
   const activeFilterCount = (
@@ -14650,6 +14682,7 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
     + (selectedPowerSource !== 'All' ? 1 : 0)
     + (selectedMaterial !== 'All' ? 1 : 0)
     + (selectedProjectType !== 'All' ? 1 : 0)
+    + selectedPackaging.length
     + (showOnSaleOnly ? 1 : 0)
   );
 
@@ -14804,6 +14837,25 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
         </div>
 
         <div>
+          <h4 className="text-sm font-medium text-[#1A1A1A]">Packaging Size</h4>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {constructionPackagingOptions.map((option) => {
+              const isActive = selectedPackaging.includes(option);
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => toggleMulti(option, selectedPackaging, setSelectedPackaging)}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${isActive ? 'border-[#0f9fb2] bg-[#0f9fb2] text-white' : 'border-[#D1D5DB] bg-white text-[#1A1A1A] hover:border-[#0f9fb2] hover:text-[#0f9fb2]'}`}
+                >
+                  {option}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
           <label className="flex items-center gap-2.5 text-sm font-medium text-[#1A1A1A]">
             <input
               type="checkbox"
@@ -14840,21 +14892,58 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
     onToggleWishlist: (item) => onToggleWishlist(buildWishlistItem(item)),
     onOpenItemDetails: (item) => {
       const wishlistItem = buildWishlistItem(item);
+      const itemTitle = getTranslatedValue(t, item.titleKey, item.title);
+      const packagingValue = item.packaging || item.packagingSize || item.size || '';
+      const sellerHighlights = Array.isArray(item.highlights)
+        ? item.highlights.map((line) => String(line).trim()).filter(Boolean)
+        : (typeof item.highlights === 'string' && item.highlights.trim()
+          ? item.highlights.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+          : []);
+      const keyHighlights = sellerHighlights.length
+        ? sellerHighlights
+        : [
+          `${item.brand || 'Trusted'} brand, construction-grade quality`,
+          item.material ? `Made from durable ${item.material}` : 'Durable, site-ready build',
+          item.powerSource && item.powerSource !== 'Manual'
+            ? `${item.powerSource} powered for demanding jobs`
+            : 'Built for professional and DIY use',
+          item.projectType ? `Ideal for ${item.projectType} projects` : 'Versatile across project types',
+        ].filter(Boolean);
+      const technicalSpecs = {
+        Brand: item.brand || 'Generic',
+        Category: item.category || 'Construction',
+        Subcategory: item.subcategory || 'General',
+        'Power Source': item.powerSource || 'Manual',
+        Material: item.material || 'Mixed',
+        'Project Type': item.projectType || 'General',
+        ...(packagingValue ? { 'Packaging Size': packagingValue } : {}),
+        ...(item.specification ? { Specification: item.specification } : {}),
+      };
+      const relatedPool = marketItems.filter((entry) => String(entry.id) !== String(item.id));
+      const sameCategory = relatedPool.filter((entry) => (entry.category || '') === (item.category || ''));
+      const similarProducts = (sameCategory.length ? sameCategory : relatedPool).slice(0, 3).map((entry) => ({
+        id: entry.id,
+        title: getTranslatedValue(t, entry.titleKey, entry.title),
+        image: entry.image,
+        price: getSalePrices(entry.price, getItemSaleDiscountRate(entry), entry.currency || null).nowPrice,
+        category: entry.category || 'Construction',
+        sellerName: entry.sellerName || '',
+        rating: 4.8,
+        reviewsCount: 120,
+      }));
       onOpenItemDetails?.({
-        title: getTranslatedValue(t, item.titleKey, item.title),
+        title: itemTitle,
         image: item.image,
         images: item.images || (item.image ? [item.image] : []),
         marketName: t('markets.constructionTools'),
         details: buildDetailsText(item),
         priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
-        detailsTable: {
-          Category: item.category || 'Construction',
-          Subcategory: item.subcategory || 'General',
-          Brand: item.brand || 'Generic',
-          'Power Source': item.powerSource || 'Manual',
-          Material: item.material || 'Mixed',
-          'Project Type': item.projectType || 'General',
-        },
+        detailVariant: 'construction',
+        productOverview: item.description || buildDetailsText(item) || `${itemTitle} — quality building material and equipment available for residential, commercial, and industrial projects.`,
+        keyHighlights,
+        technicalSpecs,
+        specsTitle: 'Product Details',
+        similarProducts,
         cartItem: buildCartItem(item),
         wishlistItem,
       });
@@ -14874,6 +14963,17 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
       />
       <MarketTrustStrip />
       <div className="mx-auto w-full max-w-[1280px] px-4 py-8 sm:px-6 lg:py-10">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#0f9fb2]" aria-hidden="true" />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search building materials, tools & equipment…"
+            aria-label="Search building materials and tools"
+            className="h-12 w-full rounded-full border border-[var(--svs-border)] bg-white pl-12 pr-4 text-sm text-[var(--svs-text)] shadow-sm outline-none transition focus:border-[#0f9fb2] focus:ring-2 focus:ring-[#0f9fb2]/30"
+          />
+        </div>
         <div className="mt-8 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-[var(--svs-text)]">Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}</h2>
           <button
@@ -32175,6 +32275,11 @@ const ItemDetailsModal = ({
     );
   }
 
+  // Rich, full-page-style detail layout (Product Overview, Key Highlights,
+  // spec table, ratings breakdown, similar-products grid). Shared by the
+  // electronics and construction/building markets.
+  const isRichDetail = item.detailVariant === 'electronics' || item.detailVariant === 'construction';
+
   return (
     <div
       className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/70 p-4"
@@ -32408,8 +32513,8 @@ const ItemDetailsModal = ({
             ) : null}
           </div>
         </div>
-        {/* Electronics & Gadgets rich detail sections */}
-        {item.detailVariant === 'electronics' ? (
+        {/* Electronics & construction rich detail sections */}
+        {isRichDetail ? (
           <div className="space-y-6 border-t border-[var(--svs-border)] px-6 py-6">
             {item.productOverview ? (
               <div>
@@ -32473,9 +32578,9 @@ const ItemDetailsModal = ({
           </div>
         ) : null}
         {/* Reviews Section */}
-        <div className={`${item.detailVariant === 'electronics' ? 'rounded-2xl bg-[var(--svs-primary)]/5 mx-6 mb-6' : 'border-t border-[var(--svs-border)]'} px-6 py-6`}>
+        <div className={`${isRichDetail ? 'rounded-2xl bg-[var(--svs-primary)]/5 mx-6 mb-6' : 'border-t border-[var(--svs-border)]'} px-6 py-6`}>
           <h3 className="text-lg font-bold text-[var(--svs-primary-strong)] mb-3">Ratings &amp; Reviews</h3>
-          {item.detailVariant === 'electronics' ? (() => {
+          {isRichDetail ? (() => {
             const ratingValues = reviews.length ? reviews.map((r) => r.rating) : [5, 5, 5, 5, 4, 4, 4, 3, 5, 5];
             const total = ratingValues.length;
             const avg = total ? (ratingValues.reduce((sum, n) => sum + n, 0) / total).toFixed(1) : '0.0';
@@ -32582,7 +32687,7 @@ const ItemDetailsModal = ({
         {item.similarProducts?.length ? (
           <div className="border-t border-[var(--svs-border)] px-6 py-6">
             <h3 className="text-lg font-bold text-[var(--svs-text)] mb-3">Similar Products</h3>
-            {item.detailVariant === 'electronics' ? (
+            {isRichDetail ? (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
                 {item.similarProducts.map((sim) => (
                   <article key={sim.id} className="overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-sm">
