@@ -25376,6 +25376,35 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     return () => { cancelled = true; };
   }, [activeThread, activeMessages, currentUserEmail, loadRemoteChat]);
 
+  // Remote delivery receipts — the moment a message from someone else lands in
+  // this signed-in user's client (across ANY of their threads, even while the
+  // chat is closed), stamp our email under `metadata.deliveredTo` so the sender
+  // sees the grey double-tick. This is the real "delivered" state: it does not
+  // require the recipient to open the thread (that becomes "read" instead).
+  // Idempotent — skips messages already marked — so it converges and won't loop.
+  useEffect(() => {
+    if (!messages.length) return;
+    if (!getAuthState() || !currentUserEmail || !hasSupabaseEnv || !supabase) return;
+    const toMark = messages.filter((message) => (
+      normalizeEmail(message.senderEmail || '') !== currentUserEmail
+      && !(Array.isArray(message.metadata?.deliveredTo) && message.metadata.deliveredTo.includes(currentUserEmail))
+    ));
+    if (!toMark.length) return;
+    const records = toMark.map((message) => toSupportChatMessageRecord({
+      ...message,
+      metadata: {
+        ...(message.metadata || {}),
+        deliveredTo: [...(message.metadata?.deliveredTo || []), currentUserEmail],
+      },
+    }));
+    let cancelled = false;
+    supabase
+      .from(SUPPORT_CHAT_MESSAGES_TABLE)
+      .upsert(records, { onConflict: 'message_key' })
+      .then(() => { if (!cancelled) loadRemoteChat(); });
+    return () => { cancelled = true; };
+  }, [messages, currentUserEmail, loadRemoteChat]);
+
   // Pin the scroll position when the active thread changes (opening a
   // chat) or a new message lands. Prefers the first-unread divider so the
   // user lands on their first unseen message; otherwise jumps to the
@@ -27273,6 +27302,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                           </article>
                         </div>
                         ) : (
+                      <Fragment>
                       <SwipeableMessage onReply={startReply} elevated={menuOpen}>
                         <div className={`group flex items-end gap-2 ${menuOpen ? 'relative z-40' : ''} ${mine ? 'flex-row-reverse' : 'justify-start'}`}>
                           <span
@@ -27612,9 +27642,15 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                             {mine ? (() => {
                               const readByOthers = Array.isArray(message.metadata?.readBy)
                                 && message.metadata.readBy.some((email) => normalizeEmail(email) !== currentUserEmail);
-                              return readByOthers
-                                ? <CheckCheck className="h-3.5 w-3.5 text-sky-300" aria-label="Read" />
-                                : <CheckCheck className="h-3.5 w-3.5 opacity-80" aria-label="Sent" />;
+                              const deliveredToOthers = Array.isArray(message.metadata?.deliveredTo)
+                                && message.metadata.deliveredTo.some((email) => normalizeEmail(email) !== currentUserEmail);
+                              if (readByOthers) {
+                                return <CheckCheck className="h-3.5 w-3.5 text-sky-300" aria-label="Read" />;
+                              }
+                              if (deliveredToOthers) {
+                                return <CheckCheck className="h-3.5 w-3.5 opacity-80" aria-label="Delivered" />;
+                              }
+                              return <Check className="h-3.5 w-3.5 opacity-80" aria-label="Sent" />;
                             })() : null}
                           </p>
                           {message.metadata?.reactions && Object.keys(message.metadata.reactions).length ? (
@@ -27640,6 +27676,33 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                           </article>
                         </div>
                       </SwipeableMessage>
+                      {mine ? (() => {
+                        const readByOthers = Array.isArray(message.metadata?.readBy)
+                          && message.metadata.readBy.some((email) => normalizeEmail(email) !== currentUserEmail);
+                        const deliveredToOthers = Array.isArray(message.metadata?.deliveredTo)
+                          && message.metadata.deliveredTo.some((email) => normalizeEmail(email) !== currentUserEmail);
+                        const statusLabel = readByOthers ? 'Read' : deliveredToOthers ? 'Delivered' : 'Sent';
+                        const statusClass = readByOthers
+                          ? 'bg-sky-100 text-sky-700'
+                          : deliveredToOthers
+                            ? 'bg-slate-200 text-slate-600'
+                            : 'bg-slate-100 text-slate-500';
+                        return (
+                          <div className="mt-0.5 flex justify-end pr-10">
+                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${statusClass}`}>
+                              {readByOthers ? (
+                                <CheckCheck className="h-3 w-3 text-sky-600" aria-hidden="true" />
+                              ) : deliveredToOthers ? (
+                                <CheckCheck className="h-3 w-3 text-slate-500" aria-hidden="true" />
+                              ) : (
+                                <Check className="h-3 w-3 text-slate-400" aria-hidden="true" />
+                              )}
+                              {statusLabel}
+                            </span>
+                          </div>
+                        );
+                      })() : null}
+                      </Fragment>
                         )}
                       </Fragment>
                     );
