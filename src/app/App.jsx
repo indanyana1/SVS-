@@ -18206,6 +18206,10 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
   const [bulkDraft, setBulkDraft] = useState(null); // { id, files: [{file, previewUrl}], status, title, ... } | null
   const [isBulkAnalyzing, setIsBulkAnalyzing] = useState(false);
   const [bulkMessage, setBulkMessage] = useState('');
+  // Free-text box for typing a new size/variant before adding it as a chip
+  // (e.g. "Small", "30", "UK 7"). The committed values live on
+  // bulkDraft.sizes so one listing can carry several sizes at once.
+  const [bulkSizeInput, setBulkSizeInput] = useState('');
   const bulkInputRef = useRef(null);
   // Hard idempotency guard. Even if the Publish button is double-tapped
   // before React re-renders with `status: 'publishing'`, this ref blocks
@@ -18240,6 +18244,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
     brand: '',
     color: '',
     size: '',
+    sizes: [],
     material: '',
     condition: 'New',
     keyFeatures: [],
@@ -18249,6 +18254,53 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
 
   const updateBulkDraft = useCallback((patch) => {
     setBulkDraft((current) => (current ? { ...current, ...patch } : current));
+  }, []);
+
+  // Add one or more sizes/variants to the current draft. Accepts a single
+  // value or a comma / slash separated string ("S, M, L" or "UK6/UK7") and
+  // dedupes case-insensitively so the same listing can be sold in several
+  // sizes at once.
+  const addBulkSizes = useCallback((raw) => {
+    const parts = String(raw || '')
+      .split(/[,/|]+/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+    if (!parts.length) return;
+    setBulkDraft((current) => {
+      if (!current) return current;
+      const existing = Array.isArray(current.sizes) ? current.sizes : [];
+      const next = existing.slice();
+      parts.forEach((value) => {
+        if (!next.some((entry) => entry.toLowerCase() === value.toLowerCase())) {
+          next.push(value);
+        }
+      });
+      return { ...current, sizes: next, size: next.join(', ') };
+    });
+  }, []);
+
+  // Remove a single size/variant chip from the draft.
+  const removeBulkSize = useCallback((value) => {
+    setBulkDraft((current) => {
+      if (!current) return current;
+      const next = (Array.isArray(current.sizes) ? current.sizes : []).filter(
+        (entry) => entry.toLowerCase() !== String(value).toLowerCase(),
+      );
+      return { ...current, sizes: next, size: next.join(', ') };
+    });
+  }, []);
+
+  // Toggle a quick-pick size (from the per-market sizeOptions list) on/off.
+  const toggleBulkSize = useCallback((value) => {
+    setBulkDraft((current) => {
+      if (!current) return current;
+      const existing = Array.isArray(current.sizes) ? current.sizes : [];
+      const has = existing.some((entry) => entry.toLowerCase() === String(value).toLowerCase());
+      const next = has
+        ? existing.filter((entry) => entry.toLowerCase() !== String(value).toLowerCase())
+        : [...existing, value];
+      return { ...current, sizes: next, size: next.join(', ') };
+    });
   }, []);
 
   // ---- AI Quick Lister: per-market hints for fields the AI usually
@@ -18283,7 +18335,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
     const priceNum = Number(String(draft.price || '').replace(/[^\d.]/g, ''));
     if (!Number.isFinite(priceNum) || priceNum <= 0) missing.push({ key: 'price', label: 'Price' });
     if (!Number(draft.quantity) || Number(draft.quantity) < 1) missing.push({ key: 'quantity', label: 'Quantity' });
-    if (hints.sizeRequired && !String(draft.size || '').trim()) {
+    if (hints.sizeRequired && !(Array.isArray(draft.sizes) && draft.sizes.length)) {
       missing.push({ key: 'size', label: 'Size', hint: hints.sizePlaceholder });
     }
     return missing;
@@ -18343,6 +18395,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
       return null;
     });
     setBulkMessage('');
+    setBulkSizeInput('');
   }, []);
 
   // Downscale a photo for the AI vision call. Phone cameras often
@@ -18447,6 +18500,12 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
         brand: listing.brand || '',
         color: listing.color || '',
         size: listing.size || '',
+        sizes: listing.size
+          ? String(listing.size)
+              .split(/[,/|]+/)
+              .map((part) => part.trim())
+              .filter(Boolean)
+          : [],
         material: listing.material || '',
         condition: listing.condition || 'New',
         keyFeatures: featureLines,
@@ -18524,7 +18583,14 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
       if (bulkDraft.brand) detailsJson.brand = bulkDraft.brand;
       if (bulkDraft.color) detailsJson.color = bulkDraft.color;
       if (bulkDraft.category) detailsJson.category = bulkDraft.category;
-      if (bulkDraft.size) detailsJson.size = bulkDraft.size;
+      if (Array.isArray(bulkDraft.sizes) && bulkDraft.sizes.length) {
+        // Store the full list so buyers can pick a size on the product page,
+        // and keep `size` as a readable summary for older filters/display.
+        detailsJson.sizes = bulkDraft.sizes;
+        detailsJson.size = bulkDraft.sizes.join(', ');
+      } else if (bulkDraft.size) {
+        detailsJson.size = bulkDraft.size;
+      }
       if (bulkDraft.material) detailsJson.material = bulkDraft.material;
       if (bulkDraft.condition) detailsJson.condition = bulkDraft.condition;
       if (Array.isArray(bulkDraft.keyFeatures) && bulkDraft.keyFeatures.length) {
@@ -18925,32 +18991,75 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                       </div>
                       <p className="mt-0.5 text-[10px] font-normal text-[var(--svs-muted)]">AI suggests a fair retail price — always confirm or set your own.</p>
                     </label>
-                    <label className="block text-[11px] font-semibold text-[var(--svs-text)]">
-                      <span className="flex items-center gap-1.5">Size {bulkDraft.size ? <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-700" title="Auto-filled by AI">✨ AI</span> : <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${(BULK_MARKET_FIELD_HINTS[bulkDraft.marketKey]?.sizeRequired) ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>{(BULK_MARKET_FIELD_HINTS[bulkDraft.marketKey]?.sizeRequired) ? '✏️ You' : 'Optional'}</span>}</span>
-                      <input
-                        type="text"
-                        value={bulkDraft.size}
-                        onChange={(event) => updateBulkDraft({ size: event.target.value })}
-                        placeholder={BULK_MARKET_FIELD_HINTS[bulkDraft.marketKey]?.sizePlaceholder || 'e.g. M, 42, 500ml'}
-                        className={`mt-1 w-full rounded-md border bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none ${(!bulkDraft.size && BULK_MARKET_FIELD_HINTS[bulkDraft.marketKey]?.sizeRequired) ? 'border-amber-400 ring-2 ring-amber-200' : 'border-[var(--svs-border)]'}`}
-                        disabled={bulkDraft.status === 'publishing'}
-                      />
-                      {Array.isArray(BULK_MARKET_FIELD_HINTS[bulkDraft.marketKey]?.sizeOptions) ? (
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {BULK_MARKET_FIELD_HINTS[bulkDraft.marketKey].sizeOptions.map((option) => (
-                            <button
-                              key={option}
-                              type="button"
-                              onClick={() => updateBulkDraft({ size: option })}
-                              disabled={bulkDraft.status === 'publishing'}
-                              className={`rounded-full border px-2 py-0.5 text-[10px] font-bold transition ${bulkDraft.size === option ? 'border-[var(--svs-primary)] bg-[var(--svs-primary)] text-white' : 'border-[var(--svs-border)] bg-[var(--svs-surface)] text-[var(--svs-text)] hover:bg-[var(--svs-cyan-surface)]'}`}
+                    <div className="block text-[11px] font-semibold text-[var(--svs-text)]">
+                      <span className="flex items-center gap-1.5">Sizes / variants {(Array.isArray(bulkDraft.sizes) && bulkDraft.sizes.length) ? <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-700" title="Auto-filled by AI">✨ AI</span> : <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${(BULK_MARKET_FIELD_HINTS[bulkDraft.marketKey]?.sizeRequired) ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>{(BULK_MARKET_FIELD_HINTS[bulkDraft.marketKey]?.sizeRequired) ? '✏️ You' : 'Optional'}</span>}</span>
+                      <p className="mt-0.5 text-[10px] font-normal text-[var(--svs-muted)]">Selling the same product in several sizes or types? Add each one (e.g. Small, Medium, Large or 28, 30 or UK 6, UK 7). Buyers pick their size at checkout.</p>
+                      {(Array.isArray(bulkDraft.sizes) && bulkDraft.sizes.length) ? (
+                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                          {bulkDraft.sizes.map((sizeValue) => (
+                            <span
+                              key={sizeValue}
+                              className="inline-flex items-center gap-1 rounded-full border border-[var(--svs-primary)] bg-[var(--svs-cyan-surface)] px-2 py-0.5 text-[11px] font-bold text-[var(--svs-primary-strong)]"
                             >
-                              {option}
-                            </button>
+                              {sizeValue}
+                              <button
+                                type="button"
+                                onClick={() => removeBulkSize(sizeValue)}
+                                disabled={bulkDraft.status === 'publishing'}
+                                className="rounded-full p-0.5 hover:bg-[var(--svs-primary)] hover:text-white"
+                                aria-label={`Remove size ${sizeValue}`}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </span>
                           ))}
                         </div>
                       ) : null}
-                    </label>
+                      <div className="mt-1.5 flex gap-1">
+                        <input
+                          type="text"
+                          value={bulkSizeInput}
+                          onChange={(event) => setBulkSizeInput(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ',') {
+                              event.preventDefault();
+                              addBulkSizes(bulkSizeInput);
+                              setBulkSizeInput('');
+                            }
+                          }}
+                          placeholder={BULK_MARKET_FIELD_HINTS[bulkDraft.marketKey]?.sizePlaceholder || 'e.g. M, 42, 500ml'}
+                          className={`w-full rounded-md border bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none ${(!(Array.isArray(bulkDraft.sizes) && bulkDraft.sizes.length) && BULK_MARKET_FIELD_HINTS[bulkDraft.marketKey]?.sizeRequired) ? 'border-amber-400 ring-2 ring-amber-200' : 'border-[var(--svs-border)]'}`}
+                          disabled={bulkDraft.status === 'publishing'}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => { addBulkSizes(bulkSizeInput); setBulkSizeInput(''); }}
+                          disabled={bulkDraft.status === 'publishing' || !bulkSizeInput.trim()}
+                          className="shrink-0 rounded-md border border-[var(--svs-primary)] bg-[var(--svs-primary)] px-3 py-1.5 text-[11px] font-bold text-white transition hover:opacity-90 disabled:opacity-40"
+                        >
+                          Add
+                        </button>
+                      </div>
+                      {Array.isArray(BULK_MARKET_FIELD_HINTS[bulkDraft.marketKey]?.sizeOptions) ? (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {BULK_MARKET_FIELD_HINTS[bulkDraft.marketKey].sizeOptions.map((option) => {
+                            const isSelected = Array.isArray(bulkDraft.sizes)
+                              && bulkDraft.sizes.some((entry) => entry.toLowerCase() === option.toLowerCase());
+                            return (
+                              <button
+                                key={option}
+                                type="button"
+                                onClick={() => toggleBulkSize(option)}
+                                disabled={bulkDraft.status === 'publishing'}
+                                className={`rounded-full border px-2 py-0.5 text-[10px] font-bold transition ${isSelected ? 'border-[var(--svs-primary)] bg-[var(--svs-primary)] text-white' : 'border-[var(--svs-border)] bg-[var(--svs-surface)] text-[var(--svs-text)] hover:bg-[var(--svs-cyan-surface)]'}`}
+                              >
+                                {option}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
                     <label className="block text-[11px] font-semibold text-[var(--svs-text)]">
                       <span className="flex items-center gap-1.5">Material {bulkDraft.material ? <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-700" title="Auto-filled by AI">✨ AI</span> : <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-600">Optional</span>}</span>
                       <input
