@@ -4254,6 +4254,52 @@ const getItemSizeOptions = (item = {}) => {
     .filter(Boolean);
 };
 
+// Per-size stock support. A listing can carry a `sizeStock` map
+// ({ "S": 5, "M": 0, "UK 7": 3 }) so each size/variant of the same product
+// tracks its own quantity. Buyers can only order sizes that still have stock;
+// when a size hits 0 it becomes un-orderable while the rest stay available.
+const getItemSizeStockMap = (item = {}) => {
+  const raw = item?.sizeStock;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const entries = Object.entries(raw)
+    .map(([key, value]) => [String(key).trim(), normalizeListingQuantity(value, 0)])
+    .filter(([key]) => Boolean(key));
+  return entries.length ? Object.fromEntries(entries) : null;
+};
+
+const hasItemSizeStock = (item = {}) => Boolean(getItemSizeStockMap(item));
+
+const getItemSizeStock = (item = {}, size = '') => {
+  const stockMap = getItemSizeStockMap(item);
+  if (!stockMap) return null;
+  const target = String(size || '').trim().toLowerCase();
+  const matchKey = Object.keys(stockMap).find((key) => key.toLowerCase() === target);
+  return matchKey ? stockMap[matchKey] : 0;
+};
+
+const isItemSizeSoldOut = (item = {}, size = '') => {
+  const stock = getItemSizeStock(item, size);
+  if (stock === null) return false;
+  return stock <= 0;
+};
+
+// Sizes that still have stock (or every size if the listing has no per-size
+// stock map). Used to pick a sensible default selected size and to decide
+// when the whole listing is sold out.
+const getItemInStockSizes = (item = {}) => {
+  const sizes = getItemSizeOptions(item);
+  const stockMap = getItemSizeStockMap(item);
+  if (!stockMap) return sizes;
+  return sizes.filter((size) => (getItemSizeStock(item, size) || 0) > 0);
+};
+
+// Sum the per-size stock values for the AI Quick Lister draft so the overall
+// listing quantity always equals the total across every size/variant.
+const sumBulkSizeStock = (sizes = [], stockMap = {}) => (Array.isArray(sizes) ? sizes : []).reduce(
+  (total, size) => total + Math.max(parseInt(stockMap?.[size], 10) || 0, 0),
+  0,
+);
+
 const naturalResourcesItems = [
   {
     id: 'nr1',
@@ -10171,7 +10217,9 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
       images: item.images || (item.image ? [item.image] : []),
       marketName: t('markets.bookings'),
       details,
-      priceLabel: item.price,
+      priceLabel: item.isSellerListing
+        ? getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice
+        : item.price,
       cartItem,
       wishlistItem,
     });
@@ -10598,7 +10646,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
                         </p>
                       ) : null}
                     </div>
-                    <p className="mt-2 text-sm font-bold text-[var(--svs-text)] sm:mt-3 sm:text-base">{item.price}</p>
+                    <p className="mt-2 text-sm font-bold text-[var(--svs-text)] sm:mt-3 sm:text-base">{item.isSellerListing ? <SalePrice price={item.price} currency={item.currency} /> : item.price}</p>
                     <div className="mt-2 sm:mt-3">
                       <button
                         type="button"
@@ -16267,7 +16315,9 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
         details: buildDetailsText(item),
         priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
         sizeOptions: getItemSizeOptions(item),
-        defaultSelectedSize: item.selectedSize || getItemSizeOptions(item)[0] || '',
+        sizeStock: item.sizeStock,
+        availableQuantity: item.availableQuantity,
+        defaultSelectedSize: item.selectedSize || getItemInStockSizes(item)[0] || getItemSizeOptions(item)[0] || '',
         detailsTable: {
           Category: item.category || 'Fashion',
           Subcategory: item.subcategory || 'General',
@@ -18238,13 +18288,22 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
     description: '',
     marketKey: '',
     price: '',
-    currency: 'USD',
+    // Default to the currency the seller is currently browsing in (e.g. ZAR)
+    // rather than a hardcoded USD, so a price typed as R1800 is not later
+    // treated as $1800 and converted up on the buyer UI.
+    currency: SUPPORTED_CURRENCIES.some((entry) => entry.code === _fxState.buyerCurrency)
+      ? _fxState.buyerCurrency
+      : 'USD',
     quantity: '1',
     category: '',
     brand: '',
     color: '',
     size: '',
     sizes: [],
+    // Per-size stock map ({ "S": "5", "M": "3" }) so each size/variant of the
+    // same product tracks its own quantity. When a size hits 0 buyers can no
+    // longer order that size while the others stay available.
+    sizeStock: {},
     material: '',
     condition: 'New',
     keyFeatures: [],
@@ -18259,7 +18318,8 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
   // Add one or more sizes/variants to the current draft. Accepts a single
   // value or a comma / slash separated string ("S, M, L" or "UK6/UK7") and
   // dedupes case-insensitively so the same listing can be sold in several
-  // sizes at once.
+  // sizes at once. Each newly added size starts with a stock of 1 that the
+  // seller can adjust per size.
   const addBulkSizes = useCallback((raw) => {
     const parts = String(raw || '')
       .split(/[,/|]+/)
@@ -18270,23 +18330,41 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
       if (!current) return current;
       const existing = Array.isArray(current.sizes) ? current.sizes : [];
       const next = existing.slice();
+      const nextStock = { ...(current.sizeStock || {}) };
       parts.forEach((value) => {
         if (!next.some((entry) => entry.toLowerCase() === value.toLowerCase())) {
           next.push(value);
+          if (nextStock[value] === undefined) nextStock[value] = '1';
         }
       });
-      return { ...current, sizes: next, size: next.join(', ') };
+      return {
+        ...current,
+        sizes: next,
+        size: next.join(', '),
+        sizeStock: nextStock,
+        quantity: String(sumBulkSizeStock(next, nextStock)),
+      };
     });
   }, []);
 
-  // Remove a single size/variant chip from the draft.
+  // Remove a single size/variant chip (and its stock entry) from the draft.
   const removeBulkSize = useCallback((value) => {
     setBulkDraft((current) => {
       if (!current) return current;
       const next = (Array.isArray(current.sizes) ? current.sizes : []).filter(
         (entry) => entry.toLowerCase() !== String(value).toLowerCase(),
       );
-      return { ...current, sizes: next, size: next.join(', ') };
+      const nextStock = { ...(current.sizeStock || {}) };
+      Object.keys(nextStock).forEach((key) => {
+        if (key.toLowerCase() === String(value).toLowerCase()) delete nextStock[key];
+      });
+      return {
+        ...current,
+        sizes: next,
+        size: next.join(', '),
+        sizeStock: nextStock,
+        quantity: next.length ? String(sumBulkSizeStock(next, nextStock)) : current.quantity,
+      };
     });
   }, []);
 
@@ -18299,7 +18377,37 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
       const next = has
         ? existing.filter((entry) => entry.toLowerCase() !== String(value).toLowerCase())
         : [...existing, value];
-      return { ...current, sizes: next, size: next.join(', ') };
+      const nextStock = { ...(current.sizeStock || {}) };
+      if (has) {
+        Object.keys(nextStock).forEach((key) => {
+          if (key.toLowerCase() === String(value).toLowerCase()) delete nextStock[key];
+        });
+      } else if (nextStock[value] === undefined) {
+        nextStock[value] = '1';
+      }
+      return {
+        ...current,
+        sizes: next,
+        size: next.join(', '),
+        sizeStock: nextStock,
+        quantity: next.length ? String(sumBulkSizeStock(next, nextStock)) : current.quantity,
+      };
+    });
+  }, []);
+
+  // Set the stock for a single size/variant and keep the overall quantity in
+  // sync with the sum of all per-size stocks.
+  const setBulkSizeStock = useCallback((sizeValue, rawQuantity) => {
+    const sanitized = String(rawQuantity ?? '').replace(/[^\d]/g, '');
+    setBulkDraft((current) => {
+      if (!current) return current;
+      const sizes = Array.isArray(current.sizes) ? current.sizes : [];
+      const nextStock = { ...(current.sizeStock || {}), [sizeValue]: sanitized };
+      return {
+        ...current,
+        sizeStock: nextStock,
+        quantity: String(sumBulkSizeStock(sizes, nextStock)),
+      };
     });
   }, []);
 
@@ -18494,7 +18602,11 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
         description: composedDescription || listing.description || '',
         marketKey: listing.suggestedMarketKey || 'ecommerce',
         price: listing.suggestedPrice ? String(listing.suggestedPrice) : '',
-        currency: listing.suggestedCurrency || 'USD',
+        currency: (listing.suggestedCurrency
+          && SUPPORTED_CURRENCIES.some((entry) => entry.code === String(listing.suggestedCurrency).toUpperCase()))
+          ? String(listing.suggestedCurrency).toUpperCase()
+          : (bulkDraft.currency
+            || (SUPPORTED_CURRENCIES.some((entry) => entry.code === _fxState.buyerCurrency) ? _fxState.buyerCurrency : 'USD')),
         quantity: String(listing.suggestedQuantity || 1),
         category: listing.category || '',
         brand: listing.brand || '',
@@ -18580,6 +18692,13 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
 
       // Build a richer details_json so market filters still work where applicable.
       const detailsJson = {};
+      // Persist the currency the seller listed in so the buyer UI shows the
+      // exact price they set instead of treating it as USD and converting it
+      // up (e.g. R1800 wrongly shown as R27000).
+      const normalizedCurrency = String(bulkDraft.currency || '').toUpperCase();
+      detailsJson.currency = SUPPORTED_CURRENCIES.some((entry) => entry.code === normalizedCurrency)
+        ? normalizedCurrency
+        : 'USD';
       if (bulkDraft.brand) detailsJson.brand = bulkDraft.brand;
       if (bulkDraft.color) detailsJson.color = bulkDraft.color;
       if (bulkDraft.category) detailsJson.category = bulkDraft.category;
@@ -18588,6 +18707,13 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
         // and keep `size` as a readable summary for older filters/display.
         detailsJson.sizes = bulkDraft.sizes;
         detailsJson.size = bulkDraft.sizes.join(', ');
+        // Persist the per-size stock map so each size/variant sells out on its
+        // own. Sizes with no number entered default to 0 (sold out).
+        const sizeStock = {};
+        bulkDraft.sizes.forEach((sizeValue) => {
+          sizeStock[sizeValue] = Math.max(parseInt(bulkDraft.sizeStock?.[sizeValue], 10) || 0, 0);
+        });
+        detailsJson.sizeStock = sizeStock;
       } else if (bulkDraft.size) {
         detailsJson.size = bulkDraft.size;
       }
@@ -18604,7 +18730,9 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
           seller_name: userName,
           title: trimmedTitle,
           description: trimmedDescription,
-          quantity: normalizedQuantity,
+          quantity: detailsJson.sizeStock
+            ? Object.values(detailsJson.sizeStock).reduce((total, value) => total + (Number(value) || 0), 0)
+            : normalizedQuantity,
           price: cleanedPrice,
           market_key: bulkDraft.marketKey,
           details_json: detailsJson,
@@ -18973,12 +19101,10 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                     <label className="block text-[11px] font-semibold text-[var(--svs-text)]">
                       <span className="flex items-center gap-1.5">Price {bulkDraft.price ? <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-700" title="Suggested by AI — confirm or adjust">✨ AI</span> : <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700">✏️ You</span>}</span>
                       <div className="mt-1 flex gap-1">
-                        <input
-                          type="text"
+                        <CurrencyPickerField
                           value={bulkDraft.currency}
-                          onChange={(event) => updateBulkDraft({ currency: event.target.value.toUpperCase().slice(0, 6) })}
-                          className="w-16 rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-1.5 text-sm font-normal text-[var(--svs-text)] outline-none"
-                          disabled={bulkDraft.status === 'publishing'}
+                          onChange={(event) => updateBulkDraft({ currency: event.target.value })}
+                          ariaLabel="Listing currency"
                         />
                         <input
                           type="text"
@@ -18989,30 +19115,44 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                           disabled={bulkDraft.status === 'publishing'}
                         />
                       </div>
-                      <p className="mt-0.5 text-[10px] font-normal text-[var(--svs-muted)]">AI suggests a fair retail price — always confirm or set your own.</p>
+                      <p className="mt-0.5 text-[10px] font-normal text-[var(--svs-muted)]">Pick the currency you're selling in, then set your price. AI suggests a fair retail price — always confirm or set your own.</p>
                     </label>
                     <div className="block text-[11px] font-semibold text-[var(--svs-text)]">
                       <span className="flex items-center gap-1.5">Sizes / variants {(Array.isArray(bulkDraft.sizes) && bulkDraft.sizes.length) ? <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-700" title="Auto-filled by AI">✨ AI</span> : <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${(BULK_MARKET_FIELD_HINTS[bulkDraft.marketKey]?.sizeRequired) ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>{(BULK_MARKET_FIELD_HINTS[bulkDraft.marketKey]?.sizeRequired) ? '✏️ You' : 'Optional'}</span>}</span>
-                      <p className="mt-0.5 text-[10px] font-normal text-[var(--svs-muted)]">Selling the same product in several sizes or types? Add each one (e.g. Small, Medium, Large or 28, 30 or UK 6, UK 7). Buyers pick their size at checkout.</p>
+                      <p className="mt-0.5 text-[10px] font-normal text-[var(--svs-muted)]">Selling the same product in several sizes or types? Add each one (e.g. Small, Medium, Large or 28, 30 or UK 6, UK 7). Set the stock for each size — when a size hits 0 it sells out on its own while the others stay available.</p>
                       {(Array.isArray(bulkDraft.sizes) && bulkDraft.sizes.length) ? (
-                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        <div className="mt-1.5 flex flex-col gap-1.5">
                           {bulkDraft.sizes.map((sizeValue) => (
-                            <span
+                            <div
                               key={sizeValue}
-                              className="inline-flex items-center gap-1 rounded-full border border-[var(--svs-primary)] bg-[var(--svs-cyan-surface)] px-2 py-0.5 text-[11px] font-bold text-[var(--svs-primary-strong)]"
+                              className="flex items-center gap-1.5 rounded-md border border-[var(--svs-primary)] bg-[var(--svs-cyan-surface)] px-2 py-1"
                             >
-                              {sizeValue}
+                              <span className="min-w-0 flex-1 truncate text-[11px] font-bold text-[var(--svs-primary-strong)]">{sizeValue}</span>
+                              <label className="flex items-center gap-1 text-[10px] font-semibold text-[var(--svs-primary-strong)]">
+                                Qty
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  value={(bulkDraft.sizeStock && bulkDraft.sizeStock[sizeValue] !== undefined) ? bulkDraft.sizeStock[sizeValue] : ''}
+                                  onChange={(event) => setBulkSizeStock(sizeValue, event.target.value)}
+                                  placeholder="0"
+                                  className="w-14 rounded border border-[var(--svs-border)] bg-[var(--svs-surface)] px-1.5 py-0.5 text-center text-[11px] font-bold text-[var(--svs-text)] outline-none"
+                                  disabled={bulkDraft.status === 'publishing'}
+                                  aria-label={`Stock for size ${sizeValue}`}
+                                />
+                              </label>
                               <button
                                 type="button"
                                 onClick={() => removeBulkSize(sizeValue)}
                                 disabled={bulkDraft.status === 'publishing'}
-                                className="rounded-full p-0.5 hover:bg-[var(--svs-primary)] hover:text-white"
+                                className="rounded-full p-0.5 text-[var(--svs-primary-strong)] hover:bg-[var(--svs-primary)] hover:text-white"
                                 aria-label={`Remove size ${sizeValue}`}
                               >
                                 <X className="h-3 w-3" />
                               </button>
-                            </span>
+                            </div>
                           ))}
+                          <p className="text-[10px] font-semibold text-[var(--svs-muted)]">Total stock across all sizes: {sumBulkSizeStock(bulkDraft.sizes, bulkDraft.sizeStock)}</p>
                         </div>
                       ) : null}
                       <div className="mt-1.5 flex gap-1">
@@ -31273,7 +31413,7 @@ const ItemDetailsModal = ({
     setComment('');
     setReviewError('');
     setReviewerName(currentReviewerName);
-    setSelectedSize(item?.defaultSelectedSize || getItemSizeOptions(item)[0] || '');
+    setSelectedSize(item?.defaultSelectedSize || getItemInStockSizes(item)[0] || getItemSizeOptions(item)[0] || '');
   }, [item, currentReviewerName]);
 
   if (!item) {
@@ -31305,6 +31445,12 @@ const ItemDetailsModal = ({
     };
   })();
   const actionWishlistItem = item.wishlistItem || item;
+  const itemHasSizeStock = hasItemSizeStock(item);
+  // When the listing tracks stock per size, block ordering the selected size
+  // once it sells out (and block everything when every size is gone).
+  const selectedSizeSoldOut = itemHasSizeStock && Boolean(selectedSize) && isItemSizeSoldOut(item, selectedSize);
+  const allSizesSoldOut = itemHasSizeStock && sizeOptions.length > 0 && getItemInStockSizes(item).length === 0;
+  const isModalOutOfStock = selectedSizeSoldOut || allSizesSoldOut;
   const isInformalMarketItem = String(item.marketName || '').toLowerCase().includes('informal market');
   const rawSellerName = String(
     actionCartItem?.sellerName
@@ -32123,18 +32269,26 @@ const ItemDetailsModal = ({
               <div>
                 <h3 className="mt-4 text-lg font-bold text-[var(--svs-text)]">Select size</h3>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {sizeOptions.map((size) => (
-                    <button
-                      key={size}
-                      type="button"
-                      onClick={() => setSelectedSize(size)}
-                      className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition ${selectedSize === size ? 'border-[var(--svs-primary)] bg-[var(--svs-primary-faint)] text-[var(--svs-primary-strong)]' : 'border-[var(--svs-border)] bg-white text-[var(--svs-text)] hover:border-[var(--svs-primary)]'}`}
-                      aria-pressed={selectedSize === size}
-                    >
-                      {size}
-                    </button>
-                  ))}
+                  {sizeOptions.map((size) => {
+                    const sizeSoldOut = itemHasSizeStock && isItemSizeSoldOut(item, size);
+                    return (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => setSelectedSize(size)}
+                        disabled={sizeSoldOut}
+                        className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition ${sizeSoldOut ? 'cursor-not-allowed border-[var(--svs-border)] bg-slate-100 text-slate-400 line-through' : selectedSize === size ? 'border-[var(--svs-primary)] bg-[var(--svs-primary-faint)] text-[var(--svs-primary-strong)]' : 'border-[var(--svs-border)] bg-white text-[var(--svs-text)] hover:border-[var(--svs-primary)]'}`}
+                        aria-pressed={selectedSize === size}
+                        title={sizeSoldOut ? `${size} is sold out` : undefined}
+                      >
+                        {size}{sizeSoldOut ? ' • Sold out' : ''}
+                      </button>
+                    );
+                  })}
                 </div>
+                {selectedSizeSoldOut ? (
+                  <p className="mt-2 text-sm font-semibold text-rose-600">That size is sold out. Pick another size to order.</p>
+                ) : null}
               </div>
             ) : null}
             {isInformalMarketItem ? (
@@ -32147,17 +32301,19 @@ const ItemDetailsModal = ({
                 <>
                   <button
                     type="button"
-                    className="rounded-lg bg-[var(--svs-primary)] px-6 py-3 text-base font-semibold text-white shadow hover:bg-[var(--svs-primary-strong)]"
+                    disabled={isModalOutOfStock}
+                    className="rounded-lg bg-[var(--svs-primary)] px-6 py-3 text-base font-semibold text-white shadow hover:bg-[var(--svs-primary-strong)] disabled:cursor-not-allowed disabled:bg-slate-400"
                     onClick={() => onAddToCart?.(actionCartItem)}
                   >
-                    Add to Basket
+                    {isModalOutOfStock ? 'Out of stock' : 'Add to Basket'}
                   </button>
                   <button
                     type="button"
-                    className="rounded-lg border border-[var(--svs-primary)] px-6 py-3 text-base font-semibold text-[var(--svs-primary)] hover:bg-[var(--svs-primary-faint)]"
+                    disabled={isModalOutOfStock}
+                    className="rounded-lg border border-[var(--svs-primary)] px-6 py-3 text-base font-semibold text-[var(--svs-primary)] hover:bg-[var(--svs-primary-faint)] disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400"
                     onClick={() => onBuyNow?.(actionCartItem)}
                   >
-                    Buy Now
+                    {isModalOutOfStock ? 'Out of stock' : 'Buy Now'}
                   </button>
                 </>
               ) : null}
@@ -32987,9 +33143,19 @@ const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaR
         const itemTitle = getTranslatedValue(t, item.titleKey, item.title);
         const hasStockValue = item.availableQuantity !== null && item.availableQuantity !== undefined;
         const availableQuantity = hasStockValue ? normalizeListingQuantity(item.availableQuantity, 0) : null;
-        const isOutOfStock = availableQuantity !== null && availableQuantity <= 0;
         const itemSizeOptions = getItemSizeOptions(item);
-        const selectedSize = selectedSizesByItem[item.id] || item.selectedSize || itemSizeOptions[0] || '';
+        // When the listing tracks stock per size, default the picker to the
+        // first size that still has stock so buyers don't land on a sold-out
+        // size, and treat the whole card as out of stock only when every size
+        // is gone.
+        const itemHasSizeStock = hasItemSizeStock(item);
+        const inStockSizes = itemHasSizeStock ? getItemInStockSizes(item) : itemSizeOptions;
+        const selectedSize = selectedSizesByItem[item.id] || item.selectedSize || inStockSizes[0] || itemSizeOptions[0] || '';
+        const selectedSizeSoldOut = itemHasSizeStock && Boolean(selectedSize) && isItemSizeSoldOut(item, selectedSize);
+        const allSizesSoldOut = itemHasSizeStock && itemSizeOptions.length > 0 && inStockSizes.length === 0;
+        const isOutOfStock = (availableQuantity !== null && availableQuantity <= 0)
+          || selectedSizeSoldOut
+          || allSizesSoldOut;
         const actionItem = selectedSize ? { ...item, selectedSize } : item;
         const rawSellerName = String(actionItem?.sellerName || item?.sellerName || '').trim();
         const sellerEmail = (() => {
@@ -33103,9 +33269,14 @@ const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaR
                     }}
                     className="w-full rounded-full border border-[#e0e7ef] bg-white px-3 py-2 text-sm text-[#0f6674] outline-none transition focus:border-[#0f6674]"
                   >
-                    {itemSizeOptions.map((sizeOption) => (
-                      <option key={sizeOption} value={sizeOption}>{sizeOption}</option>
-                    ))}
+                    {itemSizeOptions.map((sizeOption) => {
+                      const sizeSoldOut = itemHasSizeStock && isItemSizeSoldOut(item, sizeOption);
+                      return (
+                        <option key={sizeOption} value={sizeOption} disabled={sizeSoldOut}>
+                          {sizeOption}{sizeSoldOut ? ' (Sold out)' : ''}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
               ) : null}
@@ -34629,8 +34800,12 @@ const App = () => {
     setWishlistItems((currentItems) => currentItems.filter((item) => !sellerItemKeys.includes(String(item.id || '')) && !sellerItemKeys.includes(String(item.sku || ''))));
     setProductReviews((currentReviews) => currentReviews.filter((review) => !sellerItemKeys.includes(String(review.itemKey || ''))));
     setProductReviewSummaryMap((currentMap) => {
-      const nextMap = new Map(currentMap);
-      sellerItemKeys.forEach((itemKey) => nextMap.delete(itemKey));
+      // currentMap is a plain object keyed by itemKey (see
+      // buildProductReviewSummaryMap), so rebuild it without the removed
+      // keys instead of using the Map constructor (which throws on a plain
+      // object and crashed the page into the error boundary).
+      const nextMap = { ...(currentMap || {}) };
+      sellerItemKeys.forEach((itemKey) => { delete nextMap[itemKey]; });
       return nextMap;
     });
 
