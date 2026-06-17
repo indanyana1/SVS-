@@ -24210,6 +24210,71 @@ const renderChatBodyWithLinks = (text) => {
   return parts;
 };
 
+// Playback speeds offered for recorded voice notes so listeners can speed
+// through (or slow down) a clip. Tapping the speed pill cycles to the next.
+const VOICE_NOTE_SPEEDS = [1, 1.5, 2, 2.5, 3];
+
+// Voice-note player: native audio controls plus a tappable speed pill that
+// cycles 1x → 1.5x → 2x → 2.5x → 3x and applies it to the audio element.
+const VoiceNotePlayer = ({ src, durationSec = 0, mine = false }) => {
+  const audioRef = useRef(null);
+  const [speedIndex, setSpeedIndex] = useState(0);
+  const speed = VOICE_NOTE_SPEEDS[speedIndex];
+
+  // Keep the audio element's playbackRate in sync with the selected speed,
+  // including after the source loads or playback (re)starts.
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = speed;
+    }
+  }, [speed, src]);
+
+  const cycleSpeed = useCallback(() => {
+    setSpeedIndex((current) => (current + 1) % VOICE_NOTE_SPEEDS.length);
+  }, []);
+
+  return (
+    <div className={`rounded-lg border p-2 ${mine ? 'border-cyan-200/40 bg-white/10' : 'border-[#d6e6f5] bg-[#f7fbff]'}`}>
+      <div className="flex items-center gap-2">
+        <Mic className={`h-4 w-4 flex-none ${mine ? 'text-cyan-100' : 'text-[#0f6674]'}`} aria-hidden="true" />
+        {src ? (
+          <>
+            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+            <audio
+              ref={audioRef}
+              controls
+              src={src}
+              className="h-9 flex-1 min-w-0"
+              onPlay={(event) => { event.currentTarget.playbackRate = speed; }}
+              onRateChange={(event) => {
+                // Reflect any browser-native rate change back into the pill.
+                const matchIndex = VOICE_NOTE_SPEEDS.indexOf(event.currentTarget.playbackRate);
+                if (matchIndex !== -1 && matchIndex !== speedIndex) setSpeedIndex(matchIndex);
+              }}
+            />
+            <button
+              type="button"
+              onClick={cycleSpeed}
+              aria-label={`Playback speed ${speed}x. Tap to change.`}
+              title="Change playback speed"
+              className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-extrabold tabular-nums transition ${mine ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-[#0f6674] text-white hover:bg-[#0c5260]'}`}
+            >
+              {speed}x
+            </button>
+          </>
+        ) : (
+          <span className={`flex-1 text-[11px] italic ${mine ? 'text-cyan-100' : 'text-slate-500'}`}>
+            Audio not cached — refresh to fetch from server.
+          </span>
+        )}
+        <span className={`shrink-0 text-[11px] font-bold ${mine ? 'text-cyan-100' : 'text-slate-500'}`}>
+          {durationSec || 0}s
+        </span>
+      </div>
+    </div>
+  );
+};
+
 const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -27378,21 +27443,8 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                                 </a>
                               ) : null}
                               {card.type === 'voice' ? (
-                                <div className={`rounded-lg border p-2 ${mine ? 'border-cyan-200/40 bg-white/10' : 'border-[#d6e6f5] bg-[#f7fbff]'}`}>
-                                  <div className="flex items-center gap-2">
-                                    <Mic className={`h-4 w-4 flex-none ${mine ? 'text-cyan-100' : 'text-[#0f6674]'}`} aria-hidden="true" />
-                                    {card.src ? (
-                                      // eslint-disable-next-line jsx-a11y/media-has-caption
-                                      <audio controls src={card.src} className="h-9 flex-1 min-w-0" />
-                                    ) : (
-                                      <span className={`flex-1 text-[11px] italic ${mine ? 'text-cyan-100' : 'text-slate-500'}`}>
-                                        Audio not cached — refresh to fetch from server.
-                                      </span>
-                                    )}
-                                    <span className={`shrink-0 text-[11px] font-bold ${mine ? 'text-cyan-100' : 'text-slate-500'}`}>
-                                      {card.durationSec || 0}s
-                                    </span>
-                                  </div>
+                                <div>
+                                  <VoiceNotePlayer src={card.src} durationSec={card.durationSec} mine={mine} />
                                   {card.transcript ? (
                                     <p className={`mt-1.5 text-[11px] italic ${mine ? 'text-cyan-50' : 'text-slate-600'}`}>
                                       &ldquo;{card.transcript}&rdquo;
