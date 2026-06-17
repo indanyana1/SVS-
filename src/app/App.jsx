@@ -18750,6 +18750,11 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
       onSellerItemCreated(mapSellerItemRecord(data));
       updateBulkDraft({ status: 'published', error: '' });
       setBulkMessage(`Published in ${t(market.labelKey)}. Hit "List another item" to add the next product.`);
+      // Take the seller straight to the buyer view of the market they just
+      // listed in so they can see their product live alongside other items.
+      if (market.route) {
+        navigate(market.route, { state: { justListedItemId: `seller-${data.id}` } });
+      }
     } catch (error) {
       updateBulkDraft({ status: 'ready', error: error?.message || 'Publish failed.' });
     } finally {
@@ -18757,7 +18762,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
       // start a fresh draft after publishing this one.
       publishInFlightRef.current = null;
     }
-  }, [bulkDraft, onSellerItemCreated, t, updateBulkDraft, userEmail, userName]);
+  }, [bulkDraft, onSellerItemCreated, t, updateBulkDraft, userEmail, userName, navigate]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -34739,6 +34744,8 @@ const App = () => {
 
   const handleSellerItemCreated = useCallback((item) => {
     setSellerItems((currentItems) => [item, ...currentItems]);
+    const listedTitle = String(item?.title || '').trim();
+    setActionNotice(listedTitle ? `✓ Listed: ${listedTitle} is now live for buyers.` : '✓ Your item is now live for buyers.');
   }, []);
 
   const handleDeleteSellerItem = useCallback(async (dbId, imageUrls = [], imageUrl = '') => {
