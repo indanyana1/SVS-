@@ -27186,7 +27186,17 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                           </span>
                         ) : (
                           (() => {
-                            const seen = formatLastSeen(lastSeenMap.get(normalizeEmail(resolveCounterparty(activeThread).email)));
+                            const cpEmail = normalizeEmail(resolveCounterparty(activeThread).email);
+                            let seen = formatLastSeen(lastSeenMap.get(cpEmail));
+                            if (!seen) {
+                              // Fall back to the time they were last active in this
+                              // conversation, so "last seen" still reflects real
+                              // activity before any presence heartbeat is recorded.
+                              const lastFromThem = [...activeMessages].reverse().find((message) => (
+                                normalizeEmail(message.senderEmail || '') === cpEmail && message.createdAt
+                              ));
+                              if (lastFromThem) seen = formatLastSeen(lastFromThem.createdAt);
+                            }
                             return (
                               <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[var(--svs-muted)]">
                                 <span className="h-1.5 w-1.5 rounded-full bg-[var(--svs-muted)]"></span>{seen || 'Offline'}
