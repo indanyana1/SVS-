@@ -5423,14 +5423,32 @@ const notifyPresenceListeners = () => {
 };
 
 const recomputePresenceFromState = (state) => {
+  const previouslyOnline = new Set(presenceOnlineEmails);
   presenceOnlineEmails.clear();
+  const nowIso = new Date().toISOString();
   Object.values(state || {}).forEach((entries) => {
     (entries || []).forEach((entry) => {
       const email = normalizeEmail(entry?.email || '');
-      if (email) presenceOnlineEmails.add(email);
+      if (email) {
+        presenceOnlineEmails.add(email);
+        // Anyone we can see online is "seen" right now — keep it fresh so the
+        // moment they drop off we already have an accurate last-seen.
+        lastSeenCache.set(email, nowIso);
+      }
     });
   });
+  // Anyone who was online a moment ago but isn't now just went offline.
+  // Record their real last-seen from *our* vantage point (works even when
+  // their own browser never wrote a heartbeat).
+  let leaverWrote = false;
+  previouslyOnline.forEach((email) => {
+    if (!presenceOnlineEmails.has(email)) {
+      persistLastSeen(email, nowIso);
+      leaverWrote = true;
+    }
+  });
   notifyPresenceListeners();
+  if (leaverWrote) notifyLastSeenListeners();
 };
 
 const leavePresence = () => {
@@ -5528,16 +5546,23 @@ const fetchLastSeenFor = async (emails) => {
   } catch (_) { /* ignore */ }
 };
 
-const writeLastSeen = (rawEmail) => {
+const persistLastSeen = (rawEmail, stamp) => {
   const email = normalizeEmail(rawEmail);
-  if (!hasSupabaseEnv || !supabase || !email) return;
-  const stamp = new Date().toISOString();
-  lastSeenCache.set(email, stamp);
+  if (!email) return;
+  const at = stamp || new Date().toISOString();
+  lastSeenCache.set(email, at);
+  if (!hasSupabaseEnv || !supabase) return;
   try {
     supabase.from(LAST_SEEN_TABLE)
-      .upsert({ email, last_seen_at: stamp, updated_at: stamp }, { onConflict: 'email' })
+      .upsert({ email, last_seen_at: at, updated_at: at }, { onConflict: 'email' })
       .then(() => {}, () => {});
   } catch (_) { /* ignore */ }
+};
+
+const writeLastSeen = (rawEmail) => {
+  const email = normalizeEmail(rawEmail);
+  if (!email) return;
+  persistLastSeen(email, new Date().toISOString());
   notifyLastSeenListeners();
 };
 
