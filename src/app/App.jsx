@@ -81,6 +81,14 @@ import { createAddressLookupSessionToken, lookupAddressDetails, lookupAddressSug
 import { DEFAULT_LANGUAGE_CODE, getLanguageByCode, isRtlLanguage, SUPPORTED_LANGUAGES } from '../lib/languages';
 import { embeddedCardCheckoutEnabled, getStripeInstance, startCardPayment, stripeCurrency } from '../lib/payments';
 import { hasSupabaseEnv, supabase } from '../lib/supabase';
+import {
+  getWalletSnapshot,
+  topUpWallet,
+  transferWallet,
+  requestWithdrawal,
+  spendFromWallet,
+  WALLET_TRANSACTION_LABELS,
+} from '../lib/wallet';
 import { buildShareLink, ensureUserHandle, lookupAccountByHandle } from '../lib/userHandles';
 import useNearbyLocation from '../hooks/useLocation';
 import SigninPage from '../pages/SigninPage';
@@ -4826,6 +4834,7 @@ const PROJECT_ROUTE_SEARCH_ENTRIES = [
   { id: 'page-seller-dashboard', title: 'Seller Dashboard', section: 'Seller Console', route: '/seller/dashboard', keywords: 'seller dashboard listings analytics management' },
   { id: 'page-seller-orders', title: 'Seller Orders', section: 'Seller Console', route: '/seller/orders', keywords: 'seller orders fulfillment status updates' },
   { id: 'page-seller-payouts', title: 'Seller Payouts', section: 'Seller Console', route: '/seller/payouts', keywords: 'seller payouts withdraw balance bank earnings' },
+  { id: 'page-wallet', title: 'My Wallet', section: 'Account', route: '/wallet', keywords: 'wallet ewallet balance add funds top up send money transfer withdraw pay credit' },
   { id: 'page-seller-upload', title: 'Seller Upload', section: 'Seller Console', route: '/seller/upload', keywords: 'seller upload create listing product service add item' },
   { id: 'page-property-hub', title: 'Property Hub', section: 'Markets', route: '/property-hub', keywords: 'property real estate homes rentals land commercial' },
   { id: 'page-livestock-hub', title: 'Livestock Hub', section: 'Markets', route: '/livestock-hub', keywords: 'livestock cattle goats sheep poultry farm animals' },
@@ -9300,10 +9309,18 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                 <div className="absolute right-0 top-[calc(100%+8px)] z-[80] w-56 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3 shadow-xl">
                   <p className="text-xs uppercase tracking-wide text-[var(--svs-muted)]">{t('profile.signedInAs')}</p>
                   <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{profileName}</p>
+                  <Link
+                    to="/wallet"
+                    onClick={() => setProfileOpen(false)}
+                    className="mt-3 flex w-full items-center gap-2 rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)]"
+                  >
+                    <Wallet className="h-4 w-4 text-[var(--svs-primary)]" />
+                    My Wallet
+                  </Link>
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="mt-3 w-full rounded-md border border-[#fca5a5] bg-[#fff1f2] px-3 py-2 text-sm font-semibold text-[#b91c1c] transition hover:bg-[#ffe4e6]"
+                    className="mt-2 w-full rounded-md border border-[#fca5a5] bg-[#fff1f2] px-3 py-2 text-sm font-semibold text-[#b91c1c] transition hover:bg-[#ffe4e6]"
                   >
                     {t('profile.logout')}
                   </button>
@@ -18246,6 +18263,691 @@ const writeStoredPayoutRequests = (sellerEmail, requests) => {
   }
 };
 
+const formatWalletTimestamp = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const walletTransactionStatusClass = (status) => {
+  switch (status) {
+    case 'pending':
+      return 'bg-amber-50 text-amber-700 border-amber-200';
+    case 'rejected':
+      return 'bg-rose-50 text-rose-700 border-rose-200';
+    default:
+      return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+  }
+};
+
+// Searchable currency picker for the wallet. Starts unselected — the buyer
+// must explicitly pick (or search) the currency they want to deposit in.
+const WalletCurrencyPicker = ({ value, onChange, disabled = false, placeholder = 'Select currency' }) => {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const containerRef = useRef(null);
+  const selected = value ? SUPPORTED_CURRENCIES.find((entry) => entry.code === value) : null;
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const handlePointerDown = (event) => {
+      if (!containerRef.current?.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+    window.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('touchstart', handlePointerDown);
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('touchstart', handlePointerDown);
+    };
+  }, [open]);
+
+  const filtered = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    if (!term) return SUPPORTED_CURRENCIES;
+    return SUPPORTED_CURRENCIES.filter((entry) =>
+      entry.code.toLowerCase().includes(term)
+      || entry.name.toLowerCase().includes(term)
+      || String(entry.symbol).toLowerCase().includes(term));
+  }, [query]);
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen((prev) => !prev)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className={`flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm transition ${
+          disabled
+            ? 'cursor-not-allowed border-[var(--svs-border)] bg-[var(--svs-surface-soft)] text-[var(--svs-muted)]'
+            : selected
+              ? 'border-[var(--svs-primary)] bg-[var(--svs-surface)] text-[var(--svs-text)]'
+              : 'border-[#f1c8a0] bg-[#fff8ec] text-[#8a5a1a]'
+        }`}
+      >
+        <span className="flex min-w-0 items-center gap-2 truncate">
+          {selected ? (
+            <>
+              <span aria-hidden="true">{selected.flag}</span>
+              <span className="font-semibold">{selected.code}</span>
+              <span className="truncate text-[var(--svs-muted)]">· {selected.name}</span>
+            </>
+          ) : (
+            <span className="font-semibold">{placeholder}</span>
+          )}
+        </span>
+        <ChevronDown className={`h-4 w-4 shrink-0 transition ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && !disabled ? (
+        <div className="absolute left-0 right-0 top-full z-40 mt-1 overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-2xl">
+          <div className="sticky top-0 border-b border-[var(--svs-border)] bg-[var(--svs-surface)] p-2">
+            <div className="flex items-center gap-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2">
+              <Search className="h-4 w-4 shrink-0 text-[var(--svs-muted)]" />
+              <input
+                autoFocus
+                type="text"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search currency or code"
+                aria-label="Search currency"
+                className="w-full bg-transparent py-2 text-sm text-[var(--svs-text)] outline-none"
+              />
+            </div>
+          </div>
+          <ul role="listbox" className="max-h-60 overflow-auto py-1">
+            {filtered.length === 0 ? (
+              <li className="px-3 py-3 text-center text-xs text-[var(--svs-muted)]">No currencies match</li>
+            ) : filtered.map((entry) => {
+              const isSelected = entry.code === value;
+              return (
+                <li key={entry.code}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    onClick={() => {
+                      onChange(entry.code);
+                      setOpen(false);
+                      setQuery('');
+                    }}
+                    className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition hover:bg-[var(--svs-surface-soft)] ${isSelected ? 'bg-[var(--svs-surface-soft)] font-semibold' : ''}`}
+                  >
+                    <span aria-hidden="true">{entry.flag}</span>
+                    <span className="font-semibold text-[var(--svs-text)]">{entry.code}</span>
+                    <span className="truncate text-xs text-[var(--svs-muted)]">{entry.name}</span>
+                    <span className="ml-auto text-xs text-[var(--svs-muted)]">{entry.symbol}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+// Inline Stripe card form used to add funds to the wallet. Rendered inside an
+// <Elements> provider that already holds the PaymentIntent client secret.
+const WalletStripeTopUpForm = ({ amountLabel, onSuccess, onCancel }) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async () => {
+    if (!stripe || !elements) return;
+    setIsSubmitting(true);
+    setError('');
+    try {
+      const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: `${typeof window !== 'undefined' ? window.location.origin : ''}/wallet`,
+        },
+        redirect: 'if_required',
+      });
+
+      if (confirmError) {
+        setError(confirmError.message || 'Card payment failed. Please try again.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (paymentIntent && (paymentIntent.status === 'succeeded' || paymentIntent.status === 'processing')) {
+        await onSuccess(paymentIntent.id);
+        return;
+      }
+
+      setError('Payment could not be confirmed. Please try again.');
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Card payment failed. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="mt-4 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4">
+      <p className="text-xs font-semibold text-[var(--svs-text)]">Pay securely with Stripe</p>
+      <div className="mt-3 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3">
+        <PaymentElement options={{ layout: 'tabs' }} />
+      </div>
+      {error ? (
+        <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</p>
+      ) : null}
+      <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isSubmitting}
+          className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-2 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] disabled:opacity-60"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={isSubmitting || !stripe || !elements}
+          className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-5 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-70`}
+        >
+          {isSubmitting ? 'Processing…' : `Pay ${amountLabel}`}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const WalletPage = () => {
+  const isAuthenticated = getAuthState();
+  const userEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
+  const profileName = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-name') || '');
+  const stripePromise = useMemo(() => getStripeInstance(), []);
+
+  const [snapshot, setSnapshot] = useState({ balance: 0, currency: _fxState.buyerCurrency || 'USD', transactions: [] });
+  const [isLoading, setIsLoading] = useState(false);
+  const [feedback, setFeedback] = useState({ type: 'idle', message: '' });
+
+  // Add funds
+  const [topUpAmount, setTopUpAmount] = useState('');
+  const [topUpClientSecret, setTopUpClientSecret] = useState('');
+  const [isPreparingCard, setIsPreparingCard] = useState(false);
+  const [isToppingUp, setIsToppingUp] = useState(false);
+
+  // Transfer
+  const [transferTo, setTransferTo] = useState('');
+  const [transferAmount, setTransferAmount] = useState('');
+  const [transferNote, setTransferNote] = useState('');
+  const [isTransferring, setIsTransferring] = useState(false);
+
+  // Withdraw
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawDestination, setWithdrawDestination] = useState('');
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+
+  const walletCurrency = snapshot.currency || _fxState.buyerCurrency || 'USD';
+
+  // Deposit currency starts UNSELECTED — the user must pick it before topping up.
+  const [depositCurrency, setDepositCurrency] = useState('');
+  const walletHasActivity = snapshot.balance > 0 || (Array.isArray(snapshot.transactions) && snapshot.transactions.length > 0);
+  // Once a wallet holds money it is locked to its existing currency; otherwise the
+  // user's chosen deposit currency applies.
+  const establishedCurrency = walletHasActivity ? walletCurrency : null;
+  const activeDepositCurrency = establishedCurrency || depositCurrency;
+  const displayCurrency = establishedCurrency || depositCurrency || walletCurrency;
+
+  const refresh = useCallback(async () => {
+    if (!isAuthenticated || !userEmail) return;
+    setIsLoading(true);
+    const result = await getWalletSnapshot(userEmail, _fxState.buyerCurrency || 'USD');
+    if (result.ok) {
+      setSnapshot({ balance: result.balance, currency: result.currency, transactions: result.transactions });
+    } else if (result.error) {
+      setFeedback({ type: 'error', message: result.error });
+    }
+    setIsLoading(false);
+  }, [isAuthenticated, userEmail]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const showFeedback = (type, message) => setFeedback({ type, message });
+
+  // ---- Add funds -----------------------------------------------------------
+  const handleStartCardTopUp = async () => {
+    if (!activeDepositCurrency) {
+      showFeedback('error', 'Select the currency you want to deposit in first.');
+      return;
+    }
+    const amount = Number(topUpAmount);
+    if (!amount || amount <= 0) {
+      showFeedback('error', 'Enter an amount greater than zero to add funds.');
+      return;
+    }
+    setIsPreparingCard(true);
+    showFeedback('idle', '');
+    try {
+      const secret = await requestStripeClientSecret({
+        amount,
+        currency: activeDepositCurrency,
+        email: userEmail,
+        fullName: profileName,
+      });
+      setTopUpClientSecret(secret);
+    } catch (error) {
+      showFeedback('error', error instanceof Error ? error.message : 'Could not start the card payment.');
+    } finally {
+      setIsPreparingCard(false);
+    }
+  };
+
+  const finishTopUp = async (reference, method) => {
+    const amount = Number(topUpAmount);
+    const currency = String(activeDepositCurrency || 'USD').toUpperCase();
+    setIsToppingUp(true);
+    const result = await topUpWallet({
+      email: userEmail,
+      amount,
+      currency,
+      method,
+      reference,
+    });
+    setIsToppingUp(false);
+    setTopUpClientSecret('');
+    if (result.ok) {
+      setTopUpAmount('');
+      showFeedback('success', `Added ${formatAmountInCurrency(amount, currency)} to your wallet.`);
+      await refresh();
+    } else {
+      showFeedback('error', result.error || 'Could not add funds.');
+    }
+  };
+
+  const handleDemoTopUp = async () => {
+    if (!activeDepositCurrency) {
+      showFeedback('error', 'Select the currency you want to deposit in first.');
+      return;
+    }
+    const amount = Number(topUpAmount);
+    if (!amount || amount <= 0) {
+      showFeedback('error', 'Enter an amount greater than zero to add funds.');
+      return;
+    }
+    await finishTopUp(null, 'demo');
+  };
+
+  // ---- Transfer ------------------------------------------------------------
+  const handleTransfer = async (event) => {
+    event.preventDefault();
+    const amount = Number(transferAmount);
+    const recipient = normalizeEmail(transferTo);
+    if (!recipient || !recipient.includes('@')) {
+      showFeedback('error', 'Enter a valid recipient email address.');
+      return;
+    }
+    if (recipient === userEmail) {
+      showFeedback('error', 'You cannot send money to yourself.');
+      return;
+    }
+    if (!amount || amount <= 0) {
+      showFeedback('error', 'Enter an amount greater than zero to send.');
+      return;
+    }
+    if (amount > snapshot.balance) {
+      showFeedback('error', 'That amount is more than your wallet balance.');
+      return;
+    }
+    setIsTransferring(true);
+    const result = await transferWallet({
+      fromEmail: userEmail,
+      toEmail: recipient,
+      amount,
+      note: transferNote.trim() || null,
+    });
+    setIsTransferring(false);
+    if (result.ok) {
+      setTransferTo('');
+      setTransferAmount('');
+      setTransferNote('');
+      showFeedback('success', `Sent ${formatAmountInCurrency(amount, walletCurrency)} to ${recipient}.`);
+      await refresh();
+    } else {
+      showFeedback('error', result.error || 'Could not send the money.');
+    }
+  };
+
+  // ---- Withdraw ------------------------------------------------------------
+  const handleWithdraw = async (event) => {
+    event.preventDefault();
+    const amount = Number(withdrawAmount);
+    if (!amount || amount <= 0) {
+      showFeedback('error', 'Enter an amount greater than zero to withdraw.');
+      return;
+    }
+    if (amount > snapshot.balance) {
+      showFeedback('error', 'That amount is more than your wallet balance.');
+      return;
+    }
+    if (!withdrawDestination.trim()) {
+      showFeedback('error', 'Add the bank account or details to withdraw to.');
+      return;
+    }
+    setIsWithdrawing(true);
+    const result = await requestWithdrawal({
+      email: userEmail,
+      amount,
+      destination: withdrawDestination.trim(),
+    });
+    setIsWithdrawing(false);
+    if (result.ok) {
+      setWithdrawAmount('');
+      showFeedback('success', 'Withdrawal requested. Our team will process it within 1–3 business days.');
+      await refresh();
+
+      // Fire-and-forget confirmation email (no-op without RESEND_API_KEY).
+      try {
+        fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'payout_requested',
+            to: userEmail,
+            payload: { sellerName: profileName || userEmail, amount, currency: walletCurrency, reference: `wallet-${Date.now()}` },
+          }),
+        }).catch(() => { /* ignore */ });
+      } catch (_e) { /* ignore */ }
+    } else {
+      showFeedback('error', result.error || 'Could not request the withdrawal.');
+    }
+  };
+
+  if (!isAuthenticated || !userEmail) {
+    return (
+      <PageFrame title="My Wallet" subtitle="Sign in to store, send and spend money on SVS.">
+        <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-6 text-sm text-[var(--svs-text)]">
+          <p className="mb-4">You need to be signed in to use your wallet.</p>
+          <Link to="/signin" className={`${cudyBluePrimaryButtonClassName} inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>Sign In</Link>
+        </div>
+      </PageFrame>
+    );
+  }
+
+  const quickAmounts = [10, 25, 50, 100];
+  const cardTopUpAvailable = embeddedCardCheckoutEnabled;
+
+  return (
+    <PageFrame title="My Wallet" subtitle="Store money on SVS, pay for items, send funds to other users or withdraw to your bank.">
+      {feedback.message ? (
+        <div
+          className={`mb-5 rounded-xl border px-4 py-3 text-sm ${
+            feedback.type === 'error'
+              ? 'border-rose-200 bg-rose-50 text-rose-700'
+              : feedback.type === 'success'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                : 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)] text-[var(--svs-text)]'
+          }`}
+        >
+          {feedback.message}
+        </div>
+      ) : null}
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <section className="space-y-4 lg:col-span-1">
+          {/* Balance card */}
+          <div className="rounded-2xl border border-[var(--svs-border)] bg-gradient-to-br from-[var(--svs-primary)] to-[var(--svs-primary-strong)] p-5 text-white shadow-[0_8px_24px_rgba(0,123,156,0.25)]">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/75">Wallet balance</p>
+              <Wallet className="h-5 w-5 text-white/80" />
+            </div>
+            <p className="mt-3 text-3xl font-extrabold">{formatAmountInCurrency(snapshot.balance, displayCurrency)}</p>
+            <p className="mt-1 text-xs text-white/75">{profileName || userEmail}</p>
+            <button
+              type="button"
+              onClick={refresh}
+              disabled={isLoading}
+              className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-white/30 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20 disabled:opacity-60"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+          </div>
+
+          {/* Add funds */}
+          <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+            <div className="flex items-center gap-2">
+              <Plus className="h-4 w-4 text-[var(--svs-primary)]" />
+              <h2 className="text-base font-bold text-[var(--svs-text)]">Add funds</h2>
+            </div>
+            <p className="mt-1 text-xs text-[var(--svs-muted)]">
+              {cardTopUpAvailable ? 'Top up your wallet with a debit or credit card.' : 'Add funds instantly (demo mode — no card is charged).'}
+            </p>
+            <div className="mt-3 space-y-2">
+              <div>
+                <label className="block text-xs font-semibold text-[var(--svs-muted)]">Deposit currency</label>
+                <div className="mt-1">
+                  <WalletCurrencyPicker
+                    value={activeDepositCurrency}
+                    onChange={setDepositCurrency}
+                    disabled={Boolean(establishedCurrency)}
+                  />
+                </div>
+                {establishedCurrency ? (
+                  <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Your wallet is held in {establishedCurrency}. New deposits use this currency.</p>
+                ) : !depositCurrency ? (
+                  <p className="mt-1 text-[11px] text-[#8a5a1a]">Pick or search a currency to start depositing.</p>
+                ) : null}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="min-w-[2.5rem] text-sm font-semibold text-[var(--svs-muted)]">{activeDepositCurrency || '—'}</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={topUpAmount}
+                  onChange={(event) => setTopUpAmount(event.target.value)}
+                  placeholder="0.00"
+                  disabled={!activeDepositCurrency}
+                  className="w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none disabled:cursor-not-allowed disabled:bg-[var(--svs-surface-soft)]"
+                />
+              </div>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {quickAmounts.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setTopUpAmount(String(value))}
+                  disabled={!activeDepositCurrency}
+                  className="rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-1 text-xs font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  +{formatAmountInCurrency(value, activeDepositCurrency || displayCurrency)}
+                </button>
+              ))}
+            </div>
+
+            {cardTopUpAvailable && topUpClientSecret ? (
+              <Elements stripe={stripePromise} options={{ clientSecret: topUpClientSecret }}>
+                <WalletStripeTopUpForm
+                  amountLabel={formatAmountInCurrency(Number(topUpAmount) || 0, activeDepositCurrency || displayCurrency)}
+                  onSuccess={(reference) => finishTopUp(reference, 'card')}
+                  onCancel={() => setTopUpClientSecret('')}
+                />
+              </Elements>
+            ) : (
+              <button
+                type="button"
+                onClick={cardTopUpAvailable ? handleStartCardTopUp : handleDemoTopUp}
+                disabled={isPreparingCard || isToppingUp || !activeDepositCurrency}
+                className={`${cudyBluePrimaryButtonClassName} mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[var(--svs-primary)] px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-70`}
+              >
+                {cardTopUpAvailable ? <CreditCard className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                {isPreparingCard
+                  ? 'Preparing…'
+                  : isToppingUp
+                    ? 'Adding…'
+                    : !activeDepositCurrency
+                      ? 'Select a currency'
+                      : cardTopUpAvailable
+                        ? 'Pay by card'
+                        : 'Add funds'}
+              </button>
+            )}
+          </div>
+        </section>
+
+        <section className="space-y-6 lg:col-span-2">
+          <div className="grid gap-6 sm:grid-cols-2">
+            {/* Send money */}
+            <form onSubmit={handleTransfer} className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+              <div className="flex items-center gap-2">
+                <Send className="h-4 w-4 text-[var(--svs-primary)]" />
+                <h2 className="text-base font-bold text-[var(--svs-text)]">Send money</h2>
+              </div>
+              <p className="mt-1 text-xs text-[var(--svs-muted)]">Transfer funds to another registered SVS user.</p>
+              <label className="mt-3 block text-xs font-semibold text-[var(--svs-muted)]">Recipient email</label>
+              <input
+                type="email"
+                value={transferTo}
+                onChange={(event) => setTransferTo(event.target.value)}
+                placeholder="name@example.com"
+                className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none"
+              />
+              <label className="mt-3 block text-xs font-semibold text-[var(--svs-muted)]">Amount ({walletCurrency})</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                value={transferAmount}
+                onChange={(event) => setTransferAmount(event.target.value)}
+                placeholder="0.00"
+                className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none"
+              />
+              <label className="mt-3 block text-xs font-semibold text-[var(--svs-muted)]">Note (optional)</label>
+              <input
+                type="text"
+                value={transferNote}
+                onChange={(event) => setTransferNote(event.target.value)}
+                placeholder="What's it for?"
+                maxLength={120}
+                className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none"
+              />
+              <button
+                type="submit"
+                disabled={isTransferring}
+                className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[var(--svs-primary)] px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-70`}
+              >
+                <Send className="h-4 w-4" />
+                {isTransferring ? 'Sending…' : 'Send money'}
+              </button>
+            </form>
+
+            {/* Withdraw */}
+            <form onSubmit={handleWithdraw} className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+              <div className="flex items-center gap-2">
+                <ArrowUpRight className="h-4 w-4 text-[var(--svs-primary)]" />
+                <h2 className="text-base font-bold text-[var(--svs-text)]">Withdraw</h2>
+              </div>
+              <p className="mt-1 text-xs text-[var(--svs-muted)]">Move money back to your bank account. Requests are processed within 1–3 business days.</p>
+              <label className="mt-3 block text-xs font-semibold text-[var(--svs-muted)]">Amount ({walletCurrency})</label>
+              <div className="mt-1 flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={withdrawAmount}
+                  onChange={(event) => setWithdrawAmount(event.target.value)}
+                  placeholder="0.00"
+                  className="w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setWithdrawAmount(String(snapshot.balance))}
+                  className="shrink-0 rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-xs font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)]"
+                >
+                  Use max
+                </button>
+              </div>
+              <label className="mt-3 block text-xs font-semibold text-[var(--svs-muted)]">Withdraw to</label>
+              <input
+                type="text"
+                value={withdrawDestination}
+                onChange={(event) => setWithdrawDestination(event.target.value)}
+                placeholder="Bank name & account number"
+                className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none"
+              />
+              <button
+                type="submit"
+                disabled={isWithdrawing}
+                className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[var(--svs-primary)] px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-70`}
+              >
+                <ArrowUpRight className="h-4 w-4" />
+                {isWithdrawing ? 'Requesting…' : 'Request withdrawal'}
+              </button>
+            </form>
+          </div>
+
+          {/* Transaction history */}
+          <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+            <h2 className="text-base font-bold text-[var(--svs-text)]">Activity</h2>
+            <p className="mt-1 text-xs text-[var(--svs-muted)]">Your most recent wallet transactions.</p>
+            <div className="mt-4 space-y-2">
+              {snapshot.transactions.length ? (
+                snapshot.transactions.map((tx) => {
+                  const isCredit = tx.direction === 'credit';
+                  return (
+                    <div
+                      key={tx.id || `${tx.kind}-${tx.created_at}`}
+                      className="flex items-center gap-3 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5"
+                    >
+                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${isCredit ? 'bg-emerald-100 text-emerald-700' : 'bg-[var(--svs-cyan-surface)] text-[var(--svs-primary-strong)]'}`}>
+                        {isCredit ? <Download className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-[var(--svs-text)]">
+                          {WALLET_TRANSACTION_LABELS[tx.kind] || tx.kind}
+                          {tx.counterparty ? <span className="font-normal text-[var(--svs-muted)]"> · {tx.counterparty}</span> : null}
+                        </p>
+                        <p className="truncate text-[11px] text-[var(--svs-muted)]">
+                          {tx.description ? `${tx.description} · ` : ''}{formatWalletTimestamp(tx.created_at)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-sm font-bold ${isCredit ? 'text-emerald-600' : 'text-[var(--svs-text)]'}`}>
+                          {isCredit ? '+' : '−'}{formatAmountInCurrency(tx.amount, tx.currency || walletCurrency)}
+                        </p>
+                        <span className={`mt-0.5 inline-block rounded-full border px-2 py-0.5 text-[10px] font-semibold capitalize ${walletTransactionStatusClass(tx.status)}`}>
+                          {tx.status || 'completed'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="rounded-xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-6 text-center text-sm text-[var(--svs-muted)]">
+                  No wallet activity yet. Add funds to get started.
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
+      </div>
+    </PageFrame>
+  );
+};
+
 const SellerPayoutsPage = ({ orders = [] }) => {
   const navigate = useNavigate();
   const isAuthenticated = getAuthState();
@@ -24039,6 +24741,30 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
   const selectedMethodLabel = PAYFAST_METHOD_OPTIONS.find((option) => option.value === selectedMethod)?.label || PAYFAST_METHOD_OPTIONS[0].label;
   const isCardPaymentMethod = selectedMethod === CARD_PAYMENT_METHOD_VALUE;
 
+  // SVS Wallet payment (signed-in buyers only).
+  const walletUserEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
+  const [walletSnapshot, setWalletSnapshot] = useState(null);
+  const [useWalletPayment, setUseWalletPayment] = useState(false);
+  const [isWalletPaying, setIsWalletPaying] = useState(false);
+
+  useEffect(() => {
+    if (!walletUserEmail) return undefined;
+    let cancelled = false;
+    getWalletSnapshot(walletUserEmail, _fxState.buyerCurrency || 'USD').then((result) => {
+      if (!cancelled && result.ok) {
+        setWalletSnapshot({ balance: result.balance, currency: result.currency });
+      }
+    });
+    return () => { cancelled = true; };
+  }, [walletUserEmail]);
+
+  const walletCurrency = walletSnapshot?.currency || _fxState.buyerCurrency || 'USD';
+  const walletBalance = walletSnapshot?.balance || 0;
+  const walletChargeAmount = payfastSession
+    ? Math.round(convertAmount(payfastSession.totals.total, 'ZAR', walletCurrency) * 100) / 100
+    : 0;
+  const walletSufficient = walletBalance >= walletChargeAmount;
+
   useEffect(() => {
     if (routeSession) {
       setPayfastSession(routeSession);
@@ -24177,6 +24903,69 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
     });
   };
 
+  const handleWalletPayment = async () => {
+    if (!walletSufficient) return;
+    setIsWalletPaying(true);
+    setSubmitError('');
+
+    const reference = `WAL-${Date.now()}`;
+    const spend = await spendFromWallet({
+      email: walletUserEmail,
+      amount: walletChargeAmount,
+      reference,
+      description: 'SVS order payment',
+    });
+
+    if (!spend.ok) {
+      setIsWalletPaying(false);
+      setSubmitError(spend.error || 'Wallet payment failed. Please try again.');
+      return;
+    }
+
+    const order = await onPlaceOrder(
+      {
+        ...payfastSession.customer,
+        paymentMethod: 'SVS Wallet',
+      },
+      {
+        provider: 'SVS Wallet',
+        status: 'paid',
+        reference,
+        currency: 'ZAR',
+      },
+      payfastSession.checkoutOptions,
+    );
+
+    if (!order) {
+      // Order could not be placed (e.g. stock changed) — refund the wallet so
+      // the buyer is never charged without receiving an order.
+      await topUpWallet({
+        email: walletUserEmail,
+        amount: walletChargeAmount,
+        currency: walletCurrency,
+        method: 'order-refund',
+        reference,
+      });
+      setIsWalletPaying(false);
+      setSubmitError('One or more items are no longer available in the requested quantity. Your wallet was not charged. Return to checkout and review your order.');
+      return;
+    }
+
+    clearPendingPayfastSession();
+
+    if (isBuyNowMode) {
+      onClearBuyNowCheckout?.();
+    }
+
+    setIsWalletPaying(false);
+    navigate(isBettingLotteryOrder(order) ? '/betting-ticket-tracking' : '/order-confirmation', {
+      state: {
+        order,
+        guestCheckout: !getAuthState(),
+      },
+    });
+  };
+
   const handleFinalizeStripeOrder = async (paymentDetails, paymentMethodLabel) => {
     const order = await onPlaceOrder(
       {
@@ -24277,19 +25066,65 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
             </div>
           </div>
 
+          {walletUserEmail ? (
+            <div className={`rounded-[22px] border p-4 transition ${useWalletPayment ? 'border-[var(--svs-primary)] bg-[#f2fbff]' : 'border-[#e2dbd0] bg-[#fbfaf7]'}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[var(--svs-primary-strong)]">
+                    <Wallet className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-bold text-[#1f1f1f]">Pay with SVS Wallet</p>
+                    <p className="mt-0.5 text-xs text-[#6b6258]">
+                      Balance: {formatAmountInCurrency(walletBalance, walletCurrency)}
+                      {walletCurrency !== 'ZAR' ? ` · This order ≈ ${formatAmountInCurrency(walletChargeAmount, walletCurrency)}` : ''}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setUseWalletPayment((prev) => !prev)}
+                  className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-bold transition ${useWalletPayment ? 'bg-[var(--svs-primary)] text-white' : 'border border-[#d9d1c6] bg-white text-[#1f1f1f] hover:border-[#1f1f1f]'}`}
+                >
+                  {useWalletPayment ? 'Selected' : 'Use wallet'}
+                </button>
+              </div>
+              {useWalletPayment && !walletSufficient ? (
+                <p className="mt-3 rounded-xl border border-[#f1d2a8] bg-[#fff8ec] px-3 py-2 text-xs text-[#8a5a1a]">
+                  Not enough balance. <Link to="/wallet" className="font-bold underline">Add funds to your wallet</Link> to pay this way.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
           {stripeSetupError ? (
             <div className="rounded-2xl border border-[#f1b8b8] bg-[#fff4f4] px-4 py-3 text-sm text-[#c74d4d]">
               {stripeSetupError}
             </div>
           ) : null}
 
-          {!isCardPaymentMethod && submitError ? (
+          {(useWalletPayment || !isCardPaymentMethod) && submitError ? (
             <div className="rounded-2xl border border-[#f1b8b8] bg-[#fff4f4] px-4 py-3 text-sm text-[#c74d4d]">
               {submitError}
             </div>
           ) : null}
 
-          {isCardPaymentMethod ? (
+          {useWalletPayment ? (
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <button type="button" onClick={handleReturnToCheckout} className="rounded-2xl border border-[#d9d1c6] bg-white px-5 py-3 text-sm font-semibold text-[#4d463d] transition hover:border-[#1f1f1f] hover:text-[#1f1f1f]">
+                Cancel Payment
+              </button>
+              <button
+                type="button"
+                disabled={isWalletPaying || !walletSufficient}
+                onClick={handleWalletPayment}
+                className={`${cudyBluePrimaryButtonClassName} inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--svs-primary)] px-6 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70`}
+              >
+                <Wallet className="h-4 w-4" />
+                {isWalletPaying ? 'Processing payment...' : `Pay ${formatCheckoutAmount(payfastSession.totals.total)} from wallet`}
+              </button>
+            </div>
+          ) : isCardPaymentMethod ? (
             isPreparingStripe ? (
               <div className="rounded-2xl border border-[#e2dbd0] bg-[#fbfaf7] px-5 py-4 text-sm text-[#4d463d]">
                 Preparing secure Stripe card payment...
@@ -34336,6 +35171,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/seller/dashboard" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onUpdateOrderStatus={onUpdateOrderStatus} initialView="listings" />} />
     <Route path="/seller/orders" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onUpdateOrderStatus={onUpdateOrderStatus} initialView="orders" />} />
     <Route path="/seller/payouts" element={<SellerPayoutsPage orders={orders} />} />
+    <Route path="/wallet" element={<WalletPage />} />
     <Route path="/property-hub" element={<PropertyHubPage />} />
     <Route path="/property-hub/sell" element={<PropertySellPage />} />
     <Route path="/home-care/sell" element={<HomeCareSellPage onSellerItemCreated={onSellerItemCreated} />} />
