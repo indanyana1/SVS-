@@ -846,6 +846,12 @@ const createSellerListingFormState = () => ({
   currency: '',
   quantity: '',
   marketKey: '',
+  // Optional multi-size support so one manual listing can sell several sizes
+  // (e.g. 25kg, 50kg) each with its own stock and its own price. Sizes left
+  // with a blank price fall back to the listing's base price.
+  sizes: [],
+  sizeStock: {},
+  sizePrices: {},
   ...EMPTY_GROCERIES_LISTING_FIELDS,
   ...EMPTY_TICKETS_LISTING_FIELDS,
   ...EMPTY_BEVERAGES_LISTING_FIELDS,
@@ -4314,6 +4320,47 @@ const sumBulkSizeStock = (sizes = [], stockMap = {}) => (Array.isArray(sizes) ? 
   0,
 );
 
+// Per-size pricing support. A listing can carry a `sizePrices` map
+// ({ "25kg": 80, "50kg": 150 }) so the same product can be sold in several
+// packing sizes at different prices. A size with no explicit price falls back
+// to the listing's base price.
+const getItemSizePriceMap = (item = {}) => {
+  const raw = item?.sizePrices;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const entries = Object.entries(raw)
+    .map(([key, value]) => [String(key).trim(), Number(String(value ?? '').replace(/[^\d.]/g, ''))])
+    .filter(([key, amount]) => Boolean(key) && Number.isFinite(amount) && amount > 0);
+  return entries.length ? Object.fromEntries(entries) : null;
+};
+
+const hasItemSizePrices = (item = {}) => Boolean(getItemSizePriceMap(item));
+
+// The price for a single size/variant, or null when the listing has no
+// per-size pricing (or that size has no explicit price).
+const getItemSizePrice = (item = {}, size = '') => {
+  const priceMap = getItemSizePriceMap(item);
+  if (!priceMap) return null;
+  const target = String(size || '').trim().toLowerCase();
+  const matchKey = Object.keys(priceMap).find((key) => key.toLowerCase() === target);
+  return matchKey ? priceMap[matchKey] : null;
+};
+
+// Detail-modal size props bundle. Spreading this into an onOpenItemDetails
+// payload carries the listing's sizes, per-size stock and per-size pricing
+// into the buyer detail modal for ANY market. Returns an empty object for
+// listings with no sizes so it is safe to spread into every market builder.
+const getItemDetailSizeProps = (item = {}) => {
+  const sizeOptions = getItemSizeOptions(item);
+  if (!sizeOptions.length) return {};
+  return {
+    currency: item.currency,
+    sizeOptions,
+    sizeStock: item.sizeStock,
+    sizePrices: item.sizePrices,
+    defaultSelectedSize: item.selectedSize || getItemInStockSizes(item)[0] || sizeOptions[0] || '',
+  };
+};
+
 const naturalResourcesItems = [
   {
     id: 'nr1',
@@ -5881,7 +5928,34 @@ const getSellerListingValidationMessage = (formState) => {
   return 'For grocery listings, select the grocery category and add the brand, pack size, and freshness details before publishing.';
 };
 
-const buildSellerItemDetailsJson = (formState) => {
+// Sanitize the optional multi-size fields from a seller form into the shape
+// the buyer side reads: `sizes` (array), `sizeStock` (map) and `sizePrices`
+// (map, only sizes with a real price > 0). Returns an empty object for
+// sizeless listings so the details_json stays clean.
+const buildSizeDetailFields = (formState = {}) => {
+  const sizes = Array.isArray(formState.sizes)
+    ? formState.sizes.map((value) => String(value || '').trim()).filter(Boolean)
+    : [];
+  if (!sizes.length) return {};
+
+  const rawStock = formState.sizeStock && typeof formState.sizeStock === 'object' ? formState.sizeStock : {};
+  const rawPrices = formState.sizePrices && typeof formState.sizePrices === 'object' ? formState.sizePrices : {};
+
+  const sizeStock = {};
+  const sizePrices = {};
+  sizes.forEach((size) => {
+    const qty = parseInt(String(rawStock[size] ?? '').replace(/[^\d]/g, ''), 10);
+    sizeStock[size] = Number.isFinite(qty) ? qty : 0;
+    const amount = Number(String(rawPrices[size] ?? '').replace(/[^\d.]/g, ''));
+    if (Number.isFinite(amount) && amount > 0) sizePrices[size] = amount;
+  });
+
+  const result = { sizes, sizeStock };
+  if (Object.keys(sizePrices).length) result.sizePrices = sizePrices;
+  return result;
+};
+
+const buildSellerItemBaseDetailsJson = (formState) => {
   const sharedFields = {
     currency: SUPPORTED_CURRENCIES.some((entry) => entry.code === formState.currency) ? formState.currency : 'USD',
   };
@@ -5945,6 +6019,14 @@ const buildSellerItemDetailsJson = (formState) => {
   }
   return sharedFields;
 };
+
+// Build the persisted details_json for a seller listing, merging in any
+// optional multi-size data (sizes / per-size stock / per-size price) on top
+// of the market-specific fields so manual listings support packing sizes too.
+const buildSellerItemDetailsJson = (formState) => ({
+  ...buildSellerItemBaseDetailsJson(formState),
+  ...buildSizeDetailFields(formState),
+});
 
 const getGroceriesListingMetaText = (item = {}) => {
   const categoryLabel = item.category || getGroceriesCategoryTitle(item.categoryKey);
@@ -9931,6 +10013,7 @@ const ECommercePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
             title: getTranslatedValue(t, item.titleKey, item.title),
             image: item.image,
             images: item.images || (item.image ? [item.image] : []),
+            ...getItemDetailSizeProps(item),
             marketName: t('markets.ecommerce'),
             details: item.subtitle || item.description || item.sellerName,
             priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -10376,6 +10459,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
       title: item.title,
       image: item.image,
       images: item.images || (item.image ? [item.image] : []),
+      ...getItemDetailSizeProps(item),
       marketName: t('markets.bookings'),
       details,
       priceLabel: item.isSellerListing
@@ -10897,6 +10981,7 @@ const VotingClientsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIt
             title: getTranslatedValue(t, item.titleKey, item.title),
             image: item.image,
             images: item.images || (item.image ? [item.image] : []),
+            ...getItemDetailSizeProps(item),
             marketName: t('markets.votingClients'),
             details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Beauty, fitness & sports'}`,
             priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -10953,6 +11038,7 @@ const VotingProvidersPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
             title: getTranslatedValue(t, item.titleKey, item.title),
             image: item.image,
             images: item.images || (item.image ? [item.image] : []),
+            ...getItemDetailSizeProps(item),
             marketName: t('markets.votingProviders'),
             details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Jewellery & accessories'}`,
             priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -12134,6 +12220,7 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       title: item.title,
       image: item.image,
       images: item.images || (item.image ? [item.image] : []),
+      ...getItemDetailSizeProps(item),
       marketName: 'Beverages & Liquors',
       details,
       priceLabel: getSalePrices(item.price, SALE_DISCOUNT_RATE, item.currency).nowPrice,
@@ -12324,6 +12411,7 @@ const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
           title: getTranslatedValue(t, item.titleKey, item.title),
           image: item.image,
           images: item.images || (item.image ? [item.image] : []),
+          ...getItemDetailSizeProps(item),
           marketName: t('markets.wellness'),
           details: item.description || item.sellerName,
           priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -12380,6 +12468,7 @@ const TraditionalMedicinesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wis
           title: getTranslatedValue(t, item.titleKey, item.title),
           image: item.image,
           images: item.images || (item.image ? [item.image] : []),
+          ...getItemDetailSizeProps(item),
           marketName: t('markets.traditionalMedicines'),
           details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Traditional herbal listing'}`,
           priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -12574,6 +12663,7 @@ const StationeryPage = ({ onToggleWishlist, wishlistItemIds = [], sellerItems = 
       title: getTranslatedValue(t, item.titleKey, item.title),
       image: item.image,
       images: item.images || (item.image ? [item.image] : []),
+      ...getItemDetailSizeProps(item),
       marketName: t('markets.stationery'),
       details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Ready for school and office use'}`,
       priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -13158,6 +13248,7 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
       title: getTranslatedValue(t, item.titleKey, item.title),
       image: item.image,
       images: item.images || (item.image ? [item.image] : []),
+      ...getItemDetailSizeProps(item),
       marketName: 'Informal Market',
       marketKey: 'informalMarket',
       category: item.category || '',
@@ -15114,12 +15205,19 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
         marketName: t('markets.constructionTools'),
         details: buildDetailsText(item),
         priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
+        currency: item.currency,
+        price: item.price,
+        sizeOptions: getItemSizeOptions(item),
+        sizeStock: item.sizeStock,
+        sizePrices: item.sizePrices,
+        defaultSelectedSize: item.selectedSize || getItemInStockSizes(item)[0] || getItemSizeOptions(item)[0] || '',
         detailVariant: 'construction',
         productOverview: item.description || buildDetailsText(item) || `${itemTitle} — quality building material and equipment available for residential, commercial, and industrial projects.`,
         keyHighlights,
         technicalSpecs,
         specsTitle: 'Product Details',
         similarProducts,
+        cartItemBase: buildCartItem(item),
         cartItem: buildCartItem(item),
         wishlistItem,
       });
@@ -16054,6 +16152,7 @@ const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       title: getTranslatedValue(t, item.titleKey, item.title),
       image: item.image,
       images: item.images || (item.image ? [item.image] : []),
+      ...getItemDetailSizeProps(item),
       marketName: t('markets.hardwareSoftware'),
       details: item.description || item.subtitle || item.sellerName,
       priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency).nowPrice,
@@ -16244,6 +16343,7 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
           title: getTranslatedValue(t, item.titleKey, item.title),
           image: item.image,
           images: item.images || (item.image ? [item.image] : []),
+          ...getItemDetailSizeProps(item),
           marketName: t('markets.mobilityVehicles'),
           details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Transport listing'}`,
           priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -16592,6 +16692,8 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
         priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
         sizeOptions: getItemSizeOptions(item),
         sizeStock: item.sizeStock,
+        sizePrices: item.sizePrices,
+        currency: item.currency,
         availableQuantity: item.availableQuantity,
         defaultSelectedSize: item.selectedSize || getItemInStockSizes(item)[0] || getItemSizeOptions(item)[0] || '',
         detailsTable: {
@@ -16765,6 +16867,7 @@ const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
           title: getTranslatedValue(t, item.titleKey, item.title),
           image: item.image,
           images: item.images || (item.image ? [item.image] : []),
+          ...getItemDetailSizeProps(item),
           marketName: t('markets.naturalResources'),
           details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Resource listing'}`,
           priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -18442,6 +18545,142 @@ const SellerPayoutsPage = ({ orders = [] }) => {
   );
 };
 
+// -----------------------------------------------------------------
+// SizeVariantEditor
+// -----------------------------------------------------------------
+// Reusable "sizes / packing sizes" editor for the manual seller forms.
+// One listing can carry several sizes (e.g. 25kg, 50kg or S, M, L), and
+// each size can track its own stock and its own price. A size left with a
+// blank price is sold at the listing's base price. Operates on three
+// controlled values — `sizes` (array), `sizeStock` (map) and `sizePrices`
+// (map) — and reports every change through a single `onChange` callback so
+// the parent form can keep them on its formData.
+const SizeVariantEditor = ({
+  sizes = [],
+  sizeStock = {},
+  sizePrices = {},
+  basePrice = '',
+  idPrefix = 'size',
+  onChange,
+}) => {
+  const [sizeInput, setSizeInput] = useState('');
+
+  const emit = (nextSizes, nextStock, nextPrices) => {
+    onChange?.({ sizes: nextSizes, sizeStock: nextStock, sizePrices: nextPrices });
+  };
+
+  const addSizes = (raw) => {
+    const parts = String(raw || '')
+      .split(/[,/|]+/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+    if (!parts.length) return;
+
+    const existingLower = sizes.map((value) => value.toLowerCase());
+    const nextSizes = [...sizes];
+    const nextStock = { ...sizeStock };
+    parts.forEach((part) => {
+      if (existingLower.includes(part.toLowerCase())) return;
+      existingLower.push(part.toLowerCase());
+      nextSizes.push(part);
+      // Each new size starts with a stock of 1 the seller can adjust.
+      if (nextStock[part] == null || nextStock[part] === '') nextStock[part] = '1';
+    });
+    emit(nextSizes, nextStock, sizePrices);
+    setSizeInput('');
+  };
+
+  const removeSize = (sizeValue) => {
+    const nextSizes = sizes.filter((value) => value !== sizeValue);
+    const nextStock = { ...sizeStock };
+    const nextPrices = { ...sizePrices };
+    delete nextStock[sizeValue];
+    delete nextPrices[sizeValue];
+    emit(nextSizes, nextStock, nextPrices);
+  };
+
+  const setSizeStockValue = (sizeValue, rawQty) => {
+    const sanitized = String(rawQty).replace(/[^\d]/g, '');
+    emit(sizes, { ...sizeStock, [sizeValue]: sanitized }, sizePrices);
+  };
+
+  const setSizePriceValue = (sizeValue, rawPrice) => {
+    // Keep digits and a single decimal point only.
+    const sanitized = String(rawPrice).replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1');
+    emit(sizes, sizeStock, { ...sizePrices, [sizeValue]: sanitized });
+  };
+
+  return (
+    <div className="sm:col-span-2">
+      <label htmlFor={`${idPrefix}-input`} className="mb-1 block text-sm font-medium text-[var(--svs-text)]">
+        Sizes / packing sizes <span className="font-normal text-[var(--svs-muted)]">(optional)</span>
+      </label>
+      <div className="flex gap-2">
+        <input
+          id={`${idPrefix}-input`}
+          value={sizeInput}
+          onChange={(event) => setSizeInput(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              addSizes(sizeInput);
+            }
+          }}
+          placeholder="e.g. 25kg, 50kg or S, M, L"
+          className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none"
+        />
+        <button
+          type="button"
+          onClick={() => addSizes(sizeInput)}
+          className="shrink-0 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm font-semibold text-[var(--svs-text)]"
+        >
+          Add
+        </button>
+      </div>
+      {sizes.length ? (
+        <div className="mt-3 space-y-2">
+          {sizes.map((sizeValue) => (
+            <div key={sizeValue} className="flex items-center gap-2">
+              <span className="inline-flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)]">
+                <span className="truncate font-semibold">{sizeValue}</span>
+                <button
+                  type="button"
+                  onClick={() => removeSize(sizeValue)}
+                  aria-label={`Remove ${sizeValue}`}
+                  className="ml-auto text-[var(--svs-muted)] hover:text-rose-500"
+                >
+                  ×
+                </button>
+              </span>
+              <label className="sr-only" htmlFor={`${idPrefix}-qty-${sizeValue}`}>Quantity for {sizeValue}</label>
+              <input
+                id={`${idPrefix}-qty-${sizeValue}`}
+                inputMode="numeric"
+                value={sizeStock[sizeValue] ?? ''}
+                onChange={(event) => setSizeStockValue(sizeValue, event.target.value)}
+                placeholder="Qty"
+                className="w-16 shrink-0 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-2 text-center text-sm text-[var(--svs-text)] outline-none"
+              />
+              <label className="sr-only" htmlFor={`${idPrefix}-price-${sizeValue}`}>Price for {sizeValue}</label>
+              <input
+                id={`${idPrefix}-price-${sizeValue}`}
+                inputMode="decimal"
+                value={sizePrices[sizeValue] ?? ''}
+                onChange={(event) => setSizePriceValue(sizeValue, event.target.value)}
+                placeholder={basePrice || 'Base'}
+                className="w-20 shrink-0 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-2 text-center text-sm text-[var(--svs-text)] outline-none"
+              />
+            </div>
+          ))}
+        </div>
+      ) : null}
+      <p className="mt-1 text-[11px] text-[var(--svs-muted)]">
+        Add a size to sell the same item in several sizes. Set a quantity and an optional price per size — leave the price blank to use your base price.
+      </p>
+    </div>
+  );
+};
+
 const SellerUploadPage = ({ onSellerItemCreated }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -18580,6 +18819,10 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
     // same product tracks its own quantity. When a size hits 0 buyers can no
     // longer order that size while the others stay available.
     sizeStock: {},
+    // Per-size price map ({ "25kg": "80", "50kg": "150" }) so the same product
+    // can sell in several packing sizes at different prices. Sizes with no
+    // price entered fall back to the listing's base price.
+    sizePrices: {},
     material: '',
     condition: 'New',
     keyFeatures: [],
@@ -18634,11 +18877,16 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
       Object.keys(nextStock).forEach((key) => {
         if (key.toLowerCase() === String(value).toLowerCase()) delete nextStock[key];
       });
+      const nextPrices = { ...(current.sizePrices || {}) };
+      Object.keys(nextPrices).forEach((key) => {
+        if (key.toLowerCase() === String(value).toLowerCase()) delete nextPrices[key];
+      });
       return {
         ...current,
         sizes: next,
         size: next.join(', '),
         sizeStock: nextStock,
+        sizePrices: nextPrices,
         quantity: next.length ? String(sumBulkSizeStock(next, nextStock)) : current.quantity,
       };
     });
@@ -18654,9 +18902,13 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
         ? existing.filter((entry) => entry.toLowerCase() !== String(value).toLowerCase())
         : [...existing, value];
       const nextStock = { ...(current.sizeStock || {}) };
+      const nextPrices = { ...(current.sizePrices || {}) };
       if (has) {
         Object.keys(nextStock).forEach((key) => {
           if (key.toLowerCase() === String(value).toLowerCase()) delete nextStock[key];
+        });
+        Object.keys(nextPrices).forEach((key) => {
+          if (key.toLowerCase() === String(value).toLowerCase()) delete nextPrices[key];
         });
       } else if (nextStock[value] === undefined) {
         nextStock[value] = '1';
@@ -18666,6 +18918,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
         sizes: next,
         size: next.join(', '),
         sizeStock: nextStock,
+        sizePrices: nextPrices,
         quantity: next.length ? String(sumBulkSizeStock(next, nextStock)) : current.quantity,
       };
     });
@@ -18683,6 +18936,19 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
         ...current,
         sizeStock: nextStock,
         quantity: String(sumBulkSizeStock(sizes, nextStock)),
+      };
+    });
+  }, []);
+
+  // Set the price for a single size/variant. Allows digits and one decimal
+  // point so each packing size can carry its own price.
+  const setBulkSizePrice = useCallback((sizeValue, rawPrice) => {
+    const sanitized = String(rawPrice ?? '').replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1');
+    setBulkDraft((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        sizePrices: { ...(current.sizePrices || {}), [sizeValue]: sanitized },
       };
     });
   }, []);
@@ -18990,6 +19256,15 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
           sizeStock[sizeValue] = Math.max(parseInt(bulkDraft.sizeStock?.[sizeValue], 10) || 0, 0);
         });
         detailsJson.sizeStock = sizeStock;
+        // Persist the per-size price map so each size/variant can sell at its
+        // own price. Sizes with no valid price entered are left out and fall
+        // back to the listing's base price on the buyer side.
+        const sizePrices = {};
+        bulkDraft.sizes.forEach((sizeValue) => {
+          const amount = Number(String(bulkDraft.sizePrices?.[sizeValue] ?? '').replace(/[^\d.]/g, ''));
+          if (Number.isFinite(amount) && amount > 0) sizePrices[sizeValue] = amount;
+        });
+        if (Object.keys(sizePrices).length) detailsJson.sizePrices = sizePrices;
       } else if (bulkDraft.size) {
         detailsJson.size = bulkDraft.size;
       }
@@ -19400,7 +19675,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                     </label>
                     <div className="block text-[11px] font-semibold text-[var(--svs-text)]">
                       <span className="flex items-center gap-1.5">Sizes / variants {(Array.isArray(bulkDraft.sizes) && bulkDraft.sizes.length) ? <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-700" title="Auto-filled by AI">✨ AI</span> : <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${(BULK_MARKET_FIELD_HINTS[bulkDraft.marketKey]?.sizeRequired) ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>{(BULK_MARKET_FIELD_HINTS[bulkDraft.marketKey]?.sizeRequired) ? '✏️ You' : 'Optional'}</span>}</span>
-                      <p className="mt-0.5 text-[10px] font-normal text-[var(--svs-muted)]">Selling the same product in several sizes or types? Add each one (e.g. Small, Medium, Large or 28, 30 or UK 6, UK 7). Set the stock for each size — when a size hits 0 it sells out on its own while the others stay available.</p>
+                      <p className="mt-0.5 text-[10px] font-normal text-[var(--svs-muted)]">Selling the same product in several sizes or types? Add each one (e.g. Small, Medium, Large or 28, 30 or UK 6, UK 7). Set the stock for each size — when a size hits 0 it sells out on its own while the others stay available. Set a price per size for different packing sizes (e.g. 25kg, 50kg) — leave it blank to use the base price above.</p>
                       {(Array.isArray(bulkDraft.sizes) && bulkDraft.sizes.length) ? (
                         <div className="mt-1.5 flex flex-col gap-1.5">
                           {bulkDraft.sizes.map((sizeValue) => (
@@ -19420,6 +19695,19 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                                   className="w-14 rounded border border-[var(--svs-border)] bg-[var(--svs-surface)] px-1.5 py-0.5 text-center text-[11px] font-bold text-[var(--svs-text)] outline-none"
                                   disabled={bulkDraft.status === 'publishing'}
                                   aria-label={`Stock for size ${sizeValue}`}
+                                />
+                              </label>
+                              <label className="flex items-center gap-1 text-[10px] font-semibold text-[var(--svs-primary-strong)]">
+                                Price
+                                <input
+                                  type="text"
+                                  inputMode="decimal"
+                                  value={(bulkDraft.sizePrices && bulkDraft.sizePrices[sizeValue] !== undefined) ? bulkDraft.sizePrices[sizeValue] : ''}
+                                  onChange={(event) => setBulkSizePrice(sizeValue, event.target.value)}
+                                  placeholder={bulkDraft.price ? String(bulkDraft.price) : 'Base'}
+                                  className="w-16 rounded border border-[var(--svs-border)] bg-[var(--svs-surface)] px-1.5 py-0.5 text-center text-[11px] font-bold text-[var(--svs-text)] outline-none"
+                                  disabled={bulkDraft.status === 'publishing'}
+                                  aria-label={`Price for size ${sizeValue}`}
                                 />
                               </label>
                               <button
@@ -19596,6 +19884,14 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
               {formData.marketKey && getMarketFieldSpec(formData.marketKey) ? (
                 <MarketSpecificFields formData={formData} onFieldChange={handleChange} prefix="seller-spec" marketKey={formData.marketKey} />
               ) : null}
+              <SizeVariantEditor
+                idPrefix="seller-size"
+                sizes={formData.sizes}
+                sizeStock={formData.sizeStock}
+                sizePrices={formData.sizePrices}
+                basePrice={formData.price}
+                onChange={(next) => setFormData((current) => ({ ...current, ...next }))}
+              />
               <div className="sm:col-span-2">
                 <label htmlFor="seller-description" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Description</label>
                 <textarea id="seller-description" name="description" value={formData.description} onChange={handleChange} rows={4} required placeholder="Short details that should appear with the product in its market." className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
@@ -21422,6 +21718,7 @@ const SafetyPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds =
             title: getTranslatedValue(t, item.titleKey, item.title),
             image: item.image,
             images: item.images || (item.image ? [item.image] : []),
+            ...getItemDetailSizeProps(item),
             marketName: t('markets.safety'),
             details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Toys & kids'}`,
             priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -22469,6 +22766,7 @@ const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onOpen
               title: item.title,
               image: item.image,
               images: item.images || (item.image ? [item.image] : []),
+              ...getItemDetailSizeProps(item),
               marketName: item.marketName,
               details: item.details,
               priceLabel: item.unitPriceLabel,
@@ -31860,15 +32158,27 @@ const ItemDetailsModal = ({
       ? existingDetails
       : [existingDetails, selectedSizeDetail].filter(Boolean).join(' • ');
 
+    // When the chosen size has its own price, charge that price instead of the
+    // listing's base price so each packing size is sold at its own rate.
+    const sizePrice = getItemSizePrice(item, selectedSize);
+
     return {
       ...baseCartItem,
       id: `${baseId}::size-${normalizedSize}`,
       details,
       selectedSize,
+      ...(sizePrice != null ? { price: String(sizePrice) } : {}),
     };
   })();
   const actionWishlistItem = item.wishlistItem || item;
   const itemHasSizeStock = hasItemSizeStock(item);
+  // Per-size pricing: show the selected size's price when the listing carries a
+  // sizePrices map, otherwise fall back to the listing's base price label.
+  const selectedSizePrice = getItemSizePrice(item, selectedSize);
+  const selectedSizePriceLabel = selectedSizePrice != null
+    ? getSalePrices(String(selectedSizePrice), getItemSaleDiscountRate(item), item.currency || null).nowPrice
+    : null;
+  const displayPriceLabel = selectedSizePriceLabel || item.priceLabel;
   // When the listing tracks stock per size, block ordering the selected size
   // once it sells out (and block everything when every size is gone).
   const selectedSizeSoldOut = itemHasSizeStock && Boolean(selectedSize) && isItemSizeSoldOut(item, selectedSize);
@@ -32626,8 +32936,13 @@ const ItemDetailsModal = ({
           <div className="flex flex-col gap-4">
             <div>
               <p className="text-sm font-semibold text-[var(--svs-primary-strong)]">{item.marketName}</p>
-              {item.priceLabel ? (
-                <p className="mt-2 text-2xl font-bold text-[var(--svs-primary-strong)]">{item.priceLabel}</p>
+              {displayPriceLabel ? (
+                <p className="mt-2 text-2xl font-bold text-[var(--svs-primary-strong)]">
+                  {displayPriceLabel}
+                  {selectedSizePriceLabel && selectedSize ? (
+                    <span className="ml-2 align-middle text-sm font-semibold text-[var(--svs-muted)]">/ {selectedSize}</span>
+                  ) : null}
+                </p>
               ) : null}
               <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[var(--svs-muted)]">
                 <span className="inline-flex items-center gap-1 rounded-full bg-[var(--svs-surface-soft)] px-3 py-1 font-semibold text-[var(--svs-text)]">
@@ -32695,10 +33010,14 @@ const ItemDetailsModal = ({
             ) : null}
             {sizeOptions.length ? (
               <div>
-                <h3 className="mt-4 text-lg font-bold text-[var(--svs-text)]">Select size</h3>
+                <h3 className="mt-4 text-lg font-bold text-[var(--svs-text)]">{hasItemSizePrices(item) ? 'Select size & price' : 'Select size'}</h3>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {sizeOptions.map((size) => {
                     const sizeSoldOut = itemHasSizeStock && isItemSizeSoldOut(item, size);
+                    const thisSizePrice = getItemSizePrice(item, size);
+                    const thisSizePriceLabel = thisSizePrice != null
+                      ? getSalePrices(String(thisSizePrice), getItemSaleDiscountRate(item), item.currency || null).nowPrice
+                      : null;
                     return (
                       <button
                         key={size}
@@ -32707,9 +33026,9 @@ const ItemDetailsModal = ({
                         disabled={sizeSoldOut}
                         className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition ${sizeSoldOut ? 'cursor-not-allowed border-[var(--svs-border)] bg-slate-100 text-slate-400 line-through' : selectedSize === size ? 'border-[var(--svs-primary)] bg-[var(--svs-primary-faint)] text-[var(--svs-primary-strong)]' : 'border-[var(--svs-border)] bg-white text-[var(--svs-text)] hover:border-[var(--svs-primary)]'}`}
                         aria-pressed={selectedSize === size}
-                        title={sizeSoldOut ? `${size} is sold out` : undefined}
+                        title={sizeSoldOut ? `${size} is sold out` : (thisSizePriceLabel ? `${size} — ${thisSizePriceLabel}` : undefined)}
                       >
-                        {size}{sizeSoldOut ? ' • Sold out' : ''}
+                        {size}{thisSizePriceLabel ? ` • ${thisSizePriceLabel}` : ''}{sizeSoldOut ? ' • Sold out' : ''}
                       </button>
                     );
                   })}
