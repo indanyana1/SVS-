@@ -449,7 +449,7 @@ const MARKET_FIELD_SPEC = {
       { name: 'powerSource', label: 'Power source', type: 'select', options: ['Manual', 'Corded Electric', 'Cordless Battery', 'Pneumatic', 'Petrol / Diesel'] },
       { name: 'material', label: 'Material', type: 'select', options: ['Steel', 'Stainless Steel', 'Aluminium', 'Wood', 'Plastic', 'Composite', 'Concrete', 'Rubber'] },
       { name: 'projectType', label: 'Project type', type: 'select', options: ['DIY / Home', 'Residential', 'Commercial', 'Industrial', 'Infrastructure'] },
-      { name: 'packaging', label: 'Packaging size', type: 'select', options: ['Each / Per unit', '25kg', '40kg', '50kg', '1 Ton', '5 Ton', 'Other'], helper: 'Pick a bag/bulk size for materials (cement, sand) so buyers can filter by packaging. Use "Each / Per unit" for tools.' },
+      { name: 'packaging', label: 'Packaging size', type: 'text', suggestions: ['Each / Per unit', '25kg', '40kg', '50kg', '1 Ton', '5 Ton', '2kg', '5kg', '10kg', '20kg', '1L', '2L', '5L', '20L'], placeholder: 'e.g. 25kg, 2kg, 5 g, 2L, or Each / Per unit', helper: 'Enter the bag/bulk/volume size buyers can filter by — pick a suggestion or type your own custom size (e.g. 2kg, 5 g, 2L). Use "Each / Per unit" for tools.' },
       { name: 'specification', label: 'Specification', type: 'text', placeholder: 'e.g. 2200 W, 230 mm disc, 42.5 N grade' },
       { name: 'highlights', label: 'Key highlights (one per line)', type: 'textarea', placeholder: 'High-strength construction grade\nWeather & moisture resistant\nProfessional and DIY use', helper: 'Optional. Shown as the bullet list on the product detail page. Leave blank to auto-generate from brand, material and project type.' },
       { name: 'warranty', label: 'Warranty', type: 'text', placeholder: 'e.g. 12 months' },
@@ -700,8 +700,16 @@ const MarketSpecificFields = ({ formData, onFieldChange, prefix = 'seller-spec',
                 onChange={onFieldChange}
                 required={field.required}
                 placeholder={field.placeholder || ''}
+                list={field.suggestions ? `${fieldId}-suggestions` : undefined}
                 className={inputClassName}
               />
+              {field.suggestions ? (
+                <datalist id={`${fieldId}-suggestions`}>
+                  {field.suggestions.map((option) => (
+                    <option key={option} value={option} />
+                  ))}
+                </datalist>
+              ) : null}
               {field.helper ? <p className={helperClassName}>{field.helper}</p> : null}
             </div>
           );
@@ -14749,6 +14757,27 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
 
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'constructionTools'), ...constructionToolsItems], [sellerItems]);
 
+  // Packaging-size filter options = the standard sizes plus any custom sizes
+  // sellers actually entered on their listings (e.g. "2kg", "5 g", "2L"), so
+  // the buyer can filter by real seller-provided packaging.
+  const packagingOptions = useMemo(() => {
+    const seen = new Map(); // normalized key -> display label
+    const add = (raw) => {
+      const display = String(raw || '').trim();
+      if (!display) return;
+      const norm = display.toLowerCase().replace(/\s+/g, '');
+      if (!norm || norm === 'each/perunit' || norm === 'other') return;
+      if (!seen.has(norm)) seen.set(norm, display);
+    };
+    constructionPackagingOptions.forEach(add);
+    marketItems.forEach((item) => {
+      add(item.packaging);
+      add(item.packagingSize);
+      add(item.size);
+    });
+    return Array.from(seen.values());
+  }, [marketItems]);
+
   const matchesField = (itemValue, selectedValues) => {
     if (!selectedValues.length) return true;
     if (!itemValue) return true;
@@ -14986,7 +15015,7 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
         <div>
           <h4 className="text-sm font-medium text-[#1A1A1A]">Packaging Size</h4>
           <div className="mt-3 flex flex-wrap gap-2">
-            {constructionPackagingOptions.map((option) => {
+            {packagingOptions.map((option) => {
               const isActive = selectedPackaging.includes(option);
               return (
                 <button

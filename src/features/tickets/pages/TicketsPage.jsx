@@ -240,8 +240,6 @@ const SalePrice = ({ price }) => {
   );
 };
 
-import React, { useState } from 'react';
-
 const MarketplaceSection = ({ title, subtitle, items }) => {
   const [expandedId, setExpandedId] = useState(null);
   if (!items.length) {
