@@ -5434,6 +5434,8 @@ const recomputePresenceFromState = (state) => {
 };
 
 const leavePresence = () => {
+  // Stamp a final "last seen" the moment we disconnect, then stop the beat.
+  stopLastSeenHeartbeat(presenceCurrentEmail);
   if (presenceChannel) {
     try { presenceChannel.untrack(); } catch (_) { /* ignore */ }
     try { supabase?.removeChannel(presenceChannel); } catch (_) { /* ignore */ }
@@ -5463,6 +5465,9 @@ const joinPresence = (rawEmail) => {
         channel.track({ email, online_at: new Date().toISOString() });
       }
     });
+  // Persist a real "last seen" heartbeat so others can see it once we leave.
+  ensureLastSeenChannel();
+  startLastSeenHeartbeat(email);
 };
 
 // React hook: subscribe to the live set of online emails.
@@ -5475,6 +5480,113 @@ const usePresence = () => {
     return () => { presenceListeners.delete(listener); };
   }, []);
   return onlineEmails;
+};
+
+// --- Last-seen heartbeat --------------------------------------------------
+// Presence (above) only knows who is connected *right now*. To show
+// "last seen … ago" once someone disconnects, we persist a heartbeat
+// timestamp per registered user in `user_presence` and read it back for the
+// counterparty. Real data — no faked timestamps.
+const LAST_SEEN_TABLE = 'user_presence';
+const lastSeenCache = new Map(); // normalized email -> ISO timestamp
+const lastSeenListeners = new Set();
+let lastSeenChannel = null;
+let lastSeenHeartbeatTimer = null;
+
+const notifyLastSeenListeners = () => {
+  const snapshot = new Map(lastSeenCache);
+  lastSeenListeners.forEach((listener) => {
+    try { listener(snapshot); } catch (_) { /* ignore */ }
+  });
+};
+
+const recordLastSeenRow = (row) => {
+  const email = normalizeEmail(row?.email || '');
+  const ts = row?.last_seen_at || row?.updated_at || '';
+  if (email && ts) lastSeenCache.set(email, ts);
+};
+
+const ensureLastSeenChannel = () => {
+  if (!hasSupabaseEnv || !supabase || lastSeenChannel) return;
+  lastSeenChannel = supabase
+    .channel('svs-last-seen')
+    .on('postgres_changes', { event: '*', schema: 'public', table: LAST_SEEN_TABLE }, (payload) => {
+      recordLastSeenRow(payload.new || payload.old);
+      notifyLastSeenListeners();
+    })
+    .subscribe();
+};
+
+const fetchLastSeenFor = async (emails) => {
+  if (!hasSupabaseEnv || !supabase) return;
+  const list = Array.from(new Set((emails || []).map(normalizeEmail).filter(Boolean)));
+  if (!list.length) return;
+  try {
+    const { data } = await supabase.from(LAST_SEEN_TABLE).select('email, last_seen_at').in('email', list);
+    (data || []).forEach(recordLastSeenRow);
+    notifyLastSeenListeners();
+  } catch (_) { /* ignore */ }
+};
+
+const writeLastSeen = (rawEmail) => {
+  const email = normalizeEmail(rawEmail);
+  if (!hasSupabaseEnv || !supabase || !email) return;
+  const stamp = new Date().toISOString();
+  lastSeenCache.set(email, stamp);
+  try {
+    supabase.from(LAST_SEEN_TABLE)
+      .upsert({ email, last_seen_at: stamp, updated_at: stamp }, { onConflict: 'email' })
+      .then(() => {}, () => {});
+  } catch (_) { /* ignore */ }
+  notifyLastSeenListeners();
+};
+
+const startLastSeenHeartbeat = (rawEmail) => {
+  const email = normalizeEmail(rawEmail);
+  if (!email) return;
+  writeLastSeen(email);
+  if (lastSeenHeartbeatTimer) clearInterval(lastSeenHeartbeatTimer);
+  lastSeenHeartbeatTimer = setInterval(() => writeLastSeen(email), 30000);
+};
+
+const stopLastSeenHeartbeat = (rawEmail) => {
+  if (lastSeenHeartbeatTimer) { clearInterval(lastSeenHeartbeatTimer); lastSeenHeartbeatTimer = null; }
+  // Final stamp so "last seen" is accurate the moment we go offline.
+  writeLastSeen(rawEmail);
+};
+
+// Turn an ISO timestamp into a friendly "last seen …" label.
+const formatLastSeen = (iso) => {
+  const ts = Date.parse(iso || '');
+  if (!ts) return '';
+  const diffMs = Date.now() - ts;
+  if (diffMs < 60000) return 'last seen just now';
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 60) return `last seen ${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `last seen ${hours} hour${hours === 1 ? '' : 's'} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'last seen yesterday';
+  if (days < 7) return `last seen ${days} days ago`;
+  try {
+    return `last seen ${new Date(ts).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`;
+  } catch (_) { return 'last seen a while ago'; }
+};
+
+// React hook: subscribe to last-seen timestamps for the given emails.
+const useLastSeen = (emails) => {
+  const [map, setMap] = useState(() => new Map(lastSeenCache));
+  const key = (Array.isArray(emails) ? emails : [emails])
+    .map(normalizeEmail).filter(Boolean).sort().join(',');
+  useEffect(() => {
+    ensureLastSeenChannel();
+    const listener = (next) => setMap(next);
+    lastSeenListeners.add(listener);
+    setMap(new Map(lastSeenCache));
+    if (key) fetchLastSeenFor(key.split(','));
+    return () => { lastSeenListeners.delete(listener); };
+  }, [key]);
+  return map;
 };
 
 const normalizeReviewComment = (value) => String(value || '')
@@ -25472,6 +25584,18 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     };
   }, [currentUserEmail]);
 
+  // Live "last seen" timestamps for everyone in view, so the chat header can
+  // show "last seen … ago" when the other party is offline.
+  const counterpartyEmails = useMemo(() => {
+    const set = new Set();
+    visibleThreads.forEach((thread) => {
+      const email = normalizeEmail(resolveCounterparty(thread).email);
+      if (email) set.add(email);
+    });
+    return Array.from(set);
+  }, [visibleThreads, resolveCounterparty]);
+  const lastSeenMap = useLastSeen(counterpartyEmails);
+
   // Ask the SVS Agent to reply in this thread. Used by plain-text messages
   // AND by the new card messages (offers, payment requests, location, voice
   // notes, etc.) so the AI can negotiate, confirm payment, etc.
@@ -27061,9 +27185,14 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                             <span className="h-1.5 w-1.5 rounded-full bg-[var(--svs-success)]"></span>Online
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[var(--svs-muted)]">
-                            <span className="h-1.5 w-1.5 rounded-full bg-[var(--svs-muted)]"></span>Offline
-                          </span>
+                          (() => {
+                            const seen = formatLastSeen(lastSeenMap.get(normalizeEmail(resolveCounterparty(activeThread).email)));
+                            return (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[var(--svs-muted)]">
+                                <span className="h-1.5 w-1.5 rounded-full bg-[var(--svs-muted)]"></span>{seen || 'Offline'}
+                              </span>
+                            );
+                          })()
                         )}
                         {!isAgentThread ? (
                           <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${dealStatusMeta[dealStatus]?.cls || 'bg-slate-100 text-slate-700'}`}>

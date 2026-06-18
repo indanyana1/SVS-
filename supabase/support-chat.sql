@@ -96,3 +96,50 @@ create policy "Public delete support chat messages"
 on public.support_chat_messages
 for delete
 using (true);
+
+-- Last-seen presence: one heartbeat row per registered user so the chat can
+-- show "last seen … ago" when the other party is offline. Updated every ~30s
+-- while a user is connected and once more the moment they disconnect.
+create table if not exists public.user_presence (
+  email text primary key,
+  last_seen_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists user_presence_last_seen_idx
+  on public.user_presence (last_seen_at desc);
+
+alter table public.user_presence enable row level security;
+
+drop policy if exists "Public read user presence" on public.user_presence;
+create policy "Public read user presence"
+on public.user_presence
+for select
+using (true);
+
+drop policy if exists "Public insert user presence" on public.user_presence;
+create policy "Public insert user presence"
+on public.user_presence
+for insert
+with check (true);
+
+drop policy if exists "Public update user presence" on public.user_presence;
+create policy "Public update user presence"
+on public.user_presence
+for update
+using (true)
+with check (true);
+
+-- Allow the frontend Realtime channel to receive last-seen changes
+-- (idempotent: skip if the table is already part of the publication).
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'user_presence'
+  ) then
+    alter publication supabase_realtime add table public.user_presence;
+  end if;
+end $$;
