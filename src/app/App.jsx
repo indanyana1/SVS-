@@ -5583,8 +5583,18 @@ const useLastSeen = (emails) => {
     const listener = (next) => setMap(next);
     lastSeenListeners.add(listener);
     setMap(new Map(lastSeenCache));
-    if (key) fetchLastSeenFor(key.split(','));
-    return () => { lastSeenListeners.delete(listener); };
+    const list = key ? key.split(',') : [];
+    if (list.length) fetchLastSeenFor(list);
+    // Poll as a fallback in case Realtime updates are not delivered, and to
+    // keep the relative "last seen … ago" labels fresh as time passes.
+    const poll = setInterval(() => {
+      if (list.length) fetchLastSeenFor(list);
+      else notifyLastSeenListeners();
+    }, 20000);
+    return () => {
+      lastSeenListeners.delete(listener);
+      clearInterval(poll);
+    };
   }, [key]);
   return map;
 };
