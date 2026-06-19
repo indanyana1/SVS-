@@ -7168,6 +7168,11 @@ const getCheckoutTotals = (cartItems, shippingFee = 0) => {
     shippingFee: normalizedShippingFee,
     feeTotal,
     total: subtotal + feeTotal,
+    // `getCartSubtotal` converts every line item into the buyer's current
+    // site-wide currency, so that's the real currency this total is
+    // denominated in — record it so downstream payment methods (wallet)
+    // convert from the right source instead of assuming a fixed currency.
+    currency: _fxState.buyerCurrency,
   };
 };
 
@@ -21738,6 +21743,10 @@ const LotteryConfirmPage = () => {
         shippingFee: 0,
         feeTotal,
         total: finalAmount,
+        // Lottery tickets are always priced in ZAR regardless of the
+        // buyer's site-wide currency selection (see `currency: 'ZAR'` on
+        // the cart item above).
+        currency: 'ZAR',
       },
       contactEmail: normalizedEmail,
     };
@@ -24843,6 +24852,9 @@ const isBettingLotteryOrder = (order) => Boolean(
 const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowCheckout }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  // Subscribes to FX-rate/currency updates so wallet-conversion math below
+  // re-renders with live rates instead of whatever was cached on mount.
+  useBuyerCurrency();
   const routeSession = location.state?.payfastSession || null;
   const [payfastSession, setPayfastSession] = useState(() => routeSession || readPendingPayfastSession());
   const [selectedMethod, setSelectedMethod] = useState(() => {
@@ -24884,10 +24896,22 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
 
   const walletCurrency = walletSnapshot?.currency || _fxState.buyerCurrency || 'USD';
   const walletBalance = walletSnapshot?.balance || 0;
+  // `totals.currency` records what currency the order total is actually
+  // denominated in (the buyer's site-wide currency for normal checkouts,
+  // always ZAR for lottery tickets) — never assume a fixed currency here.
+  const totalCurrency = payfastSession?.totals?.currency || _fxState.buyerCurrency || 'ZAR';
+  const walletNeedsConversion = Boolean(payfastSession && totalCurrency !== walletCurrency);
   const walletChargeAmount = payfastSession
-    ? Math.round(convertAmount(payfastSession.totals.total, 'ZAR', walletCurrency) * 100) / 100
+    ? Math.round(convertAmount(payfastSession.totals.total, totalCurrency, walletCurrency) * 100) / 100
     : 0;
   const walletSufficient = walletBalance >= walletChargeAmount;
+
+  // Force a live rate fetch the moment a wallet payment would need cross-
+  // currency conversion, so the actual amount charged always reflects real,
+  // current API rates rather than a stale or fallback table.
+  useEffect(() => {
+    if (walletNeedsConversion) refreshFxRates();
+  }, [walletNeedsConversion]);
 
   useEffect(() => {
     if (routeSession) {
@@ -25030,16 +25054,29 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
   const handleWalletPayment = async () => {
     if (!walletSufficient) return;
 
-    const otpVerificationId = await confirmWalletOtp('spend', `Pay ${formatCheckoutAmount(payfastSession.totals.total)} from your SVS Wallet.`);
+    const otpVerificationId = await confirmWalletOtp(
+      'spend',
+      walletNeedsConversion
+        ? `Pay ${formatCheckoutAmount(payfastSession.totals.total)} (≈ ${formatAmountInCurrency(walletChargeAmount, walletCurrency)} from your wallet) from your SVS Wallet.`
+        : `Pay ${formatCheckoutAmount(payfastSession.totals.total)} from your SVS Wallet.`,
+    );
     if (!otpVerificationId) return;
 
     setIsWalletPaying(true);
     setSubmitError('');
 
+    // Fetch the latest live rate right before debiting, instead of trusting
+    // whatever's already cached, so the actual conversion always reflects
+    // the same API rates the rest of the app uses.
+    if (walletNeedsConversion) await refreshFxRates();
+    const finalChargeAmount = walletNeedsConversion
+      ? Math.round(convertAmount(payfastSession.totals.total, totalCurrency, walletCurrency) * 100) / 100
+      : walletChargeAmount;
+
     const reference = `WAL-${Date.now()}`;
     const spend = await spendFromWallet({
       email: walletUserEmail,
-      amount: walletChargeAmount,
+      amount: finalChargeAmount,
       reference,
       description: 'SVS order payment',
       otpVerificationId,
@@ -25072,7 +25109,7 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
       // doesn't require its own OTP.
       await refundWallet({
         email: walletUserEmail,
-        amount: walletChargeAmount,
+        amount: finalChargeAmount,
         reference,
         description: 'Order could not be placed — wallet refunded',
       });
@@ -25208,7 +25245,7 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
                     <p className="text-sm font-bold text-[#1f1f1f]">Pay with SVS Wallet</p>
                     <p className="mt-0.5 text-xs text-[#6b6258]">
                       Balance: {formatAmountInCurrency(walletBalance, walletCurrency)}
-                      {walletCurrency !== 'ZAR' ? ` · This order ≈ ${formatAmountInCurrency(walletChargeAmount, walletCurrency)}` : ''}
+                      {walletNeedsConversion ? ` · This order ≈ ${formatAmountInCurrency(walletChargeAmount, walletCurrency)}` : ''}
                     </p>
                   </div>
                 </div>
