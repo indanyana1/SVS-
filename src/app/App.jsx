@@ -18524,6 +18524,37 @@ const WalletPage = () => {
     ? convertAmount(topUpAmountNumeric, activeDepositCurrency, establishedCurrency)
     : topUpAmountNumeric;
 
+  // Force a live rate fetch the moment a cross-currency deposit is on the
+  // table, instead of trusting whatever happens to already be cached — this
+  // is what actually guarantees the credited amount uses real, current API
+  // rates rather than a stale or fallback table.
+  useEffect(() => {
+    if (depositNeedsConversion) refreshFxRates();
+  }, [depositNeedsConversion]);
+
+  // The headline balance is shown converted into whatever currency the
+  // buyer has picked site-wide (top hero), so it stays consistent with
+  // prices everywhere else on the site — the wallet's ledger itself never
+  // changes currency; only this display does. Force a live rate fetch the
+  // moment that conversion is actually needed.
+  const balanceNeedsConversion = Boolean(buyerCurrencyCode && buyerCurrencyCode !== walletCurrency);
+  const displayBalanceCurrency = buyerCurrencyCode || walletCurrency;
+  const displayBalance = balanceNeedsConversion
+    ? convertAmount(snapshot.balance, walletCurrency, displayBalanceCurrency)
+    : snapshot.balance;
+
+  useEffect(() => {
+    if (balanceNeedsConversion) refreshFxRates();
+  }, [balanceNeedsConversion]);
+
+  // Withdrawals are entered in the same buyer-selected display currency as
+  // the balance card above, then converted into the wallet's own currency
+  // (what actually gets debited) right before submitting.
+  const withdrawAmountNumeric = Number(withdrawAmount) || 0;
+  const withdrawDebitPreview = balanceNeedsConversion
+    ? convertAmount(withdrawAmountNumeric, displayBalanceCurrency, walletCurrency)
+    : withdrawAmountNumeric;
+
   const refresh = useCallback(async () => {
     if (!isAuthenticated || !userEmail) return;
     setIsLoading(true);
@@ -18587,6 +18618,10 @@ const WalletPage = () => {
     const depositCode = String(activeDepositCurrency || 'USD').toUpperCase();
     const creditCurrency = String(establishedCurrency || activeDepositCurrency || 'USD').toUpperCase();
     const needsConversion = depositNeedsConversion && depositCode !== creditCurrency;
+    // Fetch the latest live rate right before crediting, instead of trusting
+    // whatever's already cached, so the actual conversion always reflects
+    // the same API rates the rest of the app uses.
+    if (needsConversion) await refreshFxRates();
     const creditAmount = needsConversion
       ? Math.round(convertAmount(amount, depositCode, creditCurrency) * 100) / 100
       : amount;
@@ -18678,11 +18713,18 @@ const WalletPage = () => {
   // ---- Withdraw ------------------------------------------------------------
   const handleWithdraw = async (event) => {
     event.preventDefault();
-    const amount = Number(withdrawAmount);
-    if (!amount || amount <= 0) {
+    const enteredAmount = Number(withdrawAmount);
+    if (!enteredAmount || enteredAmount <= 0) {
       showFeedback('error', 'Enter an amount greater than zero to withdraw.');
       return;
     }
+    // The field is entered in whatever currency the buyer has selected
+    // site-wide, but the wallet itself is only ever debited in its own
+    // currency — so convert with a fresh live rate before validating.
+    if (balanceNeedsConversion) await refreshFxRates();
+    const amount = balanceNeedsConversion
+      ? Math.round(convertAmount(enteredAmount, displayBalanceCurrency, walletCurrency) * 100) / 100
+      : enteredAmount;
     if (amount > snapshot.balance) {
       showFeedback('error', 'That amount is more than your wallet balance.');
       return;
@@ -18762,7 +18804,10 @@ const WalletPage = () => {
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/75">Wallet balance</p>
               <Wallet className="h-5 w-5 text-white/80" />
             </div>
-            <p className="mt-3 text-3xl font-extrabold">{formatAmountInCurrency(snapshot.balance, displayCurrency)}</p>
+            <p className="mt-3 text-3xl font-extrabold">{formatAmountInCurrency(displayBalance, displayBalanceCurrency)}</p>
+            {balanceNeedsConversion ? (
+              <p className="mt-0.5 text-[11px] text-white/70">≈ {formatAmountInCurrency(snapshot.balance, walletCurrency)} held in your wallet</p>
+            ) : null}
             <p className="mt-1 text-xs text-white/75">{profileName || userEmail}</p>
             <button
               type="button"
@@ -18817,9 +18862,11 @@ const WalletPage = () => {
                   className="w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none disabled:cursor-not-allowed disabled:bg-[var(--svs-surface-soft)]"
                 />
               </div>
-              {depositNeedsConversion && topUpAmountNumeric > 0 ? (
-                <p className="text-[11px] text-[var(--svs-muted)]">
-                  ≈ {formatAmountInCurrency(topUpCreditPreview, establishedCurrency)} will be added to your wallet.
+              {topUpAmountNumeric > 0 ? (
+                <p className="text-[11px] font-semibold text-[var(--svs-primary-strong)]">
+                  {depositNeedsConversion
+                    ? `Wallet will receive ${formatAmountInCurrency(topUpCreditPreview, establishedCurrency)} (converted from ${formatAmountInCurrency(topUpAmountNumeric, activeDepositCurrency)}).`
+                    : `Wallet will receive ${formatAmountInCurrency(topUpAmountNumeric, activeDepositCurrency)}.`}
                 </p>
               ) : null}
             </div>
@@ -18886,38 +18933,37 @@ const WalletPage = () => {
                   }}
                 />
               </div>
-              {transferTo ? (
-                <>
-                  <label className="mt-3 block text-xs font-semibold text-[var(--svs-muted)]">Amount ({walletCurrency})</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    inputMode="decimal"
-                    value={transferAmount}
-                    onChange={(event) => setTransferAmount(event.target.value)}
-                    placeholder="0.00"
-                    className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none"
-                  />
-                  <label className="mt-3 block text-xs font-semibold text-[var(--svs-muted)]">Note (optional)</label>
-                  <input
-                    type="text"
-                    value={transferNote}
-                    onChange={(event) => setTransferNote(event.target.value)}
-                    placeholder="What's it for?"
-                    maxLength={120}
-                    className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none"
-                  />
-                  <button
-                    type="submit"
-                    disabled={isTransferring}
-                    className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[var(--svs-primary)] px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-70`}
-                  >
-                    <Send className="h-4 w-4" />
-                    {isTransferring ? 'Sending…' : 'Send money'}
-                  </button>
-                </>
+              {!transferTo ? (
+                <p className="mt-3 text-[11px] text-[var(--svs-muted)]">Pick a beneficiary above to send them money.</p>
               ) : null}
+              <label className="mt-3 block text-xs font-semibold text-[var(--svs-muted)]">Amount ({walletCurrency})</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                value={transferAmount}
+                onChange={(event) => setTransferAmount(event.target.value)}
+                placeholder="0.00"
+                className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none"
+              />
+              <label className="mt-3 block text-xs font-semibold text-[var(--svs-muted)]">Note (optional)</label>
+              <input
+                type="text"
+                value={transferNote}
+                onChange={(event) => setTransferNote(event.target.value)}
+                placeholder="What's it for?"
+                maxLength={120}
+                className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none"
+              />
+              <button
+                type="submit"
+                disabled={isTransferring}
+                className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[var(--svs-primary)] px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-70`}
+              >
+                <Send className="h-4 w-4" />
+                {isTransferring ? 'Sending…' : 'Send money'}
+              </button>
             </form>
 
             {/* Withdraw */}
@@ -18927,7 +18973,7 @@ const WalletPage = () => {
                 <h2 className="text-base font-bold text-[var(--svs-text)]">Withdraw</h2>
               </div>
               <p className="mt-1 text-xs text-[var(--svs-muted)]">Move money back to your bank account. Requests are processed within 1–3 business days.</p>
-              <label className="mt-3 block text-xs font-semibold text-[var(--svs-muted)]">Amount ({walletCurrency})</label>
+              <label className="mt-3 block text-xs font-semibold text-[var(--svs-muted)]">Amount ({displayBalanceCurrency})</label>
               <div className="mt-1 flex items-center gap-2">
                 <input
                   type="number"
@@ -18941,12 +18987,22 @@ const WalletPage = () => {
                 />
                 <button
                   type="button"
-                  onClick={() => setWithdrawAmount(String(snapshot.balance))}
+                  onClick={() => setWithdrawAmount(String(Math.round(displayBalance * 100) / 100))}
                   className="shrink-0 rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-xs font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)]"
                 >
                   Use max
                 </button>
               </div>
+              {balanceNeedsConversion ? (
+                <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Your wallet is held in {walletCurrency}. This will be converted automatically.</p>
+              ) : null}
+              {withdrawAmountNumeric > 0 ? (
+                <p className="mt-1 text-[11px] font-semibold text-[var(--svs-primary-strong)]">
+                  {balanceNeedsConversion
+                    ? `≈ ${formatAmountInCurrency(withdrawDebitPreview, walletCurrency)} will be deducted from your wallet.`
+                    : `${formatAmountInCurrency(withdrawAmountNumeric, walletCurrency)} will be deducted from your wallet.`}
+                </p>
+              ) : null}
               <div className="mt-3">
                 <BankAccountManager
                   userEmail={userEmail}
@@ -26062,7 +26118,18 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     }
   }, [currentUserEmail, messages]);
 
+  // `loadRemoteChat` is called from several independent places (Realtime
+  // change events, the read/delivery-receipt effects, and right after every
+  // edit/delete/reaction). Network responses can resolve out of order, so a
+  // refetch dispatched *before* an edit could otherwise land *after* the
+  // edit's own refetch and stomp the screen with the pre-edit data it read.
+  // This sequence guard discards any response that isn't from the most
+  // recently dispatched call.
+  const loadRemoteChatSeqRef = useRef(0);
+
   const loadRemoteChat = useCallback(async () => {
+    const requestSeq = (loadRemoteChatSeqRef.current += 1);
+
     if (!getAuthState()) {
       setIsRemoteChatEnabled(false);
       setRemoteChatStatusMessage('You are not signed in. Chat is saved only on this device.');
@@ -26111,6 +26178,11 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
         mappedMessages = (messageRows || []).map(mapSupportChatMessageRecord);
       }
     }
+
+    // A newer call has been dispatched since this one started — its result
+    // (or one already in flight behind it) supersedes this stale read, so
+    // skip applying it rather than risk overwriting fresher state.
+    if (requestSeq !== loadRemoteChatSeqRef.current) return true;
 
     setThreads(mappedThreads);
     setMessages(mappedMessages);
@@ -26748,14 +26820,14 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       && !(Array.isArray(message.metadata?.readBy) && message.metadata.readBy.includes(currentUserEmail))
     ));
     if (!toMark.length) return;
-    const records = toMark.map((message) => toSupportChatMessageRecord({
-      ...message,
-      metadata: { ...(message.metadata || {}), readBy: [...(message.metadata?.readBy || []), currentUserEmail] },
-    }));
+    // Update only the `metadata` column per message — never the full row —
+    // so this background stamp can never overwrite a body edited (or
+    // deleted) concurrently elsewhere while this call was in flight.
     let cancelled = false;
-    supabase
+    Promise.all(toMark.map((message) => supabase
       .from(SUPPORT_CHAT_MESSAGES_TABLE)
-      .upsert(records, { onConflict: 'message_key' })
+      .update({ metadata: { ...(message.metadata || {}), readBy: [...(message.metadata?.readBy || []), currentUserEmail] } })
+      .eq('message_key', message.id)))
       .then(() => { if (!cancelled) loadRemoteChat(); });
     return () => { cancelled = true; };
   }, [activeThread, activeMessages, currentUserEmail, loadRemoteChat]);
@@ -26774,17 +26846,17 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       && !(Array.isArray(message.metadata?.deliveredTo) && message.metadata.deliveredTo.includes(currentUserEmail))
     ));
     if (!toMark.length) return;
-    const records = toMark.map((message) => toSupportChatMessageRecord({
-      ...message,
-      metadata: {
-        ...(message.metadata || {}),
-        deliveredTo: [...(message.metadata?.deliveredTo || []), currentUserEmail],
-      },
-    }));
+    // Same fix as the read-receipt effect above: touch only `metadata`.
     let cancelled = false;
-    supabase
+    Promise.all(toMark.map((message) => supabase
       .from(SUPPORT_CHAT_MESSAGES_TABLE)
-      .upsert(records, { onConflict: 'message_key' })
+      .update({
+        metadata: {
+          ...(message.metadata || {}),
+          deliveredTo: [...(message.metadata?.deliveredTo || []), currentUserEmail],
+        },
+      })
+      .eq('message_key', message.id)))
       .then(() => { if (!cancelled) loadRemoteChat(); });
     return () => { cancelled = true; };
   }, [messages, currentUserEmail, loadRemoteChat]);
@@ -27139,36 +27211,78 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   }, [hiddenMessageIds, currentUserEmail]);
 
   // Low-level helper: rewrite a message body locally + sync to Supabase so
-  // both sides converge (used by edit and delete-for-everyone).
+  // both sides converge (used by edit and delete-for-everyone). Writes only
+  // the `body` column — never a full-row upsert — so a slow-resolving
+  // background call elsewhere (read/delivery receipts) can never clobber an
+  // edit by writing back a stale snapshot of the rest of the row.
   const updateMessageBodyRemote = useCallback((messageId, nextBody) => {
     let updatedRecord = null;
-    setMessages((current) => current.map((message) => {
-      if (message.id !== messageId) return message;
-      updatedRecord = { ...message, body: nextBody };
-      return updatedRecord;
-    }));
-    if (updatedRecord && getAuthState() && currentUserEmail && hasSupabaseEnv && supabase) {
+    let isLatestInThread = false;
+    setMessages((current) => {
+      const next = current.map((message) => {
+        if (message.id !== messageId) return message;
+        updatedRecord = { ...message, body: nextBody };
+        return updatedRecord;
+      });
+      if (updatedRecord) {
+        const latestInThread = next
+          .filter((message) => message.threadId === updatedRecord.threadId)
+          .reduce((latest, message) => (
+            !latest || Date.parse(message.createdAt || '') > Date.parse(latest.createdAt || '') ? message : latest
+          ), null);
+        isLatestInThread = latestInThread?.id === messageId;
+      }
+      return next;
+    });
+    if (!updatedRecord) return;
+
+    // Editing or deleting the *latest* message in a thread also has to
+    // refresh that thread's cached preview — nothing else ever touches
+    // `lastMessage` after the message was first sent, so without this the
+    // thread list keeps showing the original, pre-edit text forever.
+    if (isLatestInThread) {
+      const preview = nextBody === DELETED_TOKEN
+        ? 'This message was deleted'
+        : extractReplyMeta(extractEditedMeta(nextBody).body).body;
+      const nowIso = new Date().toISOString();
+      setThreads((current) => current.map((thread) => (
+        thread.id === updatedRecord.threadId ? { ...thread, lastMessage: preview, updatedAt: nowIso } : thread
+      )));
+      if (getAuthState() && currentUserEmail && hasSupabaseEnv && supabase) {
+        supabase
+          .from(SUPPORT_CHAT_THREADS_TABLE)
+          .update({ last_message: preview, updated_at: nowIso })
+          .eq('thread_key', updatedRecord.threadId)
+          .then(() => { loadRemoteChat(); });
+      }
+    }
+
+    if (getAuthState() && currentUserEmail && hasSupabaseEnv && supabase) {
       supabase
         .from(SUPPORT_CHAT_MESSAGES_TABLE)
-        .upsert([toSupportChatMessageRecord(updatedRecord)], { onConflict: 'message_key' })
+        .update({ body: nextBody })
+        .eq('message_key', messageId)
         .then(() => { loadRemoteChat(); });
     }
   }, [currentUserEmail, loadRemoteChat]);
 
   // Low-level helper: merge new metadata onto a message locally + sync to
   // Supabase. Powers reactions, pins, read receipts and disappearing timers.
+  // Writes only the `metadata` column for the same reason as above — this
+  // runs from background effects that capture a message snapshot and may
+  // resolve well after a concurrent edit, so it must never touch `body`.
   const updateMessageMetadataRemote = useCallback((messageId, patch) => {
-    let updatedRecord = null;
+    let nextMetadata = null;
     setMessages((current) => current.map((message) => {
       if (message.id !== messageId) return message;
-      const nextMetadata = { ...(message.metadata || {}), ...(typeof patch === 'function' ? patch(message.metadata || {}) : patch) };
-      updatedRecord = { ...message, metadata: nextMetadata };
-      return updatedRecord;
+      nextMetadata = { ...(message.metadata || {}), ...(typeof patch === 'function' ? patch(message.metadata || {}) : patch) };
+      return { ...message, metadata: nextMetadata };
     }));
-    if (updatedRecord && getAuthState() && currentUserEmail && hasSupabaseEnv && supabase) {
+    if (nextMetadata && getAuthState() && currentUserEmail && hasSupabaseEnv && supabase) {
       supabase
         .from(SUPPORT_CHAT_MESSAGES_TABLE)
-        .upsert([toSupportChatMessageRecord(updatedRecord)], { onConflict: 'message_key' })
+        .update({ metadata: nextMetadata })
+        .eq('message_key', messageId)
         .then(() => { loadRemoteChat(); });
     }
   }, [currentUserEmail, loadRemoteChat]);
@@ -35004,7 +35118,7 @@ const SiteFooter = () => {
         <div className="grid grid-cols-4 gap-2 sm:gap-10">
           {/* Column 1 – Support */}
           <div>
-            <h4 className="whitespace-nowrap text-[10px] font-bold uppercase tracking-wide sm:text-sm">{t('footer.support')}</h4>
+            <h4 className="text-[10px] font-bold uppercase tracking-wide sm:whitespace-nowrap sm:text-sm">{t('footer.support')}</h4>
             <ul className="mt-1.5 space-y-1 text-[9px] sm:mt-4 sm:space-y-2 sm:text-sm">
               {footerLinks.support.map((item) => (
                 <li key={item.href}>
@@ -35016,7 +35130,7 @@ const SiteFooter = () => {
 
           {/* Column 2 – Brand */}
           <div>
-            <h3 className="whitespace-nowrap text-[10px] font-bold sm:text-xl">SVS E-Commerce</h3>
+            <h3 className="text-[10px] font-bold sm:whitespace-nowrap sm:text-xl">SVS E-Commerce</h3>
             <ul className="mt-1.5 space-y-1 text-[9px] leading-snug text-slate-200 sm:mt-3 sm:space-y-2 sm:text-base">
               <li>{t('site.tagline', { defaultValue: 'Your one-stop marketplace for everything you need – from groceries to tickets!' })}</li>
             </ul>
@@ -35044,7 +35158,7 @@ const SiteFooter = () => {
 
           {/* Column 4 – Quick Links */}
           <div>
-            <h4 className="whitespace-nowrap text-[10px] font-bold uppercase tracking-wide sm:text-sm">{t('footer.quickLinks')}</h4>
+            <h4 className="text-[10px] font-bold uppercase tracking-wide sm:whitespace-nowrap sm:text-sm">{t('footer.quickLinks')}</h4>
             <ul className="mt-1.5 space-y-1 text-[9px] sm:mt-4 sm:space-y-2 sm:text-sm">
               {footerLinks.quick.map((item) => (
                 <li key={item.href}>
