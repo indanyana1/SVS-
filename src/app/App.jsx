@@ -18505,11 +18505,18 @@ const WalletPage = () => {
   // Deposit currency starts UNSELECTED — the user must pick it before topping up.
   const [depositCurrency, setDepositCurrency] = useState('');
   const walletHasActivity = snapshot.balance > 0 || (Array.isArray(snapshot.transactions) && snapshot.transactions.length > 0);
-  // Once a wallet holds money it is locked to its existing currency; otherwise the
-  // user's chosen deposit currency applies.
+  // A wallet's balance always lives in one currency once it has any history,
+  // but you can still deposit in a different currency — it's converted (via
+  // the same FX rates used at checkout) into the wallet's currency before
+  // being credited, so the ledger itself stays single-currency.
   const establishedCurrency = walletHasActivity ? walletCurrency : null;
-  const activeDepositCurrency = establishedCurrency || depositCurrency;
-  const displayCurrency = establishedCurrency || depositCurrency || walletCurrency;
+  const activeDepositCurrency = depositCurrency || establishedCurrency;
+  const displayCurrency = activeDepositCurrency || walletCurrency;
+  const depositNeedsConversion = Boolean(establishedCurrency && activeDepositCurrency && activeDepositCurrency !== establishedCurrency);
+  const topUpAmountNumeric = Number(topUpAmount) || 0;
+  const topUpCreditPreview = depositNeedsConversion
+    ? convertAmount(topUpAmountNumeric, activeDepositCurrency, establishedCurrency)
+    : topUpAmountNumeric;
 
   const refresh = useCallback(async () => {
     if (!isAuthenticated || !userEmail) return;
@@ -18532,6 +18539,13 @@ const WalletPage = () => {
   // ---- Add funds -----------------------------------------------------------
   const [topUpOtpId, setTopUpOtpId] = useState(null);
 
+  const buildTopUpSummary = (amount, suffix = '') => {
+    const depositLabel = formatAmountInCurrency(amount, activeDepositCurrency);
+    if (!depositNeedsConversion) return `Add ${depositLabel} to your wallet${suffix}.`;
+    const creditLabel = formatAmountInCurrency(convertAmount(amount, activeDepositCurrency, establishedCurrency), establishedCurrency);
+    return `Add ${depositLabel} (≈ ${creditLabel}) to your wallet${suffix}.`;
+  };
+
   const handleStartCardTopUp = async () => {
     if (!activeDepositCurrency) {
       showFeedback('error', 'Select the currency you want to deposit in first.');
@@ -18542,7 +18556,7 @@ const WalletPage = () => {
       showFeedback('error', 'Enter an amount greater than zero to add funds.');
       return;
     }
-    const otpVerificationId = await confirmWithOtp('topup', `Add ${formatAmountInCurrency(amount, activeDepositCurrency)} to your wallet by card.`);
+    const otpVerificationId = await confirmWithOtp('topup', buildTopUpSummary(amount, ' by card'));
     if (!otpVerificationId) return;
     setTopUpOtpId(otpVerificationId);
     setIsPreparingCard(true);
@@ -18564,12 +18578,17 @@ const WalletPage = () => {
 
   const finishTopUp = async (reference, method, otpVerificationId) => {
     const amount = Number(topUpAmount);
-    const currency = String(activeDepositCurrency || 'USD').toUpperCase();
+    const depositCode = String(activeDepositCurrency || 'USD').toUpperCase();
+    const creditCurrency = String(establishedCurrency || activeDepositCurrency || 'USD').toUpperCase();
+    const needsConversion = depositNeedsConversion && depositCode !== creditCurrency;
+    const creditAmount = needsConversion
+      ? Math.round(convertAmount(amount, depositCode, creditCurrency) * 100) / 100
+      : amount;
     setIsToppingUp(true);
     const result = await topUpWallet({
       email: userEmail,
-      amount,
-      currency,
+      amount: creditAmount,
+      currency: creditCurrency,
       method,
       reference,
       otpVerificationId,
@@ -18579,7 +18598,12 @@ const WalletPage = () => {
     setTopUpOtpId(null);
     if (result.ok) {
       setTopUpAmount('');
-      showFeedback('success', `Added ${formatAmountInCurrency(amount, currency)} to your wallet.`);
+      showFeedback(
+        'success',
+        needsConversion
+          ? `Added ${formatAmountInCurrency(creditAmount, creditCurrency)} to your wallet (converted from ${formatAmountInCurrency(amount, depositCode)}).`
+          : `Added ${formatAmountInCurrency(amount, depositCode)} to your wallet.`,
+      );
       await refresh();
     } else {
       showFeedback('error', result.error || 'Could not add funds.');
@@ -18596,7 +18620,7 @@ const WalletPage = () => {
       showFeedback('error', 'Enter an amount greater than zero to add funds.');
       return;
     }
-    const otpVerificationId = await confirmWithOtp('topup', `Add ${formatAmountInCurrency(amount, activeDepositCurrency)} to your wallet.`);
+    const otpVerificationId = await confirmWithOtp('topup', buildTopUpSummary(amount));
     if (!otpVerificationId) return;
     await finishTopUp(null, 'demo', otpVerificationId);
   };
@@ -18761,11 +18785,14 @@ const WalletPage = () => {
                   <WalletCurrencyPicker
                     value={activeDepositCurrency}
                     onChange={setDepositCurrency}
-                    disabled={Boolean(establishedCurrency)}
                   />
                 </div>
-                {establishedCurrency ? (
-                  <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Your wallet is held in {establishedCurrency}. New deposits use this currency.</p>
+                {depositNeedsConversion ? (
+                  <p className="mt-1 text-[11px] text-[var(--svs-muted)]">
+                    Your wallet is held in {establishedCurrency}. Depositing in {activeDepositCurrency} will be converted automatically.
+                  </p>
+                ) : establishedCurrency ? (
+                  <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Your wallet is held in {establishedCurrency}. Pick a different currency above to convert a deposit.</p>
                 ) : !depositCurrency ? (
                   <p className="mt-1 text-[11px] text-[#8a5a1a]">Pick or search a currency to start depositing.</p>
                 ) : null}
@@ -18784,6 +18811,11 @@ const WalletPage = () => {
                   className="w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none disabled:cursor-not-allowed disabled:bg-[var(--svs-surface-soft)]"
                 />
               </div>
+              {depositNeedsConversion && topUpAmountNumeric > 0 ? (
+                <p className="text-[11px] text-[var(--svs-muted)]">
+                  ≈ {formatAmountInCurrency(topUpCreditPreview, establishedCurrency)} will be added to your wallet.
+                </p>
+              ) : null}
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
               {quickAmounts.map((value) => (
