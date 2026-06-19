@@ -87,9 +87,13 @@ import {
   transferWallet,
   requestWithdrawal,
   spendFromWallet,
+  refundWallet,
   WALLET_TRANSACTION_LABELS,
 } from '../lib/wallet';
 import { buildShareLink, ensureUserHandle, lookupAccountByHandle } from '../lib/userHandles';
+import useWalletOtp from '../components/wallet/useWalletOtp';
+import BeneficiaryManager from '../components/wallet/BeneficiaryManager';
+import BankAccountManager from '../components/wallet/BankAccountManager';
 import useNearbyLocation from '../hooks/useLocation';
 import SigninPage from '../pages/SigninPage';
 import ForgotPasswordPage from '../pages/ForgotPasswordPage';
@@ -18472,6 +18476,7 @@ const WalletPage = () => {
   const userEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
   const profileName = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-name') || '');
   const stripePromise = useMemo(() => getStripeInstance(), []);
+  const { confirmWithOtp, otpModalElement } = useWalletOtp({ email: userEmail, name: profileName });
 
   const [snapshot, setSnapshot] = useState({ balance: 0, currency: _fxState.buyerCurrency || 'USD', transactions: [] });
   const [isLoading, setIsLoading] = useState(false);
@@ -18484,6 +18489,7 @@ const WalletPage = () => {
   const [isToppingUp, setIsToppingUp] = useState(false);
 
   // Transfer
+  const [selectedBeneficiaryId, setSelectedBeneficiaryId] = useState(null);
   const [transferTo, setTransferTo] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
   const [transferNote, setTransferNote] = useState('');
@@ -18491,7 +18497,7 @@ const WalletPage = () => {
 
   // Withdraw
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [withdrawDestination, setWithdrawDestination] = useState('');
+  const [selectedBankAccountId, setSelectedBankAccountId] = useState(null);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
 
   const walletCurrency = snapshot.currency || _fxState.buyerCurrency || 'USD';
@@ -18524,6 +18530,8 @@ const WalletPage = () => {
   const showFeedback = (type, message) => setFeedback({ type, message });
 
   // ---- Add funds -----------------------------------------------------------
+  const [topUpOtpId, setTopUpOtpId] = useState(null);
+
   const handleStartCardTopUp = async () => {
     if (!activeDepositCurrency) {
       showFeedback('error', 'Select the currency you want to deposit in first.');
@@ -18534,6 +18542,9 @@ const WalletPage = () => {
       showFeedback('error', 'Enter an amount greater than zero to add funds.');
       return;
     }
+    const otpVerificationId = await confirmWithOtp('topup', `Add ${formatAmountInCurrency(amount, activeDepositCurrency)} to your wallet by card.`);
+    if (!otpVerificationId) return;
+    setTopUpOtpId(otpVerificationId);
     setIsPreparingCard(true);
     showFeedback('idle', '');
     try {
@@ -18551,7 +18562,7 @@ const WalletPage = () => {
     }
   };
 
-  const finishTopUp = async (reference, method) => {
+  const finishTopUp = async (reference, method, otpVerificationId) => {
     const amount = Number(topUpAmount);
     const currency = String(activeDepositCurrency || 'USD').toUpperCase();
     setIsToppingUp(true);
@@ -18561,9 +18572,11 @@ const WalletPage = () => {
       currency,
       method,
       reference,
+      otpVerificationId,
     });
     setIsToppingUp(false);
     setTopUpClientSecret('');
+    setTopUpOtpId(null);
     if (result.ok) {
       setTopUpAmount('');
       showFeedback('success', `Added ${formatAmountInCurrency(amount, currency)} to your wallet.`);
@@ -18583,7 +18596,9 @@ const WalletPage = () => {
       showFeedback('error', 'Enter an amount greater than zero to add funds.');
       return;
     }
-    await finishTopUp(null, 'demo');
+    const otpVerificationId = await confirmWithOtp('topup', `Add ${formatAmountInCurrency(amount, activeDepositCurrency)} to your wallet.`);
+    if (!otpVerificationId) return;
+    await finishTopUp(null, 'demo', otpVerificationId);
   };
 
   // ---- Transfer ------------------------------------------------------------
@@ -18592,7 +18607,7 @@ const WalletPage = () => {
     const amount = Number(transferAmount);
     const recipient = normalizeEmail(transferTo);
     if (!recipient || !recipient.includes('@')) {
-      showFeedback('error', 'Enter a valid recipient email address.');
+      showFeedback('error', 'Add and select a beneficiary to send money to.');
       return;
     }
     if (recipient === userEmail) {
@@ -18607,15 +18622,19 @@ const WalletPage = () => {
       showFeedback('error', 'That amount is more than your wallet balance.');
       return;
     }
+    const otpVerificationId = await confirmWithOtp('transfer', `Send ${formatAmountInCurrency(amount, walletCurrency)} to ${recipient}.`);
+    if (!otpVerificationId) return;
     setIsTransferring(true);
     const result = await transferWallet({
       fromEmail: userEmail,
       toEmail: recipient,
       amount,
       note: transferNote.trim() || null,
+      otpVerificationId,
     });
     setIsTransferring(false);
     if (result.ok) {
+      setSelectedBeneficiaryId(null);
       setTransferTo('');
       setTransferAmount('');
       setTransferNote('');
@@ -18638,15 +18657,18 @@ const WalletPage = () => {
       showFeedback('error', 'That amount is more than your wallet balance.');
       return;
     }
-    if (!withdrawDestination.trim()) {
-      showFeedback('error', 'Add the bank account or details to withdraw to.');
+    if (!selectedBankAccountId) {
+      showFeedback('error', 'Add or select a bank account to withdraw to.');
       return;
     }
+    const otpVerificationId = await confirmWithOtp('withdraw', `Withdraw ${formatAmountInCurrency(amount, walletCurrency)} to your bank account.`);
+    if (!otpVerificationId) return;
     setIsWithdrawing(true);
     const result = await requestWithdrawal({
       email: userEmail,
       amount,
-      destination: withdrawDestination.trim(),
+      bankAccountId: selectedBankAccountId,
+      otpVerificationId,
     });
     setIsWithdrawing(false);
     if (result.ok) {
@@ -18687,6 +18709,7 @@ const WalletPage = () => {
 
   return (
     <PageFrame title="My Wallet" subtitle="Store money on SVS, pay for items, send funds to other users or withdraw to your bank.">
+      {otpModalElement}
       {feedback.message ? (
         <div
           className={`mb-5 rounded-xl border px-4 py-3 text-sm ${
@@ -18780,7 +18803,7 @@ const WalletPage = () => {
               <Elements stripe={stripePromise} options={{ clientSecret: topUpClientSecret }}>
                 <WalletStripeTopUpForm
                   amountLabel={formatAmountInCurrency(Number(topUpAmount) || 0, activeDepositCurrency || displayCurrency)}
-                  onSuccess={(reference) => finishTopUp(reference, 'card')}
+                  onSuccess={(reference) => finishTopUp(reference, 'card', topUpOtpId)}
                   onCancel={() => setTopUpClientSecret('')}
                 />
               </Elements>
@@ -18814,43 +18837,49 @@ const WalletPage = () => {
                 <Send className="h-4 w-4 text-[var(--svs-primary)]" />
                 <h2 className="text-base font-bold text-[var(--svs-text)]">Send money</h2>
               </div>
-              <p className="mt-1 text-xs text-[var(--svs-muted)]">Transfer funds to another registered SVS user.</p>
-              <label className="mt-3 block text-xs font-semibold text-[var(--svs-muted)]">Recipient email</label>
-              <input
-                type="email"
-                value={transferTo}
-                onChange={(event) => setTransferTo(event.target.value)}
-                placeholder="name@example.com"
-                className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none"
-              />
-              <label className="mt-3 block text-xs font-semibold text-[var(--svs-muted)]">Amount ({walletCurrency})</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                inputMode="decimal"
-                value={transferAmount}
-                onChange={(event) => setTransferAmount(event.target.value)}
-                placeholder="0.00"
-                className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none"
-              />
-              <label className="mt-3 block text-xs font-semibold text-[var(--svs-muted)]">Note (optional)</label>
-              <input
-                type="text"
-                value={transferNote}
-                onChange={(event) => setTransferNote(event.target.value)}
-                placeholder="What's it for?"
-                maxLength={120}
-                className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none"
-              />
-              <button
-                type="submit"
-                disabled={isTransferring}
-                className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[var(--svs-primary)] px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-70`}
-              >
-                <Send className="h-4 w-4" />
-                {isTransferring ? 'Sending…' : 'Send money'}
-              </button>
+              <p className="mt-1 text-xs text-[var(--svs-muted)]">Add a beneficiary, then pick them to send money.</p>
+              <div className="mt-3">
+                <BeneficiaryManager
+                  ownerEmail={userEmail}
+                  selectedBeneficiaryId={selectedBeneficiaryId}
+                  onSelectBeneficiary={(beneficiary) => {
+                    setSelectedBeneficiaryId(beneficiary.id);
+                    setTransferTo(beneficiary.beneficiary_email);
+                  }}
+                />
+              </div>
+              {transferTo ? (
+                <>
+                  <label className="mt-3 block text-xs font-semibold text-[var(--svs-muted)]">Amount ({walletCurrency})</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputMode="decimal"
+                    value={transferAmount}
+                    onChange={(event) => setTransferAmount(event.target.value)}
+                    placeholder="0.00"
+                    className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none"
+                  />
+                  <label className="mt-3 block text-xs font-semibold text-[var(--svs-muted)]">Note (optional)</label>
+                  <input
+                    type="text"
+                    value={transferNote}
+                    onChange={(event) => setTransferNote(event.target.value)}
+                    placeholder="What's it for?"
+                    maxLength={120}
+                    className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isTransferring}
+                    className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[var(--svs-primary)] px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-70`}
+                  >
+                    <Send className="h-4 w-4" />
+                    {isTransferring ? 'Sending…' : 'Send money'}
+                  </button>
+                </>
+              ) : null}
             </form>
 
             {/* Withdraw */}
@@ -18880,14 +18909,13 @@ const WalletPage = () => {
                   Use max
                 </button>
               </div>
-              <label className="mt-3 block text-xs font-semibold text-[var(--svs-muted)]">Withdraw to</label>
-              <input
-                type="text"
-                value={withdrawDestination}
-                onChange={(event) => setWithdrawDestination(event.target.value)}
-                placeholder="Bank name & account number"
-                className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none"
-              />
+              <div className="mt-3">
+                <BankAccountManager
+                  userEmail={userEmail}
+                  selectedAccountId={selectedBankAccountId}
+                  onSelectAccount={setSelectedBankAccountId}
+                />
+              </div>
               <button
                 type="submit"
                 disabled={isWithdrawing}
@@ -24743,9 +24771,11 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
 
   // SVS Wallet payment (signed-in buyers only).
   const walletUserEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
+  const walletUserName = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-name') || '');
   const [walletSnapshot, setWalletSnapshot] = useState(null);
   const [useWalletPayment, setUseWalletPayment] = useState(false);
   const [isWalletPaying, setIsWalletPaying] = useState(false);
+  const { confirmWithOtp: confirmWalletOtp, otpModalElement: walletOtpModalElement } = useWalletOtp({ email: walletUserEmail, name: walletUserName });
 
   useEffect(() => {
     if (!walletUserEmail) return undefined;
@@ -24905,6 +24935,10 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
 
   const handleWalletPayment = async () => {
     if (!walletSufficient) return;
+
+    const otpVerificationId = await confirmWalletOtp('spend', `Pay ${formatCheckoutAmount(payfastSession.totals.total)} from your SVS Wallet.`);
+    if (!otpVerificationId) return;
+
     setIsWalletPaying(true);
     setSubmitError('');
 
@@ -24914,6 +24948,7 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
       amount: walletChargeAmount,
       reference,
       description: 'SVS order payment',
+      otpVerificationId,
     });
 
     if (!spend.ok) {
@@ -24938,13 +24973,14 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
 
     if (!order) {
       // Order could not be placed (e.g. stock changed) — refund the wallet so
-      // the buyer is never charged without receiving an order.
-      await topUpWallet({
+      // the buyer is never charged without receiving an order. This is a
+      // system-issued reversal of the spend above, not a new deposit, so it
+      // doesn't require its own OTP.
+      await refundWallet({
         email: walletUserEmail,
         amount: walletChargeAmount,
-        currency: walletCurrency,
-        method: 'order-refund',
         reference,
+        description: 'Order could not be placed — wallet refunded',
       });
       setIsWalletPaying(false);
       setSubmitError('One or more items are no longer available in the requested quantity. Your wallet was not charged. Return to checkout and review your order.');
@@ -25001,6 +25037,7 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
       title="Payment"
       badge={<div className="rounded-full border border-[#d9d1c6] bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#6b6258]">Secure checkout</div>}
     >
+      {walletOtpModalElement}
       <div className="mx-auto max-w-3xl rounded-[32px] border border-[#ddd5c8] bg-white p-6 shadow-[0_22px_50px_rgba(15,23,42,0.08)] sm:p-8">
         <div className="space-y-6">
           <div className="rounded-[24px] bg-[#f7f3ec] p-5">

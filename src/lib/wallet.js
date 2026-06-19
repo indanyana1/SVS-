@@ -147,7 +147,7 @@ export const getWalletSnapshot = async (email, fallbackCurrency = DEFAULT_CURREN
   }
 };
 
-export const topUpWallet = async ({ email, amount, currency = DEFAULT_CURRENCY, method = 'card', reference = null }) => {
+export const topUpWallet = async ({ email, amount, currency = DEFAULT_CURRENCY, method = 'card', reference = null, otpVerificationId = null }) => {
   const normalized = normalizeEmail(email);
   const value = round2(amount);
   if (!normalized) {
@@ -181,6 +181,7 @@ export const topUpWallet = async ({ email, amount, currency = DEFAULT_CURRENCY, 
       p_currency: currency,
       p_method: method,
       p_reference: reference,
+      p_otp_id: otpVerificationId,
     });
     if (error) throw error;
     return { ok: true, balance: round2(data?.balance ?? 0) };
@@ -189,7 +190,7 @@ export const topUpWallet = async ({ email, amount, currency = DEFAULT_CURRENCY, 
   }
 };
 
-export const transferWallet = async ({ fromEmail, toEmail, amount, note = null }) => {
+export const transferWallet = async ({ fromEmail, toEmail, amount, note = null, otpVerificationId = null }) => {
   const from = normalizeEmail(fromEmail);
   const to = normalizeEmail(toEmail);
   const value = round2(amount);
@@ -243,6 +244,7 @@ export const transferWallet = async ({ fromEmail, toEmail, amount, note = null }
       p_to: to,
       p_amount: value,
       p_note: note,
+      p_otp_id: otpVerificationId,
     });
     if (error) throw error;
     return { ok: true, balance: round2(data?.balance ?? 0) };
@@ -251,7 +253,7 @@ export const transferWallet = async ({ fromEmail, toEmail, amount, note = null }
   }
 };
 
-export const requestWithdrawal = async ({ email, amount, destination = null }) => {
+export const requestWithdrawal = async ({ email, amount, destination = null, bankAccountId = null, otpVerificationId = null }) => {
   const normalized = normalizeEmail(email);
   const value = round2(amount);
   if (!normalized) {
@@ -287,6 +289,8 @@ export const requestWithdrawal = async ({ email, amount, destination = null }) =
       p_email: normalized,
       p_amount: value,
       p_destination: destination,
+      p_bank_account_id: bankAccountId,
+      p_otp_id: otpVerificationId,
     });
     if (error) throw error;
     return { ok: true, balance: round2(data?.balance ?? 0) };
@@ -295,7 +299,7 @@ export const requestWithdrawal = async ({ email, amount, destination = null }) =
   }
 };
 
-export const spendFromWallet = async ({ email, amount, reference = null, description = null }) => {
+export const spendFromWallet = async ({ email, amount, reference = null, description = null, otpVerificationId = null }) => {
   const normalized = normalizeEmail(email);
   const value = round2(amount);
   if (!normalized) {
@@ -331,11 +335,54 @@ export const spendFromWallet = async ({ email, amount, reference = null, descrip
       p_amount: value,
       p_reference: reference,
       p_description: description,
+      p_otp_id: otpVerificationId,
     });
     if (error) throw error;
     return { ok: true, balance: round2(data?.balance ?? 0) };
   } catch (error) {
     return { ok: false, error: error?.message || 'Could not complete the wallet payment.' };
+  }
+};
+
+// System-issued refund (e.g. reversing a wallet payment when an order
+// could not be placed). No OTP is required here — it only ever runs as
+// automatic compensation for a spend that was already OTP-approved
+// moments earlier, not a new user-initiated deposit.
+export const refundWallet = async ({ email, amount, reference = null, description = null }) => {
+  const normalized = normalizeEmail(email);
+  const value = round2(amount);
+  if (!normalized || value <= 0) {
+    return { ok: false, error: 'Could not process the refund.' };
+  }
+
+  if (!hasSupabaseEnv || !supabase) {
+    const store = readStore();
+    const account = ensureLocalAccount(store, normalized);
+    account.balance = round2(account.balance + value);
+    account.updated_at = new Date().toISOString();
+    pushLocalTransaction(store, normalized, {
+      kind: 'refund',
+      direction: 'credit',
+      amount: value,
+      currency: account.currency,
+      reference,
+      description: description || 'Refund',
+    });
+    writeStore(store);
+    return { ok: true, balance: account.balance };
+  }
+
+  try {
+    const { data, error } = await supabase.rpc('wallet_refund', {
+      p_email: normalized,
+      p_amount: value,
+      p_reference: reference,
+      p_description: description,
+    });
+    if (error) throw error;
+    return { ok: true, balance: round2(data?.balance ?? 0) };
+  } catch (error) {
+    return { ok: false, error: error?.message || 'Could not process the refund.' };
   }
 };
 
