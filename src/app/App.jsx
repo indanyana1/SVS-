@@ -18477,6 +18477,7 @@ const WalletPage = () => {
   const profileName = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-name') || '');
   const stripePromise = useMemo(() => getStripeInstance(), []);
   const { confirmWithOtp, otpModalElement } = useWalletOtp({ email: userEmail, name: profileName });
+  const { code: buyerCurrencyCode } = useBuyerCurrency();
 
   const [snapshot, setSnapshot] = useState({ balance: 0, currency: _fxState.buyerCurrency || 'USD', transactions: [] });
   const [isLoading, setIsLoading] = useState(false);
@@ -18502,15 +18503,20 @@ const WalletPage = () => {
 
   const walletCurrency = snapshot.currency || _fxState.buyerCurrency || 'USD';
 
-  // Deposit currency starts UNSELECTED — the user must pick it before topping up.
+  // Explicit override once the buyer picks a currency themselves; until then
+  // the deposit currency defaults to their site-wide selection (see
+  // buyerCurrencyCode below).
   const [depositCurrency, setDepositCurrency] = useState('');
   const walletHasActivity = snapshot.balance > 0 || (Array.isArray(snapshot.transactions) && snapshot.transactions.length > 0);
   // A wallet's balance always lives in one currency once it has any history,
   // but you can still deposit in a different currency — it's converted (via
   // the same FX rates used at checkout) into the wallet's currency before
-  // being credited, so the ledger itself stays single-currency.
+  // being credited, so the ledger itself stays single-currency. The picker
+  // defaults to whatever currency the buyer has selected site-wide (the
+  // same one used at checkout), not the wallet's currency, but the buyer is
+  // always free to pick a different one for this particular deposit.
   const establishedCurrency = walletHasActivity ? walletCurrency : null;
-  const activeDepositCurrency = depositCurrency || establishedCurrency;
+  const activeDepositCurrency = depositCurrency || buyerCurrencyCode || establishedCurrency;
   const displayCurrency = activeDepositCurrency || walletCurrency;
   const depositNeedsConversion = Boolean(establishedCurrency && activeDepositCurrency && activeDepositCurrency !== establishedCurrency);
   const topUpAmountNumeric = Number(topUpAmount) || 0;
