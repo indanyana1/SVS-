@@ -33,10 +33,31 @@ reportWebVitals();
 
 // Register the service worker so the app is installable as a PWA and the
 // "Install App" affordance can surface the native install prompt.
+//
+// Production only: the worker's fetch handler caches JS bundle requests
+// cache-first (see public/service-worker.js), which is exactly wrong for
+// `npm start` — the dev server's bundle URL doesn't change between rebuilds,
+// so once the SW caches it, every reload replays that stale snapshot
+// forever regardless of how many times the source changes, even surviving
+// hard refreshes. Production builds get cache-busted hashed filenames, so
+// the same strategy is safe there.
 if ('serviceWorker' in navigator) {
-	window.addEventListener('load', () => {
-		navigator.serviceWorker.register('/service-worker.js').catch(() => {
-			/* registration failed — app still works, just not installable */
+	if (process.env.NODE_ENV === 'production') {
+		window.addEventListener('load', () => {
+			navigator.serviceWorker.register('/service-worker.js').catch(() => {
+				/* registration failed — app still works, just not installable */
+			});
 		});
-	});
+	} else {
+		// Self-heal anyone who already has a stale dev-mode registration
+		// (e.g. from before this guard existed, or from a prior `serve -s
+		// build` test on this same port) so the next reload stops replaying
+		// cached old bundles without needing manual DevTools steps.
+		navigator.serviceWorker.getRegistrations()
+			.then((registrations) => registrations.forEach((registration) => registration.unregister()))
+			.catch(() => {});
+		if (window.caches) {
+			caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key)))).catch(() => {});
+		}
+	}
 }

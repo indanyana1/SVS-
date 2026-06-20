@@ -32,20 +32,21 @@ const emptySnapshot = (currency = DEFAULT_CURRENCY) => ({
 
 const readStore = () => {
   if (typeof window === 'undefined') {
-    return { accounts: {}, transactions: {} };
+    return { accounts: {}, transactions: {}, savingsAccounts: {} };
   }
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     const parsed = raw ? JSON.parse(raw) : null;
     if (!parsed || typeof parsed !== 'object') {
-      return { accounts: {}, transactions: {} };
+      return { accounts: {}, transactions: {}, savingsAccounts: {} };
     }
     return {
       accounts: parsed.accounts && typeof parsed.accounts === 'object' ? parsed.accounts : {},
       transactions: parsed.transactions && typeof parsed.transactions === 'object' ? parsed.transactions : {},
+      savingsAccounts: parsed.savingsAccounts && typeof parsed.savingsAccounts === 'object' ? parsed.savingsAccounts : {},
     };
   } catch (_error) {
-    return { accounts: {}, transactions: {} };
+    return { accounts: {}, transactions: {}, savingsAccounts: {} };
   }
 };
 
@@ -73,6 +74,21 @@ const ensureLocalAccount = (store, email, currency) => {
     store.transactions[email] = [];
   }
   return store.accounts[email];
+};
+
+const ensureLocalSavingsAccount = (store, email, currency) => {
+  if (!store.savingsAccounts) {
+    store.savingsAccounts = {};
+  }
+  if (!store.savingsAccounts[email]) {
+    store.savingsAccounts[email] = {
+      user_email: email,
+      balance: 0,
+      currency: currency || DEFAULT_CURRENCY,
+      updated_at: new Date().toISOString(),
+    };
+  }
+  return store.savingsAccounts[email];
 };
 
 const pushLocalTransaction = (store, email, transaction) => {
@@ -386,6 +402,153 @@ export const refundWallet = async ({ email, amount, reference = null, descriptio
   }
 };
 
+// ---------------------------------------------------------------------------
+// Smart Save — a non-transactional sub-account. The only two ways money
+// moves in or out of it are to/from the user's own main wallet (see
+// wallet_savings_deposit / wallet_savings_withdraw in
+// supabase/wallet-savings.sql); there is no top-up, transfer-to-others,
+// spend, or withdraw-to-bank entry point for it. It always shares the main
+// wallet's currency, so the same convertAmount()-based conversion the main
+// wallet offers for deposits/withdrawals applies to Smart Save moves too —
+// the caller (WalletPage) is responsible for converting the entered amount
+// into that shared currency before calling these, exactly like topUpWallet
+// and requestWithdrawal already expect. Unlike every main-wallet operation,
+// these two don't require an OTP — both sides of the move stay inside the
+// same user's own wallet, so there's no one else's money at risk.
+// ---------------------------------------------------------------------------
+
+const SAVINGS_LABEL = 'Smart Save';
+
+export const getSavingsSnapshot = async (email, fallbackCurrency = DEFAULT_CURRENCY) => {
+  const normalized = normalizeEmail(email);
+  if (!normalized) {
+    return { ok: false, balance: 0, currency: fallbackCurrency || DEFAULT_CURRENCY, error: 'You need to sign in to use Smart Save.' };
+  }
+
+  if (!hasSupabaseEnv || !supabase) {
+    const store = readStore();
+    const account = store.savingsAccounts[normalized];
+    return {
+      ok: true,
+      balance: round2(account?.balance || 0),
+      currency: account?.currency || fallbackCurrency || DEFAULT_CURRENCY,
+      source: 'local',
+    };
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('wallet_savings_accounts')
+      .select('*')
+      .eq('user_email', normalized)
+      .maybeSingle();
+    if (error && error.code !== 'PGRST116') throw error;
+    return {
+      ok: true,
+      balance: round2(data?.balance || 0),
+      currency: data?.currency || fallbackCurrency || DEFAULT_CURRENCY,
+      source: 'supabase',
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      balance: 0,
+      currency: fallbackCurrency || DEFAULT_CURRENCY,
+      error: error?.message || 'Could not load Smart Save.',
+    };
+  }
+};
+
+export const moveToSavings = async ({ email, amount }) => {
+  const normalized = normalizeEmail(email);
+  const value = round2(amount);
+  if (!normalized) {
+    return { ok: false, error: 'You need to sign in to use Smart Save.' };
+  }
+  if (value <= 0) {
+    return { ok: false, error: 'Enter an amount greater than zero.' };
+  }
+
+  if (!hasSupabaseEnv || !supabase) {
+    const store = readStore();
+    const main = ensureLocalAccount(store, normalized);
+    if (round2(main.balance) < value) {
+      return { ok: false, error: 'Insufficient wallet balance.' };
+    }
+    const savings = ensureLocalSavingsAccount(store, normalized, main.currency);
+    main.balance = round2(main.balance - value);
+    main.updated_at = new Date().toISOString();
+    savings.balance = round2(savings.balance + value);
+    savings.updated_at = new Date().toISOString();
+    pushLocalTransaction(store, normalized, {
+      kind: 'savings_out',
+      direction: 'debit',
+      amount: value,
+      currency: main.currency,
+      counterparty: SAVINGS_LABEL,
+      description: `Moved to ${SAVINGS_LABEL}`,
+    });
+    writeStore(store);
+    return { ok: true, mainBalance: main.balance, savingsBalance: savings.balance };
+  }
+
+  try {
+    const { data, error } = await supabase.rpc('wallet_savings_deposit', {
+      p_email: normalized,
+      p_amount: value,
+    });
+    if (error) throw error;
+    return { ok: true, savingsBalance: round2(data?.balance ?? 0) };
+  } catch (error) {
+    return { ok: false, error: error?.message || `Could not move money to ${SAVINGS_LABEL}.` };
+  }
+};
+
+export const moveToMainWallet = async ({ email, amount }) => {
+  const normalized = normalizeEmail(email);
+  const value = round2(amount);
+  if (!normalized) {
+    return { ok: false, error: 'You need to sign in to use Smart Save.' };
+  }
+  if (value <= 0) {
+    return { ok: false, error: 'Enter an amount greater than zero.' };
+  }
+
+  if (!hasSupabaseEnv || !supabase) {
+    const store = readStore();
+    const savings = ensureLocalSavingsAccount(store, normalized);
+    if (round2(savings.balance) < value) {
+      return { ok: false, error: `Insufficient ${SAVINGS_LABEL} balance.` };
+    }
+    const main = ensureLocalAccount(store, normalized, savings.currency);
+    savings.balance = round2(savings.balance - value);
+    savings.updated_at = new Date().toISOString();
+    main.balance = round2(main.balance + value);
+    main.updated_at = new Date().toISOString();
+    pushLocalTransaction(store, normalized, {
+      kind: 'savings_in',
+      direction: 'credit',
+      amount: value,
+      currency: main.currency,
+      counterparty: SAVINGS_LABEL,
+      description: `Moved from ${SAVINGS_LABEL}`,
+    });
+    writeStore(store);
+    return { ok: true, mainBalance: main.balance, savingsBalance: savings.balance };
+  }
+
+  try {
+    const { data, error } = await supabase.rpc('wallet_savings_withdraw', {
+      p_email: normalized,
+      p_amount: value,
+    });
+    if (error) throw error;
+    return { ok: true, mainBalance: round2(data?.balance ?? 0) };
+  } catch (error) {
+    return { ok: false, error: error?.message || 'Could not move money to your main wallet.' };
+  }
+};
+
 export const WALLET_TRANSACTION_LABELS = {
   topup: 'Added funds',
   transfer_in: 'Received',
@@ -393,4 +556,6 @@ export const WALLET_TRANSACTION_LABELS = {
   withdrawal: 'Withdrawal',
   purchase: 'Purchase',
   refund: 'Refund',
+  savings_out: 'Moved to Smart Save',
+  savings_in: 'Moved from Smart Save',
 };

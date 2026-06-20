@@ -75,6 +75,11 @@ import {
   Fuel,
   Cog,
   Gauge,
+  Eye,
+  PiggyBank,
+  ArrowDownToLine,
+  ArrowUpToLine,
+  Lock,
 } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -91,6 +96,9 @@ import {
   requestWithdrawal,
   spendFromWallet,
   refundWallet,
+  getSavingsSnapshot,
+  moveToSavings,
+  moveToMainWallet,
   WALLET_TRANSACTION_LABELS,
 } from '../lib/wallet';
 import { buildShareLink, ensureUserHandle, lookupAccountByHandle } from '../lib/userHandles';
@@ -3880,21 +3888,13 @@ const livestockItems = [
   },
 ];
 
-// Stock photos reused per category are the same ones already verified (by
-// directly viewing each image, not just trusting search snippets) for that
-// category's "Browse by Category" tile — see `mobilityCategoryShowcase`
-// above. Reusing them here for every listing in that category guarantees
-// the photo always actually matches the vehicle type, even though several
-// listings then share one photo (acceptable for catalog/demo data; real
-// seller listings bring their own photos via `getSellerItemsForMarket`).
+// Fallback stock photos for listings that don't map to a real-world make/
+// model worth sourcing a dedicated photo for (fictional brands, or generic
+// parts where no single product photo applies). Every other listing below
+// has its own individually verified photo (directly viewed, not just
+// trusted from a search snippet) matching its actual brand/model.
 const MOBILITY_IMAGE = {
-  car: 'https://images.pexels.com/photos/170811/pexels-photo-170811.jpeg?auto=compress&cs=tinysrgb&w=1200',
-  suv: 'https://images.pexels.com/photos/14776590/pexels-photo-14776590.jpeg?auto=compress&cs=tinysrgb&w=1200',
   motorcycle: 'https://images.pexels.com/photos/2116475/pexels-photo-2116475.jpeg?auto=compress&cs=tinysrgb&w=1200',
-  pickup: 'https://images.pexels.com/photos/2994335/pexels-photo-2994335.jpeg?auto=compress&cs=tinysrgb&w=1200',
-  commercial: 'https://images.pexels.com/photos/6563903/pexels-photo-6563903.jpeg?auto=compress&cs=tinysrgb&w=1200',
-  electric: 'https://images.pexels.com/photos/110844/pexels-photo-110844.jpeg?auto=compress&cs=tinysrgb&w=1200',
-  luxury: 'https://images.pexels.com/photos/4692088/pexels-photo-4692088.jpeg?auto=compress&cs=tinysrgb&w=1200',
   parts: 'https://images.pexels.com/photos/5158155/pexels-photo-5158155.jpeg?auto=compress&cs=tinysrgb&w=1200',
   rail: 'https://images.pexels.com/photos/302428/pexels-photo-302428.jpeg?auto=compress&cs=tinysrgb&w=1200',
   aircraft: 'https://images.pexels.com/photos/46148/aircraft-jet-landing-cloud-46148.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -4179,7 +4179,7 @@ const mobilityVehiclesItems = [
     modelYear: 2022,
     specification: '2022 model • 27,400 km • Diesel • Automatic',
     price: '742000',
-    image: MOBILITY_IMAGE.luxury,
+    image: 'https://images.pexels.com/photos/5998732/pexels-photo-5998732.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
   // ---- Spare Parts ----
   {
@@ -4310,6 +4310,148 @@ const detectMobilityModelYear = (item) => {
   const haystack = `${item.specification || ''} ${item.title || ''}`;
   const match = haystack.match(/\b(19|20)\d{2}\b/);
   return match ? match[0] : null;
+};
+
+// Categories that get the full "Cars Market Listing" product page treatment
+// (Product Overview, Key Highlights, Product Details spec table, Features,
+// Dealer Information) — everything else (spare parts, the fictional
+// aircraft/bicycle/rail items) keeps the simpler default detail layout.
+const MOBILITY_RICH_DETAIL_CATEGORIES = ['Car', 'SUV', 'Motorcycle', 'Pickup Truck', 'Commercial Vehicle', 'Electric Vehicle', 'Luxury Car'];
+
+// Deterministic per-listing "random" numbers for spec fields that aren't
+// part of the catalog (this is a marketplace listing, not a manufacturer
+// feed) — stable across re-renders, and distinct per vehicle rather than
+// reused identically across an entire category.
+const seededVehicleHash = (seed) => {
+  let hash = 0;
+  const str = String(seed);
+  for (let i = 0; i < str.length; i += 1) hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+  return hash;
+};
+const seededVehicleRange = (seed, min, max, decimals = 0) => {
+  const unit = (seededVehicleHash(seed) % 1000) / 1000;
+  const value = min + unit * (max - min);
+  return decimals > 0 ? Number(value.toFixed(decimals)) : Math.round(value);
+};
+const seededVehiclePick = (seed, list) => list[seededVehicleHash(seed) % list.length];
+
+const MOBILITY_DEALER_CITIES = [
+  'Sandton, Johannesburg, Gauteng',
+  'Umhlanga, Durban, KwaZulu-Natal',
+  'Century City, Cape Town, Western Cape',
+  'Centurion, Pretoria, Gauteng',
+  'Westville, Durban, KwaZulu-Natal',
+  'Bellville, Cape Town, Western Cape',
+];
+
+// Builds the rich item-detail payload for a Mobility & Vehicles Exchange
+// listing — Product Overview, Key Highlights, a Product Details spec table,
+// Features, and Dealer Information — mirroring the "Cars Market Listing"
+// product-page prototype. Only called for MOBILITY_RICH_DETAIL_CATEGORIES.
+const buildVehicleDetailPayload = (item) => {
+  const category = item.category;
+  const brand = item.brand || 'SVS Auto';
+  const fuel = detectMobilityAttribute(item, MOBILITY_FUEL_OPTIONS) || 'Petrol';
+  const transmission = detectMobilityAttribute(item, MOBILITY_TRANSMISSION_OPTIONS) || 'Automatic';
+  const modelYear = detectMobilityModelYear(item) || '2023';
+  const isEV = fuel === 'Electric';
+  const isMotorcycle = category === 'Motorcycle';
+  const isTruck = category === 'Pickup Truck' || category === 'Commercial Vehicle';
+  const seed = item.id;
+
+  const engineCc = seededVehicleRange(`${seed}:cc`, isMotorcycle ? 150 : 1200, isMotorcycle ? 750 : 2500);
+  const power = seededVehicleRange(`${seed}:power`, isMotorcycle ? 15 : isTruck ? 130 : 90, isMotorcycle ? 55 : isTruck ? 220 : 280);
+  const topSpeed = seededVehicleRange(`${seed}:topspeed`, isMotorcycle ? 110 : isTruck ? 160 : 170, isMotorcycle ? 160 : isTruck ? 190 : 250);
+  const mileage = seededVehicleRange(`${seed}:mileage`, isMotorcycle ? 28 : isTruck ? 8 : 12, isMotorcycle ? 45 : isTruck ? 14 : 22, 1);
+  const evRange = seededVehicleRange(`${seed}:range`, 250, 580);
+  const wheelbase = seededVehicleRange(`${seed}:wheelbase`, isMotorcycle ? 1350 : 2450, isMotorcycle ? 1550 : 3100);
+  const groundClearance = seededVehicleRange(`${seed}:gc`, 150, isTruck ? 230 : 200);
+  const curbWeight = seededVehicleRange(`${seed}:weight`, isMotorcycle ? 140 : isTruck ? 1800 : 1150, isMotorcycle ? 240 : isTruck ? 2300 : 1850);
+  const cargoVolume = seededVehicleRange(`${seed}:cargo`, 320, 550);
+  const length = seededVehicleRange(`${seed}:length`, isMotorcycle ? 1900 : isTruck ? 5200 : 4200, isMotorcycle ? 2200 : isTruck ? 5400 : 4900);
+  const width = seededVehicleRange(`${seed}:width`, isMotorcycle ? 750 : 1750, isMotorcycle ? 850 : 1950);
+  const height = seededVehicleRange(`${seed}:height`, isMotorcycle ? 1050 : 1450, isMotorcycle ? 1250 : 1850);
+
+  const productOverview = item.productOverview
+    || `The ${modelYear} ${item.title} is a well-kept ${String(category).toLowerCase()} from ${brand}, offering a balanced mix of comfort, efficiency, and everyday reliability. It comes with a clean service history and is ready to drive away, backed by a manufacturer-style warranty for extra peace of mind.`;
+
+  const keyHighlights = Array.isArray(item.keyHighlights) && item.keyHighlights.length ? item.keyHighlights : (
+    isEV ? [
+      'Zero tailpipe emissions with instant electric torque',
+      `Up to ${evRange} km of range on a full charge`,
+      'Compatible with home and public fast-charging',
+      'Backed by a manufacturer-style warranty',
+    ] : isMotorcycle ? [
+      `Smooth, responsive ${engineCc}cc engine`,
+      'Comfortable ergonomics for daily riding or touring',
+      'ABS braking for confident stopping power',
+      'Backed by a manufacturer-style warranty',
+    ] : isTruck ? [
+      `Strong, dependable ${(engineCc / 1000).toFixed(1)}L ${fuel.toLowerCase()} engine`,
+      'Built for heavy-duty payload and towing work',
+      'Durable cabin trim suited to daily work use',
+      'Backed by a manufacturer-style warranty',
+    ] : [
+      `Efficient ${(engineCc / 1000).toFixed(1)}L ${fuel.toLowerCase()} engine with excellent fuel economy`,
+      'Spacious cabin with comfortable seating for the whole family',
+      'Advanced safety features including multiple airbags',
+      'Backed by a manufacturer-style warranty',
+    ]
+  );
+
+  const technicalSpecs = item.technicalSpecs && typeof item.technicalSpecs === 'object' ? item.technicalSpecs : {
+    'Engine Type': isEV ? 'Electric Motor' : `${(engineCc / 1000).toFixed(1)}L ${fuel} Engine`,
+    ...(isEV ? { 'Battery Range': `${evRange} km` } : { Mileage: `${mileage} km/l` }),
+    'Power Output': `${power} ${isEV ? 'kW' : 'PS'}`,
+    'Top Speed': `${topSpeed} km/h`,
+    'Fuel Type': fuel,
+    Transmission: transmission,
+    'Seating Capacity': isMotorcycle ? '2 riders' : '5 seats',
+    Drivetrain: isTruck ? '4x2 / 4x4 available' : isMotorcycle ? 'Chain drive' : isEV ? 'Single-motor, rear-wheel drive' : 'Front-wheel drive',
+    'Body Type': category,
+    ...(isMotorcycle ? {} : { Wheelbase: `${wheelbase} mm`, 'Cargo Volume': `${cargoVolume} L` }),
+    'Dimensions (L x W x H)': `${length} x ${width} x ${height} mm`,
+    'Ground Clearance': `${groundClearance} mm`,
+    'Curb Weight': `${curbWeight} kg`,
+    'Color Options': 'Pearl White, Midnight Black, Silver Metallic, Graphite Grey',
+    Warranty: isEV ? '8-year battery / 3-year vehicle warranty' : '3-year / 100,000 km manufacturer warranty',
+  };
+
+  const features = Array.isArray(item.features) && item.features.length ? item.features : (
+    isEV ? [
+      { icon: 'fuel', title: 'Instant Electric Torque', description: 'Smooth, silent acceleration with no gear shifts.' },
+      { icon: 'gauge', title: 'Fast Charging Capable', description: 'Top up to 80% in under an hour on a compatible fast charger.' },
+      { icon: 'shield', title: 'Driver Assistance Suite', description: 'Adaptive cruise control and lane-keeping aids.' },
+      { icon: 'sparkles', title: 'Connected App Control', description: 'Check range, pre-cool the cabin, and locate your vehicle from your phone.' },
+    ] : isMotorcycle ? [
+      { icon: 'gauge', title: 'Responsive Power Delivery', description: 'Smooth throttle response across the rev range.' },
+      { icon: 'shield', title: 'ABS Braking System', description: 'Confident, controlled stopping in all conditions.' },
+      { icon: 'cog', title: 'Comfortable Touring Ergonomics', description: 'Upright seating position for long-distance comfort.' },
+      { icon: 'sparkles', title: 'Digital Instrument Cluster', description: 'Clear at-a-glance readouts for speed, fuel, and gear.' },
+    ] : isTruck ? [
+      { icon: 'cog', title: 'Heavy-Duty Towing Capability', description: 'Engineered for demanding payload and towing work.' },
+      { icon: 'gauge', title: 'Reinforced Cargo Bed', description: 'Durable load bay built to handle daily work use.' },
+      { icon: 'shield', title: 'Driver Assist Technology', description: 'Stability control and traction aids for tough terrain.' },
+      { icon: 'sparkles', title: 'Work-Ready Cabin', description: 'Durable trim with practical, easy-to-clean surfaces.' },
+    ] : [
+      { icon: 'gauge', title: 'Performance Tuned Engine', description: `Tuned by ${brand} for a confident blend of power and efficiency.` },
+      { icon: 'shield', title: 'Advanced Safety Suite', description: 'Multiple airbags, ABS, and stability control come standard.' },
+      { icon: 'sparkles', title: 'Smart Connectivity', description: 'Touchscreen infotainment with smartphone mirroring and Bluetooth.' },
+      { icon: 'cog', title: 'Comfort & Convenience', description: 'Climate control, power windows, and ergonomic seating throughout.' },
+    ]
+  );
+
+  const dealer = item.dealer || {
+    name: `${brand} ${seededVehiclePick(`${seed}:dealersuffix`, ['Auto Hub', 'Motors', 'Dealership', 'Auto Centre'])}`,
+    location: seededVehiclePick(`${seed}:city`, MOBILITY_DEALER_CITIES),
+    rating: seededVehicleRange(`${seed}:dealerrating`, 4.4, 5.0, 1),
+    reviewCount: seededVehicleRange(`${seed}:dealerreviews`, 38, 420),
+  };
+
+  const badges = ['Verified Listing', 'Warranty Included', 'Free Delivery', 'Finance Available'];
+  const viewCount = seededVehicleRange(`${seed}:views`, 320, 2400);
+
+  return { productOverview, keyHighlights, technicalSpecs, specsTitle: 'Product Details', features, dealer, badges, viewCount };
 };
 
 const beautyFitnessSportsItems = [
@@ -16822,6 +16964,22 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
   });
   const openItemDetails = (item) => {
     const wishlistItem = buildWishlistItem(item);
+    const isRichVehicle = MOBILITY_RICH_DETAIL_CATEGORIES.includes(item.category);
+    const similarProducts = isRichVehicle
+      ? mobilityVehiclesItems
+        .filter((other) => other.id !== item.id && other.category === item.category)
+        .slice(0, 3)
+        .map((other) => ({
+          id: other.id,
+          title: getTranslatedValue(t, other.titleKey, other.title),
+          image: other.image,
+          price: getSalePrices(other.price, getItemSaleDiscountRate(other), other.currency || null).nowPrice,
+          category: other.category,
+          brand: other.brand,
+          rating: 4.7,
+          reviewsCount: 86,
+        }))
+      : [];
     onOpenItemDetails?.({
       title: getTranslatedValue(t, item.titleKey, item.title),
       image: item.image,
@@ -16832,6 +16990,17 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
       cartItem: buildCartItem(item),
       wishlistItem,
+      ...(isRichVehicle ? (() => {
+        const vehicleDetail = buildVehicleDetailPayload(item);
+        return {
+          ...vehicleDetail,
+          detailVariant: 'vehicle',
+          category: item.category,
+          brand: item.brand,
+          sellerName: item.sellerName || vehicleDetail.dealer.name,
+          similarProducts,
+        };
+      })() : {}),
     });
   };
 
@@ -19345,6 +19514,21 @@ const WalletPage = () => {
   const [selectedBankAccountId, setSelectedBankAccountId] = useState(null);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
 
+  // Smart Save — non-transactional sub-account. Money only ever moves
+  // between this and the main wallet above (see moveToSavings /
+  // moveToMainWallet), never to/from anyone else.
+  const [savingsSnapshot, setSavingsSnapshot] = useState({ balance: 0, currency: '' });
+  const [moveToSavingsAmount, setMoveToSavingsAmount] = useState('');
+  const [savingsDepositCurrency, setSavingsDepositCurrency] = useState('');
+  const [isMovingToSavings, setIsMovingToSavings] = useState(false);
+  const [moveToMainAmount, setMoveToMainAmount] = useState('');
+  const [isMovingToMain, setIsMovingToMain] = useState(false);
+  // 'toSavings' | 'toMain' | null — set once a move form is submitted, so a
+  // confirmation dialog (showing the exact amount and direction) appears
+  // before either side of the move actually executes. No OTP, but never
+  // silent either.
+  const [pendingSavingsMove, setPendingSavingsMove] = useState(null);
+
   const walletCurrency = snapshot.currency || _fxState.buyerCurrency || 'USD';
 
   // Explicit override once the buyer picks a currency themselves; until then
@@ -19399,14 +19583,50 @@ const WalletPage = () => {
     ? convertAmount(withdrawAmountNumeric, displayBalanceCurrency, walletCurrency)
     : withdrawAmountNumeric;
 
+  // Smart Save always shares the main wallet's ledger currency (it's
+  // bootstrapped from it on the first deposit — see wallet_savings_deposit),
+  // so the same buyer-display conversion computed above for the main
+  // balance applies to it unchanged.
+  const savingsCurrency = savingsSnapshot.currency || walletCurrency;
+  const displaySavingsBalance = balanceNeedsConversion
+    ? convertAmount(savingsSnapshot.balance, savingsCurrency, displayBalanceCurrency)
+    : savingsSnapshot.balance;
+
+  // "Move to Smart Save" mirrors the Add Funds deposit flow: any currency
+  // can be entered, converted into the shared wallet currency before
+  // crediting Smart Save.
+  const activeSavingsDepositCurrency = savingsDepositCurrency || buyerCurrencyCode || walletCurrency;
+  const savingsDepositNeedsConversion = Boolean(activeSavingsDepositCurrency && activeSavingsDepositCurrency !== walletCurrency);
+  const moveToSavingsAmountNumeric = Number(moveToSavingsAmount) || 0;
+  const moveToSavingsPreview = savingsDepositNeedsConversion
+    ? convertAmount(moveToSavingsAmountNumeric, activeSavingsDepositCurrency, walletCurrency)
+    : moveToSavingsAmountNumeric;
+
+  useEffect(() => {
+    if (savingsDepositNeedsConversion) refreshFxRates();
+  }, [savingsDepositNeedsConversion]);
+
+  // "Move to Main Wallet" mirrors the Withdraw flow: entered in the buyer's
+  // display currency, converted back into the shared wallet currency.
+  const moveToMainAmountNumeric = Number(moveToMainAmount) || 0;
+  const moveToMainDebitPreview = balanceNeedsConversion
+    ? convertAmount(moveToMainAmountNumeric, displayBalanceCurrency, walletCurrency)
+    : moveToMainAmountNumeric;
+
   const refresh = useCallback(async () => {
     if (!isAuthenticated || !userEmail) return;
     setIsLoading(true);
-    const result = await getWalletSnapshot(userEmail, _fxState.buyerCurrency || 'USD');
+    const [result, savingsResult] = await Promise.all([
+      getWalletSnapshot(userEmail, _fxState.buyerCurrency || 'USD'),
+      getSavingsSnapshot(userEmail, _fxState.buyerCurrency || 'USD'),
+    ]);
     if (result.ok) {
       setSnapshot({ balance: result.balance, currency: result.currency, transactions: result.transactions });
     } else if (result.error) {
       setFeedback({ type: 'error', message: result.error });
+    }
+    if (savingsResult.ok) {
+      setSavingsSnapshot({ balance: savingsResult.balance, currency: savingsResult.currency });
     }
     setIsLoading(false);
   }, [isAuthenticated, userEmail]);
@@ -19606,6 +19826,80 @@ const WalletPage = () => {
       } catch (_e) { /* ignore */ }
     } else {
       showFeedback('error', result.error || 'Could not request the withdrawal.');
+    }
+  };
+
+  // ---- Smart Save -----------------------------------------------------------
+  // Submitting either form just validates and opens the confirmation
+  // dialog below — the actual move only happens once the user explicitly
+  // confirms it there (see confirmSavingsMove).
+  const handleMoveToSavings = (event) => {
+    event.preventDefault();
+    if (!activeSavingsDepositCurrency) {
+      showFeedback('error', 'Select the currency you want to move first.');
+      return;
+    }
+    if (!moveToSavingsAmountNumeric || moveToSavingsAmountNumeric <= 0) {
+      showFeedback('error', 'Enter an amount greater than zero to move.');
+      return;
+    }
+    setPendingSavingsMove('toSavings');
+  };
+
+  const handleMoveToMain = (event) => {
+    event.preventDefault();
+    if (!moveToMainAmountNumeric || moveToMainAmountNumeric <= 0) {
+      showFeedback('error', 'Enter an amount greater than zero to move.');
+      return;
+    }
+    setPendingSavingsMove('toMain');
+  };
+
+  const confirmSavingsMove = async () => {
+    const direction = pendingSavingsMove;
+    setPendingSavingsMove(null);
+
+    if (direction === 'toSavings') {
+      if (savingsDepositNeedsConversion) await refreshFxRates();
+      const amount = savingsDepositNeedsConversion
+        ? Math.round(convertAmount(moveToSavingsAmountNumeric, activeSavingsDepositCurrency, walletCurrency) * 100) / 100
+        : moveToSavingsAmountNumeric;
+      if (amount > snapshot.balance) {
+        showFeedback('error', 'That amount is more than your main wallet balance.');
+        return;
+      }
+      setIsMovingToSavings(true);
+      const result = await moveToSavings({ email: userEmail, amount });
+      setIsMovingToSavings(false);
+      if (result.ok) {
+        setMoveToSavingsAmount('');
+        showFeedback('success', `Moved ${formatAmountInCurrency(amount, walletCurrency)} to Smart Save.`);
+        await refresh();
+      } else {
+        showFeedback('error', result.error || 'Could not move money to Smart Save.');
+      }
+      return;
+    }
+
+    if (direction === 'toMain') {
+      if (balanceNeedsConversion) await refreshFxRates();
+      const amount = balanceNeedsConversion
+        ? Math.round(convertAmount(moveToMainAmountNumeric, displayBalanceCurrency, walletCurrency) * 100) / 100
+        : moveToMainAmountNumeric;
+      if (amount > savingsSnapshot.balance) {
+        showFeedback('error', 'That amount is more than your Smart Save balance.');
+        return;
+      }
+      setIsMovingToMain(true);
+      const result = await moveToMainWallet({ email: userEmail, amount });
+      setIsMovingToMain(false);
+      if (result.ok) {
+        setMoveToMainAmount('');
+        showFeedback('success', `Moved ${formatAmountInCurrency(amount, walletCurrency)} to your main wallet.`);
+        await refresh();
+      } else {
+        showFeedback('error', result.error || 'Could not move money to your main wallet.');
+      }
     }
   };
 
@@ -19865,6 +20159,97 @@ const WalletPage = () => {
             </form>
           </div>
 
+          {/* Smart Save — non-transactional sub-account */}
+          <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <PiggyBank className="h-4 w-4 text-emerald-600" />
+                <h2 className="text-base font-bold text-[var(--svs-text)]">Smart Save</h2>
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                  <Lock className="h-3 w-3" /> Non-transactional
+                </span>
+              </div>
+              <p className="text-xl font-extrabold text-emerald-700">{formatAmountInCurrency(displaySavingsBalance, displayBalanceCurrency)}</p>
+            </div>
+            <p className="mt-1 text-xs text-[var(--svs-muted)]">
+              Money parked in Smart Save can only move to or from your main wallet above — it can't be spent, sent to anyone else, or withdrawn to a bank directly.
+            </p>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              {/* Move to Smart Save */}
+              <form onSubmit={handleMoveToSavings} className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4">
+                <label className="block text-xs font-semibold text-[var(--svs-muted)]">Move to Smart Save</label>
+                <div className="mt-1.5">
+                  <WalletCurrencyPicker value={activeSavingsDepositCurrency} onChange={setSavingsDepositCurrency} />
+                </div>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={moveToSavingsAmount}
+                  onChange={(event) => setMoveToSavingsAmount(event.target.value)}
+                  placeholder="0.00"
+                  className="mt-2 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none"
+                />
+                {moveToSavingsAmountNumeric > 0 ? (
+                  <p className="mt-1.5 text-[11px] font-semibold text-emerald-700">
+                    {savingsDepositNeedsConversion
+                      ? `Smart Save will receive ${formatAmountInCurrency(moveToSavingsPreview, walletCurrency)} (converted from ${formatAmountInCurrency(moveToSavingsAmountNumeric, activeSavingsDepositCurrency)}).`
+                      : `Smart Save will receive ${formatAmountInCurrency(moveToSavingsAmountNumeric, activeSavingsDepositCurrency)}.`}
+                  </p>
+                ) : null}
+                <button
+                  type="submit"
+                  disabled={isMovingToSavings}
+                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  <ArrowDownToLine className="h-4 w-4" />
+                  {isMovingToSavings ? 'Moving…' : 'Move to Smart Save'}
+                </button>
+              </form>
+
+              {/* Move to Main Wallet */}
+              <form onSubmit={handleMoveToMain} className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4">
+                <label className="block text-xs font-semibold text-[var(--svs-muted)]">Move to main wallet ({displayBalanceCurrency})</label>
+                <div className="mt-1.5 flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputMode="decimal"
+                    value={moveToMainAmount}
+                    onChange={(event) => setMoveToMainAmount(event.target.value)}
+                    placeholder="0.00"
+                    className="w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setMoveToMainAmount(String(Math.round(displaySavingsBalance * 100) / 100))}
+                    className="shrink-0 rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-xs font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)]"
+                  >
+                    Use max
+                  </button>
+                </div>
+                {moveToMainAmountNumeric > 0 ? (
+                  <p className="mt-1.5 text-[11px] font-semibold text-[var(--svs-primary-strong)]">
+                    {balanceNeedsConversion
+                      ? `≈ ${formatAmountInCurrency(moveToMainDebitPreview, walletCurrency)} will move from Smart Save to your main wallet.`
+                      : `${formatAmountInCurrency(moveToMainAmountNumeric, walletCurrency)} will move to your main wallet.`}
+                  </p>
+                ) : null}
+                <button
+                  type="submit"
+                  disabled={isMovingToMain}
+                  className={`${cudyBluePrimaryButtonClassName} mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)] disabled:cursor-not-allowed disabled:opacity-70`}
+                >
+                  <ArrowUpToLine className="h-4 w-4" />
+                  {isMovingToMain ? 'Moving…' : 'Move to main wallet'}
+                </button>
+              </form>
+            </div>
+          </div>
+
           {/* Transaction history */}
           <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
             <h2 className="text-base font-bold text-[var(--svs-text)]">Activity</h2>
@@ -19910,6 +20295,48 @@ const WalletPage = () => {
           </div>
         </section>
       </div>
+
+      {/* Confirm Smart Save move dialog */}
+      {pendingSavingsMove ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-4" role="dialog" aria-modal="true" aria-label="Confirm Smart Save transfer">
+          <div className="w-full max-w-sm rounded-2xl bg-[var(--svs-surface)] p-6 shadow-2xl">
+            <h4 className="text-lg font-bold text-[var(--svs-text)]">
+              {pendingSavingsMove === 'toSavings' ? 'Move money to Smart Save?' : 'Move money to your main wallet?'}
+            </h4>
+            <p className="mt-2 text-sm text-[var(--svs-muted)]">
+              {pendingSavingsMove === 'toSavings' ? (
+                <>
+                  <span className="font-semibold text-[var(--svs-text)]">{formatAmountInCurrency(moveToSavingsAmountNumeric, activeSavingsDepositCurrency)}</span> will move from your main wallet to Smart Save
+                  {savingsDepositNeedsConversion ? <> (≈ {formatAmountInCurrency(moveToSavingsPreview, walletCurrency)})</> : null}. This transaction will appear in your wallet activity below.
+                </>
+              ) : (
+                <>
+                  <span className="font-semibold text-[var(--svs-text)]">{formatAmountInCurrency(moveToMainAmountNumeric, displayBalanceCurrency)}</span> will move from Smart Save to your main wallet
+                  {balanceNeedsConversion ? <> (≈ {formatAmountInCurrency(moveToMainDebitPreview, walletCurrency)})</> : null}. This transaction will appear in your wallet activity below.
+                </>
+              )}
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setPendingSavingsMove(null)}
+                disabled={isMovingToSavings || isMovingToMain}
+                className="rounded-lg border border-[var(--svs-border)] px-4 py-2 text-sm font-semibold text-[var(--svs-text)]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmSavingsMove}
+                disabled={isMovingToSavings || isMovingToMain}
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+              >
+                {isMovingToSavings || isMovingToMain ? 'Moving…' : 'Yes, Move It'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </PageFrame>
   );
 };
@@ -34097,6 +34524,23 @@ const PageFrame = ({ title, subtitle, children, darkHero = false, heroImage = ''
   </section>
 );
 
+// Icon lookups for the vehicle detail layout's badges row and Features
+// cards — items store the icon as a string key (not a component) so the
+// catalog data stays plain, serializable JS.
+const MOBILITY_BADGE_ICON = {
+  'Verified Listing': CheckCircle2,
+  'Warranty Included': ShieldCheck,
+  'Free Delivery': Truck,
+  'Finance Available': CreditCard,
+};
+const MOBILITY_FEATURE_ICON = {
+  gauge: Gauge,
+  shield: ShieldCheck,
+  sparkles: Sparkles,
+  cog: Cog,
+  fuel: Fuel,
+};
+
 const ItemDetailsModal = ({
   item,
   onClose,
@@ -34870,7 +35314,7 @@ const ItemDetailsModal = ({
   // Rich, full-page-style detail layout (Product Overview, Key Highlights,
   // spec table, ratings breakdown, similar-products grid). Shared by the
   // electronics and construction/building markets.
-  const isRichDetail = item.detailVariant === 'electronics' || item.detailVariant === 'construction';
+  const isRichDetail = item.detailVariant === 'electronics' || item.detailVariant === 'construction' || item.detailVariant === 'vehicle';
 
   return (
     <div
@@ -34966,7 +35410,26 @@ const ItemDetailsModal = ({
                   {averageRating || 'New'}
                 </span>
                 <span>{reviews.length ? `${reviews.length} public review${reviews.length === 1 ? '' : 's'}` : 'No public reviews yet'}</span>
+                {item.viewCount ? (
+                  <span className="inline-flex items-center gap-1">
+                    <Eye className="h-4 w-4" />
+                    {item.viewCount.toLocaleString()} views
+                  </span>
+                ) : null}
               </div>
+              {item.badges?.length ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {item.badges.map((badge) => {
+                    const BadgeIcon = MOBILITY_BADGE_ICON[badge] || CheckCircle2;
+                    return (
+                      <span key={badge} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-1 text-xs font-semibold text-[var(--svs-text)]">
+                        <BadgeIcon className="h-3.5 w-3.5 text-[var(--svs-primary)]" />
+                        {badge}
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : null}
               {hasSellerIdentity ? (
                 <div className="mt-3 rounded-lg border border-[#d6e6f5] bg-[#f8fbff] px-3 py-2 text-xs text-slate-600">
                   <p className="font-semibold text-[#0f6674]">Listed by: {sellerDisplayName}</p>
@@ -35174,6 +35637,71 @@ const ItemDetailsModal = ({
                     </li>
                   ))}
                 </ul>
+              </div>
+            ) : null}
+            {item.features?.length ? (
+              <div>
+                <h3 className="text-lg font-bold text-[var(--svs-primary-strong)]">Features</h3>
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {item.features.map((feature, idx) => {
+                    const FeatureIcon = MOBILITY_FEATURE_ICON[feature.icon] || Sparkles;
+                    return (
+                      <div key={idx} className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4">
+                        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--svs-primary)]/10 text-[var(--svs-primary-strong)]">
+                          <FeatureIcon className="h-5 w-5" />
+                        </span>
+                        <h4 className="mt-3 text-sm font-bold text-[var(--svs-text)]">{feature.title}</h4>
+                        <p className="mt-1 text-[13px] leading-relaxed text-slate-600">{feature.description}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+            {item.dealer ? (
+              <div>
+                <h3 className="text-lg font-bold text-[var(--svs-primary-strong)]">Dealer Information</h3>
+                <div className="mt-3 flex flex-col items-start gap-4 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 sm:flex-row sm:items-center">
+                  <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-[var(--svs-primary)]/10 text-base font-bold text-[var(--svs-primary-strong)]">
+                    <Store className="h-5 w-5" />
+                  </span>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-[var(--svs-text)]">{item.dealer.name}</p>
+                    <p className="mt-1 flex items-center gap-1.5 text-xs text-[var(--svs-muted)]">
+                      <MapPin className="h-3.5 w-3.5 shrink-0 text-[var(--svs-primary)]" />
+                      {item.dealer.location}
+                    </p>
+                    <p className="mt-1 flex items-center gap-1 text-xs text-amber-500">
+                      <Star className="h-3.5 w-3.5 fill-amber-400" />
+                      <span className="font-semibold text-[var(--svs-text)]">{item.dealer.rating}</span>
+                      <span className="text-[var(--svs-muted)]">({item.dealer.reviewCount} reviews)</span>
+                    </p>
+                  </div>
+                  {canChatSeller ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const itemKey = item.key || item.id;
+                        onClose?.();
+                        navigate('/support/chat', {
+                          state: {
+                            recipientEmail: sellerChatEmail,
+                            recipientName: sellerChatName,
+                            recipientRole: 'seller',
+                            issueType: 'Item Enquiry',
+                            itemKey,
+                            itemTitle: item.title,
+                            itemImage: item.image || item.images?.[0] || '',
+                            itemLink: `/mobility-vehicles?item=${itemKey}`,
+                          },
+                        });
+                      }}
+                      className="w-full shrink-0 rounded-lg bg-[var(--svs-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-[var(--svs-primary-strong)] sm:w-auto"
+                    >
+                      Contact Dealer
+                    </button>
+                  ) : null}
+                </div>
               </div>
             ) : null}
           </div>
