@@ -72,6 +72,9 @@ import {
   Forward,
   CheckCheck,
   Timer,
+  Fuel,
+  Cog,
+  Gauge,
 } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -3877,42 +3880,343 @@ const livestockItems = [
   },
 ];
 
+// Stock photos reused per category are the same ones already verified (by
+// directly viewing each image, not just trusting search snippets) for that
+// category's "Browse by Category" tile — see `mobilityCategoryShowcase`
+// above. Reusing them here for every listing in that category guarantees
+// the photo always actually matches the vehicle type, even though several
+// listings then share one photo (acceptable for catalog/demo data; real
+// seller listings bring their own photos via `getSellerItemsForMarket`).
+const MOBILITY_IMAGE = {
+  car: 'https://images.pexels.com/photos/170811/pexels-photo-170811.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  suv: 'https://images.pexels.com/photos/14776590/pexels-photo-14776590.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  motorcycle: 'https://images.pexels.com/photos/2116475/pexels-photo-2116475.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  pickup: 'https://images.pexels.com/photos/2994335/pexels-photo-2994335.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  commercial: 'https://images.pexels.com/photos/6563903/pexels-photo-6563903.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  electric: 'https://images.pexels.com/photos/110844/pexels-photo-110844.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  luxury: 'https://images.pexels.com/photos/4692088/pexels-photo-4692088.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  parts: 'https://images.pexels.com/photos/5158155/pexels-photo-5158155.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  rail: 'https://images.pexels.com/photos/302428/pexels-photo-302428.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  aircraft: 'https://images.pexels.com/photos/46148/aircraft-jet-landing-cloud-46148.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  bicycle: 'https://images.pexels.com/photos/100582/pexels-photo-100582.jpeg?auto=compress&cs=tinysrgb&w=1200',
+};
+
 const mobilityVehiclesItems = [
+  // ---- Cars ----
   {
-    id: 'mv1',
-    title: 'CityCruise Sedan 1.8 Auto',
+    id: 'mv-car-1',
+    title: 'Toyota Corolla Altis 2024',
     category: 'Car',
-    specification: '2022 model • 48,000 km • Automatic',
+    brand: 'Toyota',
+    fuelType: 'Petrol',
+    transmission: 'Automatic',
+    modelYear: 2024,
+    specification: '2024 model • 10,200 km • Petrol • Automatic',
     price: '289000',
-    image:
-      'https://images.pexels.com/photos/170811/pexels-photo-170811.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    image: 'https://images.pexels.com/photos/37620310/pexels-photo-37620310.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
+  {
+    id: 'mv-car-2',
+    title: 'Honda City ZX CVT 2024',
+    category: 'Car',
+    brand: 'Honda',
+    fuelType: 'Petrol',
+    transmission: 'CVT',
+    modelYear: 2024,
+    specification: '2024 model • 8,400 km • Petrol • CVT',
+    price: '265000',
+    image: 'https://images.pexels.com/photos/16350068/pexels-photo-16350068.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'mv-car-3',
+    title: 'Maruti Suzuki Baleno ZXI+ 2024',
+    category: 'Car',
+    brand: 'Maruti Suzuki',
+    fuelType: 'Petrol',
+    transmission: 'Manual',
+    modelYear: 2024,
+    specification: '2024 model • 6,100 km • Petrol • Manual',
+    price: '198000',
+    image: 'https://images.pexels.com/photos/18670317/pexels-photo-18670317.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'mv-car-4',
+    title: 'Volkswagen Polo Comfortline 2023',
+    category: 'Car',
+    brand: 'Volkswagen',
+    fuelType: 'Diesel',
+    transmission: 'Manual',
+    modelYear: 2023,
+    specification: '2023 model • 22,000 km • Diesel • Manual',
+    price: '232000',
+    image: 'https://images.pexels.com/photos/26834312/pexels-photo-26834312.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  // ---- SUVs ----
+  {
+    id: 'mv-suv-1',
+    title: 'Hyundai Creta SX(O) 2024',
+    category: 'SUV',
+    brand: 'Hyundai',
+    fuelType: 'Diesel',
+    transmission: 'Automatic',
+    modelYear: 2024,
+    specification: '2024 model • 9,800 km • Diesel • Automatic',
+    price: '398000',
+    image: 'https://images.pexels.com/photos/1519192/pexels-photo-1519192.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'mv-suv-2',
+    title: 'Maruti Suzuki Brezza Alpha CVT 2024',
+    category: 'SUV',
+    brand: 'Maruti Suzuki',
+    fuelType: 'Petrol',
+    transmission: 'CVT',
+    modelYear: 2024,
+    specification: '2024 model • 7,300 km • Petrol • CVT',
+    price: '342000',
+    image: 'https://images.pexels.com/photos/19655540/pexels-photo-19655540.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'mv-suv-3',
+    title: 'Mahindra Thar LX AT 4WD 2024',
+    category: 'SUV',
+    brand: 'Mahindra',
+    fuelType: 'Diesel',
+    transmission: 'Automatic',
+    modelYear: 2024,
+    specification: '2024 model • 5,600 km • Diesel • Automatic • 4WD',
+    price: '410000',
+    image: 'https://images.pexels.com/photos/23939454/pexels-photo-23939454.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'mv-suv-4',
+    title: 'Toyota Fortuner 2023',
+    category: 'SUV',
+    brand: 'Toyota',
+    fuelType: 'Diesel',
+    transmission: 'Manual',
+    modelYear: 2023,
+    specification: '2023 model • 31,500 km • Diesel • Manual',
+    price: '585000',
+    image: 'https://images.pexels.com/photos/18240248/pexels-photo-18240248.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  // ---- Motorcycles ----
   {
     id: 'mv2',
     title: 'StormRider 650 Touring Bike',
     category: 'Motorcycle',
-    specification: 'ABS • 12,400 km • Touring ready',
+    brand: 'StormRider',
+    fuelType: 'Petrol',
+    transmission: 'Manual',
+    modelYear: 2023,
+    specification: 'ABS • 12,400 km • Petrol • Manual • Touring ready',
     price: '118000',
-    image:
-      'https://images.pexels.com/photos/2116475/pexels-photo-2116475.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    image: MOBILITY_IMAGE.motorcycle,
   },
+  {
+    id: 'mv-moto-2',
+    title: 'Royal Enfield Classic 350 2024',
+    category: 'Motorcycle',
+    brand: 'Royal Enfield',
+    fuelType: 'Petrol',
+    transmission: 'Manual',
+    modelYear: 2024,
+    specification: '2024 model • 3,200 km • Petrol • Manual',
+    price: '76000',
+    image: 'https://images.pexels.com/photos/14935456/pexels-photo-14935456.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'mv-moto-3',
+    title: 'Honda Activa 6G Scooter 2024',
+    category: 'Motorcycle',
+    brand: 'Honda',
+    fuelType: 'Petrol',
+    transmission: 'Automatic',
+    modelYear: 2024,
+    specification: '2024 model • 1,800 km • Petrol • Automatic',
+    price: '32000',
+    image: 'https://images.pexels.com/photos/2044873/pexels-photo-2044873.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  // ---- Pickup Trucks ----
+  {
+    id: 'mv-pickup-1',
+    title: 'Ford Ranger Wildtrak 2023',
+    category: 'Pickup Truck',
+    brand: 'Ford',
+    fuelType: 'Diesel',
+    transmission: 'Automatic',
+    modelYear: 2023,
+    specification: '2023 model • 28,000 km • Diesel • Automatic • 4x4',
+    price: '612000',
+    image: 'https://images.pexels.com/photos/11372241/pexels-photo-11372241.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'mv-pickup-2',
+    title: 'Toyota Hilux Legend 2024',
+    category: 'Pickup Truck',
+    brand: 'Toyota',
+    fuelType: 'Diesel',
+    transmission: 'Manual',
+    modelYear: 2024,
+    specification: '2024 model • 14,500 km • Diesel • Manual • 4x4',
+    price: '655000',
+    image: 'https://images.pexels.com/photos/19143577/pexels-photo-19143577.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'mv-pickup-3',
+    title: 'Isuzu D-Max 2022',
+    category: 'Pickup Truck',
+    brand: 'Isuzu',
+    fuelType: 'Diesel',
+    transmission: 'Automatic',
+    modelYear: 2022,
+    specification: '2022 model • 41,000 km • Diesel • Automatic',
+    price: '478000',
+    image: 'https://images.pexels.com/photos/8438569/pexels-photo-8438569.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  // ---- Commercial Vehicles ----
   {
     id: 'mv3',
     title: 'MetroLink Passenger Coach',
     category: 'Rail',
     specification: '84 seats • Refurbished interior • Fleet unit',
     price: '4900000',
-    image:
-      'https://images.pexels.com/photos/302428/pexels-photo-302428.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    image: MOBILITY_IMAGE.rail,
   },
+  {
+    id: 'mv-commercial-1',
+    title: 'Isuzu FRR500 Cargo Truck 2022',
+    category: 'Commercial Vehicle',
+    brand: 'Isuzu',
+    fuelType: 'Diesel',
+    transmission: 'Manual',
+    modelYear: 2022,
+    specification: '2022 model • 8-ton payload • Diesel • Manual',
+    price: '985000',
+    image: 'https://images.pexels.com/photos/38199714/pexels-photo-38199714.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'mv-commercial-2',
+    title: 'Mercedes-Benz Sprinter Panel Van 2023',
+    category: 'Commercial Vehicle',
+    brand: 'Mercedes-Benz',
+    fuelType: 'Diesel',
+    transmission: 'Automatic',
+    modelYear: 2023,
+    specification: '2023 model • 19,000 km • Diesel • Automatic',
+    price: '745000',
+    image: 'https://images.pexels.com/photos/19871522/pexels-photo-19871522.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  // ---- Electric Vehicles ----
+  {
+    id: 'mv-ev-1',
+    title: 'Tesla Model 3 2024',
+    category: 'Electric Vehicle',
+    brand: 'Tesla',
+    fuelType: 'Electric',
+    transmission: 'Automatic',
+    modelYear: 2024,
+    specification: '2024 model • 12,000 km • Electric • Automatic • 580 km range',
+    price: '720000',
+    image: 'https://images.pexels.com/photos/9300916/pexels-photo-9300916.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'mv-ev-2',
+    title: 'Nissan Leaf 2023',
+    category: 'Electric Vehicle',
+    brand: 'Nissan',
+    fuelType: 'Electric',
+    transmission: 'Automatic',
+    modelYear: 2023,
+    specification: '2023 model • 18,500 km • Electric • Automatic • 270 km range',
+    price: '465000',
+    image: 'https://images.pexels.com/photos/15223537/pexels-photo-15223537.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'mv-ev-3',
+    title: 'Toyota Prius Hybrid 2022',
+    category: 'Electric Vehicle',
+    brand: 'Toyota',
+    fuelType: 'Hybrid',
+    transmission: 'CVT',
+    modelYear: 2022,
+    specification: '2022 model • 35,000 km • Hybrid • CVT',
+    price: '385000',
+    image: 'https://images.pexels.com/photos/17447894/pexels-photo-17447894.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  // ---- Luxury Cars ----
+  {
+    id: 'mv-luxury-1',
+    title: 'BMW 3 Series Luxury Line 2024',
+    category: 'Luxury Car',
+    brand: 'BMW',
+    fuelType: 'Petrol',
+    transmission: 'Automatic',
+    modelYear: 2024,
+    specification: '2024 model • 6,800 km • Petrol • Automatic',
+    price: '895000',
+    image: 'https://images.pexels.com/photos/28284077/pexels-photo-28284077.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'mv-luxury-2',
+    title: 'Mercedes-Benz C-Class AMG Sport 2023',
+    category: 'Luxury Car',
+    brand: 'Mercedes-Benz',
+    fuelType: 'Petrol',
+    transmission: 'Automatic',
+    modelYear: 2023,
+    specification: '2023 model • 15,200 km • Petrol • Automatic',
+    price: '978000',
+    image: 'https://images.pexels.com/photos/14775845/pexels-photo-14775845.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'mv-luxury-3',
+    title: 'Audi A4 Sport 2022',
+    category: 'Luxury Car',
+    brand: 'Audi',
+    fuelType: 'Diesel',
+    transmission: 'Automatic',
+    modelYear: 2022,
+    specification: '2022 model • 27,400 km • Diesel • Automatic',
+    price: '742000',
+    image: MOBILITY_IMAGE.luxury,
+  },
+  // ---- Spare Parts ----
+  {
+    id: 'mv-part-1',
+    title: 'Bosch Premium Brake Pad Set (Universal)',
+    category: 'Spare Part',
+    brand: 'Bosch',
+    specification: 'Front + rear set • Ceramic compound • Universal fitment',
+    price: '850',
+    image: MOBILITY_IMAGE.parts,
+  },
+  {
+    id: 'mv-part-2',
+    title: 'Michelin All-Terrain Tire Set (4-pack)',
+    category: 'Spare Part',
+    brand: 'Michelin',
+    specification: '4-pack • All-terrain tread • 17" rim fitment',
+    price: '4200',
+    image: MOBILITY_IMAGE.parts,
+  },
+  {
+    id: 'mv-part-3',
+    title: 'K&N Performance Air Filter Kit',
+    category: 'Spare Part',
+    brand: 'K&N',
+    specification: 'Washable • Reusable • Universal fitment',
+    price: '650',
+    image: MOBILITY_IMAGE.parts,
+  },
+  // ---- Other ----
   {
     id: 'mv4',
     title: 'AeroSwift Trainer Aircraft',
     category: 'Aircraft',
     specification: '2-seater • 2020 avionics package • Hangared',
     price: '1850000',
-    image:
-      'https://images.pexels.com/photos/46148/aircraft-jet-landing-cloud-46148.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    image: MOBILITY_IMAGE.aircraft,
   },
   {
     id: 'mv5',
@@ -3920,10 +4224,93 @@ const mobilityVehiclesItems = [
     category: 'Bicycle',
     specification: '27-speed • Carbon frame • Trail setup',
     price: '42000',
-    image:
-      'https://images.pexels.com/photos/100582/pexels-photo-100582.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    image: MOBILITY_IMAGE.bicycle,
   },
 ];
+
+// "Browse by category" tiles on the Mobility and Vehicles Exchange landing
+// page. `match` tokens are matched against each listing's category/title
+// (case-insensitive substring) to filter the listings grid below. `slug`
+// is the route segment for that category's dedicated listing page
+// (/mobility-vehicles/:slug).
+const mobilityCategoryShowcase = [
+  {
+    slug: 'cars',
+    name: 'Cars',
+    description: 'Passenger vehicles, commercial cars, and automotive solutions',
+    image: 'https://images.pexels.com/photos/170811/pexels-photo-170811.jpeg?auto=compress&cs=tinysrgb&w=800',
+    match: ['car', 'sedan'],
+  },
+  {
+    slug: 'suvs',
+    name: 'SUVs',
+    description: 'SUVs, crossovers, off-road vehicles, and driving essentials',
+    image: 'https://images.pexels.com/photos/14776590/pexels-photo-14776590.jpeg?auto=compress&cs=tinysrgb&w=800',
+    match: ['suv', 'crossover'],
+  },
+  {
+    slug: 'motorcycles',
+    name: 'Motorcycles',
+    description: 'Motorcycles, scooters, and two-wheeler essentials',
+    image: 'https://images.pexels.com/photos/2116475/pexels-photo-2116475.jpeg?auto=compress&cs=tinysrgb&w=800',
+    match: ['motorcycle', 'scooter', 'bike'],
+  },
+  {
+    slug: 'pickup-trucks',
+    name: 'Pickup Trucks',
+    description: 'Pickup trucks, utility vehicles, cargo solutions, and work-ready rides',
+    image: 'https://images.pexels.com/photos/2994335/pexels-photo-2994335.jpeg?auto=compress&cs=tinysrgb&w=800',
+    match: ['pickup', 'utility'],
+  },
+  {
+    slug: 'commercial-vehicles',
+    name: 'Commercial Vehicles',
+    description: 'Commercial vehicles, trucks, buses, and transport solutions',
+    image: 'https://images.pexels.com/photos/6563903/pexels-photo-6563903.jpeg?auto=compress&cs=tinysrgb&w=800',
+    match: ['commercial', 'rail', 'bus', 'fleet', 'truck'],
+  },
+  {
+    slug: 'electric-vehicles',
+    name: 'Electric Vehicles',
+    description: 'Electric vehicles, batteries, and charging solutions',
+    image: 'https://images.pexels.com/photos/110844/pexels-photo-110844.jpeg?auto=compress&cs=tinysrgb&w=800',
+    match: ['electric', 'ev', 'hybrid'],
+  },
+  {
+    slug: 'luxury-cars',
+    name: 'Luxury Cars',
+    description: 'Prestige vehicles, sports cars, and refined driving experience',
+    image: 'https://images.pexels.com/photos/4692088/pexels-photo-4692088.jpeg?auto=compress&cs=tinysrgb&w=800',
+    match: ['luxury', 'sport'],
+  },
+  {
+    slug: 'spare-parts',
+    name: 'Spare Parts',
+    description: 'Engine parts, tires, brakes, and automotive solutions',
+    image: 'https://images.pexels.com/photos/5158155/pexels-photo-5158155.jpeg?auto=compress&cs=tinysrgb&w=800',
+    match: ['part', 'spare', 'tire', 'accessory'],
+  },
+];
+
+// Best-effort attribute extraction from free-text `specification` strings
+// (e.g. "2022 model • 48,000 km • Automatic") for listings that don't carry
+// explicit `fuelType` / `transmission` / `modelYear` fields (e.g. seller
+// listings) — catalog items below set those fields directly, which this
+// checks first since it's exact rather than a guess.
+const MOBILITY_FUEL_OPTIONS = ['Petrol', 'Diesel', 'Electric', 'Hybrid'];
+const MOBILITY_TRANSMISSION_OPTIONS = ['Automatic', 'Manual', 'CVT'];
+const detectMobilityAttribute = (item, options) => {
+  if (item.fuelType && options.includes(item.fuelType)) return item.fuelType;
+  if (item.transmission && options.includes(item.transmission)) return item.transmission;
+  const haystack = `${item.specification || ''} ${item.description || ''} ${item.title || ''}`.toLowerCase();
+  return options.find((option) => haystack.includes(option.toLowerCase())) || null;
+};
+const detectMobilityModelYear = (item) => {
+  if (item.modelYear) return String(item.modelYear);
+  const haystack = `${item.specification || ''} ${item.title || ''}`;
+  const match = haystack.match(/\b(19|20)\d{2}\b/);
+  return match ? match[0] : null;
+};
 
 const beautyFitnessSportsItems = [
   {
@@ -16332,19 +16719,377 @@ const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
 
 const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
+  const { categorySlug = '' } = useParams();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'mobilityVehicles'), ...mobilityVehiclesItems], [sellerItems]);
+  const activeCategory = mobilityCategoryShowcase.find((category) => category.slug === categorySlug) || null;
+
+  // ---- Landing page ("Browse by Category") state ----
+  const [showAllListings, setShowAllListings] = useState(false);
+  const visibleListings = showAllListings ? marketItems : marketItems.slice(0, 6);
+
+  // ---- Category detail page state ----
+  const [categorySearchQuery, setCategorySearchQuery] = useState('');
+  const [selectedVehicleTypes, setSelectedVehicleTypes] = useState([]);
+  const [selectedBrands, setSelectedBrands] = useState([]);
+  const [selectedFuelTypes, setSelectedFuelTypes] = useState([]);
+  const [selectedTransmissions, setSelectedTransmissions] = useState([]);
+  const [selectedModelYears, setSelectedModelYears] = useState([]);
+  const [priceRange, setPriceRange] = useState([0, 0]);
+  const [showAllCategoryListings, setShowAllCategoryListings] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(false);
+  const featuredScrollRef = useRef(null);
+
+  // Reset category-specific filters whenever the category changes (the
+  // route param changes without unmounting this component).
+  useEffect(() => {
+    setCategorySearchQuery('');
+    setSelectedVehicleTypes([]);
+    setSelectedBrands([]);
+    setSelectedFuelTypes([]);
+    setSelectedTransmissions([]);
+    setSelectedModelYears([]);
+    setShowAllCategoryListings(false);
+  }, [categorySlug]);
+
+  const categoryItems = useMemo(() => {
+    if (!activeCategory) return [];
+    return marketItems.filter((item) => {
+      const haystack = `${item.category || ''} ${item.title || ''}`.toLowerCase();
+      return activeCategory.match.some((token) => haystack.includes(token));
+    });
+  }, [marketItems, activeCategory]);
+
+  // Filter options are derived only from data actually present (same
+  // approach GroceriesPage uses) so the sidebar never shows a clickable
+  // option with zero possible matches.
+  const vehicleTypeOptions = useMemo(() => Array.from(new Set(categoryItems.map((item) => item.category).filter(Boolean))), [categoryItems]);
+  const brandOptions = useMemo(() => Array.from(new Set(categoryItems.map((item) => item.brand).filter(Boolean))), [categoryItems]);
+  const fuelOptions = useMemo(() => Array.from(new Set(categoryItems.map((item) => detectMobilityAttribute(item, MOBILITY_FUEL_OPTIONS)).filter(Boolean))), [categoryItems]);
+  const transmissionOptions = useMemo(() => Array.from(new Set(categoryItems.map((item) => detectMobilityAttribute(item, MOBILITY_TRANSMISSION_OPTIONS)).filter(Boolean))), [categoryItems]);
+  const modelYearOptions = useMemo(() => Array.from(new Set(categoryItems.map(detectMobilityModelYear).filter(Boolean))).sort((a, b) => Number(b) - Number(a)), [categoryItems]);
+  const categoryPriceMax = useMemo(() => {
+    const max = categoryItems.reduce((highest, item) => Math.max(highest, getNumericPriceValue(item.price, 0, item.currency || null)), 0);
+    return Math.max(100, Math.ceil(max));
+  }, [categoryItems]);
+
+  useEffect(() => {
+    setPriceRange((prev) => (prev[1] !== categoryPriceMax ? [Math.min(prev[0], categoryPriceMax), categoryPriceMax] : prev));
+  }, [categoryPriceMax]);
+
+  const toggleArrayValue = (setter, value) => {
+    setter((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
+  };
+
+  const filteredCategoryItems = useMemo(() => {
+    const q = categorySearchQuery.trim().toLowerCase();
+    return categoryItems.filter((item) => {
+      if (selectedVehicleTypes.length && !selectedVehicleTypes.includes(item.category)) return false;
+      if (selectedBrands.length && !selectedBrands.includes(item.brand)) return false;
+      if (selectedFuelTypes.length) {
+        const fuel = detectMobilityAttribute(item, MOBILITY_FUEL_OPTIONS);
+        if (!fuel || !selectedFuelTypes.includes(fuel)) return false;
+      }
+      if (selectedTransmissions.length) {
+        const transmission = detectMobilityAttribute(item, MOBILITY_TRANSMISSION_OPTIONS);
+        if (!transmission || !selectedTransmissions.includes(transmission)) return false;
+      }
+      if (selectedModelYears.length) {
+        const year = detectMobilityModelYear(item);
+        if (!year || !selectedModelYears.includes(year)) return false;
+      }
+      const price = getNumericPriceValue(item.price, 0, item.currency || null);
+      if (price < priceRange[0] || price > priceRange[1]) return false;
+      if (q && !String(item.title || '').toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [categoryItems, selectedVehicleTypes, selectedBrands, selectedFuelTypes, selectedTransmissions, selectedModelYears, priceRange, categorySearchQuery]);
+
+  const visibleCategoryListings = showAllCategoryListings ? filteredCategoryItems : filteredCategoryItems.slice(0, 6);
+  const featuredItems = categoryItems.slice(0, 6);
+
   const buildCartItem = (item) => createCartItem({
     ...item,
-    route: '/mobility-vehicles',
+    route: activeCategory ? `/mobility-vehicles/${activeCategory.slug}` : '/mobility-vehicles',
     marketName: t('markets.mobilityVehicles'),
     details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Transport listing'}`,
   });
   const buildWishlistItem = (item) => createWishlistItem({
     ...item,
-    route: '/mobility-vehicles',
+    route: activeCategory ? `/mobility-vehicles/${activeCategory.slug}` : '/mobility-vehicles',
     marketName: t('markets.mobilityVehicles'),
     details: `${item.category || 'Seller item'} • ${item.specification || item.sellerName || 'Transport listing'}`,
   });
+  const openItemDetails = (item) => {
+    const wishlistItem = buildWishlistItem(item);
+    onOpenItemDetails?.({
+      title: getTranslatedValue(t, item.titleKey, item.title),
+      image: item.image,
+      images: item.images || (item.image ? [item.image] : []),
+      ...getItemDetailSizeProps(item),
+      marketName: t('markets.mobilityVehicles'),
+      details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Transport listing'}`,
+      priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
+      cartItem: buildCartItem(item),
+      wishlistItem,
+    });
+  };
+
+  const renderVehicleCard = (item, { compact = false } = {}) => {
+    const itemTitle = getTranslatedValue(t, item.titleKey, item.title);
+    const fuel = detectMobilityAttribute(item, MOBILITY_FUEL_OPTIONS);
+    const transmission = detectMobilityAttribute(item, MOBILITY_TRANSMISSION_OPTIONS);
+    const itemReviewKey = getCollectionItemId(activeCategory ? `/mobility-vehicles/${activeCategory.slug}` : '/mobility-vehicles', item.id);
+    const reviewSummary = getProductReviewSummary(productReviewSummaryMap, itemReviewKey);
+    const averageRatingLabel = reviewSummary.reviewCount ? reviewSummary.averageRating.toFixed(1) : '0.0';
+    const isWishlisted = wishlistItemIds.includes(itemReviewKey);
+    return (
+      <article
+        key={item.id}
+        id={`listing-${item.id}`}
+        className={`group flex flex-col overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-[0_4px_10px_rgba(0,0,0,0.06)] transition hover:-translate-y-1 hover:shadow-[0_14px_28px_rgba(0,168,232,0.18)] ${compact ? 'w-[230px] shrink-0 snap-start' : ''}`}
+        role="button"
+        tabIndex={0}
+        onClick={() => openItemDetails(item)}
+        onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openItemDetails(item); } }}
+      >
+        <div className="relative aspect-[4/3] w-full overflow-hidden">
+          <img src={item.image} alt={itemTitle} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" loading="lazy" />
+          <button
+            type="button"
+            onClick={(event) => { event.stopPropagation(); onToggleWishlist(buildWishlistItem(item)); }}
+            aria-pressed={isWishlisted}
+            aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+            className={`absolute right-2 top-2 rounded-full border border-[var(--svs-border)] bg-white/90 p-1.5 text-[#e11d48] shadow ${isWishlisted ? 'bg-rose-50' : 'hover:bg-[#e0f7fa]'}`}
+          >
+            <Heart className={`h-3.5 w-3.5 ${isWishlisted ? 'fill-current' : ''}`} />
+          </button>
+        </div>
+        <div className="flex flex-1 flex-col p-3">
+          <h3 className="text-sm font-bold leading-tight text-[#0f6674]">{itemTitle}</h3>
+          <p className="mt-1 text-[11px] font-bold text-[#0f6674]"><SalePrice price={item.price} currency={item.currency} /></p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--svs-muted)]">
+            {fuel ? <span className="inline-flex items-center gap-1"><Fuel className="h-3 w-3" />{fuel}</span> : null}
+            {transmission ? <span className="inline-flex items-center gap-1"><Cog className="h-3 w-3" />{transmission}</span> : null}
+            {!fuel && !transmission && item.specification ? <span className="inline-flex items-center gap-1"><Gauge className="h-3 w-3" />{item.specification}</span> : null}
+          </div>
+          <div className="mt-1.5 flex items-center gap-1 text-[11px] text-amber-500">
+            <Star className="h-3 w-3 fill-current" />
+            <span className="font-semibold text-[var(--svs-text)]">{averageRatingLabel}</span>
+            <span className="text-[var(--svs-muted)]">({reviewSummary.reviewCount} review{reviewSummary.reviewCount === 1 ? '' : 's'})</span>
+          </div>
+          <button
+            type="button"
+            onClick={(event) => { event.stopPropagation(); openItemDetails(item); }}
+            className={`${cudyBluePrimaryButtonClassName} mt-3 w-full rounded-full bg-[var(--svs-primary)] py-2 text-xs font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}
+          >
+            View Details
+          </button>
+        </div>
+      </article>
+    );
+  };
+
+  if (categorySlug && !activeCategory) {
+    return <Navigate to="/mobility-vehicles" replace />;
+  }
+
+  if (activeCategory) {
+    return (
+      <PageFrame
+        title={`${activeCategory.name} Market Listing`}
+        subtitle="Explore the best listings with price information, vehicle information, and verified details from trusted dealers and sellers to help you find the perfect vehicle with confidence."
+        heroImage={activeCategory.image}
+        heroMediaClassName="scale-105"
+        heroOverlayClassName="bg-gradient-to-r from-black/80 via-black/60 to-black/45"
+        sectionClassName="px-0 pt-0 pb-8 sm:pt-0 sm:pb-10"
+        heroWrapperClassName="w-full max-w-none"
+        contentWrapperClassName="mx-auto w-full max-w-7xl px-4"
+        heroContainerClassName="rounded-none border-x-0 border-t-0 p-0 shadow-none"
+        heroContentClassName="flex min-h-[220px] flex-col items-center justify-center px-6 py-8 text-center sm:min-h-[260px] sm:px-8 sm:py-10"
+        titleClassName="text-xl text-white sm:text-2xl"
+        subtitleClassName="mt-2 max-w-2xl text-xs text-white/90 sm:text-sm"
+      >
+        <div className="mb-5">
+          <Link to="/mobility-vehicles" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--svs-primary-strong)] hover:underline">
+            <ChevronLeft className="h-3.5 w-3.5" /> Back to Mobility and Vehicles Exchange
+          </Link>
+        </div>
+        <div className="mb-5">
+          <div className="flex items-center gap-2 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-2.5 shadow-sm">
+            <Search className="h-4 w-4 text-[var(--svs-muted)]" />
+            <input
+              type="search"
+              value={categorySearchQuery}
+              onChange={(event) => setCategorySearchQuery(event.target.value)}
+              placeholder={`Search ${activeCategory.name.toLowerCase()}, brands, or sellers...`}
+              className="w-full bg-transparent text-sm text-[var(--svs-text)] outline-none placeholder:text-[var(--svs-muted)]"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-4 lg:flex-row lg:gap-8">
+          {isFiltersOpen ? (
+            <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setIsFiltersOpen(false)} role="presentation" />
+          ) : null}
+
+          <div className={`${isFiltersOpen ? 'fixed left-0 top-0 z-50 flex h-full w-[320px] max-w-[85vw] flex-col overflow-y-auto bg-white p-4 shadow-2xl sm:w-[340px]' : 'hidden'} ${isDesktopFiltersHidden ? 'lg:hidden' : 'lg:block lg:w-[260px] lg:shrink-0 lg:static lg:h-auto lg:p-0 lg:shadow-none'}`}>
+            <button type="button" onClick={() => setIsFiltersOpen(false)} className="mb-3 self-end rounded-full p-1.5 text-[var(--svs-muted)] hover:bg-slate-100 lg:hidden" aria-label="Close filters">
+              <X className="h-5 w-5" />
+            </button>
+            <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-sm">
+              {vehicleTypeOptions.length ? (
+                <div className="mb-5">
+                  <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">{activeCategory.name.replace(/s$/, '')} Type</h3>
+                  <div className="flex flex-col gap-2">
+                    {vehicleTypeOptions.map((option) => (
+                      <label key={option} className="flex items-center gap-2 text-sm text-[var(--svs-text)]">
+                        <input type="checkbox" checked={selectedVehicleTypes.includes(option)} onChange={() => toggleArrayValue(setSelectedVehicleTypes, option)} className="accent-[var(--svs-primary)]" />
+                        {option}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {brandOptions.length ? (
+                <div className="mb-5">
+                  <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Brand</h3>
+                  <div className="flex flex-col gap-2">
+                    {brandOptions.map((option) => (
+                      <label key={option} className="flex items-center gap-2 text-sm text-[var(--svs-text)]">
+                        <input type="checkbox" checked={selectedBrands.includes(option)} onChange={() => toggleArrayValue(setSelectedBrands, option)} className="accent-[var(--svs-primary)]" />
+                        {option}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {fuelOptions.length ? (
+                <div className="mb-5">
+                  <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Fuel Type</h3>
+                  <div className="flex flex-col gap-2">
+                    {fuelOptions.map((option) => (
+                      <label key={option} className="flex items-center gap-2 text-sm text-[var(--svs-text)]">
+                        <input type="checkbox" checked={selectedFuelTypes.includes(option)} onChange={() => toggleArrayValue(setSelectedFuelTypes, option)} className="accent-[var(--svs-primary)]" />
+                        {option}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {transmissionOptions.length ? (
+                <div className="mb-5">
+                  <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Transmission</h3>
+                  <div className="flex flex-col gap-2">
+                    {transmissionOptions.map((option) => (
+                      <label key={option} className="flex items-center gap-2 text-sm text-[var(--svs-text)]">
+                        <input type="checkbox" checked={selectedTransmissions.includes(option)} onChange={() => toggleArrayValue(setSelectedTransmissions, option)} className="accent-[var(--svs-primary)]" />
+                        {option}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              <div className="mb-5">
+                <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Price Range</h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[0], _fxState.buyerCurrency)}</span>
+                  <input type="range" min={0} max={categoryPriceMax} value={priceRange[0]} onChange={(event) => setPriceRange([Number(event.target.value), priceRange[1]])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
+                  <input type="range" min={0} max={categoryPriceMax} value={priceRange[1]} onChange={(event) => setPriceRange([priceRange[0], Number(event.target.value)])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
+                  <span className="text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[1], _fxState.buyerCurrency)}</span>
+                </div>
+              </div>
+              {modelYearOptions.length ? (
+                <div className="mb-5">
+                  <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Model Year</h3>
+                  <div className="flex flex-col gap-2">
+                    {modelYearOptions.map((option) => (
+                      <label key={option} className="flex items-center gap-2 text-sm text-[var(--svs-text)]">
+                        <input type="checkbox" checked={selectedModelYears.includes(option)} onChange={() => toggleArrayValue(setSelectedModelYears, option)} className="accent-[var(--svs-primary)]" />
+                        {option}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => setIsFiltersOpen(false)}
+                className={`${cudyBluePrimaryButtonClassName} w-full rounded-xl bg-[var(--svs-primary)] py-2.5 text-sm font-semibold text-white`}
+              >
+                Apply Filters
+              </button>
+            </div>
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="mb-4 flex items-center gap-2">
+              <button type="button" onClick={() => setIsFiltersOpen(true)} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--svs-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--svs-text)] lg:hidden">
+                <Filter className="h-3.5 w-3.5" /> Filters
+              </button>
+              <button type="button" onClick={() => setIsDesktopFiltersHidden((prev) => !prev)} className="hidden items-center gap-1.5 rounded-full border border-[var(--svs-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--svs-text)] lg:inline-flex">
+                <Filter className="h-3.5 w-3.5" /> {isDesktopFiltersHidden ? 'Show Filters' : 'Hide Filters'}
+              </button>
+              <p className="text-xs text-[var(--svs-muted)]">{filteredCategoryItems.length} listing{filteredCategoryItems.length === 1 ? '' : 's'}</p>
+            </div>
+
+            {visibleCategoryListings.length ? (
+              <>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {visibleCategoryListings.map((item) => renderVehicleCard(item))}
+                </div>
+                {!showAllCategoryListings && filteredCategoryItems.length > visibleCategoryListings.length ? (
+                  <div className="mt-6 flex justify-center">
+                    <button type="button" onClick={() => setShowAllCategoryListings(true)} className={`${cudyBluePrimaryButtonClassName} rounded-full bg-[var(--svs-primary-strong)] px-12 py-3 text-sm font-semibold text-white shadow-md hover:bg-[var(--svs-primary)]`}>
+                      View All
+                    </button>
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-[var(--svs-border)] bg-white px-5 py-12 text-center text-sm text-[var(--svs-muted)]">
+                No {activeCategory.name.toLowerCase()} listings match your filters yet.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {featuredItems.length ? (
+          <div className="relative mt-12 -mx-4 bg-[#0f6674] px-4 py-10 sm:-mx-8 sm:px-8">
+            <div
+              className="absolute inset-0 bg-cover bg-center opacity-30"
+              style={{ backgroundImage: `url('${MARKET_THEMES.mobilityVehicles}')` }}
+              aria-hidden="true"
+            />
+            <div className="relative">
+              <h2 className="text-center text-xl font-bold text-white sm:text-2xl">Featured Vehicles &amp; Top Picks</h2>
+              <div className="relative mt-6">
+                <div ref={featuredScrollRef} className="flex gap-4 overflow-x-auto pb-2 scroll-smooth snap-x" style={{ scrollbarWidth: 'none' }}>
+                  {featuredItems.map((item) => renderVehicleCard(item, { compact: true }))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => featuredScrollRef.current?.scrollBy({ left: -260, behavior: 'smooth' })}
+                  aria-label="Scroll left"
+                  className="absolute -left-3 top-1/2 hidden -translate-y-1/2 rounded-full bg-white p-2 text-[#0f6674] shadow-lg sm:flex"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => featuredScrollRef.current?.scrollBy({ left: 260, behavior: 'smooth' })}
+                  aria-label="Scroll right"
+                  className="absolute -right-3 top-1/2 hidden -translate-y-1/2 rounded-full bg-white p-2 text-[#0f6674] shadow-lg sm:flex"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </PageFrame>
+    );
+  }
 
   return (
   <MarketShowcase
@@ -16353,33 +17098,127 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
     subtitle={t('pageSubtitles.mobilityVehicles')}
     eyebrow={t('markets.mobilityVehicles')}
     chips={['Cars', 'Bikes', 'Commercial fleet']}
+    showTrustStrip={false}
   >
-    <CardGrid
-      items={marketItems}
-      buttonLabel={t('common.addToCart')}
-      secondaryButtonLabel={t('common.viewDetails')}
-      reviewSummaryMap={productReviewSummaryMap}
-      getItemReviewKey={(item) => getCollectionItemId('/mobility-vehicles', item.id)}
-      onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-      onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
-      onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
-      onOpenItemDetails={(item) => {
-        const wishlistItem = buildWishlistItem(item);
-        onOpenItemDetails?.({
-          title: getTranslatedValue(t, item.titleKey, item.title),
-          image: item.image,
-          images: item.images || (item.image ? [item.image] : []),
-          ...getItemDetailSizeProps(item),
-          marketName: t('markets.mobilityVehicles'),
-          details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Transport listing'}`,
-          priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
-          cartItem: buildCartItem(item),
-          wishlistItem,
-        });
-      }}
-      isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/mobility-vehicles', item.id))}
-      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.specification || item.sellerName || 'Transport listing'} • <SalePrice price={item.price} currency={item.currency} /></p>}
-    />
+    {/* ── Browse by Category ── */}
+    <div>
+      <div className="flex items-center gap-2">
+        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-[#0f6674] text-white">
+          <LayoutDashboard className="h-4 w-4" />
+        </span>
+        <h2 className="text-lg font-bold text-[var(--svs-text)] sm:text-xl">Browse by Category</h2>
+      </div>
+      <p className="mt-1 text-xs text-[var(--svs-muted)] sm:text-sm">Explore cars, motorcycles, spare parts, and automotive solutions all in one place.</p>
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+        {mobilityCategoryShowcase.map((category) => (
+          <Link
+            key={category.slug}
+            to={`/mobility-vehicles/${category.slug}`}
+            className="group flex flex-col overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] text-left shadow-[0_4px_10px_rgba(0,0,0,0.06)] transition hover:-translate-y-1 hover:shadow-[0_14px_28px_rgba(0,168,232,0.18)]"
+          >
+            <div className="relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-[#0f6674] to-[#33b9f2]">
+              <img
+                src={category.image}
+                alt={category.name}
+                loading="lazy"
+                onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
+              />
+            </div>
+            <div className="p-3 sm:p-4">
+              <p className="text-sm font-bold text-[#0f6674] sm:text-base">{category.name}</p>
+              <p className="mt-1 text-[11px] leading-snug text-[var(--svs-muted)] sm:text-xs">{category.description}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+
+    {/* ── Trending Cars & Automotive Gear ── */}
+    <div className="mt-12 text-center">
+      <h2 className="text-xl font-bold text-[var(--svs-text)] sm:text-2xl">Trending Cars &amp; Automotive Gear</h2>
+      <p className="mt-1 text-xs text-[var(--svs-muted)] sm:text-sm">Top picks in vehicles, spare parts, and accessories.</p>
+    </div>
+
+    {visibleListings.length ? (
+      <>
+        <div className="mt-6">
+          <CardGrid
+            items={visibleListings}
+            buttonLabel={t('common.addToCart')}
+            secondaryButtonLabel={t('common.viewDetails')}
+            reviewSummaryMap={productReviewSummaryMap}
+            getItemReviewKey={(item) => getCollectionItemId('/mobility-vehicles', item.id)}
+            onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+            onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
+            onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+            onOpenItemDetails={(item) => {
+              const wishlistItem = buildWishlistItem(item);
+              onOpenItemDetails?.({
+                title: getTranslatedValue(t, item.titleKey, item.title),
+                image: item.image,
+                images: item.images || (item.image ? [item.image] : []),
+                ...getItemDetailSizeProps(item),
+                marketName: t('markets.mobilityVehicles'),
+                details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Transport listing'}`,
+                priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
+                cartItem: buildCartItem(item),
+                wishlistItem,
+              });
+            }}
+            isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/mobility-vehicles', item.id))}
+            metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.specification || item.sellerName || 'Transport listing'} • <SalePrice price={item.price} currency={item.currency} /></p>}
+          />
+        </div>
+        {!showAllListings && marketItems.length > visibleListings.length ? (
+          <div className="mt-6 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setShowAllListings(true)}
+              className={`${cudyBluePrimaryButtonClassName} rounded-full bg-[var(--svs-primary-strong)] px-12 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-[var(--svs-primary)]`}
+            >
+              View All
+            </button>
+          </div>
+        ) : null}
+      </>
+    ) : (
+      <div className="mt-6 rounded-xl border border-dashed border-[var(--svs-border)] bg-white px-5 py-10 text-center text-xs text-[var(--svs-muted)]">
+        No listings yet in this category. Check back soon or browse another category above.
+      </div>
+    )}
+
+    {/* ── Why Shop With Us? ── */}
+    <div
+      className="relative -mx-4 mt-12 bg-[#0f6674] bg-cover bg-center py-12"
+      style={{ backgroundImage: `url('${MARKET_THEMES.mobilityVehicles}')` }}
+    >
+      <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/40 to-black/55" aria-hidden="true" />
+      <div className="relative mx-auto w-full max-w-6xl px-4 sm:px-6">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-white drop-shadow sm:text-3xl">Why Shop With Us?</h2>
+          <p className="mx-auto mt-2 max-w-3xl text-sm text-white/95 drop-shadow sm:text-base">
+            Trusted platform for vehicles, spare parts, and automotive solutions with seamless buying experience.
+          </p>
+        </div>
+        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { icon: ShieldCheck, title: 'Verified Sellers', body: 'Every seller is screened and listings are moderated for accuracy and fraud prevention.' },
+            { icon: Truck, title: 'Delivery Support', body: 'Ownership transfer and logistics support available across SVS-served regions.' },
+            { icon: ClipboardList, title: 'Vehicle History Verification', body: 'Service, accident, and odometer verification available before you buy.' },
+            { icon: Phone, title: '24/7 Customer Support', body: 'Round-the-clock support for every step of your buying and selling journey.' },
+          ].map((item) => (
+            <div key={item.title} className="flex flex-col items-center rounded-2xl border border-white/15 bg-white/10 p-5 text-center backdrop-blur">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 text-white">
+                <item.icon className="h-5 w-5" />
+              </span>
+              <p className="mt-3 text-sm font-bold text-white">{item.title}</p>
+              <p className="mt-1 text-[11px] leading-snug text-white/85 sm:text-xs">{item.body}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   </MarketShowcase>
   );
 };
@@ -25622,6 +26461,46 @@ const extractEditedMeta = (rawBody) => {
   return { edited: false, body: raw };
 };
 
+// `loadRemoteChat` fetches happen concurrently from several independent
+// triggers (Realtime events, read/delivery receipts, the SVS Agent's
+// auto-reply firing in parallel with the user's own send). A fetch that
+// started before a pending insert/update commits is not "wrong" — it's
+// just a true snapshot from a moment slightly in the past — but blindly
+// replacing local state with it would make a not-yet-committed message
+// vanish (it reappears once a later fetch catches up), or clobber an
+// edit/delete that's still in flight. These merges make any such fetch
+// strictly additive/corrective instead of a wholesale replace:
+//   - a local message/thread not yet present in the fetched set is kept
+//     (it just hasn't been read back yet, not deleted — this app never
+//     hard-deletes rows, only soft-deletes via `DELETED_TOKEN`)
+//   - a message with one of our own writes still in flight keeps its
+//     local body/metadata until that specific write's own refetch clears it
+const mergeFetchedMessages = (localMessages, fetchedMessages, pendingWriteIds) => {
+  const fetchedIds = new Set(fetchedMessages.map((message) => message.id));
+  const reconciled = fetchedMessages.map((message) => (
+    pendingWriteIds.has(message.id)
+      ? localMessages.find((local) => local.id === message.id) || message
+      : message
+  ));
+  const stillPending = localMessages.filter((message) => !fetchedIds.has(message.id));
+  return [...reconciled, ...stillPending].sort(
+    (a, b) => Date.parse(a.createdAt || '') - Date.parse(b.createdAt || ''),
+  );
+};
+
+const mergeFetchedThreads = (localThreads, fetchedThreads, pendingWriteIds) => {
+  const fetchedIds = new Set(fetchedThreads.map((thread) => thread.id));
+  const reconciled = fetchedThreads.map((thread) => (
+    pendingWriteIds.has(thread.id)
+      ? localThreads.find((local) => local.id === thread.id) || thread
+      : thread
+  ));
+  const stillPending = localThreads.filter((thread) => !fetchedIds.has(thread.id));
+  return [...reconciled, ...stillPending].sort(
+    (a, b) => Date.parse(b.updatedAt || '') - Date.parse(a.updatedAt || ''),
+  );
+};
+
 // Swipe-right-to-reply wrapper. On touch devices the user drags any
 // message bubble to the right; once the drag passes the threshold a
 // reply icon snaps into focus and `onReply` fires on release. On desktop
@@ -25973,6 +26852,11 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   const [hiddenMessageIds, setHiddenMessageIds] = useState(() => getStoredSupportChatHiddenIds(currentUserEmail));
   const [editingMessageId, setEditingMessageId] = useState('');
   const [editingDraft, setEditingDraft] = useState('');
+  // Keyed by messageId (not just a bare string) because the inline editor
+  // closes immediately on save — before the async write resolves — so a
+  // failure has to be shown back on the bubble itself, not the (by-then
+  // unmounted) editor, and needs to know *which* bubble it belongs to.
+  const [editSaveError, setEditSaveError] = useState(null);
   const [openMenuMessageId, setOpenMenuMessageId] = useState('');
 
   // --- WhatsApp-style extras ------------------------------------------
@@ -26164,6 +27048,36 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   // recently dispatched call.
   const loadRemoteChatSeqRef = useRef(0);
 
+  // Ref-counted (so two overlapping edits to the same message don't let
+  // the first one's completion clear the second's still-in-flight guard)
+  // set of message ids with one of our own writes currently in flight.
+  // See `mergeFetchedMessages` above for why this matters.
+  const pendingMessageWritesRef = useRef(new Map());
+  const markMessageWritePending = (messageId) => {
+    const map = pendingMessageWritesRef.current;
+    map.set(messageId, (map.get(messageId) || 0) + 1);
+  };
+  const clearMessageWritePending = (messageId) => {
+    const map = pendingMessageWritesRef.current;
+    const remaining = (map.get(messageId) || 1) - 1;
+    if (remaining <= 0) map.delete(messageId);
+    else map.set(messageId, remaining);
+  };
+
+  // Same idea, for thread rows (currently only `last_message`/`updated_at`,
+  // written when editing/deleting the latest message in a thread).
+  const pendingThreadWritesRef = useRef(new Map());
+  const markThreadWritePending = (threadId) => {
+    const map = pendingThreadWritesRef.current;
+    map.set(threadId, (map.get(threadId) || 0) + 1);
+  };
+  const clearThreadWritePending = (threadId) => {
+    const map = pendingThreadWritesRef.current;
+    const remaining = (map.get(threadId) || 1) - 1;
+    if (remaining <= 0) map.delete(threadId);
+    else map.set(threadId, remaining);
+  };
+
   const loadRemoteChat = useCallback(async () => {
     const requestSeq = (loadRemoteChatSeqRef.current += 1);
 
@@ -26221,8 +27135,8 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     // skip applying it rather than risk overwriting fresher state.
     if (requestSeq !== loadRemoteChatSeqRef.current) return true;
 
-    setThreads(mappedThreads);
-    setMessages(mappedMessages);
+    setThreads((current) => mergeFetchedThreads(current, mappedThreads, pendingThreadWritesRef.current));
+    setMessages((current) => mergeFetchedMessages(current, mappedMessages, pendingMessageWritesRef.current));
     setIsRemoteChatEnabled(true);
     setRemoteChatStatusMessage('Realtime chat is connected.');
     return true;
@@ -27272,35 +28186,64 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       return next;
     });
     if (!updatedRecord) return;
+    if (!(getAuthState() && currentUserEmail && hasSupabaseEnv && supabase)) return;
 
     // Editing or deleting the *latest* message in a thread also has to
     // refresh that thread's cached preview — nothing else ever touches
     // `lastMessage` after the message was first sent, so without this the
     // thread list keeps showing the original, pre-edit text forever.
+    let threadWrite = Promise.resolve({ error: null });
     if (isLatestInThread) {
       const preview = nextBody === DELETED_TOKEN
         ? 'This message was deleted'
         : extractReplyMeta(extractEditedMeta(nextBody).body).body;
       const nowIso = new Date().toISOString();
+      const threadId = updatedRecord.threadId;
       setThreads((current) => current.map((thread) => (
-        thread.id === updatedRecord.threadId ? { ...thread, lastMessage: preview, updatedAt: nowIso } : thread
+        thread.id === threadId ? { ...thread, lastMessage: preview, updatedAt: nowIso } : thread
       )));
-      if (getAuthState() && currentUserEmail && hasSupabaseEnv && supabase) {
-        supabase
-          .from(SUPPORT_CHAT_THREADS_TABLE)
-          .update({ last_message: preview, updated_at: nowIso })
-          .eq('thread_key', updatedRecord.threadId)
-          .then(() => { loadRemoteChat(); });
-      }
+      markThreadWritePending(threadId);
+      threadWrite = supabase
+        .from(SUPPORT_CHAT_THREADS_TABLE)
+        .update({ last_message: preview, updated_at: nowIso })
+        .eq('thread_key', threadId)
+        .then((result) => { clearThreadWritePending(threadId); return result; });
     }
 
-    if (getAuthState() && currentUserEmail && hasSupabaseEnv && supabase) {
-      supabase
-        .from(SUPPORT_CHAT_MESSAGES_TABLE)
-        .update({ body: nextBody })
-        .eq('message_key', messageId)
-        .then(() => { loadRemoteChat(); });
-    }
+    // The message body write and the thread-preview write are independent
+    // network calls — without sequencing them, whichever one's *own*
+    // refetch fires first could read the *other* table before its write
+    // has committed, and since that read would be the latest-dispatched
+    // (winning) one, it would stomp the just-applied optimistic update.
+    // Waiting for both before the single shared refetch avoids that.
+    markMessageWritePending(messageId);
+    const messageWrite = supabase
+      .from(SUPPORT_CHAT_MESSAGES_TABLE)
+      .update({ body: nextBody })
+      .eq('message_key', messageId)
+      .then((result) => { clearMessageWritePending(messageId); return result; });
+
+    Promise.all([threadWrite, messageWrite])
+      .then(([threadResult, messageResult]) => {
+        // supabase-js resolves (doesn't reject) even when the write failed
+        // server-side (RLS denial, constraint violation, etc.) — without
+        // checking `.error` explicitly the failure is invisible and the
+        // optimistic local edit silently reverts on the next refetch.
+        const error = messageResult?.error || threadResult?.error;
+        if (error) {
+          // eslint-disable-next-line no-console
+          console.error('[support-chat] failed to save edited message:', error);
+          setEditSaveError({ messageId, message: error.message || 'Could not save the edit. Please try again.' });
+        }
+        loadRemoteChat();
+      })
+      .catch((error) => {
+        // eslint-disable-next-line no-console
+        console.error('[support-chat] failed to save edited message:', error);
+        setEditSaveError({ messageId, message: error?.message || 'Could not save the edit — check your connection and try again.' });
+        clearMessageWritePending(messageId);
+        loadRemoteChat();
+      });
   }, [currentUserEmail, loadRemoteChat]);
 
   // Low-level helper: merge new metadata onto a message locally + sync to
@@ -27316,11 +28259,15 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       return { ...message, metadata: nextMetadata };
     }));
     if (nextMetadata && getAuthState() && currentUserEmail && hasSupabaseEnv && supabase) {
+      markMessageWritePending(messageId);
       supabase
         .from(SUPPORT_CHAT_MESSAGES_TABLE)
         .update({ metadata: nextMetadata })
         .eq('message_key', messageId)
-        .then(() => { loadRemoteChat(); });
+        .then(() => {
+          clearMessageWritePending(messageId);
+          loadRemoteChat();
+        });
     }
   }, [currentUserEmail, loadRemoteChat]);
 
@@ -27444,6 +28391,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     const replyMeta = extractReplyMeta(editedMeta.body);
     setEditingMessageId(message.id);
     setEditingDraft(replyMeta.body);
+    setEditSaveError(null);
   }, [currentUserEmail]);
 
   const handleCancelEditMessage = useCallback(() => {
@@ -29187,7 +30135,14 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                                 </div>
                               </div>
                             ) : (
-                              <p className="mt-1 whitespace-pre-wrap text-sm">{renderChatBodyWithLinks(innerBody)}</p>
+                              <>
+                                <p className="mt-1 whitespace-pre-wrap text-sm">{renderChatBodyWithLinks(innerBody)}</p>
+                                {editSaveError?.messageId === message.id ? (
+                                  <p className={`mt-1 text-[11px] font-semibold ${mine ? 'text-amber-100' : 'text-rose-600'}`}>
+                                    {editSaveError.message}
+                                  </p>
+                                ) : null}
+                              </>
                             )
                           )}
                           <p className={`mt-1 flex items-center gap-1 text-[11px] ${mine ? 'flex-row-reverse text-cyan-100' : 'text-slate-400'}`}>
@@ -35392,6 +36347,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/home-care/provider/:providerId" element={<HomeCareProviderDetailPage sellerItems={sellerItems} />} />
     <Route path="/hardware-software" element={<HardwareSoftwarePage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/mobility-vehicles" element={<MobilityVehiclesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
+    <Route path="/mobility-vehicles/:categorySlug" element={<MobilityVehiclesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/natural-resources-minerals" element={<NaturalResourcesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/seller/upload" element={<SellerUploadPage onSellerItemCreated={onSellerItemCreated} />} />
     <Route path="/seller/dashboard" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onUpdateOrderStatus={onUpdateOrderStatus} initialView="listings" />} />
