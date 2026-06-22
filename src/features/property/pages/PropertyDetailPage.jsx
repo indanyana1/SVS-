@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useSmartBack } from '../hooks/useSmartBack';
 import {
 	ArrowLeft,
@@ -11,6 +11,7 @@ import {
 	CheckCircle2,
 	Star,
 	Phone,
+	MessageCircle,
 	Heart,
 	ShoppingCart,
 	Check,
@@ -48,6 +49,7 @@ const Stat = ({ icon: Icon, label, value }) => (
 
 const PropertyDetailPage = () => {
 	const { listingId } = useParams();
+	const navigate = useNavigate();
 	const goBack = useSmartBack('/property-hub');
 	const [activeImage, setActiveImage] = useState(0);
 	const [showVisitModal, setShowVisitModal] = useState(false);
@@ -162,6 +164,33 @@ const PropertyDetailPage = () => {
 
 	const gallery = listing.gallery || [listing.image];
 	const similar = PROPERTY_LISTINGS.filter((l) => l.id !== listing.id).slice(0, 3);
+
+	// Resolve a chat-able identity for this listing's agent. Seller-submitted
+	// listings carry a real agent/seller email (see sellerListings.js); the
+	// static seed listings (SAMPLE_AGENT) don't, so fall back to a
+	// deterministic synthetic address derived from the agent's name —
+	// same pattern used for catalog listings elsewhere that don't have a
+	// real seller account.
+	const sellerChatName = listing.agent?.name || 'Seller';
+	const sellerChatEmail = (
+		listing.agent?.email
+		|| listing.sellerEmail
+		|| `${sellerChatName.toLowerCase().replace(/[^a-z0-9]/g, '')}@seller.marketplace.local`
+	).trim().toLowerCase();
+	const goToSellerChat = () => {
+		navigate('/support/chat', {
+			state: {
+				recipientEmail: sellerChatEmail,
+				recipientName: sellerChatName,
+				recipientRole: 'seller',
+				issueType: 'Item Enquiry',
+				itemKey: listing.id,
+				itemTitle: listing.title,
+				itemImage: gallery[0] || '',
+				itemLink: `/property-hub/listing/${listing.id}`,
+			},
+		});
+	};
 
 	return (
 		<section className="bg-[var(--svs-bg)] px-4 py-8 text-[var(--svs-text)]">
@@ -479,20 +508,30 @@ const PropertyDetailPage = () => {
 								</p>
 							</div>
 						</div>
-						<button
-							type="button"
-							onClick={() => setContactReveal(true)}
-							className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[var(--svs-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--svs-primary-strong)]"
-						>
-							<Phone className="h-4 w-4" />{' '}
-							{contactReveal ? (
-								<a href={`tel:${(listing.agent.phone || '').replace(/\s+/g, '')}`} className="underline">
-									{listing.agent.phone || 'Contact unavailable'}
-								</a>
-							) : (
-								'Contact Seller'
-							)}
-						</button>
+						<div className="mt-4 flex flex-col gap-2 sm:flex-row">
+							<button
+								type="button"
+								onClick={() => setContactReveal(true)}
+								className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-[var(--svs-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--svs-primary-strong)]"
+							>
+								<Phone className="h-4 w-4" />{' '}
+								{contactReveal ? (
+									<a href={`tel:${(listing.agent.phone || '').replace(/\s+/g, '')}`} className="underline">
+										{listing.agent.phone || 'Contact unavailable'}
+									</a>
+								) : (
+									'Contact Seller'
+								)}
+							</button>
+							<button
+								type="button"
+								onClick={goToSellerChat}
+								className="inline-flex flex-1 items-center justify-center gap-2 rounded-md border border-[var(--svs-primary)] bg-white px-4 py-2.5 text-sm font-semibold text-[var(--svs-primary-strong)] hover:bg-[var(--svs-cyan-surface,#eaf6f8)]"
+							>
+								<MessageCircle className="h-4 w-4" />
+								Chat with Seller
+							</button>
+						</div>
 					</section>
 
 					{/* Similar */}

@@ -3279,6 +3279,7 @@ const HomeCareProviderDetailPage = ({ sellerItems = [] }) => {
             options: [{ id: 'seller-service-option', label: billingCycle, price: priceLabel, defaultSelected: true }],
           }]
           : [],
+        sellerEmail: sellerItem.sellerEmail || '',
         isSellerListing: true,
       };
     }
@@ -3317,6 +3318,30 @@ const HomeCareProviderDetailPage = ({ sellerItems = [] }) => {
 
     return homeCareProviderDetailPrototype;
   }, [providerId, sellerItems]);
+
+  // Seller-submitted providers carry a real sellerEmail; the static
+  // catalog/prototype providers don't, so fall back to a deterministic
+  // synthetic address derived from their name — same pattern used for the
+  // Property Hub and Mobility & Vehicles "chat with seller" buttons.
+  const providerChatName = activeProvider.name || 'Provider';
+  const providerChatEmail = (
+    activeProvider.sellerEmail
+    || `${providerChatName.toLowerCase().replace(/[^a-z0-9]/g, '')}@seller.marketplace.local`
+  ).trim().toLowerCase();
+  const goToProviderChat = () => {
+    navigate('/support/chat', {
+      state: {
+        recipientEmail: providerChatEmail,
+        recipientName: providerChatName,
+        recipientRole: 'seller',
+        issueType: 'Item Enquiry',
+        itemKey: providerId,
+        itemTitle: activeProvider.name,
+        itemImage: activeProvider.image || '',
+        itemLink: `/home-care/provider/${providerId}`,
+      },
+    });
+  };
 
   const toggleOption = (optionId) => {
     setSelectedOptions((current) => ({
@@ -3386,6 +3411,7 @@ const HomeCareProviderDetailPage = ({ sellerItems = [] }) => {
               </div>
               <div className="mt-6 flex flex-wrap gap-3">
                 <button type="button" onClick={() => openBookingModal('Book Service')} className="h-12 rounded-lg border border-[#0f9fb2] bg-white px-5 text-sm font-bold text-[#0f9fb2] transition hover:bg-[#f0fdff]">Book Service</button>
+                <button type="button" onClick={goToProviderChat} className="inline-flex h-12 items-center gap-2 rounded-lg border border-[#D1D5DB] bg-white px-5 text-sm font-bold text-[#1F2937] transition hover:bg-[#F8FAFC]"><MessageCircle className="h-4 w-4" /> Chat with Provider</button>
                 <button type="button" className="inline-flex h-12 items-center gap-2 rounded-lg border border-[#D1D5DB] bg-white px-5 text-sm font-bold text-[#1F2937] transition hover:bg-[#F8FAFC]"><Heart className="h-4 w-4" /> Add to Wishlist</button>
               </div>
             </div>
