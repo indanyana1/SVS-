@@ -36758,8 +36758,8 @@ const SiteFooter = () => {
 
           {/* Column 4 – Quick Links */}
           <div>
-            <h4 className="text-[10px] font-bold uppercase tracking-wide sm:whitespace-nowrap sm:text-sm">{t('footer.quickLinks')}</h4>
-            <ul className="mt-1.5 space-y-1 text-[9px] sm:mt-4 sm:space-y-2 sm:text-sm">
+            <h4 className="ml-4 text-[10px] font-bold uppercase tracking-wide sm:ml-8 sm:whitespace-nowrap sm:text-sm">{t('footer.quickLinks')}</h4>
+            <ul className="ml-4 mt-1.5 space-y-1 text-[9px] sm:ml-8 sm:mt-4 sm:space-y-2 sm:text-sm">
               {footerLinks.quick.map((item) => (
                 <li key={item.href}>
                   <Link to={item.href} className="text-slate-200 transition hover:text-white hover:underline">{t(item.labelKey)}</Link>
