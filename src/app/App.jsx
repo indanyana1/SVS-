@@ -80,6 +80,7 @@ import {
   ArrowDownToLine,
   ArrowUpToLine,
   Lock,
+  Car,
 } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -819,7 +820,7 @@ const sellerMarketOptions = [
   { key: 'fastFood', labelKey: 'markets.fastFood', route: '/fast-food' },
   { key: 'groceries', labelKey: 'markets.groceries', route: '/groceries' },
   { key: 'ecommerce', labelKey: 'markets.ecommerce', route: '/e-commerce' },
-  { key: 'mobilityVehicles', labelKey: 'markets.mobilityVehicles', route: '/mobility-vehicles' },
+  { key: 'mobilityVehicles', labelKey: 'markets.mobilityVehicles', route: '/mobility-vehicles', externalSellRoute: '/mobility-vehicles/sell' },
   { key: 'naturalResources', labelKey: 'markets.naturalResources', route: '/natural-resources-minerals' },
   { key: 'wellness', labelKey: 'markets.wellness', route: '/wellness' },
   { key: 'property', labelKey: 'markets.propertyHub', route: '/property-hub', externalSellRoute: '/property-hub/sell' },
@@ -18550,6 +18551,13 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
           <HeartHandshake className="h-4 w-4" />
           <span>Home-Care Listings</span>
         </Link>
+        <Link
+          to="/mobility-vehicles/sell"
+          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)]"
+        >
+          <Car className="h-4 w-4" />
+          <span>Vehicle Listings</span>
+        </Link>
       </nav>
 
       <p className="mt-6 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--svs-muted)]">Other</p>
@@ -22447,6 +22455,594 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
               <p>After publishing, you can edit or remove the service anytime from My Store.</p>
             </div>
           </section>
+        </div>
+      )}
+    </PageFrame>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────
+// Mobility & Vehicles Exchange — dedicated seller listing flow. Unlike the
+// generic /seller/upload form (MARKET_FIELD_SPEC.mobilityVehicles, 9 flat
+// fields only), this collects everything the "Cars Market Listing" detail
+// page knows how to render: the filterable basics (brand/fuel/transmission/
+// year/category) PLUS the rich content (Product Overview, Key Highlights, a
+// Product Details spec table, Features cards, Dealer Information).
+//
+// Field names below are chosen to match what MobilityVehiclesPage already
+// reads (item.brand, item.fuelType, item.modelYear, item.category) and what
+// buildVehicleDetailPayload already prefers over its own auto-generated
+// content (item.productOverview, item.keyHighlights, item.technicalSpecs,
+// item.features, item.dealer) — see App.jsx's MobilityVehiclesPage and
+// buildVehicleDetailPayload. Submitting through marketplace_items.details_json
+// (mapSellerItemRecord spreads it onto the item) is enough to wire all of
+// that up with zero changes to the buyer-facing pages.
+// ─────────────────────────────────────────────────────────────────────
+const MOBILITY_SELL_CATEGORIES = ['Car', 'SUV', 'Motorcycle', 'Pickup Truck', 'Commercial Vehicle', 'Electric Vehicle', 'Luxury Car', 'Spare Part', 'Aircraft', 'Bicycle'];
+const MOBILITY_SPEC_FIELD_LABELS = [
+  'Engine Type', 'Engine Capacity', 'Power Output', 'Torque', 'Drive Type',
+  'Seating Capacity', 'Body Type', 'Wheelbase', 'Dimensions (L x W x H)',
+  'Boot / Cargo Space', 'Fuel Tank Capacity', 'Mileage (ARAI)', 'Turning Radius',
+  'Kerb Weight', 'Ground Clearance', 'Tyres', 'Color Options', 'Warranty',
+];
+const MOBILITY_SELL_FEATURE_ICON_OPTIONS = [
+  { value: 'gauge', label: 'Performance' },
+  { value: 'shield', label: 'Safety' },
+  { value: 'sparkles', label: 'Comfort & Tech' },
+  { value: 'cog', label: 'Mechanical' },
+  { value: 'fuel', label: 'Efficiency' },
+];
+const emptyMobilitySellFeature = () => ({ icon: 'sparkles', title: '', description: '' });
+const emptyMobilitySellForm = () => ({
+  category: '',
+  brand: '',
+  title: '',
+  modelYear: '',
+  fuelType: '',
+  transmission: '',
+  price: '',
+  currency: '',
+  quantity: '',
+  specification: '',
+  productOverview: '',
+  keyHighlights: '',
+  specs: MOBILITY_SPEC_FIELD_LABELS.reduce((acc, label) => ({ ...acc, [label]: '' }), {}),
+  features: [emptyMobilitySellFeature()],
+  dealerName: '',
+  dealerLocation: '',
+});
+
+const MobilityVehicleSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdateSellerItem, onDeleteSellerItem }) => {
+  const navigate = useNavigate();
+  const [form, setForm] = useState(emptyMobilitySellForm);
+  const [editingId, setEditingId] = useState(null);
+  const [existingImageUrls, setExistingImageUrls] = useState([]);
+  const [originalImageUrls, setOriginalImageUrls] = useState([]);
+  const [imageFiles, setImageFiles] = useState([]);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState('idle');
+  const isAuthenticated = getAuthState();
+  const userEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
+  const userName = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-name') || 'SVS Seller');
+
+  const myListings = useMemo(
+    () => getSellerItemsForMarket(sellerItems, 'mobilityVehicles').filter((item) => normalizeEmail(item.sellerEmail) === userEmail),
+    [sellerItems, userEmail],
+  );
+
+  useEffect(() => {
+    if (!imageFiles.length) {
+      setImagePreviewUrls([]);
+      return undefined;
+    }
+    const nextUrls = imageFiles.map((file) => URL.createObjectURL(file));
+    setImagePreviewUrls(nextUrls);
+    return () => {
+      nextUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [imageFiles]);
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleSpecChange = (label, value) => {
+    setForm((current) => ({ ...current, specs: { ...current.specs, [label]: value } }));
+  };
+
+  const handleFeatureChange = (index, field, value) => {
+    setForm((current) => ({
+      ...current,
+      features: current.features.map((feature, featureIndex) => (
+        featureIndex === index ? { ...feature, [field]: value } : feature
+      )),
+    }));
+  };
+
+  const addFeatureRow = () => {
+    setForm((current) => ({ ...current, features: [...current.features, emptyMobilitySellFeature()] }));
+  };
+
+  const removeFeatureRow = (index) => {
+    setForm((current) => ({ ...current, features: current.features.filter((_, featureIndex) => featureIndex !== index) }));
+  };
+
+  const handleImagePick = (event) => {
+    const pickedFiles = Array.from(event.target.files || []);
+    if (!pickedFiles.length) return;
+    setImageFiles((current) => [...current, ...pickedFiles]);
+    event.target.value = '';
+  };
+
+  const handleRemoveSelectedImage = (indexToRemove) => {
+    setImageFiles((current) => current.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleRemoveExistingImage = (urlToRemove) => {
+    setExistingImageUrls((current) => current.filter((url) => url !== urlToRemove));
+  };
+
+  const resetForm = () => {
+    setEditingId(null);
+    setForm(emptyMobilitySellForm());
+    setExistingImageUrls([]);
+    setOriginalImageUrls([]);
+    setImageFiles([]);
+  };
+
+  const handleEdit = (listing) => {
+    setEditingId(listing.dbId);
+    setMessage('');
+    setMessageType('idle');
+    const listingImages = Array.isArray(listing.images) && listing.images.length
+      ? listing.images
+      : (listing.image ? [listing.image] : []);
+    setForm({
+      category: listing.category || '',
+      brand: listing.brand || '',
+      title: listing.title || '',
+      modelYear: listing.modelYear ? String(listing.modelYear) : '',
+      fuelType: listing.fuelType || '',
+      transmission: listing.transmission || '',
+      price: listing.price || '',
+      currency: listing.currency || '',
+      quantity: listing.availableQuantity ? String(listing.availableQuantity) : '',
+      specification: listing.specification || '',
+      productOverview: listing.productOverview || '',
+      keyHighlights: Array.isArray(listing.keyHighlights) ? listing.keyHighlights.join('\n') : '',
+      specs: MOBILITY_SPEC_FIELD_LABELS.reduce((acc, label) => ({ ...acc, [label]: listing.technicalSpecs?.[label] || '' }), {}),
+      features: Array.isArray(listing.features) && listing.features.length
+        ? listing.features.map((feature) => ({ icon: feature.icon || 'sparkles', title: feature.title || '', description: feature.description || '' }))
+        : [emptyMobilitySellFeature()],
+      dealerName: listing.dealer?.name || '',
+      dealerLocation: listing.dealer?.location || '',
+    });
+    setExistingImageUrls(listingImages);
+    setOriginalImageUrls(listingImages);
+    setImageFiles([]);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDelete = async (listing) => {
+    if (typeof window !== 'undefined' && !window.confirm(`Remove "${listing.title}"? This cannot be undone.`)) return;
+    const result = await onDeleteSellerItem(listing.dbId, listing.images, listing.image);
+    if (result?.error) {
+      setMessage(result.error);
+      setMessageType('error');
+      return;
+    }
+    if (editingId === listing.dbId) resetForm();
+    setMessage('Listing removed.');
+    setMessageType('success');
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!isAuthenticated) {
+      navigate('/signin');
+      return;
+    }
+
+    const trimmedTitle = form.title.trim();
+    const trimmedBrand = form.brand.trim();
+    const rawPrice = form.price.trim();
+    const cleanedPrice = rawPrice.replace(/[^\d.]/g, '');
+    const trimmedPrice = cleanedPrice || rawPrice;
+
+    if (!trimmedTitle || !form.category || !trimmedBrand || !form.modelYear.trim() || !form.fuelType || !trimmedPrice) {
+      setMessage('Add a title, category, brand, model year, fuel type and price before publishing.');
+      setMessageType('error');
+      return;
+    }
+
+    if (!SUPPORTED_CURRENCIES.some((entry) => entry.code === form.currency)) {
+      setMessage('Select the currency you want to be paid in before publishing your listing.');
+      setMessageType('error');
+      return;
+    }
+
+    if (!hasSupabaseEnv || !supabase) {
+      setMessage('Supabase is not configured. Add the environment values first so listings can be stored.');
+      setMessageType('error');
+      return;
+    }
+
+    const combinedImageCount = existingImageUrls.length + imageFiles.length;
+    if (!combinedImageCount) {
+      setMessage('Add at least one photo before publishing.');
+      setMessageType('error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setMessage('');
+    setMessageType('idle');
+
+    const technicalSpecs = Object.fromEntries(
+      MOBILITY_SPEC_FIELD_LABELS
+        .map((label) => [label, String(form.specs[label] || '').trim()])
+        .filter(([, value]) => Boolean(value)),
+    );
+    const keyHighlights = form.keyHighlights
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const features = form.features
+      .filter((feature) => feature.title.trim() || feature.description.trim())
+      .map((feature) => ({
+        icon: feature.icon || 'sparkles',
+        title: feature.title.trim(),
+        description: feature.description.trim(),
+      }));
+    const dealer = {
+      name: form.dealerName.trim() || getSellerDisplayName({ sellerName: userName, sellerEmail: userEmail }),
+      location: form.dealerLocation.trim() || 'South Africa',
+      rating: 4.5,
+      reviewCount: 0,
+    };
+    const modelYearNumber = Number(form.modelYear) || null;
+    const specification = form.specification.trim()
+      || [modelYearNumber ? `${modelYearNumber} model` : '', form.fuelType, form.transmission].filter(Boolean).join(' • ');
+
+    const detailsJson = {
+      category: form.category,
+      brand: trimmedBrand,
+      fuelType: form.fuelType,
+      transmission: form.transmission,
+      modelYear: modelYearNumber,
+      specification,
+      currency: form.currency,
+      ...(form.productOverview.trim() ? { productOverview: form.productOverview.trim() } : {}),
+      ...(keyHighlights.length ? { keyHighlights } : {}),
+      ...(Object.keys(technicalSpecs).length ? { technicalSpecs, specsTitle: 'Product Details' } : {}),
+      ...(features.length ? { features } : {}),
+      dealer,
+      badges: ['Verified Listing', 'Warranty Included', 'Free Delivery', 'Finance Available'],
+    };
+
+    if (editingId) {
+      const result = await onUpdateSellerItem(editingId, {
+        title: trimmedTitle,
+        description: form.productOverview.trim(),
+        price: trimmedPrice,
+        quantity: normalizeListingQuantity(form.quantity, 1),
+        marketKey: 'mobilityVehicles',
+        detailsJson,
+        imageUrls: existingImageUrls,
+        previousImageUrls: originalImageUrls,
+      }, imageFiles);
+
+      if (result?.error) {
+        setMessage(result.error);
+        setMessageType('error');
+        setIsSubmitting(false);
+        return;
+      }
+
+      setMessage('Listing updated successfully.');
+      setMessageType('success');
+      resetForm();
+      setIsSubmitting(false);
+      return;
+    }
+
+    const uploadedImageUrls = [];
+    for (const imageFile of imageFiles) {
+      const fileExtension = imageFile.name.split('.').pop() || 'jpg';
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExtension}`;
+      const filePath = `${sanitizeStorageSegment(userEmail)}/mobilityVehicles/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(SELLER_IMAGES_BUCKET)
+        .upload(filePath, imageFile, { cacheControl: '3600', upsert: false });
+
+      if (uploadError) {
+        setMessage(`Image upload failed: ${uploadError.message}. Make sure the ${SELLER_IMAGES_BUCKET} bucket exists and allows uploads.`);
+        setMessageType('error');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const { data: publicUrlData } = supabase.storage.from(SELLER_IMAGES_BUCKET).getPublicUrl(filePath);
+      uploadedImageUrls.push(publicUrlData.publicUrl);
+    }
+
+    const { data, error } = await supabase
+      .from(SELLER_ITEMS_TABLE)
+      .insert({
+        seller_email: userEmail,
+        seller_name: dealer.name,
+        title: trimmedTitle,
+        description: form.productOverview.trim(),
+        quantity: normalizeListingQuantity(form.quantity, 1),
+        price: trimmedPrice,
+        market_key: 'mobilityVehicles',
+        details_json: detailsJson,
+        image_url: uploadedImageUrls[0],
+        image_urls: uploadedImageUrls,
+      })
+      .select('*')
+      .single();
+
+    if (error) {
+      setMessage(getMarketplaceItemSaveErrorMessage(error.message));
+      setMessageType('error');
+      setIsSubmitting(false);
+      return;
+    }
+
+    onSellerItemCreated(mapSellerItemRecord(data));
+    setMessage('Vehicle published successfully to Mobility and Vehicles Exchange.');
+    setMessageType('success');
+    resetForm();
+    setIsSubmitting(false);
+  };
+
+  return (
+    <PageFrame title="List a Vehicle or Part" subtitle="Add your vehicle, bike or spare part so buyers can find and filter it on the Mobility and Vehicles Exchange.">
+      <div className="mb-5">
+        <Link to="/seller/dashboard" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--svs-primary)] hover:underline">
+          <ChevronLeft className="h-4 w-4" /> Back to My Store
+        </Link>
+      </div>
+      {!isAuthenticated ? (
+        <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 text-sm text-[var(--svs-text)]">
+          <p>Sign in first to list a vehicle or part.</p>
+          <Link to="/signin" className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
+            Sign In
+          </Link>
+        </div>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <form onSubmit={handleSubmit} className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
+            {/* Basics */}
+            <h2 className="text-base font-bold text-[var(--svs-text)]">Vehicle basics</h2>
+            <p className="mt-0.5 text-xs text-[var(--svs-muted)]">These drive the sidebar filters on the category pages, so buyers can find this listing.</p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label htmlFor="mv-title" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Listing title <span className="text-rose-500">*</span></label>
+                <input id="mv-title" name="title" value={form.title} onChange={handleChange} required placeholder="e.g. Toyota Corolla Altis 2024" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+              <div>
+                <label htmlFor="mv-category" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Category <span className="text-rose-500">*</span></label>
+                <select id="mv-category" name="category" value={form.category} onChange={handleChange} required className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none">
+                  <option value="">Select category</option>
+                  {MOBILITY_SELL_CATEGORIES.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="mv-brand" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Brand / Make <span className="text-rose-500">*</span></label>
+                <input id="mv-brand" name="brand" value={form.brand} onChange={handleChange} required placeholder="e.g. Toyota, BMW, Honda" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+              <div>
+                <label htmlFor="mv-modelYear" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Model year <span className="text-rose-500">*</span></label>
+                <input id="mv-modelYear" name="modelYear" type="number" value={form.modelYear} onChange={handleChange} required placeholder="e.g. 2024" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+              <div>
+                <label htmlFor="mv-fuelType" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Fuel type <span className="text-rose-500">*</span></label>
+                <select id="mv-fuelType" name="fuelType" value={form.fuelType} onChange={handleChange} required className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none">
+                  <option value="">Select fuel type</option>
+                  {MOBILITY_FUEL_OPTIONS.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="mv-transmission" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Transmission</label>
+                <select id="mv-transmission" name="transmission" value={form.transmission} onChange={handleChange} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none">
+                  <option value="">Select transmission</option>
+                  {MOBILITY_TRANSMISSION_OPTIONS.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="mv-specification" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Short specification line</label>
+                <input id="mv-specification" name="specification" value={form.specification} onChange={handleChange} placeholder="e.g. 2024 model • 10,200 km • Petrol • Automatic" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+                <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Optional — shown under the title on listing cards. Auto-built from model year, fuel and transmission if left blank.</p>
+              </div>
+            </div>
+
+            {/* Pricing */}
+            <h2 className="mt-6 text-base font-bold text-[var(--svs-text)]">Pricing &amp; quantity</h2>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="mv-price" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Price <span className="text-rose-500">*</span></label>
+                <div className="flex gap-2">
+                  <CurrencyPickerField id="mv-currency" name="currency" value={form.currency} onChange={handleChange} ariaLabel="Listing currency" />
+                  <input id="mv-price" name="price" value={form.price} onChange={handleChange} required placeholder="289000" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+                </div>
+              </div>
+              <div>
+                <label htmlFor="mv-quantity" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Quantity available</label>
+                <input id="mv-quantity" name="quantity" type="number" min="0" step="1" value={form.quantity} onChange={handleChange} placeholder="1" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+                <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Use 1 for a single vehicle, or a higher number for parts sold in bulk.</p>
+              </div>
+            </div>
+
+            {/* Product overview & highlights */}
+            <h2 className="mt-6 text-base font-bold text-[var(--svs-text)]">Product overview</h2>
+            <p className="mt-0.5 text-xs text-[var(--svs-muted)]">Shown on the listing's detail page, above the spec table.</p>
+            <div className="mt-3">
+              <textarea name="productOverview" value={form.productOverview} onChange={handleChange} rows={4} placeholder="Describe the vehicle — platform, standout features, condition, what makes it a good buy." className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+            </div>
+            <div className="mt-4">
+              <label htmlFor="mv-keyHighlights" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Key highlights</label>
+              <textarea id="mv-keyHighlights" name="keyHighlights" value={form.keyHighlights} onChange={handleChange} rows={4} placeholder={'One per line, e.g.\n174 bhp 2.0L petrol engine with 19 km/L rating\n5-star safety rating with 7 airbags\n3-year / 100,000 km warranty'} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Add one per line. Shown as a checklist on the listing's detail page.</p>
+            </div>
+
+            {/* Product details / technical specs */}
+            <h2 className="mt-6 text-base font-bold text-[var(--svs-text)]">Product details</h2>
+            <p className="mt-0.5 text-xs text-[var(--svs-muted)]">Optional — fill in whichever apply. Blank rows are left out of the spec table.</p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {MOBILITY_SPEC_FIELD_LABELS.map((label) => (
+                <div key={label}>
+                  <label htmlFor={`mv-spec-${label}`} className="mb-1 block text-xs font-semibold text-[var(--svs-muted)]">{label}</label>
+                  <input
+                    id={`mv-spec-${label}`}
+                    value={form.specs[label] || ''}
+                    onChange={(event) => handleSpecChange(label, event.target.value)}
+                    className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Features */}
+            <h2 className="mt-6 text-base font-bold text-[var(--svs-text)]">Features</h2>
+            <p className="mt-0.5 text-xs text-[var(--svs-muted)]">Shown as icon cards on the listing's detail page (e.g. Toyota Safety Sense, Touchscreen, Climate Control).</p>
+            <div className="mt-3 space-y-3">
+              {form.features.map((feature, index) => (
+                <div key={index} className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3">
+                  <div className="flex items-start gap-2">
+                    <select
+                      value={feature.icon}
+                      onChange={(event) => handleFeatureChange(index, 'icon', event.target.value)}
+                      className="w-32 shrink-0 rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2 py-2 text-xs text-[var(--svs-text)] outline-none"
+                    >
+                      {MOBILITY_SELL_FEATURE_ICON_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                    <input
+                      value={feature.title}
+                      onChange={(event) => handleFeatureChange(index, 'title', event.target.value)}
+                      placeholder="Feature title, e.g. Toyota Safety Sense (TSS)"
+                      className="w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
+                    />
+                    {form.features.length > 1 ? (
+                      <button type="button" onClick={() => removeFeatureRow(index)} className="shrink-0 rounded-md p-2 text-slate-400 hover:bg-red-50 hover:text-red-500" aria-label="Remove feature">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    ) : null}
+                  </div>
+                  <textarea
+                    value={feature.description}
+                    onChange={(event) => handleFeatureChange(index, 'description', event.target.value)}
+                    rows={2}
+                    placeholder="Short description of this feature."
+                    className="mt-2 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
+                  />
+                </div>
+              ))}
+              <button type="button" onClick={addFeatureRow} className="inline-flex items-center gap-1.5 rounded-md border border-[var(--svs-border)] px-3 py-1.5 text-xs font-semibold text-[var(--svs-primary)] hover:bg-[var(--svs-cyan-surface)]">
+                <Plus className="h-3.5 w-3.5" /> Add another feature
+              </button>
+            </div>
+
+            {/* Dealer information */}
+            <h2 className="mt-6 text-base font-bold text-[var(--svs-text)]">Dealer information</h2>
+            <div className="mt-3 grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="mv-dealerName" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Dealer / Seller name</label>
+                <input id="mv-dealerName" name="dealerName" value={form.dealerName} onChange={handleChange} placeholder="Defaults to your account name" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+              <div>
+                <label htmlFor="mv-dealerLocation" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Location</label>
+                <input id="mv-dealerLocation" name="dealerLocation" value={form.dealerLocation} onChange={handleChange} placeholder="e.g. Sandton, Johannesburg, Gauteng" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+            </div>
+
+            {/* Photos */}
+            <div className="mt-6">
+              <label htmlFor="mv-image" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Photos <span className="text-rose-500">*</span></label>
+              <input id="mv-image" type="file" accept="image/*" multiple onChange={handleImagePick} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              {existingImageUrls.length ? (
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {existingImageUrls.map((url, index) => (
+                    <div key={`${url}-${index}`} className="relative overflow-hidden rounded-md border border-[var(--svs-border)] bg-white">
+                      <img src={url} alt={`Current ${index + 1}`} className="h-24 w-full object-cover" loading="lazy" />
+                      <button type="button" onClick={() => handleRemoveExistingImage(url)} className="absolute right-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700">x</button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              {imageFiles.length ? (
+                <div className="mt-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-2 text-xs text-[var(--svs-muted)]">
+                  <p className="font-semibold text-[var(--svs-text)]">{imageFiles.length} new image{imageFiles.length === 1 ? '' : 's'} selected</p>
+                  <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {imagePreviewUrls.map((previewUrl, index) => (
+                      <div key={`${previewUrl}-${index}`} className="relative overflow-hidden rounded-md border border-[var(--svs-border)] bg-white">
+                        <img src={previewUrl} alt={`Selected preview ${index + 1}`} className="h-24 w-full object-cover" loading="lazy" />
+                        <button type="button" onClick={() => handleRemoveSelectedImage(index)} className="absolute right-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700">x</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            {message ? (
+              <div className={`mt-4 rounded-lg px-4 py-3 text-sm ${messageType === 'error' ? 'border border-rose-200 bg-rose-50 text-rose-700' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+                {message}
+              </div>
+            ) : null}
+
+            <div className="mt-5 flex gap-3">
+              <button type="submit" disabled={isSubmitting} className={`${cudyBluePrimaryButtonClassName} rounded-lg bg-[var(--svs-primary)] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70`}>
+                {isSubmitting ? (editingId ? 'Saving…' : 'Publishing…') : (editingId ? 'Save Changes' : 'Publish Listing')}
+              </button>
+              {editingId ? (
+                <button type="button" onClick={resetForm} className="rounded-lg border border-[var(--svs-border)] px-5 py-3 text-sm font-semibold text-[var(--svs-text)]">
+                  Cancel edit
+                </button>
+              ) : null}
+            </div>
+          </form>
+
+          {/* MY VEHICLE LISTINGS */}
+          <aside className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-[0_4px_8px_rgba(0,0,0,0.04)]">
+            <h2 className="mb-3 text-sm font-bold text-[var(--svs-primary-strong)]">My Vehicle Listings ({myListings.length})</h2>
+            {myListings.length === 0 ? (
+              <p className="text-xs text-[var(--svs-muted)]">You haven't published any listings yet. Submit the form to add your first vehicle or part.</p>
+            ) : (
+              <ul className="space-y-3">
+                {myListings.map((listing) => (
+                  <li key={listing.dbId} className="flex gap-3 rounded-lg border border-[var(--svs-border)] p-2">
+                    <img src={listing.image} alt={listing.title} className="h-16 w-20 flex-shrink-0 rounded-md object-cover" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-semibold text-[var(--svs-text)]">{listing.title}</p>
+                      <p className="truncate text-[11px] text-[var(--svs-muted)]">{listing.category} • {listing.brand}</p>
+                      <p className="mt-0.5 text-[11px] font-semibold text-[var(--svs-primary-strong)]">{formatAmountInCurrency(Number(listing.price) || 0, listing.currency)}</p>
+                    </div>
+                    <button type="button" onClick={() => handleEdit(listing)} className="self-start rounded-md p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600" aria-label="Edit listing" title="Edit">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button type="button" onClick={() => handleDelete(listing)} className="self-start rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500" aria-label="Delete listing" title="Delete">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </aside>
         </div>
       )}
     </PageFrame>
@@ -36963,6 +37559,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/property-hub" element={<PropertyHubPage />} />
     <Route path="/property-hub/sell" element={<PropertySellPage />} />
     <Route path="/home-care/sell" element={<HomeCareSellPage onSellerItemCreated={onSellerItemCreated} />} />
+    <Route path="/mobility-vehicles/sell" element={<MobilityVehicleSellPage sellerItems={sellerItems} onSellerItemCreated={onSellerItemCreated} onUpdateSellerItem={onUpdateSellerItem} onDeleteSellerItem={onDeleteSellerItem} />} />
     <Route path="/property-hub/category/:categoryKey" element={<PropertyCategoryPage />} />
     <Route path="/property-hub/listing/:listingId" element={<PropertyDetailPage />} />
     <Route path="/property-hub/visit/:listingId" element={<PropertyVisitStatusPage />} />
