@@ -7385,7 +7385,7 @@ const CARD_PAYMENT_METHOD_VALUE = 'credit_cheque_card';
 const PAYMENT_METHOD_GROUPS = [
   { id: 'card', label: 'Credit/Debit Card', sub: 'Visa, Mastercard, Amex', value: 'credit_cheque_card', Icon: CreditCard },
   { id: 'upi', label: 'UPI', sub: 'Google Pay, Phone Pay, Paytm', value: 'scan_to_pay', Icon: Smartphone },
-  { id: 'wallet', label: 'Wallets', sub: 'PayPal, Apple Pay', value: 'snapscan', Icon: Wallet },
+  { id: 'wallet', label: 'Wallets', sub: 'My Wallet, PayPal, Apple Pay', value: 'snapscan', Icon: Wallet },
   { id: 'netbanking', label: 'Net Banking', sub: 'All major Banks', value: 'instant_eft', Icon: Landmark },
 ];
 const PAYFAST_PENDING_PAYMENT_STORAGE_KEY = 'svs-payfast-pending-payment';
@@ -26134,12 +26134,25 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
   const [stripeSetupError, setStripeSetupError] = useState('');
   const [isMethodSelectorOpen, setIsMethodSelectorOpen] = useState(false);
   const [focusedMethodIndex, setFocusedMethodIndex] = useState(() => PAYFAST_METHOD_OPTIONS.findIndex((option) => option.value === selectedMethod));
+  // The "Wallets" group on the previous step bundles My Wallet, PayPal, and
+  // Apple Pay under one tile but only carries a single representative value
+  // ('snapscan') through to this page — so arriving here with that value
+  // doesn't mean the buyer actually chose SnapScan specifically. Block the
+  // Pay button until they've explicitly engaged with either the method
+  // dropdown or the SVS Wallet toggle below, rather than letting that
+  // inherited default get silently charged.
+  const [hasExplicitlyChosenMethod, setHasExplicitlyChosenMethod] = useState(false);
   const methodCardRefs = useRef([]);
   const methodMenuRef = useRef(null);
   const stripePromise = useMemo(() => getStripeInstance(), []);
   const isBuyNowMode = payfastSession?.mode === 'buy-now' && buyNowCheckout?.items?.length;
   const selectedMethodLabel = PAYFAST_METHOD_OPTIONS.find((option) => option.value === selectedMethod)?.label || PAYFAST_METHOD_OPTIONS[0].label;
   const isCardPaymentMethod = selectedMethod === CARD_PAYMENT_METHOD_VALUE;
+  // 'snapscan' is only ever reached via the ambiguous "Wallets" group (see
+  // PAYMENT_METHOD_GROUPS) — no other group maps to it — so this value
+  // alone is enough to detect that case without tracking which tile was
+  // clicked on the previous step.
+  const walletGroupNeedsExplicitChoice = selectedMethod === 'snapscan' && !hasExplicitlyChosenMethod;
 
   // SVS Wallet payment (signed-in buyers only).
   const walletUserEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
@@ -26489,6 +26502,7 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
                   focusedIndex={focusedMethodIndex}
                   onSelect={(value) => {
                     setSelectedMethod(value);
+                    setHasExplicitlyChosenMethod(true);
                     setFocusedMethodIndex(PAYFAST_METHOD_OPTIONS.findIndex((option) => option.value === value));
                     setIsMethodSelectorOpen(false);
                   }}
@@ -26499,6 +26513,14 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
               </div>
             </div>
           </div>
+
+          {walletGroupNeedsExplicitChoice ? (
+            <div className="rounded-2xl border border-[#f1d2a8] bg-[#fff8ec] px-4 py-3 text-sm text-[#8a5a1a]">
+              {walletUserEmail
+                ? "Confirm which wallet you'd like to use before paying — pick a specific method above, or use your SVS Wallet below."
+                : "Confirm which payment method you'd like to use before paying — pick a specific option above."}
+            </div>
+          ) : null}
 
           {walletUserEmail ? (
             <div className={`rounded-[22px] border p-4 transition ${useWalletPayment ? 'border-[var(--svs-primary)] bg-[#f2fbff]' : 'border-[#e2dbd0] bg-[#fbfaf7]'}`}>
@@ -26517,7 +26539,10 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
                 </div>
                 <button
                   type="button"
-                  onClick={() => setUseWalletPayment((prev) => !prev)}
+                  onClick={() => {
+                    setUseWalletPayment((prev) => !prev);
+                    setHasExplicitlyChosenMethod(true);
+                  }}
                   className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-bold transition ${useWalletPayment ? 'bg-[var(--svs-primary)] text-white' : 'border border-[#d9d1c6] bg-white text-[#1f1f1f] hover:border-[#1f1f1f]'}`}
                 >
                   {useWalletPayment ? 'Selected' : 'Use wallet'}
@@ -26578,7 +26603,7 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
               <button type="button" onClick={handleReturnToCheckout} className="rounded-2xl border border-[#d9d1c6] bg-white px-5 py-3 text-sm font-semibold text-[#4d463d] transition hover:border-[#1f1f1f] hover:text-[#1f1f1f]">
                 Cancel Payment
               </button>
-              <button type="button" disabled={isSubmitting} onClick={handleCompletePayment} className={`${cudyBluePrimaryButtonClassName} rounded-2xl bg-[#1a73e8] px-6 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70`}>
+              <button type="button" disabled={isSubmitting || walletGroupNeedsExplicitChoice} onClick={handleCompletePayment} className={`${cudyBluePrimaryButtonClassName} rounded-2xl bg-[#1a73e8] px-6 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70`}>
                 {isSubmitting ? 'Processing payment...' : `Pay ${formatCheckoutAmount(payfastSession.totals.total)}`}
               </button>
             </div>
