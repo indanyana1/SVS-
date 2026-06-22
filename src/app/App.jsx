@@ -25046,6 +25046,7 @@ const UserProfileLinkPage = () => {
   const navigate = useNavigate();
   const [status, setStatus] = useState('loading'); // 'loading' | 'found' | 'notfound' | 'self'
   const [profile, setProfile] = useState(null);
+  const [linkCopied, setLinkCopied] = useState(false);
   const cleanedHandle = String(handle || '').trim().toLowerCase();
   const myEmail = (typeof window !== 'undefined' && window.localStorage.getItem('svs-user-email')) || '';
   const isSignedIn = Boolean(myEmail);
@@ -25076,6 +25077,16 @@ const UserProfileLinkPage = () => {
     });
     return () => { cancelled = true; };
   }, [cleanedHandle, myEmail]);
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard?.writeText(buildShareLink(profile?.handle));
+      setLinkCopied(true);
+      window.setTimeout(() => setLinkCopied(false), 2200);
+    } catch (_e) {
+      // Clipboard write failed (e.g. permission denied) — no toast to show.
+    }
+  };
 
   const openChat = () => {
     if (!profile?.email) return;
@@ -25126,7 +25137,7 @@ const UserProfileLinkPage = () => {
           <div className="mt-4 flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => navigator.clipboard?.writeText(buildShareLink(profile?.handle))}
+              onClick={handleCopyLink}
               className="inline-flex items-center gap-2 rounded-md bg-[var(--svs-primary)] px-3 py-2 text-xs font-bold text-white"
             >
               <Copy className="h-3.5 w-3.5" aria-hidden="true" /> Copy my link
@@ -25136,6 +25147,11 @@ const UserProfileLinkPage = () => {
             </Link>
           </div>
         </div>
+        {linkCopied ? (
+          <div className="pointer-events-none fixed bottom-5 right-5 z-[90] max-w-sm rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 shadow-[0_8px_24px_rgba(16,185,129,0.25)]">
+            Link copied
+          </div>
+        ) : null}
       </PageFrame>
     );
   }
