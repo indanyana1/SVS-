@@ -10139,13 +10139,13 @@ const HomePage = () => {
               <ChevronRight className="h-3 w-3 sm:h-5 sm:w-5" />
             </button>
 
-            <div className="absolute bottom-1.5 left-1/2 flex -translate-x-1/2 items-center gap-1 sm:bottom-4 sm:gap-2">
+            <div className="absolute bottom-1.5 left-1/2 flex -translate-x-1/2 items-center gap-1.5 sm:bottom-4 sm:gap-2">
               {homeHeroSlides.map((hero, index) => (
                 <button
                   key={hero.id}
                   type="button"
                   onClick={() => goToSlide(index)}
-                  className={`h-1.5 w-1.5 rounded-full transition sm:h-2.5 sm:w-2.5 ${index === activeSlide ? 'bg-[var(--svs-primary)]' : 'bg-white/50'}`}
+                  className={`h-2 rounded-full transition-all sm:h-2.5 ${index === activeSlide ? 'w-5 bg-[var(--svs-primary)] sm:w-6' : 'w-2 bg-white/50 sm:w-2.5'}`}
                   aria-label={`Go to slide ${index + 1}`}
                 />
               ))}
@@ -31843,7 +31843,7 @@ const TrackOrderPage = ({ orders, onAdminSetOrderStatus }) => {
     shipping.country,
   ].filter((line) => line && String(line).trim().length);
 
-  const courierName = order.fulfillment?.courier || 'SVS Logistics';
+  const courierName = order.fulfillment?.courier || 'SVS E-Commerce Logistics';
   const trackingNumber = order.fulfillment?.trackingNumber || `SVS${String(order.reference || order.id || '').replace(/\D/g, '').slice(-12).padStart(12, '0')}`;
   const badgeLabel = getTrackBadgeLabel(order.status);
   const badgeClass = TRACK_BADGE_STYLES[order.status] || 'bg-slate-50 text-slate-700 border-slate-200';
