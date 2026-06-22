@@ -28010,8 +28010,6 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       itemLink: prefillItemLinkFromState,
     } : null;
     const targetItemDetails = options.itemDetails || prefillItemDetails;
-    const targetItemKey = String(targetItemDetails?.itemKey || '').trim();
-    const targetItemLink = String(targetItemDetails?.itemLink || '').trim();
     const recipientName = recipientOptions.find((option) => option.email === normalizedRecipient)?.name
       || (normalizedRecipient === prefillRecipientEmailFromState ? prefillRecipientNameFromState : '')
       || normalizedRecipient;
@@ -28019,15 +28017,20 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     const nowIso = new Date().toISOString();
     const participants = Array.from(new Set([currentUserEmail, normalizedRecipient])).sort();
 
+    // Match purely on who you're talking to (+ which order, if any) — not
+    // which item/listing prompted this particular chat. Matching on
+    // itemKey/itemLink too meant contacting the same seller about a
+    // different listing always failed to match and spawned a brand-new
+    // thread, fragmenting one contact into several. The item being
+    // discussed is still recorded on the thread below (itemDetails), it
+    // just no longer decides whether this is a new conversation.
     const existing = threads.find((thread) => {
       if (!Array.isArray(thread.participants)) {
         return false;
       }
       const candidateParticipants = [...thread.participants].sort();
       return candidateParticipants.join('|') === participants.join('|')
-        && String(thread.orderId || '') === targetOrderId
-        && (targetItemKey ? String(thread?.itemDetails?.itemKey || '').trim() === targetItemKey : true)
-        && (targetItemLink ? String(thread?.itemDetails?.itemLink || '').trim() === targetItemLink : true);
+        && String(thread.orderId || '') === targetOrderId;
     });
 
     if (existing) {
