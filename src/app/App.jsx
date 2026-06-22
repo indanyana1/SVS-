@@ -25508,7 +25508,14 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
     const handleQtyChange = (item, nextQty) => {
       if (!isCartMode || !onUpdateCartQuantity) return;
       const safe = Math.max(1, Math.min(99, Number(nextQty) || 1));
-      if (safe !== item.quantity) onUpdateCartQuantity(item.id, safe);
+      // onUpdateCartQuantity (handleUpdateCartQuantity) adds its second
+      // argument to the item's current quantity — it's a delta, not the
+      // target quantity — so convert here rather than passing `safe`
+      // directly. Passing the absolute value let it get added on top of
+      // the existing quantity instead of replacing it, compounding on every
+      // click (and even growing on "decrease" once quantity exceeded the
+      // 1-99 clamp above).
+      if (safe !== item.quantity) onUpdateCartQuantity(item.id, safe - item.quantity);
     };
     const handleRemove = (item) => {
       if (!isCartMode || !onRemoveCartItem) return;
