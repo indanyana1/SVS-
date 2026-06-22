@@ -34241,9 +34241,12 @@ const OrdersPage = ({ orders, cartItems, onCancelOrder }) => {
   );
 };
 
-const SimpleContentPage = ({ title, description }) => (
+const SimpleContentPage = ({ title, description, footnote }) => (
   <PageFrame title={title} subtitle={description}>
     <p className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 text-sm text-[var(--svs-text)]">Content coming soon.</p>
+    {footnote ? (
+      <p className="mt-4 text-xs text-[var(--svs-muted)]">{footnote}</p>
+    ) : null}
   </PageFrame>
 );
 
@@ -36749,17 +36752,10 @@ const SiteFooter = () => {
             </ul>
           </div>
         </div>
-      </div>
-
-      {/* ── Bottom Bar ── */}
-      <div className="border-t border-white/15 bg-[#082028]">
-        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-2 px-3 py-2 text-[9px] text-slate-300 sm:gap-3 sm:px-8 sm:py-4 sm:text-xs">
-          <p>{t('footer.est')}</p>
-          <p className="flex items-center gap-1 sm:gap-1.5">
-            <ShieldCheck className="h-3 w-3 sm:h-4 sm:w-4" />
-            {t('footer.securePayments')}
-          </p>
-        </div>
+        <p className="mt-4 flex items-center justify-center gap-2 text-center text-xs font-medium text-slate-300 sm:mt-8 sm:text-base">
+          <ShieldCheck className="h-4 w-4 sm:h-5 sm:w-5" />
+          {t('footer.securePayments')}
+        </p>
       </div>
     </footer>
   );
@@ -36967,7 +36963,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/sell/signup" element={<SellerSignupPage />} />
     <Route path="/sell/onboarding" element={<SellerOnboardingPage />} />
 
-    <Route path="/about" element={<SimpleContentPage title={t('footer.about')} description={t('simplePages.about')} />} />
+    <Route path="/about" element={<SimpleContentPage title={t('footer.about')} description={t('simplePages.about')} footnote="Est. 2026 RSA" />} />
     <Route path="/blog" element={<SimpleContentPage title={t('footer.blog')} description={t('simplePages.blog')} />} />
     <Route path="/careers" element={<SimpleContentPage title={t('footer.careers')} description={t('simplePages.careers')} />} />
     <Route path="/help" element={<SimpleContentPage title={t('footer.help')} description={t('simplePages.help')} />} />
