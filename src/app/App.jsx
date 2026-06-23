@@ -821,7 +821,7 @@ const sellerMarketOptions = [
   { key: 'groceries', labelKey: 'markets.groceries', route: '/groceries' },
   { key: 'ecommerce', labelKey: 'markets.ecommerce', route: '/e-commerce' },
   { key: 'mobilityVehicles', labelKey: 'markets.mobilityVehicles', route: '/mobility-vehicles', externalSellRoute: '/mobility-vehicles/sell' },
-  { key: 'naturalResources', labelKey: 'markets.naturalResources', route: '/natural-resources-minerals' },
+  { key: 'naturalResources', labelKey: 'markets.naturalResources', route: '/natural-resources-minerals', externalSellRoute: '/natural-resources-minerals/sell' },
   { key: 'wellness', labelKey: 'markets.wellness', route: '/wellness' },
   { key: 'property', labelKey: 'markets.propertyHub', route: '/property-hub', externalSellRoute: '/property-hub/sell' },
   { key: 'secondhand', labelKey: 'markets.secondhand', route: '/secondhand-central' },
@@ -3922,7 +3922,6 @@ const livestockItems = [
 // trusted from a search snippet) matching its actual brand/model.
 const MOBILITY_IMAGE = {
   motorcycle: 'https://images.pexels.com/photos/2116475/pexels-photo-2116475.jpeg?auto=compress&cs=tinysrgb&w=1200',
-  parts: 'https://images.pexels.com/photos/5158155/pexels-photo-5158155.jpeg?auto=compress&cs=tinysrgb&w=1200',
   rail: 'https://images.pexels.com/photos/302428/pexels-photo-302428.jpeg?auto=compress&cs=tinysrgb&w=1200',
   aircraft: 'https://images.pexels.com/photos/46148/aircraft-jet-landing-cloud-46148.jpeg?auto=compress&cs=tinysrgb&w=1200',
   bicycle: 'https://images.pexels.com/photos/100582/pexels-photo-100582.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -4216,7 +4215,34 @@ const mobilityVehiclesItems = [
     brand: 'Bosch',
     specification: 'Front + rear set • Ceramic compound • Universal fitment',
     price: '850',
-    image: MOBILITY_IMAGE.parts,
+    image: 'https://images.pexels.com/photos/3642618/pexels-photo-3642618.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    productOverview: 'The Bosch Premium Brake Pad Set delivers consistent, dependable stopping power for a wide range of passenger vehicles. Manufactured with a low-dust ceramic friction compound, this set is engineered to cut down on brake noise and wheel grime while protecting rotor life. Whether you are doing a routine maintenance swap or replacing worn-out pads, this Bosch set offers near-OEM braking performance at a fraction of dealership prices.',
+    keyHighlights: [
+      'Low-dust ceramic friction compound keeps wheels cleaner for longer',
+      'Reduced brake noise and vibration during everyday driving',
+      'Complete front and rear pad set in one box',
+      'Universal fitment across most sedan and hatchback models',
+      'Backed by Bosch quality manufacturing standards',
+    ],
+    technicalSpecs: {
+      Brand: 'Bosch',
+      'Part Type': 'Brake Pad Set',
+      'Friction Material': 'Ceramic compound',
+      'Set Contents': 'Front and rear pads',
+      Fitment: 'Universal — most sedans and hatchbacks',
+      'Recommended Use': 'Daily driving and light performance',
+      'Average Lifespan': '40,000 – 60,000 km',
+      Installation: 'Professional fitting recommended',
+      Warranty: '12-month manufacturer warranty',
+      'Country of Origin': 'Germany',
+    },
+    features: [
+      { icon: 'shield', title: 'Consistent Stopping Power', description: 'Ceramic compound delivers reliable braking in wet and dry conditions.' },
+      { icon: 'sparkles', title: 'Low-Dust Formula', description: 'Keeps your wheels cleaner for longer between washes.' },
+      { icon: 'cog', title: 'Easy Bolt-On Fit', description: 'Installs cleanly using factory mounting points.' },
+    ],
+    dealer: { name: 'Bosch Auto Parts SA', location: 'Midrand, Johannesburg, Gauteng', rating: 4.6, reviewCount: 124 },
+    badges: ['Verified Listing', 'Warranty Included'],
   },
   {
     id: 'mv-part-2',
@@ -4225,7 +4251,34 @@ const mobilityVehiclesItems = [
     brand: 'Michelin',
     specification: '4-pack • All-terrain tread • 17" rim fitment',
     price: '4200',
-    image: MOBILITY_IMAGE.parts,
+    image: 'https://images.pexels.com/photos/34357281/pexels-photo-34357281.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    productOverview: 'This Michelin All-Terrain Tire Set brings dependable grip and durability to SUVs, bakkies, and crossover vehicles tackling both tar and gravel. The aggressive all-terrain tread pattern channels water and mud away from the contact patch, while reinforced sidewalls resist cuts and punctures on rougher roads. Sold as a complete set of four, this set is ready to fit popular 17-inch rim sizes.',
+    keyHighlights: [
+      'All-terrain tread suited to tar, gravel, and light off-road use',
+      'Reinforced sidewalls for added puncture resistance',
+      'Even-wear tread design for a longer service life',
+      'Complete set of 4 tires, ready to fit',
+      'Trusted Michelin build quality',
+    ],
+    technicalSpecs: {
+      Brand: 'Michelin',
+      'Part Type': 'All-Terrain Tire Set',
+      'Set Contents': '4 tires',
+      'Rim Size Fitment': '17"',
+      'Tread Pattern': 'All-terrain',
+      'Load Rating': 'Standard load (confirm against vehicle manual)',
+      'Recommended Use': 'SUVs, bakkies and crossovers',
+      'Average Lifespan': '50,000 – 70,000 km',
+      Warranty: '24-month manufacturer warranty',
+      'Country of Origin': 'France',
+    },
+    features: [
+      { icon: 'shield', title: 'Reinforced Sidewalls', description: 'Built to resist cuts and punctures on gravel roads.' },
+      { icon: 'gauge', title: 'All-Terrain Grip', description: 'Aggressive tread channels mud and water for confident traction.' },
+      { icon: 'cog', title: 'Even Wear Design', description: 'Tread blocks are engineered for longer, more even wear.' },
+    ],
+    dealer: { name: 'Michelin Tyre Centre', location: 'Westville, Durban, KwaZulu-Natal', rating: 4.7, reviewCount: 96 },
+    badges: ['Verified Listing', 'Warranty Included'],
   },
   {
     id: 'mv-part-3',
@@ -4234,7 +4287,32 @@ const mobilityVehiclesItems = [
     brand: 'K&N',
     specification: 'Washable • Reusable • Universal fitment',
     price: '650',
-    image: MOBILITY_IMAGE.parts,
+    image: 'https://images.pexels.com/photos/11074558/pexels-photo-11074558.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    productOverview: 'The K&N Performance Air Filter Kit is a washable, reusable upgrade designed to improve airflow into your engine for a noticeable gain in throttle response. Unlike disposable paper filters, this cotton-gauze filter can be cleaned and re-oiled, saving you money over the life of your vehicle while keeping performance consistent. Universal fitment makes it a simple swap in most engine bays.',
+    keyHighlights: [
+      'Washable and reusable — no repeat purchases needed',
+      'Improved airflow for sharper throttle response',
+      'Million-mile limited warranty from K&N',
+      'Simple bolt-in fitment in most engine bays',
+      'Cotton-gauze filtration traps dirt without choking airflow',
+    ],
+    technicalSpecs: {
+      Brand: 'K&N',
+      'Part Type': 'Performance Air Filter',
+      'Filter Material': 'Oiled cotton-gauze',
+      Fitment: 'Universal — most engine bays',
+      Reusable: 'Yes — washable and re-oilable',
+      'Recommended Service Interval': 'Clean every 50,000 km',
+      Warranty: 'Limited million-mile warranty',
+      'Country of Origin': 'United States',
+    },
+    features: [
+      { icon: 'gauge', title: 'Increased Airflow', description: 'Less restrictive than paper filters for improved throttle response.' },
+      { icon: 'sparkles', title: 'Reusable Design', description: 'Wash and re-oil instead of replacing — saves money long term.' },
+      { icon: 'shield', title: 'Effective Filtration', description: 'Cotton-gauze layers trap contaminants without starving the engine.' },
+    ],
+    dealer: { name: 'K&N Performance Distributor', location: 'Centurion, Pretoria, Gauteng', rating: 4.8, reviewCount: 67 },
+    badges: ['Verified Listing', 'Warranty Included'],
   },
   // ---- Other ----
   {
@@ -4341,9 +4419,9 @@ const detectMobilityModelYear = (item) => {
 
 // Categories that get the full "Cars Market Listing" product page treatment
 // (Product Overview, Key Highlights, Product Details spec table, Features,
-// Dealer Information) — everything else (spare parts, the fictional
-// aircraft/bicycle/rail items) keeps the simpler default detail layout.
-const MOBILITY_RICH_DETAIL_CATEGORIES = ['Car', 'SUV', 'Motorcycle', 'Pickup Truck', 'Commercial Vehicle', 'Electric Vehicle', 'Luxury Car'];
+// Dealer Information) — everything else (the fictional aircraft/bicycle/rail
+// items) keeps the simpler default detail layout.
+const MOBILITY_RICH_DETAIL_CATEGORIES = ['Car', 'SUV', 'Motorcycle', 'Pickup Truck', 'Commercial Vehicle', 'Electric Vehicle', 'Luxury Car', 'Spare Part'];
 
 // Deterministic per-listing "random" numbers for spec fields that aren't
 // part of the catalog (this is a marketplace listing, not a manufacturer
@@ -4371,36 +4449,106 @@ const MOBILITY_DEALER_CITIES = [
   'Bellville, Cape Town, Western Cape',
 ];
 
+const MOBILITY_TYRE_SIZES = ['175/65 R14', '185/65 R15', '195/55 R16', '205/55 R16', '215/55 R17', '225/45 R18'];
+const MOBILITY_TRUCK_TYRE_SIZES = ['235/70 R16', '245/70 R16', '265/65 R17', '275/65 R18'];
+const MOBILITY_MOTORCYCLE_TYRE_SIZES = ['90/90-17', '100/80-17', '110/70-17', '120/70-17'];
+const MOBILITY_BODY_TYPES_BY_CATEGORY = {
+  Car: ['Sedan', 'Hatchback'],
+  SUV: ['SUV', 'Crossover SUV'],
+  'Luxury Car': ['Sedan', 'Coupe'],
+  'Pickup Truck': ['Double Cab Pickup', 'Single Cab Pickup'],
+  'Commercial Vehicle': ['Panel Van', 'Cargo Truck'],
+  'Electric Vehicle': ['Hatchback', 'Sedan'],
+};
+const MOBILITY_MOTORCYCLE_BODY_TYPES = ['Standard', 'Cruiser', 'Sport Tourer'];
+
 // Builds the rich item-detail payload for a Mobility & Vehicles Exchange
 // listing — Product Overview, Key Highlights, a Product Details spec table,
 // Features, and Dealer Information — mirroring the "Cars Market Listing"
 // product-page prototype. Only called for MOBILITY_RICH_DETAIL_CATEGORIES.
+// `item.*` fields (set directly on a catalog entry, or filled in through
+// MobilityVehicleSellPage) always win over the generated fallbacks below.
 const buildVehicleDetailPayload = (item) => {
   const category = item.category;
   const brand = item.brand || 'SVS Auto';
+  const seed = item.id;
+
+  if (category === 'Spare Part') {
+    const productOverview = item.productOverview
+      || `The ${item.title} is a quality automotive spare part from ${brand}, built for a reliable fit and dependable performance. ${item.specification ? `${item.specification}. ` : ''}It's a straightforward replacement for routine maintenance or repair work, backed by the seller's warranty.`;
+    const keyHighlights = Array.isArray(item.keyHighlights) && item.keyHighlights.length ? item.keyHighlights : [
+      `Genuine ${brand} build quality`,
+      item.specification || 'Designed for a reliable, straightforward fit',
+      'Suitable for routine maintenance or repair work',
+      'Backed by the seller warranty',
+    ];
+    const technicalSpecs = item.technicalSpecs && typeof item.technicalSpecs === 'object' ? item.technicalSpecs : {
+      Brand: brand,
+      'Part Type': item.partType || 'Automotive Spare Part',
+      Compatibility: 'Universal fitment — confirm with seller for your specific vehicle',
+      Condition: 'New',
+      Warranty: '12-month seller warranty',
+    };
+    const features = Array.isArray(item.features) && item.features.length ? item.features : [
+      { icon: 'cog', title: 'Reliable Fitment', description: 'Designed to install cleanly using standard mounting points.' },
+      { icon: 'shield', title: 'Quality Assured', description: 'Sourced from a trusted automotive parts brand.' },
+    ];
+    const dealer = item.dealer || {
+      name: `${brand} Parts Centre`,
+      location: seededVehiclePick(`${seed}:city`, MOBILITY_DEALER_CITIES),
+      rating: seededVehicleRange(`${seed}:dealerrating`, 4.4, 5.0, 1),
+      reviewCount: seededVehicleRange(`${seed}:dealerreviews`, 20, 150),
+    };
+    const badges = item.badges || ['Verified Listing', 'Warranty Included'];
+    const viewCount = seededVehicleRange(`${seed}:views`, 80, 900);
+    return { productOverview, keyHighlights, technicalSpecs, specsTitle: 'Product Details', features, dealer, badges, viewCount };
+  }
+
   const fuel = detectMobilityAttribute(item, MOBILITY_FUEL_OPTIONS) || 'Petrol';
   const transmission = detectMobilityAttribute(item, MOBILITY_TRANSMISSION_OPTIONS) || 'Automatic';
   const modelYear = detectMobilityModelYear(item) || '2023';
-  const isEV = fuel === 'Electric';
+  const isElectricOnly = fuel === 'Electric';
+  const isEV = isElectricOnly;
   const isMotorcycle = category === 'Motorcycle';
   const isTruck = category === 'Pickup Truck' || category === 'Commercial Vehicle';
-  const seed = item.id;
+  const haystack = `${item.specification || ''} ${item.title || ''}`.toLowerCase();
+  const has4wd = haystack.includes('4x4') || haystack.includes('4wd');
 
   const engineCc = seededVehicleRange(`${seed}:cc`, isMotorcycle ? 150 : 1200, isMotorcycle ? 750 : 2500);
   const power = seededVehicleRange(`${seed}:power`, isMotorcycle ? 15 : isTruck ? 130 : 90, isMotorcycle ? 55 : isTruck ? 220 : 280);
-  const topSpeed = seededVehicleRange(`${seed}:topspeed`, isMotorcycle ? 110 : isTruck ? 160 : 170, isMotorcycle ? 160 : isTruck ? 190 : 250);
+  const torque = seededVehicleRange(`${seed}:torque`, isMotorcycle ? 12 : isTruck ? 320 : 110, isMotorcycle ? 65 : isTruck ? 600 : 280);
   const mileage = seededVehicleRange(`${seed}:mileage`, isMotorcycle ? 28 : isTruck ? 8 : 12, isMotorcycle ? 45 : isTruck ? 14 : 22, 1);
   const evRange = seededVehicleRange(`${seed}:range`, 250, 580);
   const wheelbase = seededVehicleRange(`${seed}:wheelbase`, isMotorcycle ? 1350 : 2450, isMotorcycle ? 1550 : 3100);
   const groundClearance = seededVehicleRange(`${seed}:gc`, 150, isTruck ? 230 : 200);
-  const curbWeight = seededVehicleRange(`${seed}:weight`, isMotorcycle ? 140 : isTruck ? 1800 : 1150, isMotorcycle ? 240 : isTruck ? 2300 : 1850);
+  const kerbWeight = seededVehicleRange(`${seed}:weight`, isMotorcycle ? 140 : isTruck ? 1800 : 1150, isMotorcycle ? 240 : isTruck ? 2300 : 1850);
   const cargoVolume = seededVehicleRange(`${seed}:cargo`, 320, 550);
+  const fuelTank = seededVehicleRange(`${seed}:fueltank`, isMotorcycle ? 12 : isTruck ? 70 : 42, isMotorcycle ? 20 : isTruck ? 100 : 60);
+  const turningRadius = seededVehicleRange(`${seed}:turning`, isMotorcycle ? 1.8 : isTruck ? 6.2 : 4.5, isMotorcycle ? 2.4 : isTruck ? 7.2 : 5.5, 1);
   const length = seededVehicleRange(`${seed}:length`, isMotorcycle ? 1900 : isTruck ? 5200 : 4200, isMotorcycle ? 2200 : isTruck ? 5400 : 4900);
   const width = seededVehicleRange(`${seed}:width`, isMotorcycle ? 750 : 1750, isMotorcycle ? 850 : 1950);
   const height = seededVehicleRange(`${seed}:height`, isMotorcycle ? 1050 : 1450, isMotorcycle ? 1250 : 1850);
+  const tyreSize = seededVehiclePick(`${seed}:tyre`, isMotorcycle ? MOBILITY_MOTORCYCLE_TYRE_SIZES : isTruck ? MOBILITY_TRUCK_TYRE_SIZES : MOBILITY_TYRE_SIZES);
+  const engineLayout = seededVehiclePick(`${seed}:layout`, isMotorcycle ? ['Single-Cylinder', 'V-Twin', 'Parallel-Twin'] : isTruck ? ['Inline 4-Cylinder', 'Inline 5-Cylinder', 'V6'] : ['Inline 3-Cylinder', 'Inline 4-Cylinder']);
+  const bodyType = isMotorcycle
+    ? (/scooter/i.test(item.title || '') ? 'Scooter' : seededVehiclePick(`${seed}:bodytype`, MOBILITY_MOTORCYCLE_BODY_TYPES))
+    : seededVehiclePick(`${seed}:bodytype`, MOBILITY_BODY_TYPES_BY_CATEGORY[category] || [category]);
+  const driveType = isMotorcycle
+    ? 'Chain Drive'
+    : isElectricOnly
+      ? 'Single-Motor, Rear-Wheel Drive (RWD)'
+      : has4wd
+        ? '4-Wheel Drive (4WD)'
+        : isTruck
+          ? 'Rear-Wheel Drive (RWD)'
+          : brand === 'Audi'
+            ? 'All-Wheel Drive (AWD)'
+            : (brand === 'BMW' || brand === 'Mercedes-Benz')
+              ? 'Rear-Wheel Drive (RWD)'
+              : 'Front-Wheel Drive (FWD)';
 
   const productOverview = item.productOverview
-    || `The ${modelYear} ${item.title} is a well-kept ${String(category).toLowerCase()} from ${brand}, offering a balanced mix of comfort, efficiency, and everyday reliability. It comes with a clean service history and is ready to drive away, backed by a manufacturer-style warranty for extra peace of mind.`;
+    || `The ${modelYear} ${item.title} is a dependable ${String(category).toLowerCase()} from ${brand}, powered by ${isElectricOnly ? 'an efficient electric motor' : `a proven ${fuel.toLowerCase()} engine`}${(isMotorcycle || isElectricOnly) ? '' : ` paired with a ${transmission.toLowerCase()} transmission`}. It offers low running costs, dependable reliability, and easy maintenance, with a clean service history and a manufacturer-style warranty for extra peace of mind.`;
 
   const keyHighlights = Array.isArray(item.keyHighlights) && item.keyHighlights.length ? item.keyHighlights : (
     isEV ? [
@@ -4427,21 +4575,24 @@ const buildVehicleDetailPayload = (item) => {
   );
 
   const technicalSpecs = item.technicalSpecs && typeof item.technicalSpecs === 'object' ? item.technicalSpecs : {
-    'Engine Type': isEV ? 'Electric Motor' : `${(engineCc / 1000).toFixed(1)}L ${fuel} Engine`,
-    ...(isEV ? { 'Battery Range': `${evRange} km` } : { Mileage: `${mileage} km/l` }),
-    'Power Output': `${power} ${isEV ? 'kW' : 'PS'}`,
-    'Top Speed': `${topSpeed} km/h`,
-    'Fuel Type': fuel,
-    Transmission: transmission,
-    'Seating Capacity': isMotorcycle ? '2 riders' : '5 seats',
-    Drivetrain: isTruck ? '4x2 / 4x4 available' : isMotorcycle ? 'Chain drive' : isEV ? 'Single-motor, rear-wheel drive' : 'Front-wheel drive',
-    'Body Type': category,
-    ...(isMotorcycle ? {} : { Wheelbase: `${wheelbase} mm`, 'Cargo Volume': `${cargoVolume} L` }),
+    'Engine Type': isElectricOnly ? 'Permanent Magnet Synchronous Electric Motor' : `${engineLayout} ${fuel}`,
+    'Engine Capacity': isElectricOnly ? 'N/A (Electric Motor)' : `${engineCc.toLocaleString()} cc (${(engineCc / 1000).toFixed(1)}L)`,
+    'Power Output': `${power} ${isElectricOnly ? 'kW' : 'PS'}`,
+    Torque: `${torque} Nm`,
+    'Drive Type': driveType,
+    'Seating Capacity': isMotorcycle ? '2 riders' : (category === 'Commercial Vehicle' ? '3 seats' : '5 seats'),
+    'Body Type': bodyType,
+    Wheelbase: `${wheelbase} mm`,
     'Dimensions (L x W x H)': `${length} x ${width} x ${height} mm`,
+    'Boot / Cargo Space': isMotorcycle ? 'N/A (Motorcycle)' : `${cargoVolume} L`,
+    'Fuel Tank Capacity': isElectricOnly ? 'N/A (Electric Vehicle)' : `${fuelTank} L`,
+    'Mileage (ARAI)': isElectricOnly ? `${evRange} km range (full charge)` : `${mileage} km/l`,
+    'Turning Radius': `${turningRadius} m`,
+    'Kerb Weight': `${kerbWeight} kg`,
     'Ground Clearance': `${groundClearance} mm`,
-    'Curb Weight': `${curbWeight} kg`,
-    'Color Options': 'Pearl White, Midnight Black, Silver Metallic, Graphite Grey',
-    Warranty: isEV ? '8-year battery / 3-year vehicle warranty' : '3-year / 100,000 km manufacturer warranty',
+    Tyres: tyreSize,
+    'Color Options': 'White, Black, Silver, Grey, Blue, Red',
+    Warranty: isElectricOnly ? '8-year battery / 3-year vehicle warranty' : '3-year / 100,000 km manufacturer warranty',
   };
 
   const features = Array.isArray(item.features) && item.features.length ? item.features : (
@@ -4475,7 +4626,7 @@ const buildVehicleDetailPayload = (item) => {
     reviewCount: seededVehicleRange(`${seed}:dealerreviews`, 38, 420),
   };
 
-  const badges = ['Verified Listing', 'Warranty Included', 'Free Delivery', 'Finance Available'];
+  const badges = item.badges || ['Verified Listing', 'Warranty Included', 'Free Delivery', 'Finance Available'];
   const viewCount = seededVehicleRange(`${seed}:views`, 320, 2400);
 
   return { productOverview, keyHighlights, technicalSpecs, specsTitle: 'Product Details', features, dealer, badges, viewCount };
@@ -4930,52 +5081,682 @@ const getItemDetailSizeProps = (item = {}) => {
 };
 
 const naturalResourcesItems = [
+  // ---- Precious Metals ----
+  {
+    id: 'nr-gold-1',
+    title: '24K Gold Bullion Bars – 99.99% Pure',
+    category: 'Gold',
+    brand: 'Valcambi',
+    unit: 'kg',
+    currency: 'ZAR',
+    purity: '99.99% (24K Gold)',
+    form: 'Bars',
+    specification: '99.99% purity • LBMA-style assay • Sealed bullion bars',
+    price: '9800',
+    rating: 4.8,
+    reviewCount: 145,
+    image: 'https://images.pexels.com/photos/33539235/pexels-photo-33539235.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'nr-silver-1',
+    title: 'Fine Silver Bullion Bars – 99.9% Pure',
+    category: 'Silver',
+    brand: 'Royal Canadian Mint',
+    unit: 'kg',
+    currency: 'ZAR',
+    purity: '99.9%',
+    form: 'Bars',
+    specification: '99.9% fine silver • Investment-grade bar stock',
+    price: '1450',
+    rating: 4.7,
+    reviewCount: 112,
+    image: 'https://images.pexels.com/photos/20979926/pexels-photo-20979926.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'nr-silver-2',
+    title: 'Silver Bullion Coins – 99.9% Pure',
+    category: 'Silver',
+    brand: 'Perth Mint',
+    unit: 'kg',
+    currency: 'ZAR',
+    purity: '99.9%',
+    form: 'Coins',
+    specification: '99.9% fine silver • Minted investment coins',
+    price: '1520',
+    rating: 4.7,
+    reviewCount: 96,
+    image: 'https://images.pexels.com/photos/7111543/pexels-photo-7111543.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'nr-gold-2',
+    title: 'Raw Gold Nugget Ore Parcel',
+    category: 'Gold',
+    brand: 'Limpopo Alluvial Miners',
+    unit: 'kg',
+    currency: 'ZAR',
+    purity: 'Unrefined (Raw)',
+    form: 'Raw Ore',
+    specification: 'Unrefined alluvial nuggets • Assay certificate available',
+    price: '7200',
+    rating: 4.6,
+    reviewCount: 58,
+    image: 'https://images.pexels.com/photos/34522438/pexels-photo-34522438.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'nr-platinum-1',
+    title: 'Platinum Bullion Bars – 99.95% Pure',
+    category: 'Platinum',
+    brand: 'Johnson Matthey',
+    unit: 'kg',
+    currency: 'ZAR',
+    purity: '99.95%',
+    form: 'Bars',
+    specification: '99.95% purity • Investment-grade bullion bars',
+    price: '3450',
+    rating: 4.8,
+    reviewCount: 145,
+    image: 'https://images.pexels.com/photos/8940820/pexels-photo-8940820.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'nr-platinum-2',
+    title: 'Platinum Bullion Ingots – 99.95% Pure',
+    category: 'Platinum',
+    brand: 'Heraeus',
+    unit: 'kg',
+    currency: 'ZAR',
+    purity: '99.95%',
+    form: 'Ingots',
+    specification: '99.95% purity • Cast ingots • Export-ready lots',
+    price: '3450',
+    rating: 4.8,
+    reviewCount: 145,
+    image: 'https://images.pexels.com/photos/12951634/pexels-photo-12951634.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'nr-palladium-1',
+    title: 'Palladium Bullion Bar – 99.95% Pure',
+    category: 'Palladium',
+    brand: 'PAMP Suisse',
+    unit: 'kg',
+    currency: 'ZAR',
+    purity: '99.95%',
+    form: 'Bars',
+    specification: '99.95% purity • Assayed bullion bar • Sealed assay card',
+    price: '1850',
+    rating: 4.7,
+    reviewCount: 52,
+    image: 'https://images.pexels.com/photos/20979925/pexels-photo-20979925.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'nr-rhodium-1',
+    title: 'Rhodium Bullion Granules – 99.9% Pure',
+    category: 'Rhodium',
+    brand: 'Johnson Matthey',
+    unit: 'kg',
+    currency: 'ZAR',
+    purity: '99.9%',
+    form: 'Granules',
+    specification: '99.9% purity • Industrial-grade granules • Sealed containers',
+    price: '4200',
+    rating: 4.6,
+    reviewCount: 24,
+    image: 'https://images.pexels.com/photos/19911421/pexels-photo-19911421.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  // ---- Industrial Metals ----
   {
     id: 'nr1',
     title: 'Industrial Grade Copper Cathodes',
-    category: 'Minerals',
-    specification: '99.99% purity • Export-ready lots',
+    category: 'Copper',
+    brand: 'SA Copper Refineries',
+    unit: 'tonne',
+    currency: 'ZAR',
+    purity: '99%+',
+    form: 'Sheets',
+    specification: '99.99% purity • Export-ready lots • LME grade A',
     price: '86000',
-    image:
-      'https://source.unsplash.com/1200x900/?copper,metal,industry',
+    rating: 4.7,
+    reviewCount: 94,
+    image: 'https://images.pexels.com/photos/3721272/pexels-photo-3721272.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
+  {
+    id: 'nr-steel-1',
+    title: 'Steel Rebar Bundles – Grade 60',
+    category: 'Steel',
+    brand: 'Highveld Steel Supply',
+    unit: 'tonne',
+    currency: 'ZAR',
+    purity: 'Grade 60',
+    form: 'Bars',
+    specification: 'Grade 60 deformed bar • Construction-ready bundles',
+    price: '14500',
+    rating: 4.6,
+    reviewCount: 130,
+    image: 'https://images.pexels.com/photos/46167/iron-rods-reinforcing-bars-rods-steel-bars-46167.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'nr-iron-1',
+    title: 'Raw Iron Ore Lump Parcel',
+    category: 'Iron Ore',
+    brand: 'Northern Cape Iron Exports',
+    unit: 'tonne',
+    currency: 'ZAR',
+    purity: '62% Fe Content',
+    form: 'Raw Ore',
+    specification: '62% Fe content • Lump ore • Bulk export grade',
+    price: '1250',
+    rating: 4.5,
+    reviewCount: 47,
+    image: 'https://images.pexels.com/photos/34045315/pexels-photo-34045315.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'nr-alloy-1',
+    title: 'Industrial Alloy Ingots (Brass & Bronze)',
+    category: 'Industrial Alloys',
+    brand: 'Continental Alloy Works',
+    unit: 'tonne',
+    currency: 'ZAR',
+    purity: 'Industrial Grade',
+    form: 'Ingots',
+    specification: 'Brass and bronze alloy blends • Cast ingots • Foundry-ready',
+    price: '62000',
+    rating: 4.5,
+    reviewCount: 22,
+    image: 'https://images.pexels.com/photos/6942257/pexels-photo-6942257.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  // ---- Gemstones ----
+  {
+    id: 'nr-amethyst-1',
+    title: 'Natural Amethyst Crystal Cluster – A-Grade',
+    category: 'Amethyst',
+    brand: 'Gem Imports Pvt Ltd.',
+    unit: 'kg',
+    currency: 'ZAR',
+    purity: 'A-Grade (Certified)',
+    form: 'Crystal Cluster',
+    specification: 'A-grade clarity • Natural cluster formation • Deep purple',
+    price: '1100',
+    rating: 4.8,
+    reviewCount: 145,
+    image: 'https://images.pexels.com/photos/6400515/pexels-photo-6400515.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'nr-quartz-1',
+    title: 'Rose Quartz Crystal Stock',
+    category: 'Rose Quartz',
+    brand: 'Crystal Source Exports',
+    unit: 'kg',
+    currency: 'ZAR',
+    purity: 'AA-Grade',
+    form: 'Rough & Polished Mix',
+    specification: 'Polished and rough mix • Pink quartz • Wholesale lots',
+    price: '480',
+    rating: 4.6,
+    reviewCount: 73,
+    image: 'https://images.pexels.com/photos/37942957/pexels-photo-37942957.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'nr-emerald-1',
+    title: 'Natural Emerald Gemstones – Certified',
+    category: 'Emerald',
+    brand: 'Gem Imports Pvt Ltd.',
+    unit: 'carat',
+    currency: 'ZAR',
+    purity: 'Certified',
+    form: 'Rough Stones',
+    specification: 'Untreated rough stones • Mixed clarity grades',
+    price: '650',
+    rating: 4.7,
+    reviewCount: 41,
+    image: 'https://images.pexels.com/photos/37924951/pexels-photo-37924951.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'nr-sapphire-1',
+    title: 'Premium Sapphire Stones – AAA Grade',
+    category: 'Sapphire',
+    brand: 'Royal Gem Traders',
+    unit: 'carat',
+    currency: 'ZAR',
+    purity: 'AAA Grade',
+    form: 'Cut Stones',
+    specification: 'AAA grade clarity • Deep blue • Certified origin',
+    price: '880',
+    rating: 4.8,
+    reviewCount: 145,
+    image: 'https://images.pexels.com/photos/37702966/pexels-photo-37702966.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  // ---- Crude Oil & Petroleum ----
+  {
+    id: 'nr-oil-1',
+    title: 'Crude Oil – Brent Grade (Bulk Supply)',
+    category: 'Crude Oil',
+    brand: 'Atlas Petroleum Traders',
+    unit: 'barrel',
+    currency: 'ZAR',
+    purity: 'Brent Benchmark',
+    form: 'Bulk Liquid',
+    specification: 'Brent benchmark grade • FOB bulk shipment',
+    price: '1450',
+    rating: 4.5,
+    reviewCount: 36,
+    image: 'https://images.pexels.com/photos/6048394/pexels-photo-6048394.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'nr-diesel-1',
+    title: 'Refined Diesel Fuel (Bulk Supply)',
+    category: 'Diesel Fuel',
+    brand: 'Atlas Petroleum Traders',
+    unit: 'litre',
+    currency: 'ZAR',
+    purity: '50ppm Low-Sulphur',
+    form: 'Bulk Liquid',
+    specification: '50ppm low-sulphur diesel • Bulk tanker delivery',
+    price: '23',
+    rating: 4.6,
+    reviewCount: 52,
+    image: 'https://images.pexels.com/photos/3151717/pexels-photo-3151717.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'nr-lubricant-1',
+    title: 'Industrial Lubricant Base Oil Drums',
+    category: 'Lubricant Oil',
+    brand: 'PetroChem Lubricants SA',
+    unit: 'drum',
+    currency: 'ZAR',
+    purity: 'Group II Base Oil',
+    form: 'Drums',
+    specification: 'Group II base oil • 205L steel drums',
+    price: '3400',
+    rating: 4.5,
+    reviewCount: 29,
+    image: 'https://images.pexels.com/photos/9381053/pexels-photo-9381053.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  // ---- Coal & Energy Resources ----
+  {
+    id: 'nr-coal-1',
+    title: 'Industrial Coal – Thermal Grade 6500 kcal',
+    category: 'Thermal Coal',
+    brand: 'Coal Exports Ltd.',
+    unit: 'tonne',
+    currency: 'ZAR',
+    purity: '6500 kcal/kg',
+    form: 'Lumps',
+    specification: '6500 kcal/kg • Low ash • Power station grade',
+    price: '4200',
+    rating: 4.8,
+    reviewCount: 148,
+    image: 'https://images.pexels.com/photos/46801/coal-briquette-black-46801.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'nr-coal-2',
+    title: 'Anthracite Coal Lumps',
+    category: 'Anthracite Coal',
+    brand: 'Mpumalanga Coal Traders',
+    unit: 'tonne',
+    currency: 'ZAR',
+    purity: 'High Carbon',
+    form: 'Lumps',
+    specification: 'High carbon content • Low smoke • Lump grade',
+    price: '3650',
+    rating: 4.6,
+    reviewCount: 64,
+    image: 'https://images.pexels.com/photos/162477/coal-miners-minerals-extraction-162477.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'nr-coal-3',
+    title: 'Coking Coal Bulk Supply',
+    category: 'Coking Coal',
+    brand: 'Coal Exports Ltd.',
+    unit: 'tonne',
+    currency: 'ZAR',
+    purity: 'Metallurgical Grade',
+    form: 'Bulk Lumps',
+    specification: 'Metallurgical grade • Low sulphur • Bulk export',
+    price: '5100',
+    rating: 4.7,
+    reviewCount: 39,
+    image: 'https://images.pexels.com/photos/48884/carbon-black-charcoal-grill-briquettes-48884.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  // ---- Sand & Aggregates ----
   {
     id: 'nr2',
     title: 'Washed River Sand Bulk Supply',
-    category: 'Aggregates',
+    category: 'River Sand',
+    brand: 'Vaal River Aggregates',
+    unit: 'm³',
+    currency: 'ZAR',
+    purity: 'Construction Grade',
+    form: 'Bulk Loose',
     specification: 'Construction grade • Bulk delivery available',
-    price: '18500',
-    image:
-      'https://source.unsplash.com/1200x900/?sand,quarry,aggregate',
+    price: '650',
+    rating: 4.5,
+    reviewCount: 88,
+    image: 'https://images.pexels.com/photos/27986719/pexels-photo-27986719.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'nr-stone-1',
+    title: 'Crushed Stone Aggregate (19mm)',
+    category: 'Crushed Stone',
+    brand: 'Vaal River Aggregates',
+    unit: 'm³',
+    currency: 'ZAR',
+    purity: '19mm Grade',
+    form: 'Crushed Aggregate',
+    specification: '19mm grade • Road base and concrete mix use',
+    price: '580',
+    rating: 4.6,
+    reviewCount: 71,
+    image: 'https://images.pexels.com/photos/32967189/pexels-photo-32967189.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
   {
     id: 'nr3',
     title: 'Dimension Granite Blocks',
-    category: 'Stone',
-    specification: 'Cut-to-order • Quarry sourced',
-    price: '54000',
-    image:
-      'https://source.unsplash.com/1200x900/?granite,stone,quarry',
+    category: 'Granite',
+    brand: 'Quarry Stone Exports',
+    unit: 'tonne',
+    currency: 'ZAR',
+    purity: 'Quarry Grade',
+    form: 'Cut Blocks',
+    specification: 'Cut-to-order • Quarry sourced • Structural and decorative use',
+    price: '5400',
+    rating: 4.7,
+    reviewCount: 33,
+    image: 'https://images.pexels.com/photos/37845015/pexels-photo-37845015.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
+  // ---- Timber & Forestry ----
   {
     id: 'nr4',
     title: 'Hardwood Timber Packs',
-    category: 'Natural Resources',
+    category: 'Hardwood Timber',
+    brand: 'KZN Forestry Exports',
+    unit: 'm³',
+    currency: 'ZAR',
+    purity: 'Kiln-Dried',
+    form: 'Planks',
     specification: 'Kiln-dried • Furniture and structural use',
-    price: '32000',
-    image:
-      'https://source.unsplash.com/1200x900/?timber,lumber,wood',
+    price: '3200',
+    rating: 4.6,
+    reviewCount: 57,
+    image: 'https://images.pexels.com/photos/12278570/pexels-photo-12278570.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
+  {
+    id: 'nr-timber-2',
+    title: 'Pine Timber Logs (SAP-Treated)',
+    category: 'Pine Timber',
+    brand: 'Mpumalanga Sawmills',
+    unit: 'm³',
+    currency: 'ZAR',
+    purity: 'SAP-Treated',
+    form: 'Logs',
+    specification: 'SAP-treated • Structural and roofing grade',
+    price: '2450',
+    rating: 4.5,
+    reviewCount: 44,
+    image: 'https://images.pexels.com/photos/35623190/pexels-photo-35623190.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'nr-timber-3',
+    title: 'Eucalyptus Poles & Logs',
+    category: 'Eucalyptus',
+    brand: 'KZN Forestry Exports',
+    unit: 'unit',
+    currency: 'ZAR',
+    purity: 'Treated',
+    form: 'Poles',
+    specification: 'Treated poles • Fencing, mining, and utility use',
+    price: '650',
+    rating: 4.4,
+    reviewCount: 26,
+    image: 'https://images.pexels.com/photos/37866801/pexels-photo-37866801.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  // ---- Salt & Natural Chemicals ----
   {
     id: 'nr5',
     title: 'Refined Sea Salt Mineral Stock',
-    category: 'Mineral Products',
+    category: 'Sea Salt',
+    brand: 'Cape Coastal Salt Works',
+    unit: 'tonne',
+    currency: 'ZAR',
+    purity: 'Food Grade',
+    form: 'Crystals',
     specification: 'Food and industrial grade options',
-    price: '9500',
-    image:
-      'https://source.unsplash.com/1200x900/?sea-salt,mineral,salt',
+    price: '2100',
+    rating: 4.6,
+    reviewCount: 49,
+    image: 'https://images.pexels.com/photos/7717461/pexels-photo-7717461.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'nr-salt-2',
+    title: 'Himalayan Rock Salt Lumps',
+    category: 'Rock Salt',
+    brand: 'Trans-Continental Minerals',
+    unit: 'tonne',
+    currency: 'ZAR',
+    purity: 'Unrefined',
+    form: 'Lumps',
+    specification: 'Unrefined pink rock salt • Food and spa grade',
+    price: '3800',
+    rating: 4.7,
+    reviewCount: 38,
+    image: 'https://images.pexels.com/photos/6104433/pexels-photo-6104433.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'nr-chem-1',
+    title: 'Bulk Limestone Powder',
+    category: 'Limestone',
+    brand: 'Northern Lime Industries',
+    unit: 'tonne',
+    currency: 'ZAR',
+    purity: 'Industrial Grade',
+    form: 'Powder',
+    specification: 'Agricultural and industrial grade • Bulk bags available',
+    price: '950',
+    rating: 4.5,
+    reviewCount: 31,
+    image: 'https://images.pexels.com/photos/7409835/pexels-photo-7409835.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
 ];
+
+// "Browse by category" tiles on the Natural & Mineral Resources Market
+// landing page. `match` tokens are matched against each listing's
+// category/title (case-insensitive substring) to filter the listings grid
+// below. `slug` is the route segment for that category's dedicated listing
+// page (/natural-resources-minerals/:slug).
+const naturalResourcesCategoryShowcase = [
+  {
+    slug: 'precious-metals',
+    name: 'Precious Metals',
+    description: 'Gold, silver, platinum, and precious metal essentials',
+    image: 'https://images.pexels.com/photos/33539235/pexels-photo-33539235.jpeg?auto=compress&cs=tinysrgb&w=800',
+    match: ['gold', 'silver', 'platinum', 'palladium', 'rhodium', 'precious', 'bullion', 'nugget'],
+  },
+  {
+    slug: 'industrial-metals',
+    name: 'Industrial Metals',
+    description: 'Steel, copper, industrial minerals and metal essentials',
+    image: 'https://images.pexels.com/photos/3721272/pexels-photo-3721272.jpeg?auto=compress&cs=tinysrgb&w=800',
+    match: ['copper', 'steel', 'iron', 'rebar', 'industrial metal', 'alloy'],
+  },
+  {
+    slug: 'gemstones',
+    name: 'Gemstones',
+    description: 'Diamonds, gemstones, and gemstone essentials',
+    image: 'https://images.pexels.com/photos/6400515/pexels-photo-6400515.jpeg?auto=compress&cs=tinysrgb&w=800',
+    match: ['amethyst', 'emerald', 'quartz', 'gemstone', 'diamond', 'crystal', 'sapphire'],
+  },
+  {
+    slug: 'crude-oil-petroleum',
+    name: 'Crude Oil & Petroleum',
+    description: 'Crude oil, refined petroleum, fuels, and energy supplies',
+    image: 'https://images.pexels.com/photos/6048394/pexels-photo-6048394.jpeg?auto=compress&cs=tinysrgb&w=800',
+    match: ['oil', 'petroleum', 'crude', 'diesel', 'fuel', 'lubricant'],
+  },
+  {
+    slug: 'coal-energy-resources',
+    name: 'Coal & Energy Resources',
+    description: 'Coal, thermal, and energy resources solutions',
+    image: 'https://images.pexels.com/photos/46801/coal-briquette-black-46801.jpeg?auto=compress&cs=tinysrgb&w=800',
+    match: ['coal', 'anthracite', 'coking', 'thermal', 'energy'],
+  },
+  {
+    slug: 'sand-aggregates',
+    name: 'Sand & Aggregates',
+    description: 'Sand, gravel, aggregates, and construction solutions',
+    image: 'https://images.pexels.com/photos/32967189/pexels-photo-32967189.jpeg?auto=compress&cs=tinysrgb&w=800',
+    match: ['sand', 'aggregate', 'stone', 'gravel', 'granite', 'quarry'],
+  },
+  {
+    slug: 'timber-forestry',
+    name: 'Timber & Forestry',
+    description: 'Timber, wood products, and forestry essentials',
+    image: 'https://images.pexels.com/photos/12278570/pexels-photo-12278570.jpeg?auto=compress&cs=tinysrgb&w=800',
+    match: ['timber', 'wood', 'lumber', 'forestry', 'pine', 'eucalyptus', 'hardwood'],
+  },
+  {
+    slug: 'salt-natural-chemicals',
+    name: 'Salt & Natural Chemicals',
+    description: 'Salt, natural minerals, chemicals, and industrial solutions',
+    image: 'https://images.pexels.com/photos/7717461/pexels-photo-7717461.jpeg?auto=compress&cs=tinysrgb&w=800',
+    match: ['salt', 'limestone', 'chemical', 'lime'],
+  },
+];
+
+const NATURAL_RESOURCE_METAL_CATEGORIES = ['Gold', 'Silver', 'Platinum', 'Palladium', 'Rhodium', 'Copper', 'Steel', 'Iron Ore', 'Industrial Alloys'];
+const NATURAL_RESOURCE_GEMSTONE_CATEGORIES = ['Amethyst', 'Rose Quartz', 'Emerald', 'Sapphire'];
+const NATURAL_RESOURCE_ENERGY_CATEGORIES = ['Crude Oil', 'Diesel Fuel', 'Lubricant Oil', 'Thermal Coal', 'Anthracite Coal', 'Coking Coal'];
+
+// Which "Product Details" field set a resource category uses — shared by
+// buildResourceDetailPayload (buyer-facing detail view) and
+// NaturalResourcesSellPage (seller form), so a listing's spec table always
+// matches the fields the seller was actually asked to fill in.
+const getNaturalResourceFamily = (category) => {
+  if (NATURAL_RESOURCE_METAL_CATEGORIES.includes(category)) return 'metal';
+  if (NATURAL_RESOURCE_GEMSTONE_CATEGORIES.includes(category)) return 'gemstone';
+  if (NATURAL_RESOURCE_ENERGY_CATEGORIES.includes(category)) return 'energy';
+  return 'bulk';
+};
+
+// Sell-form category options, grouped by broad showcase category for the
+// <optgroup> dropdown. Picking one of these sets `item.category` (the
+// granular type used for the "Type" sidebar filter and for matching a
+// listing to its Browse-by-Category tile).
+const NATURAL_RESOURCE_SELL_CATEGORY_GROUPS = [
+  { group: 'Precious Metals', options: ['Gold', 'Silver', 'Platinum', 'Palladium', 'Rhodium'] },
+  { group: 'Industrial Metals', options: ['Copper', 'Steel', 'Iron Ore', 'Industrial Alloys'] },
+  { group: 'Gemstones', options: ['Amethyst', 'Rose Quartz', 'Emerald', 'Sapphire'] },
+  { group: 'Crude Oil & Petroleum', options: ['Crude Oil', 'Diesel Fuel', 'Lubricant Oil'] },
+  { group: 'Coal & Energy Resources', options: ['Thermal Coal', 'Anthracite Coal', 'Coking Coal'] },
+  { group: 'Sand & Aggregates', options: ['River Sand', 'Crushed Stone', 'Granite'] },
+  { group: 'Timber & Forestry', options: ['Hardwood Timber', 'Pine Timber', 'Eucalyptus'] },
+  { group: 'Salt & Natural Chemicals', options: ['Sea Salt', 'Rock Salt', 'Limestone'] },
+];
+const NATURAL_RESOURCE_UNIT_OPTIONS = ['kg', 'tonne', 'carat', 'litre', 'barrel', 'drum', 'm³', 'unit'];
+
+// The 2 leading "Product Details" rows (Product Type, Purity/Grade) are
+// always auto-derived from Category + Product Form + the top-level
+// Purity/Grade field rather than asked for twice — these are the
+// family-specific rows the seller fills in after that.
+const NATURAL_RESOURCE_SPEC_FIELDS_BY_FAMILY = {
+  metal: { qualityLabel: 'Purity', fields: ['Metal Standard', 'Available Weights', 'Metal Composition', 'Certification', 'Finish', 'Packaging'] },
+  gemstone: { qualityLabel: 'Clarity Grade', fields: ['Cut / Form', 'Carat Weight Range', 'Origin', 'Certification', 'Treatment', 'Packaging'] },
+  energy: { qualityLabel: 'Grade', fields: ['Composition', 'Packaging', 'Delivery Method', 'Certification', 'Storage', 'Shelf Life'] },
+  bulk: { qualityLabel: 'Grade', fields: ['Composition / Source', 'Particle Size / Dimensions', 'Certification', 'Packaging', 'Delivery Method', 'Storage'] },
+};
+
+// Builds the rich item-detail payload for any Natural & Mineral Resources
+// listing — Product Overview, Key Highlights, a Product Details spec table,
+// Ratings & Reviews, and Similar Products — mirroring the "Cars Market
+// Listing" rich-detail pattern. Called for every resource listing, whether
+// it's a catalog item or one filled in (fully or partially) through the
+// seller UI — `item.*` fields always win over the generated fallbacks below.
+const buildResourceDetailPayload = (item) => {
+  const category = item.category || 'Resource';
+  const brand = item.brand || item.sellerName || 'Verified Supplier';
+  // `volume`/`grade`/`origin` are the field names the generic seller-listing
+  // form (naturalResources market config) saves — catalog items set
+  // `unit`/`purity`/`form` directly, so both shapes resolve to sane content.
+  const unit = item.unit || item.volume || 'unit';
+  const purity = item.purity || item.grade || 'Standard Grade';
+  const form = item.form || 'Bulk';
+  const origin = item.origin || null;
+  const seed = item.id;
+  const family = getNaturalResourceFamily(category);
+  const isMetal = family === 'metal';
+  const isGemstone = family === 'gemstone';
+  const isEnergy = family === 'energy';
+
+  const productOverview = item.productOverview
+    || `${item.title} is a ${purity.toLowerCase()} ${category.toLowerCase()} product supplied by ${brand}, sold per ${unit} in ${String(form).toLowerCase()} form${origin ? ` and sourced from ${origin}` : ''}. ${item.specification ? `${item.specification}. ` : ''}Every lot is quality-checked before dispatch, with documentation and trade support available for local and export buyers.`;
+
+  const keyHighlights = Array.isArray(item.keyHighlights) && item.keyHighlights.length ? item.keyHighlights : (
+    isMetal ? [
+      `${purity} purity, independently assay-certified`,
+      `Supplied as ${String(form).toLowerCase()} for easy storage and resale`,
+      'Tamper-evident packaging with serial-numbered certification',
+      'Trusted by institutional and individual investors alike',
+    ] : isGemstone ? [
+      `${purity} clarity, ethically sourced`,
+      `Available as ${String(form).toLowerCase()}`,
+      'Certificate of authenticity included on request',
+      'Suitable for jewellery design, collection, or investment',
+    ] : isEnergy ? [
+      `${purity} grade, consistent batch quality`,
+      'Bulk supply with flexible delivery scheduling',
+      'Full compliance documentation provided',
+      'Competitive pricing for repeat and contract buyers',
+    ] : [
+      `${purity} grade material, consistently graded`,
+      `Supplied as ${String(form).toLowerCase()} for ${String(category).toLowerCase()} applications`,
+      'Bulk and trade quantities available',
+      'Quality-checked before dispatch',
+    ]
+  );
+
+  const qualityLabel = NATURAL_RESOURCE_SPEC_FIELDS_BY_FAMILY[family].qualityLabel;
+  const technicalSpecs = item.technicalSpecs && typeof item.technicalSpecs === 'object' ? item.technicalSpecs : (
+    isMetal ? {
+      'Product Type': `${category} ${form}`,
+      [qualityLabel]: purity,
+      'Metal Standard': seededVehiclePick(`${seed}:std`, ['LBMA Good Delivery', 'ISO 9001 Certified', 'London Platinum & Palladium Market Accredited']),
+      'Available Weights': seededVehiclePick(`${seed}:weights`, ['1g, 10g, 50g, 100g, 1kg', '10g, 100g, 1kg, 5kg', '1kg, 5kg, 10kg']),
+      'Metal Composition': `${purity} ${category}`,
+      Certification: 'Assay certified with unique serial number',
+      Finish: seededVehiclePick(`${seed}:finish`, ['Precision-cast', 'Minted', 'Cast and polished']),
+      Packaging: 'Tamper-evident assay card or sealed protective case',
+    } : isGemstone ? {
+      'Product Type': `${category} ${form}`,
+      [qualityLabel]: purity,
+      'Cut / Form': form,
+      'Carat Weight Range': seededVehiclePick(`${seed}:carat`, ['0.5 – 2 carats', '1 – 5 carats', '2 – 10 carats']),
+      Origin: origin || seededVehiclePick(`${seed}:origin`, ['Southern Africa', 'East Africa', 'South America', 'South Asia']),
+      Certification: 'Certificate of authenticity available on request',
+      Treatment: seededVehiclePick(`${seed}:treatment`, ['Untreated / Natural', 'Minor enhancement disclosed']),
+      Packaging: 'Secure gem parcel with tamper-evident seal',
+    } : isEnergy ? {
+      'Product Type': category,
+      [qualityLabel]: purity,
+      Composition: item.specification || `${category} — standard commercial grade`,
+      Packaging: form,
+      'Delivery Method': seededVehiclePick(`${seed}:delivery`, ['Bulk tanker / rail', 'Bulk vessel (FOB/CIF)', 'Containerised bulk bags']),
+      Certification: 'Certificate of analysis (CoA) provided per batch',
+      Storage: seededVehiclePick(`${seed}:storage`, ['Store in cool, ventilated conditions', 'Store away from direct heat and ignition sources']),
+      'Shelf Life': seededVehiclePick(`${seed}:shelf`, ['12 months from production', '24 months from production', 'No expiry under proper storage']),
+    } : {
+      'Product Type': `${category} (${form})`,
+      [qualityLabel]: purity,
+      'Composition / Source': item.specification || `${category} sourced from verified suppliers`,
+      'Particle Size / Dimensions': seededVehiclePick(`${seed}:size`, ['Standard graded mix', 'Uniform graded sizing', 'Custom sizing on request']),
+      Certification: 'Quality-tested before dispatch',
+      Packaging: form,
+      'Delivery Method': seededVehiclePick(`${seed}:delivery2`, ['Bulk truck delivery', 'Bagged and palletised', 'Loose bulk or bagged on request']),
+      Storage: 'Store in dry, covered conditions',
+    }
+  );
+
+  const badges = item.badges || ['Verified Listing', 'Warranty Included', 'Free Delivery', 'Finance Available'];
+  const viewCount = seededVehicleRange(`${seed}:nrviews`, 180, 2200);
+
+  return { productOverview, keyHighlights, technicalSpecs, specsTitle: 'Product Details', badges, viewCount };
+};
 
 const footerLinks = {
   quick: [
@@ -17031,6 +17812,11 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
     });
   };
 
+  // Lets a `?focus=<id>` link (e.g. from the Trending carousel, Recently
+  // Viewed, or an order summary) scroll to and auto-open a listing's rich
+  // detail view, whether that's a catalog vehicle or a seller-submitted one.
+  useListingFocusFromQuery(marketItems, openItemDetails);
+
   const renderVehicleCard = (item, { compact = false } = {}) => {
     const itemTitle = getTranslatedValue(t, item.titleKey, item.title);
     const fuel = detectMobilityAttribute(item, MOBILITY_FUEL_OPTIONS);
@@ -17348,20 +18134,7 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
             onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
             onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
             onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
-            onOpenItemDetails={(item) => {
-              const wishlistItem = buildWishlistItem(item);
-              onOpenItemDetails?.({
-                title: getTranslatedValue(t, item.titleKey, item.title),
-                image: item.image,
-                images: item.images || (item.image ? [item.image] : []),
-                ...getItemDetailSizeProps(item),
-                marketName: t('markets.mobilityVehicles'),
-                details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Transport listing'}`,
-                priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
-                cartItem: buildCartItem(item),
-                wishlistItem,
-              });
-            }}
+            onOpenItemDetails={openItemDetails}
             isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/mobility-vehicles', item.id))}
             metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.specification || item.sellerName || 'Transport listing'} • <SalePrice price={item.price} currency={item.currency} /></p>}
           />
@@ -17891,19 +18664,404 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
 
 const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
+  const { categorySlug = '' } = useParams();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'naturalResources'), ...naturalResourcesItems], [sellerItems]);
+  const activeCategory = naturalResourcesCategoryShowcase.find((category) => category.slug === categorySlug) || null;
+
+  // ---- Landing page ("Browse by Category") state ----
+  const [showAllListings, setShowAllListings] = useState(false);
+  const visibleListings = showAllListings ? marketItems : marketItems.slice(0, 6);
+
+  // ---- Category detail page state ----
+  const [categorySearchQuery, setCategorySearchQuery] = useState('');
+  const [selectedTypes, setSelectedTypes] = useState([]);
+  const [selectedPurities, setSelectedPurities] = useState([]);
+  const [selectedForms, setSelectedForms] = useState([]);
+  const [selectedSuppliers, setSelectedSuppliers] = useState([]);
+  const [priceRange, setPriceRange] = useState([0, 0]);
+  const [showAllCategoryListings, setShowAllCategoryListings] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(false);
+  const featuredScrollRef = useRef(null);
+
+  // Reset category-specific filters whenever the category changes (the
+  // route param changes without unmounting this component).
+  useEffect(() => {
+    setCategorySearchQuery('');
+    setSelectedTypes([]);
+    setSelectedPurities([]);
+    setSelectedForms([]);
+    setSelectedSuppliers([]);
+    setShowAllCategoryListings(false);
+  }, [categorySlug]);
+
+  const categoryItems = useMemo(() => {
+    if (!activeCategory) return [];
+    return marketItems.filter((item) => {
+      const haystack = `${item.category || ''} ${item.title || ''}`.toLowerCase();
+      return activeCategory.match.some((token) => haystack.includes(token));
+    });
+  }, [marketItems, activeCategory]);
+
+  // Filter options are derived only from data actually present so the
+  // sidebar never shows a clickable option with zero possible matches.
+  const typeOptions = useMemo(() => Array.from(new Set(categoryItems.map((item) => item.category).filter(Boolean))), [categoryItems]);
+  const purityOptions = useMemo(() => Array.from(new Set(categoryItems.map((item) => item.purity).filter(Boolean))), [categoryItems]);
+  const formOptions = useMemo(() => Array.from(new Set(categoryItems.map((item) => item.form).filter(Boolean))), [categoryItems]);
+  const supplierOptions = useMemo(() => Array.from(new Set(categoryItems.map((item) => item.brand).filter(Boolean))), [categoryItems]);
+  const categoryPriceMax = useMemo(() => {
+    const max = categoryItems.reduce((highest, item) => Math.max(highest, getNumericPriceValue(item.price, 0, item.currency || null)), 0);
+    return Math.max(100, Math.ceil(max));
+  }, [categoryItems]);
+
+  useEffect(() => {
+    setPriceRange((prev) => (prev[1] !== categoryPriceMax ? [Math.min(prev[0], categoryPriceMax), categoryPriceMax] : prev));
+  }, [categoryPriceMax]);
+
+  const toggleArrayValue = (setter, value) => {
+    setter((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
+  };
+
+  const filteredCategoryItems = useMemo(() => {
+    const q = categorySearchQuery.trim().toLowerCase();
+    return categoryItems.filter((item) => {
+      if (selectedTypes.length && !selectedTypes.includes(item.category)) return false;
+      if (selectedPurities.length && !selectedPurities.includes(item.purity)) return false;
+      if (selectedForms.length && !selectedForms.includes(item.form)) return false;
+      if (selectedSuppliers.length && !selectedSuppliers.includes(item.brand)) return false;
+      const price = getNumericPriceValue(item.price, 0, item.currency || null);
+      if (price < priceRange[0] || price > priceRange[1]) return false;
+      if (q && !String(item.title || '').toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [categoryItems, selectedTypes, selectedPurities, selectedForms, selectedSuppliers, priceRange, categorySearchQuery]);
+
+  const visibleCategoryListings = showAllCategoryListings ? filteredCategoryItems : filteredCategoryItems.slice(0, 6);
+  const featuredItems = categoryItems.slice(0, 6);
+  // "Featured Gold, Silver & Platinum Selections" — naturally joins the
+  // distinct resource types in this category (comma-separated, "&" before
+  // the last) instead of a hardcoded string per category.
+  const featuredHeading = (() => {
+    const names = typeOptions.slice(0, 3);
+    if (names.length <= 1) return `Featured ${activeCategory?.name || 'Resource'} Selections`;
+    const joined = names.length === 2
+      ? names.join(' & ')
+      : `${names.slice(0, -1).join(', ')} & ${names[names.length - 1]}`;
+    return `Featured ${joined} Selections`;
+  })();
+
   const buildCartItem = (item) => createCartItem({
     ...item,
-    route: '/natural-resources-minerals',
+    route: activeCategory ? `/natural-resources-minerals/${activeCategory.slug}` : '/natural-resources-minerals',
     marketName: t('markets.naturalResources'),
     details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Resource listing'}`,
   });
   const buildWishlistItem = (item) => createWishlistItem({
     ...item,
-    route: '/natural-resources-minerals',
+    route: activeCategory ? `/natural-resources-minerals/${activeCategory.slug}` : '/natural-resources-minerals',
     marketName: t('markets.naturalResources'),
     details: `${item.category || 'Seller item'} • ${item.specification || item.sellerName || 'Resource listing'}`,
   });
+
+  const openItemDetails = (item) => {
+    const wishlistItem = buildWishlistItem(item);
+    // Every resource listing gets the full rich detail treatment (Product
+    // Overview, Key Highlights, Product Details, Ratings & Reviews, Similar
+    // Products) — whether it's a catalog item or one filled in (fully or
+    // partially) through the seller UI; buildResourceDetailPayload falls
+    // back to sensible generated content for any fields the seller left blank.
+    const resourceDetail = buildResourceDetailPayload(item);
+    const matchedShowcaseCategory = naturalResourcesCategoryShowcase.find((showcase) => {
+      const haystack = `${item.category || ''} ${item.title || ''}`.toLowerCase();
+      return showcase.match.some((token) => haystack.includes(token));
+    });
+    const similarProducts = naturalResourcesItems
+      .filter((other) => other.id !== item.id && other.category === item.category)
+      .slice(0, 3)
+      .map((other) => ({
+        id: other.id,
+        title: getTranslatedValue(t, other.titleKey, other.title),
+        image: other.image,
+        price: getSalePrices(other.price, getItemSaleDiscountRate(other), other.currency || null).nowPrice,
+        productType: matchedShowcaseCategory?.name || other.category,
+        category: other.category,
+        sellerName: other.brand,
+        rating: other.rating || 4.7,
+        reviewsCount: other.reviewCount || 86,
+      }));
+    onOpenItemDetails?.({
+      title: getTranslatedValue(t, item.titleKey, item.title),
+      image: item.image,
+      images: item.images || (item.image ? [item.image] : []),
+      ...getItemDetailSizeProps(item),
+      marketName: t('markets.naturalResources'),
+      details: `${item.category || 'Seller item'} • ${item.brand || item.sellerName || 'Resource listing'}${item.unit ? ` • Sold per ${item.unit}` : ''}`,
+      priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
+      cartItem: buildCartItem(item),
+      wishlistItem,
+      ...resourceDetail,
+      detailVariant: 'naturalResource',
+      category: item.category,
+      brand: item.brand,
+      sellerName: item.sellerName || item.brand,
+      similarProducts,
+    });
+  };
+
+  // Lets a `?focus=<id>` link (e.g. from the Trending carousel) scroll to
+  // and auto-open a listing, whether that's a catalog resource or a
+  // seller-submitted one.
+  useListingFocusFromQuery(marketItems, openItemDetails);
+
+  const renderResourceCard = (item, { compact = false } = {}) => {
+    const itemTitle = getTranslatedValue(t, item.titleKey, item.title);
+    const itemReviewKey = getCollectionItemId(activeCategory ? `/natural-resources-minerals/${activeCategory.slug}` : '/natural-resources-minerals', item.id);
+    const reviewSummary = getProductReviewSummary(productReviewSummaryMap, itemReviewKey);
+    const hasStaticRating = typeof item.rating === 'number';
+    const averageRatingLabel = hasStaticRating ? item.rating.toFixed(1) : (reviewSummary.reviewCount ? reviewSummary.averageRating.toFixed(1) : '0.0');
+    const reviewCountValue = hasStaticRating ? (item.reviewCount || 0) : reviewSummary.reviewCount;
+    const isWishlisted = wishlistItemIds.includes(itemReviewKey);
+    return (
+      <article
+        key={item.id}
+        id={`listing-${item.id}`}
+        className={`group flex flex-col overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-[0_4px_10px_rgba(0,0,0,0.06)] transition hover:-translate-y-1 hover:shadow-[0_14px_28px_rgba(0,168,232,0.18)] ${compact ? 'w-[230px] shrink-0 snap-start' : ''}`}
+        role="button"
+        tabIndex={0}
+        onClick={() => openItemDetails(item)}
+        onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openItemDetails(item); } }}
+      >
+        <div className="relative aspect-[4/3] w-full overflow-hidden">
+          <img src={item.image} alt={itemTitle} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" loading="lazy" />
+          <button
+            type="button"
+            onClick={(event) => { event.stopPropagation(); onToggleWishlist(buildWishlistItem(item)); }}
+            aria-pressed={isWishlisted}
+            aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+            className={`absolute right-2 top-2 rounded-full border border-[var(--svs-border)] bg-white/90 p-1.5 text-[#e11d48] shadow ${isWishlisted ? 'bg-rose-50' : 'hover:bg-[#e0f7fa]'}`}
+          >
+            <Heart className={`h-3.5 w-3.5 ${isWishlisted ? 'fill-current' : ''}`} />
+          </button>
+        </div>
+        <div className="flex flex-1 flex-col p-3">
+          <h3 className="text-sm font-bold leading-tight text-[#0f6674]">{itemTitle}</h3>
+          {item.category ? (
+            <div className="mt-1.5 flex items-center gap-1 text-[11px] text-[var(--svs-muted)]">
+              <Package className="h-3 w-3" />{item.category}
+            </div>
+          ) : null}
+          <div className="mt-1.5 flex items-center gap-1 text-[11px] text-amber-500">
+            <Star className="h-3 w-3 fill-current" />
+            <span className="font-semibold text-[var(--svs-text)]">{averageRatingLabel}</span>
+            <span className="text-[var(--svs-muted)]">({reviewCountValue} review{reviewCountValue === 1 ? '' : 's'})</span>
+          </div>
+          {item.brand ? (
+            <div className="mt-1.5 flex items-center gap-1 text-[11px] text-[var(--svs-muted)]">
+              <Building2 className="h-3 w-3" />{item.brand}
+            </div>
+          ) : null}
+          <p className="mt-2 text-sm font-bold text-[#0f6674]">
+            <SalePrice price={item.price} currency={item.currency} />{item.unit ? <span className="text-[11px] font-semibold text-[var(--svs-muted)]">/{item.unit}</span> : null}
+          </p>
+          <button
+            type="button"
+            onClick={(event) => { event.stopPropagation(); openItemDetails(item); }}
+            className={`${cudyBluePrimaryButtonClassName} mt-3 w-full rounded-full bg-[var(--svs-primary)] py-2 text-xs font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}
+          >
+            View Details
+          </button>
+        </div>
+      </article>
+    );
+  };
+
+  if (categorySlug && !activeCategory) {
+    return <Navigate to="/natural-resources-minerals" replace />;
+  }
+
+  if (activeCategory) {
+    return (
+      <PageFrame
+        title={`${activeCategory.name} Market Listing`}
+        subtitle="Explore verified suppliers, transparent pricing, and bulk sourcing options for metals, minerals, energy resources, and natural commodities."
+        heroImage={activeCategory.image}
+        heroMediaClassName="scale-105"
+        heroOverlayClassName="bg-gradient-to-r from-black/80 via-black/60 to-black/45"
+        sectionClassName="px-0 pt-0 pb-8 sm:pt-0 sm:pb-10"
+        heroWrapperClassName="w-full max-w-none"
+        contentWrapperClassName="mx-auto w-full max-w-7xl px-4"
+        heroContainerClassName="rounded-none border-x-0 border-t-0 p-0 shadow-none"
+        heroContentClassName="flex min-h-[220px] flex-col items-center justify-center px-6 py-8 text-center sm:min-h-[260px] sm:px-8 sm:py-10"
+        titleClassName="text-xl text-white sm:text-2xl"
+        subtitleClassName="mt-2 max-w-2xl text-xs text-white/90 sm:text-sm"
+      >
+        <div className="mb-5">
+          <Link to="/natural-resources-minerals" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--svs-primary-strong)] hover:underline">
+            <ChevronLeft className="h-3.5 w-3.5" /> Back to Natural & Mineral Resources Market
+          </Link>
+        </div>
+        <div className="mb-5">
+          <div className="flex items-center gap-2 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-2.5 shadow-sm">
+            <Search className="h-4 w-4 text-[var(--svs-muted)]" />
+            <input
+              type="search"
+              value={categorySearchQuery}
+              onChange={(event) => setCategorySearchQuery(event.target.value)}
+              placeholder={`Search ${activeCategory.name.toLowerCase()}, suppliers...`}
+              className="w-full bg-transparent text-sm text-[var(--svs-text)] outline-none placeholder:text-[var(--svs-muted)]"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-4 lg:flex-row lg:gap-8">
+          {isFiltersOpen ? (
+            <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setIsFiltersOpen(false)} role="presentation" />
+          ) : null}
+
+          <div className={`${isFiltersOpen ? 'fixed left-0 top-0 z-50 flex h-full w-[320px] max-w-[85vw] flex-col overflow-y-auto bg-white p-4 shadow-2xl sm:w-[340px]' : 'hidden'} ${isDesktopFiltersHidden ? 'lg:hidden' : 'lg:block lg:w-[260px] lg:shrink-0 lg:static lg:h-auto lg:p-0 lg:shadow-none'}`}>
+            <button type="button" onClick={() => setIsFiltersOpen(false)} className="mb-3 self-end rounded-full p-1.5 text-[var(--svs-muted)] hover:bg-slate-100 lg:hidden" aria-label="Close filters">
+              <X className="h-5 w-5" />
+            </button>
+            <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-sm">
+              {typeOptions.length ? (
+                <div className="mb-5">
+                  <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">{activeCategory.name.replace(/s$/, '')} Type</h3>
+                  <div className="flex flex-col gap-2">
+                    {typeOptions.map((option) => (
+                      <label key={option} className="flex items-center gap-2 text-sm text-[var(--svs-text)]">
+                        <input type="checkbox" checked={selectedTypes.includes(option)} onChange={() => toggleArrayValue(setSelectedTypes, option)} className="accent-[var(--svs-primary)]" />
+                        {option}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {purityOptions.length ? (
+                <div className="mb-5">
+                  <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Purity / Grade</h3>
+                  <div className="flex flex-col gap-2">
+                    {purityOptions.map((option) => (
+                      <label key={option} className="flex items-center gap-2 text-sm text-[var(--svs-text)]">
+                        <input type="checkbox" checked={selectedPurities.includes(option)} onChange={() => toggleArrayValue(setSelectedPurities, option)} className="accent-[var(--svs-primary)]" />
+                        {option}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {formOptions.length ? (
+                <div className="mb-5">
+                  <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Product Form</h3>
+                  <div className="flex flex-col gap-2">
+                    {formOptions.map((option) => (
+                      <label key={option} className="flex items-center gap-2 text-sm text-[var(--svs-text)]">
+                        <input type="checkbox" checked={selectedForms.includes(option)} onChange={() => toggleArrayValue(setSelectedForms, option)} className="accent-[var(--svs-primary)]" />
+                        {option}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {supplierOptions.length ? (
+                <div className="mb-5">
+                  <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Brand</h3>
+                  <div className="flex flex-col gap-2">
+                    {supplierOptions.map((option) => (
+                      <label key={option} className="flex items-center gap-2 text-sm text-[var(--svs-text)]">
+                        <input type="checkbox" checked={selectedSuppliers.includes(option)} onChange={() => toggleArrayValue(setSelectedSuppliers, option)} className="accent-[var(--svs-primary)]" />
+                        {option}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              <div className="mb-5">
+                <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Price Range</h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[0], _fxState.buyerCurrency)}</span>
+                  <input type="range" min={0} max={categoryPriceMax} value={priceRange[0]} onChange={(event) => setPriceRange([Number(event.target.value), priceRange[1]])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
+                  <input type="range" min={0} max={categoryPriceMax} value={priceRange[1]} onChange={(event) => setPriceRange([priceRange[0], Number(event.target.value)])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
+                  <span className="text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[1], _fxState.buyerCurrency)}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsFiltersOpen(false)}
+                className={`${cudyBluePrimaryButtonClassName} w-full rounded-xl bg-[var(--svs-primary)] py-2.5 text-sm font-semibold text-white`}
+              >
+                Apply Filters
+              </button>
+            </div>
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="mb-4 flex items-center gap-2">
+              <button type="button" onClick={() => setIsFiltersOpen(true)} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--svs-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--svs-text)] lg:hidden">
+                <Filter className="h-3.5 w-3.5" /> Filters
+              </button>
+              <button type="button" onClick={() => setIsDesktopFiltersHidden((prev) => !prev)} className="hidden items-center gap-1.5 rounded-full border border-[var(--svs-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--svs-text)] lg:inline-flex">
+                <Filter className="h-3.5 w-3.5" /> {isDesktopFiltersHidden ? 'Show Filters' : 'Hide Filters'}
+              </button>
+              <p className="text-xs text-[var(--svs-muted)]">{filteredCategoryItems.length} listing{filteredCategoryItems.length === 1 ? '' : 's'}</p>
+            </div>
+
+            {visibleCategoryListings.length ? (
+              <>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {visibleCategoryListings.map((item) => renderResourceCard(item))}
+                </div>
+                {!showAllCategoryListings && filteredCategoryItems.length > visibleCategoryListings.length ? (
+                  <div className="mt-6 flex justify-center">
+                    <button type="button" onClick={() => setShowAllCategoryListings(true)} className={`${cudyBluePrimaryButtonClassName} rounded-full bg-[var(--svs-primary-strong)] px-12 py-3 text-sm font-semibold text-white shadow-md hover:bg-[var(--svs-primary)]`}>
+                      View All
+                    </button>
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-[var(--svs-border)] bg-white px-5 py-12 text-center text-sm text-[var(--svs-muted)]">
+                No {activeCategory.name.toLowerCase()} listings match your filters yet.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {featuredItems.length ? (
+          <div className="relative mt-12 -mx-4 bg-[#0f6674] px-4 py-10 sm:-mx-8 sm:px-8">
+            <div
+              className="absolute inset-0 bg-cover bg-center opacity-30"
+              style={{ backgroundImage: `url('${MARKET_THEMES.naturalResources}')` }}
+              aria-hidden="true"
+            />
+            <div className="relative">
+              <h2 className="text-center text-xl font-bold text-white sm:text-2xl">{featuredHeading}</h2>
+              <div className="relative mt-6">
+                <div ref={featuredScrollRef} className="flex gap-4 overflow-x-auto pb-2 scroll-smooth snap-x" style={{ scrollbarWidth: 'none' }}>
+                  {featuredItems.map((item) => renderResourceCard(item, { compact: true }))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => featuredScrollRef.current?.scrollBy({ left: -260, behavior: 'smooth' })}
+                  aria-label="Scroll left"
+                  className="absolute -left-3 top-1/2 hidden -translate-y-1/2 rounded-full bg-white p-2 text-[#0f6674] shadow-lg sm:flex"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => featuredScrollRef.current?.scrollBy({ left: 260, behavior: 'smooth' })}
+                  aria-label="Scroll right"
+                  className="absolute -right-3 top-1/2 hidden -translate-y-1/2 rounded-full bg-white p-2 text-[#0f6674] shadow-lg sm:flex"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </PageFrame>
+    );
+  }
 
   return (
   <MarketShowcase
@@ -17912,34 +19070,579 @@ const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
     subtitle={t('pageSubtitles.naturalResources')}
     eyebrow={t('markets.naturalResources')}
     chips={['Minerals', 'Renewables', 'Bulk supply']}
+    showTrustStrip={false}
   >
-    <CardGrid
-      items={marketItems}
-      buttonLabel={t('common.addToCart')}
-      secondaryButtonLabel={t('common.viewDetails')}
-      reviewSummaryMap={productReviewSummaryMap}
-      getItemReviewKey={(item) => getCollectionItemId('/natural-resources-minerals', item.id)}
-      onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-      onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
-      onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
-      onOpenItemDetails={(item) => {
-        const wishlistItem = buildWishlistItem(item);
-        onOpenItemDetails?.({
-          title: getTranslatedValue(t, item.titleKey, item.title),
-          image: item.image,
-          images: item.images || (item.image ? [item.image] : []),
-          ...getItemDetailSizeProps(item),
-          marketName: t('markets.naturalResources'),
-          details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Resource listing'}`,
-          priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
-          cartItem: buildCartItem(item),
-          wishlistItem,
-        });
-      }}
-      isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/natural-resources-minerals', item.id))}
-      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • {item.specification || item.sellerName || 'Resource listing'} • <SalePrice price={item.price} currency={item.currency} /></p>}
-    />
+    {/* ── Browse by Category ── */}
+    <div>
+      <div className="flex items-center gap-2">
+        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-[#0f6674] text-white">
+          <LayoutDashboard className="h-4 w-4" />
+        </span>
+        <h2 className="text-lg font-bold text-[var(--svs-text)] sm:text-xl">Browse by Category</h2>
+      </div>
+      <p className="mt-1 text-xs text-[var(--svs-muted)] sm:text-sm">Explore metals, minerals, energy resources, and natural commodities all in one place.</p>
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+        {naturalResourcesCategoryShowcase.map((category) => (
+          <Link
+            key={category.slug}
+            to={`/natural-resources-minerals/${category.slug}`}
+            className="group flex flex-col overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] text-left shadow-[0_4px_10px_rgba(0,0,0,0.06)] transition hover:-translate-y-1 hover:shadow-[0_14px_28px_rgba(0,168,232,0.18)]"
+          >
+            <div className="relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-[#0f6674] to-[#33b9f2]">
+              <img
+                src={category.image}
+                alt={category.name}
+                loading="lazy"
+                onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
+              />
+            </div>
+            <div className="p-3 sm:p-4">
+              <p className="text-sm font-bold text-[#0f6674] sm:text-base">{category.name}</p>
+              <p className="mt-1 text-[11px] leading-snug text-[var(--svs-muted)] sm:text-xs">{category.description}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+
+    {/* ── Trending Natural Resources & Top Picks ── */}
+    <div className="mt-12 text-center">
+      <h2 className="text-xl font-bold text-[var(--svs-text)] sm:text-2xl">Trending Natural Resources &amp; Top Picks</h2>
+      <p className="mt-1 text-xs text-[var(--svs-muted)] sm:text-sm">Top picks in precious metals, industrial minerals, and natural resources.</p>
+    </div>
+
+    {visibleListings.length ? (
+      <>
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {visibleListings.map((item) => renderResourceCard(item))}
+        </div>
+        {!showAllListings && marketItems.length > visibleListings.length ? (
+          <div className="mt-6 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setShowAllListings(true)}
+              className={`${cudyBluePrimaryButtonClassName} rounded-full bg-[var(--svs-primary-strong)] px-12 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-[var(--svs-primary)]`}
+            >
+              View All
+            </button>
+          </div>
+        ) : null}
+      </>
+    ) : (
+      <div className="mt-6 rounded-xl border border-dashed border-[var(--svs-border)] bg-white px-5 py-10 text-center text-xs text-[var(--svs-muted)]">
+        No listings yet in this category. Check back soon or browse another category above.
+      </div>
+    )}
+
+    {/* ── Why Shop With Us? ── */}
+    <div
+      className="relative -mx-4 mt-12 bg-[#0f6674] bg-cover bg-center py-12"
+      style={{ backgroundImage: `url('${MARKET_THEMES.naturalResources}')` }}
+    >
+      <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/40 to-black/55" aria-hidden="true" />
+      <div className="relative mx-auto w-full max-w-6xl px-4 sm:px-6">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-white drop-shadow sm:text-3xl">Why Shop With Us?</h2>
+          <p className="mx-auto mt-2 max-w-3xl text-sm text-white/95 drop-shadow sm:text-base">
+            Reliable marketplace for metals, minerals, energy resources, and commodities with transparent sourcing.
+          </p>
+        </div>
+        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { icon: ShieldCheck, title: 'Verified Suppliers', body: 'Every supplier is screened for quality, reliability, and a proven track record.' },
+            { icon: Package, title: 'Quality Assurance', body: 'Third-party lab testing and certification available on mineral and resource lots.' },
+            { icon: Globe, title: 'Global Trade Support', body: 'Export documentation, customs clearance, and shipping support worldwide.' },
+            { icon: HeartHandshake, title: 'Expert / Import Assistance', body: 'On-call trade specialists, document support, and trade finance connections.' },
+          ].map((item) => (
+            <div key={item.title} className="flex flex-col items-center rounded-2xl border border-white/15 bg-white/10 p-5 text-center backdrop-blur">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 text-white">
+                <item.icon className="h-5 w-5" />
+              </span>
+              <p className="mt-3 text-sm font-bold text-white">{item.title}</p>
+              <p className="mt-1 text-[11px] leading-snug text-white/85 sm:text-xs">{item.body}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   </MarketShowcase>
+  );
+};
+
+const NATURAL_RESOURCE_SELL_CATEGORIES = NATURAL_RESOURCE_SELL_CATEGORY_GROUPS.flatMap((group) => group.options);
+const emptyNaturalResourceSellForm = () => ({
+  title: '',
+  category: '',
+  brand: '',
+  purity: '',
+  form: '',
+  unit: '',
+  price: '',
+  currency: '',
+  quantity: '',
+  specification: '',
+  productOverview: '',
+  keyHighlights: '',
+  specs: {},
+});
+
+const NaturalResourcesSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdateSellerItem, onDeleteSellerItem }) => {
+  const navigate = useNavigate();
+  const [form, setForm] = useState(emptyNaturalResourceSellForm);
+  const [editingId, setEditingId] = useState(null);
+  const [existingImageUrls, setExistingImageUrls] = useState([]);
+  const [originalImageUrls, setOriginalImageUrls] = useState([]);
+  const [imageFiles, setImageFiles] = useState([]);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState('idle');
+  const isAuthenticated = getAuthState();
+  const userEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
+  const userName = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-name') || 'SVS Seller');
+
+  const myListings = useMemo(
+    () => getSellerItemsForMarket(sellerItems, 'naturalResources').filter((item) => normalizeEmail(item.sellerEmail) === userEmail),
+    [sellerItems, userEmail],
+  );
+
+  const activeFamily = getNaturalResourceFamily(form.category);
+  const activeSpecConfig = NATURAL_RESOURCE_SPEC_FIELDS_BY_FAMILY[activeFamily];
+
+  useEffect(() => {
+    if (!imageFiles.length) {
+      setImagePreviewUrls([]);
+      return undefined;
+    }
+    const nextUrls = imageFiles.map((file) => URL.createObjectURL(file));
+    setImagePreviewUrls(nextUrls);
+    return () => {
+      nextUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [imageFiles]);
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleSpecChange = (label, value) => {
+    setForm((current) => ({ ...current, specs: { ...current.specs, [label]: value } }));
+  };
+
+  const handleImagePick = (event) => {
+    const pickedFiles = Array.from(event.target.files || []);
+    if (!pickedFiles.length) return;
+    setImageFiles((current) => [...current, ...pickedFiles]);
+    event.target.value = '';
+  };
+
+  const handleRemoveSelectedImage = (indexToRemove) => {
+    setImageFiles((current) => current.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleRemoveExistingImage = (urlToRemove) => {
+    setExistingImageUrls((current) => current.filter((url) => url !== urlToRemove));
+  };
+
+  const resetForm = () => {
+    setEditingId(null);
+    setForm(emptyNaturalResourceSellForm());
+    setExistingImageUrls([]);
+    setOriginalImageUrls([]);
+    setImageFiles([]);
+  };
+
+  const handleEdit = (listing) => {
+    setEditingId(listing.dbId);
+    setMessage('');
+    setMessageType('idle');
+    const listingImages = Array.isArray(listing.images) && listing.images.length
+      ? listing.images
+      : (listing.image ? [listing.image] : []);
+    const listingFamily = getNaturalResourceFamily(listing.category);
+    setForm({
+      title: listing.title || '',
+      category: listing.category || '',
+      brand: listing.brand || '',
+      purity: listing.purity || '',
+      form: listing.form || '',
+      unit: listing.unit || '',
+      price: listing.price || '',
+      currency: listing.currency || '',
+      quantity: listing.availableQuantity ? String(listing.availableQuantity) : '',
+      specification: listing.specification || '',
+      productOverview: listing.productOverview || '',
+      keyHighlights: Array.isArray(listing.keyHighlights) ? listing.keyHighlights.join('\n') : '',
+      specs: NATURAL_RESOURCE_SPEC_FIELDS_BY_FAMILY[listingFamily].fields.reduce((acc, label) => ({ ...acc, [label]: listing.technicalSpecs?.[label] || '' }), {}),
+    });
+    setExistingImageUrls(listingImages);
+    setOriginalImageUrls(listingImages);
+    setImageFiles([]);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDelete = async (listing) => {
+    if (typeof window !== 'undefined' && !window.confirm(`Remove "${listing.title}"? This cannot be undone.`)) return;
+    const result = await onDeleteSellerItem(listing.dbId, listing.images, listing.image);
+    if (result?.error) {
+      setMessage(result.error);
+      setMessageType('error');
+      return;
+    }
+    if (editingId === listing.dbId) resetForm();
+    setMessage('Listing removed.');
+    setMessageType('success');
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!isAuthenticated) {
+      navigate('/signin');
+      return;
+    }
+
+    const trimmedTitle = form.title.trim();
+    const trimmedBrand = form.brand.trim();
+    const trimmedPurity = form.purity.trim();
+    const rawPrice = form.price.trim();
+    const cleanedPrice = rawPrice.replace(/[^\d.]/g, '');
+    const trimmedPrice = cleanedPrice || rawPrice;
+
+    if (!trimmedTitle || !form.category || !trimmedBrand || !trimmedPurity || !form.unit || !trimmedPrice) {
+      setMessage('Add a title, category, brand/supplier, purity/grade, unit and price before publishing.');
+      setMessageType('error');
+      return;
+    }
+
+    if (!SUPPORTED_CURRENCIES.some((entry) => entry.code === form.currency)) {
+      setMessage('Select the currency you want to be paid in before publishing your listing.');
+      setMessageType('error');
+      return;
+    }
+
+    if (!hasSupabaseEnv || !supabase) {
+      setMessage('Supabase is not configured. Add the environment values first so listings can be stored.');
+      setMessageType('error');
+      return;
+    }
+
+    const combinedImageCount = existingImageUrls.length + imageFiles.length;
+    if (!combinedImageCount) {
+      setMessage('Add at least one photo before publishing.');
+      setMessageType('error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setMessage('');
+    setMessageType('idle');
+
+    const trimmedForm = form.form.trim();
+    const technicalSpecs = {
+      'Product Type': trimmedForm ? `${form.category} ${trimmedForm}` : form.category,
+      [activeSpecConfig.qualityLabel]: trimmedPurity,
+      ...Object.fromEntries(
+        activeSpecConfig.fields
+          .map((label) => [label, String(form.specs[label] || '').trim()])
+          .filter(([, value]) => Boolean(value)),
+      ),
+    };
+    const keyHighlights = form.keyHighlights
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const specification = form.specification.trim()
+      || [trimmedPurity, trimmedForm].filter(Boolean).join(' • ');
+
+    const detailsJson = {
+      category: form.category,
+      brand: trimmedBrand,
+      purity: trimmedPurity,
+      ...(trimmedForm ? { form: trimmedForm } : {}),
+      unit: form.unit,
+      specification,
+      currency: form.currency,
+      ...(form.productOverview.trim() ? { productOverview: form.productOverview.trim() } : {}),
+      ...(keyHighlights.length ? { keyHighlights } : {}),
+      technicalSpecs,
+      specsTitle: 'Product Details',
+      badges: ['Verified Listing', 'Warranty Included', 'Free Delivery', 'Finance Available'],
+    };
+
+    if (editingId) {
+      const result = await onUpdateSellerItem(editingId, {
+        title: trimmedTitle,
+        description: form.productOverview.trim(),
+        price: trimmedPrice,
+        quantity: normalizeListingQuantity(form.quantity, 1),
+        marketKey: 'naturalResources',
+        detailsJson,
+        imageUrls: existingImageUrls,
+        previousImageUrls: originalImageUrls,
+      }, imageFiles);
+
+      if (result?.error) {
+        setMessage(result.error);
+        setMessageType('error');
+        setIsSubmitting(false);
+        return;
+      }
+
+      setMessage('Listing updated successfully.');
+      setMessageType('success');
+      resetForm();
+      setIsSubmitting(false);
+      return;
+    }
+
+    const uploadedImageUrls = [];
+    for (const imageFile of imageFiles) {
+      const fileExtension = imageFile.name.split('.').pop() || 'jpg';
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExtension}`;
+      const filePath = `${sanitizeStorageSegment(userEmail)}/naturalResources/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(SELLER_IMAGES_BUCKET)
+        .upload(filePath, imageFile, { cacheControl: '3600', upsert: false });
+
+      if (uploadError) {
+        setMessage(`Image upload failed: ${uploadError.message}. Make sure the ${SELLER_IMAGES_BUCKET} bucket exists and allows uploads.`);
+        setMessageType('error');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const { data: publicUrlData } = supabase.storage.from(SELLER_IMAGES_BUCKET).getPublicUrl(filePath);
+      uploadedImageUrls.push(publicUrlData.publicUrl);
+    }
+
+    const { data, error } = await supabase
+      .from(SELLER_ITEMS_TABLE)
+      .insert({
+        seller_email: userEmail,
+        seller_name: trimmedBrand || getSellerDisplayName({ sellerName: userName, sellerEmail: userEmail }),
+        title: trimmedTitle,
+        description: form.productOverview.trim(),
+        quantity: normalizeListingQuantity(form.quantity, 1),
+        price: trimmedPrice,
+        market_key: 'naturalResources',
+        details_json: detailsJson,
+        image_url: uploadedImageUrls[0],
+        image_urls: uploadedImageUrls,
+      })
+      .select('*')
+      .single();
+
+    if (error) {
+      setMessage(getMarketplaceItemSaveErrorMessage(error.message));
+      setMessageType('error');
+      setIsSubmitting(false);
+      return;
+    }
+
+    onSellerItemCreated(mapSellerItemRecord(data));
+    setMessage('Resource published successfully to the Natural & Mineral Resources Exchange.');
+    setMessageType('success');
+    resetForm();
+    setIsSubmitting(false);
+  };
+
+  return (
+    <PageFrame title="List a Mineral or Natural Resource" subtitle="Add your metal, gemstone, energy resource, or bulk material so buyers can find and filter it on the Natural &amp; Mineral Resources Exchange.">
+      <div className="mb-5">
+        <Link to="/seller/dashboard" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--svs-primary)] hover:underline">
+          <ChevronLeft className="h-4 w-4" /> Back to My Store
+        </Link>
+      </div>
+      {!isAuthenticated ? (
+        <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 text-sm text-[var(--svs-text)]">
+          <p>Sign in first to list a resource.</p>
+          <Link to="/signin" className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
+            Sign In
+          </Link>
+        </div>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <form onSubmit={handleSubmit} className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
+            {/* Basics */}
+            <h2 className="text-base font-bold text-[var(--svs-text)]">Resource basics</h2>
+            <p className="mt-0.5 text-xs text-[var(--svs-muted)]">These drive the sidebar filters on the category pages, so buyers can find this listing.</p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label htmlFor="nr-title" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Listing title <span className="text-rose-500">*</span></label>
+                <input id="nr-title" name="title" value={form.title} onChange={handleChange} required placeholder="e.g. 24K Gold Bullion Bars – 99.99% Pure" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+              <div>
+                <label htmlFor="nr-category" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Category <span className="text-rose-500">*</span></label>
+                <select id="nr-category" name="category" value={form.category} onChange={handleChange} required className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none">
+                  <option value="">Select category</option>
+                  {NATURAL_RESOURCE_SELL_CATEGORY_GROUPS.map((group) => (
+                    <optgroup key={group.group} label={group.group}>
+                      {group.options.map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="nr-brand" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Brand / Supplier name <span className="text-rose-500">*</span></label>
+                <input id="nr-brand" name="brand" value={form.brand} onChange={handleChange} required placeholder="e.g. Valcambi, Rand Refinery" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+              <div>
+                <label htmlFor="nr-purity" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">{activeSpecConfig.qualityLabel} <span className="text-rose-500">*</span></label>
+                <input id="nr-purity" name="purity" value={form.purity} onChange={handleChange} required placeholder="e.g. 99.99% (24K Gold)" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+                <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Shown in the "Purity / Grade" filter and the Product Details table.</p>
+              </div>
+              <div>
+                <label htmlFor="nr-form" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Product form</label>
+                <input id="nr-form" name="form" value={form.form} onChange={handleChange} placeholder="e.g. Bars, Coins, Ingots, Lumps, Planks" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+                <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Shown in the "Product Form" filter.</p>
+              </div>
+              <div>
+                <label htmlFor="nr-unit" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Sold per (unit) <span className="text-rose-500">*</span></label>
+                <select id="nr-unit" name="unit" value={form.unit} onChange={handleChange} required className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none">
+                  <option value="">Select unit</option>
+                  {NATURAL_RESOURCE_UNIT_OPTIONS.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="nr-specification" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Short specification line</label>
+                <input id="nr-specification" name="specification" value={form.specification} onChange={handleChange} placeholder="e.g. 99.99% purity • LBMA-style assay • Sealed bullion bars" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+                <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Optional — shown under the title on listing cards. Auto-built from purity and form if left blank.</p>
+              </div>
+            </div>
+
+            {/* Pricing */}
+            <h2 className="mt-6 text-base font-bold text-[var(--svs-text)]">Pricing &amp; quantity</h2>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="nr-price" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Price <span className="text-rose-500">*</span></label>
+                <div className="flex gap-2">
+                  <CurrencyPickerField id="nr-currency" name="currency" value={form.currency} onChange={handleChange} ariaLabel="Listing currency" />
+                  <input id="nr-price" name="price" value={form.price} onChange={handleChange} required placeholder="9800" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+                </div>
+              </div>
+              <div>
+                <label htmlFor="nr-quantity" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Quantity available</label>
+                <input id="nr-quantity" name="quantity" type="number" min="0" step="1" value={form.quantity} onChange={handleChange} placeholder="1" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+                <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Number of units/kg/tonnes/etc. available at this price.</p>
+              </div>
+            </div>
+
+            {/* Product overview & highlights */}
+            <h2 className="mt-6 text-base font-bold text-[var(--svs-text)]">Product overview</h2>
+            <p className="mt-0.5 text-xs text-[var(--svs-muted)]">Shown on the listing's detail page, above the spec table.</p>
+            <div className="mt-3">
+              <textarea name="productOverview" value={form.productOverview} onChange={handleChange} rows={4} placeholder="Describe the resource — sourcing, standout qualities, condition, what makes it a good buy." className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+            </div>
+            <div className="mt-4">
+              <label htmlFor="nr-keyHighlights" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Key highlights</label>
+              <textarea id="nr-keyHighlights" name="keyHighlights" value={form.keyHighlights} onChange={handleChange} rows={4} placeholder={'One per line, e.g.\n99.99% purity, independently assay-certified\nSupplied as bars for easy storage and resale\nTamper-evident packaging with serial-numbered certification'} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Add one per line. Shown as a checklist on the listing's detail page.</p>
+            </div>
+
+            {/* Product details / technical specs */}
+            <h2 className="mt-6 text-base font-bold text-[var(--svs-text)]">Product details</h2>
+            <p className="mt-0.5 text-xs text-[var(--svs-muted)]">
+              {form.category ? `Fields shown match the "${form.category}" category. ` : 'Pick a category above to see its fields. '}
+              Optional — fill in whichever apply. Blank rows are left out of the spec table.
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {activeSpecConfig.fields.map((label) => (
+                <div key={label}>
+                  <label htmlFor={`nr-spec-${label}`} className="mb-1 block text-xs font-semibold text-[var(--svs-muted)]">{label}</label>
+                  <input
+                    id={`nr-spec-${label}`}
+                    value={form.specs[label] || ''}
+                    onChange={(event) => handleSpecChange(label, event.target.value)}
+                    className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Photos */}
+            <div className="mt-6">
+              <label htmlFor="nr-image" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Photos <span className="text-rose-500">*</span></label>
+              <input id="nr-image" type="file" accept="image/*" multiple onChange={handleImagePick} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              {existingImageUrls.length ? (
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {existingImageUrls.map((url, index) => (
+                    <div key={`${url}-${index}`} className="relative overflow-hidden rounded-md border border-[var(--svs-border)] bg-white">
+                      <img src={url} alt={`Current ${index + 1}`} className="h-24 w-full object-cover" loading="lazy" />
+                      <button type="button" onClick={() => handleRemoveExistingImage(url)} className="absolute right-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700">x</button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              {imageFiles.length ? (
+                <div className="mt-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-2 text-xs text-[var(--svs-muted)]">
+                  <p className="font-semibold text-[var(--svs-text)]">{imageFiles.length} new image{imageFiles.length === 1 ? '' : 's'} selected</p>
+                  <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {imagePreviewUrls.map((previewUrl, index) => (
+                      <div key={`${previewUrl}-${index}`} className="relative overflow-hidden rounded-md border border-[var(--svs-border)] bg-white">
+                        <img src={previewUrl} alt={`Selected preview ${index + 1}`} className="h-24 w-full object-cover" loading="lazy" />
+                        <button type="button" onClick={() => handleRemoveSelectedImage(index)} className="absolute right-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700">x</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            {message ? (
+              <div className={`mt-4 rounded-lg px-4 py-3 text-sm ${messageType === 'error' ? 'border border-rose-200 bg-rose-50 text-rose-700' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+                {message}
+              </div>
+            ) : null}
+
+            <div className="mt-5 flex gap-3">
+              <button type="submit" disabled={isSubmitting} className={`${cudyBluePrimaryButtonClassName} rounded-lg bg-[var(--svs-primary)] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70`}>
+                {isSubmitting ? (editingId ? 'Saving…' : 'Publishing…') : (editingId ? 'Save Changes' : 'Publish Listing')}
+              </button>
+              {editingId ? (
+                <button type="button" onClick={resetForm} className="rounded-lg border border-[var(--svs-border)] px-5 py-3 text-sm font-semibold text-[var(--svs-text)]">
+                  Cancel edit
+                </button>
+              ) : null}
+            </div>
+          </form>
+
+          {/* MY RESOURCE LISTINGS */}
+          <aside className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-[0_4px_8px_rgba(0,0,0,0.04)]">
+            <h2 className="mb-3 text-sm font-bold text-[var(--svs-primary-strong)]">My Resource Listings ({myListings.length})</h2>
+            {myListings.length === 0 ? (
+              <p className="text-xs text-[var(--svs-muted)]">You haven't published any listings yet. Submit the form to add your first resource.</p>
+            ) : (
+              <ul className="space-y-3">
+                {myListings.map((listing) => (
+                  <li key={listing.dbId} className="flex gap-3 rounded-lg border border-[var(--svs-border)] p-2">
+                    <img src={listing.image} alt={listing.title} className="h-16 w-20 flex-shrink-0 rounded-md object-cover" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-semibold text-[var(--svs-text)]">{listing.title}</p>
+                      <p className="truncate text-[11px] text-[var(--svs-muted)]">{listing.category} • {listing.brand}</p>
+                      <p className="mt-0.5 text-[11px] font-semibold text-[var(--svs-primary-strong)]">{formatAmountInCurrency(Number(listing.price) || 0, listing.currency)}</p>
+                    </div>
+                    <button type="button" onClick={() => handleEdit(listing)} className="self-start rounded-md p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600" aria-label="Edit listing" title="Edit">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button type="button" onClick={() => handleDelete(listing)} className="self-start rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500" aria-label="Delete listing" title="Delete">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </aside>
+        </div>
+      )}
+    </PageFrame>
   );
 };
 
@@ -18557,6 +20260,13 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
         >
           <Car className="h-4 w-4" />
           <span>Vehicle Listings</span>
+        </Link>
+        <Link
+          to="/natural-resources-minerals/sell"
+          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)]"
+        >
+          <Landmark className="h-4 w-4" />
+          <span>Resource Listings</span>
         </Link>
       </nav>
 
@@ -35990,7 +37700,7 @@ const ItemDetailsModal = ({
   // Rich, full-page-style detail layout (Product Overview, Key Highlights,
   // spec table, ratings breakdown, similar-products grid). Shared by the
   // electronics and construction/building markets.
-  const isRichDetail = item.detailVariant === 'electronics' || item.detailVariant === 'construction' || item.detailVariant === 'vehicle';
+  const isRichDetail = item.detailVariant === 'electronics' || item.detailVariant === 'construction' || item.detailVariant === 'vehicle' || item.detailVariant === 'naturalResource';
 
   return (
     <div
@@ -37551,6 +39261,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/mobility-vehicles" element={<MobilityVehiclesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/mobility-vehicles/:categorySlug" element={<MobilityVehiclesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/natural-resources-minerals" element={<NaturalResourcesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
+    <Route path="/natural-resources-minerals/:categorySlug" element={<NaturalResourcesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/seller/upload" element={<SellerUploadPage onSellerItemCreated={onSellerItemCreated} />} />
     <Route path="/seller/dashboard" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onUpdateOrderStatus={onUpdateOrderStatus} initialView="listings" />} />
     <Route path="/seller/orders" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onUpdateOrderStatus={onUpdateOrderStatus} initialView="orders" />} />
@@ -37560,6 +39271,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/property-hub/sell" element={<PropertySellPage />} />
     <Route path="/home-care/sell" element={<HomeCareSellPage onSellerItemCreated={onSellerItemCreated} />} />
     <Route path="/mobility-vehicles/sell" element={<MobilityVehicleSellPage sellerItems={sellerItems} onSellerItemCreated={onSellerItemCreated} onUpdateSellerItem={onUpdateSellerItem} onDeleteSellerItem={onDeleteSellerItem} />} />
+    <Route path="/natural-resources-minerals/sell" element={<NaturalResourcesSellPage sellerItems={sellerItems} onSellerItemCreated={onSellerItemCreated} onUpdateSellerItem={onUpdateSellerItem} onDeleteSellerItem={onDeleteSellerItem} />} />
     <Route path="/property-hub/category/:categoryKey" element={<PropertyCategoryPage />} />
     <Route path="/property-hub/listing/:listingId" element={<PropertyDetailPage />} />
     <Route path="/property-hub/visit/:listingId" element={<PropertyVisitStatusPage />} />
