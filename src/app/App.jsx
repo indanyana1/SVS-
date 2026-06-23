@@ -5649,7 +5649,7 @@ const NATURAL_RESOURCE_SELL_CATEGORY_GROUPS = [
   { group: 'Timber & Forestry', options: ['Hardwood Timber', 'Pine Timber', 'Eucalyptus'] },
   { group: 'Salt & Natural Chemicals', options: ['Sea Salt', 'Rock Salt', 'Limestone'] },
 ];
-const NATURAL_RESOURCE_UNIT_OPTIONS = ['kg', 'tonne', 'carat', 'litre', 'barrel', 'drum', 'm³', 'unit'];
+const NATURAL_RESOURCE_UNIT_OPTIONS = ['g', 'oz', 'lb', 'kg', 'tonne', 'carat', 'litre', 'barrel', 'drum', 'm³', 'unit'];
 
 // The 2 leading "Product Details" rows (Product Type, Purity/Grade) are
 // always auto-derived from Category + Product Form + the top-level
@@ -19170,7 +19170,6 @@ const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
   );
 };
 
-const NATURAL_RESOURCE_SELL_CATEGORIES = NATURAL_RESOURCE_SELL_CATEGORY_GROUPS.flatMap((group) => group.options);
 const emptyNaturalResourceSellForm = () => ({
   title: '',
   category: '',
