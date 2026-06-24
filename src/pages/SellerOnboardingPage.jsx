@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Camera, RotateCcw, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Camera, Check, RotateCcw, ShieldCheck, SwitchCamera, X } from 'lucide-react';
 import StandalonePageShell from '../components/layout/StandalonePageShell';
 import { hasSupabaseEnv, supabase } from '../lib/supabase';
 import { clearPendingSellerSignupDraft, getPendingSellerSignupDraft } from './sellerSignupDraft';
@@ -63,8 +63,13 @@ const getAccountUserErrorMessage = (error) => {
 // fallback anywhere in here, for either the ID/passport photo or the
 // selfie, since the whole point is to stop sellers substituting a
 // pre-existing, downloaded, or doctored image for either document.
+// Below this average 0-255 luminance, a captured frame is flagged as too
+// dark to reliably verify (e.g. a document photographed in a dim room).
+const DARK_PHOTO_LUMINANCE_THRESHOLD = 60;
+
 const LiveCameraCapture = ({
   previewUrl,
+  isDark = false,
   onCapture,
   onRetake,
   instructions,
@@ -76,6 +81,13 @@ const LiveCameraCapture = ({
   const streamRef = useRef(null);
   const [cameraState, setCameraState] = useState('idle');
   const [cameraError, setCameraError] = useState('');
+  const [facingMode, setFacingMode] = useState('user');
+  // Optimistic until proven otherwise — enumerateDevices() can't reliably
+  // tell us camera count before permission is granted on every browser, so
+  // default to showing the switch control rather than hiding a useful one.
+  const [hasMultipleCameras, setHasMultipleCameras] = useState(true);
+  const [pendingCapture, setPendingCapture] = useState(null);
+  const [pendingPreviewUrl, setPendingPreviewUrl] = useState('');
 
   const stopStream = () => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -83,6 +95,16 @@ const LiveCameraCapture = ({
   };
 
   useEffect(() => () => stopStream(), []);
+
+  useEffect(() => {
+    if (!pendingCapture) {
+      setPendingPreviewUrl('');
+      return undefined;
+    }
+    const url = URL.createObjectURL(pendingCapture.blob);
+    setPendingPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [pendingCapture]);
 
   // The <video> element only mounts once cameraState becomes 'live', so
   // videoRef.current is still null at the point getUserMedia resolves —
@@ -94,13 +116,23 @@ const LiveCameraCapture = ({
     videoRef.current.play().catch(() => {});
   }, [cameraState]);
 
-  const startCamera = async () => {
+  const startCamera = async (mode = facingMode) => {
     setCameraState('starting');
     setCameraError('');
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: mode }, audio: false });
       streamRef.current = stream;
       setCameraState('live');
+
+      if (navigator.mediaDevices.enumerateDevices) {
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          setHasMultipleCameras(devices.filter((device) => device.kind === 'videoinput').length > 1);
+        } catch {
+          // Device labels/enumeration can be restricted in some browsers —
+          // keep the switch button visible rather than guessing it's absent.
+        }
+      }
     } catch (error) {
       setCameraState('error');
       setCameraError(
@@ -113,20 +145,64 @@ const LiveCameraCapture = ({
     }
   };
 
+  const switchCamera = () => {
+    const nextMode = facingMode === 'user' ? 'environment' : 'user';
+    setFacingMode(nextMode);
+    stopStream();
+    startCamera(nextMode);
+  };
+
   const captureFrame = () => {
     const video = videoRef.current;
     if (!video) return;
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth || 480;
     canvas.height = video.videoHeight || 360;
-    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Sample every 8th pixel (4 bytes each) for a fast-enough average
+    // brightness estimate — this only runs once per capture, not per frame.
+    const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    let totalLuminance = 0;
+    let sampleCount = 0;
+    for (let i = 0; i < data.length; i += 32) {
+      totalLuminance += (0.299 * data[i]) + (0.587 * data[i + 1]) + (0.114 * data[i + 2]);
+      sampleCount += 1;
+    }
+    const averageLuminance = sampleCount ? totalLuminance / sampleCount : 255;
+    const capturedIsDark = averageLuminance < DARK_PHOTO_LUMINANCE_THRESHOLD;
+
     canvas.toBlob((blob) => {
-      if (blob) onCapture(blob);
+      if (blob) setPendingCapture({ blob, isDark: capturedIsDark });
     }, 'image/png');
     stopStream();
     setCameraState('idle');
   };
 
+  // "Retake" while reviewing a just-taken (not yet confirmed) photo — drop
+  // it and jump straight back into the live camera view.
+  const handleRetakeFromReview = () => {
+    setPendingCapture(null);
+    startCamera();
+  };
+
+  // "Cancel" while reviewing — drop the candidate photo and back out to
+  // idle entirely, distinct from Retake which immediately restarts the camera.
+  const handleCancelReview = () => {
+    setPendingCapture(null);
+    setCameraState('idle');
+    setCameraError('');
+  };
+
+  const handleUsePhoto = () => {
+    if (!pendingCapture) return;
+    onCapture(pendingCapture.blob, pendingCapture.isDark);
+    setPendingCapture(null);
+  };
+
+  // "Retake" once the parent has already confirmed a photo (previewUrl is
+  // set) — clears the parent's stored photo and goes back to idle.
   const handleRetake = () => {
     onRetake();
     setCameraState('idle');
@@ -135,18 +211,66 @@ const LiveCameraCapture = ({
 
   if (previewUrl) {
     return (
-      <div className="flex items-center gap-4 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4">
-        <img src={previewUrl} alt={capturedLabel} className="h-20 w-20 rounded-lg object-cover" />
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-emerald-600">{capturedLabel}</p>
-          {capturedHint ? <p className="text-xs text-[var(--svs-muted)]">{capturedHint}</p> : null}
+      <div className="space-y-2">
+        {isDark ? (
+          <div className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 ring-1 ring-amber-200">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>This photo looks too dark to verify clearly. Move somewhere brighter and retake for the best chance of approval.</span>
+          </div>
+        ) : null}
+        <div className="flex items-center gap-4 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4">
+          <img src={previewUrl} alt={capturedLabel} className="h-20 w-20 rounded-lg object-cover" />
+          <div className="flex-1">
+            <p className={`text-sm font-semibold ${isDark ? 'text-amber-700' : 'text-emerald-600'}`}>
+              {isDark ? 'Captured — but it looks dark' : capturedLabel}
+            </p>
+            {capturedHint ? <p className="text-xs text-[var(--svs-muted)]">{capturedHint}</p> : null}
+          </div>
+          <button
+            type="button"
+            onClick={handleRetake}
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition ${isDark ? 'border-amber-300 text-amber-800 hover:border-amber-500' : 'border-[var(--svs-border)] text-[var(--svs-text)] hover:border-[var(--svs-primary)]'}`}
+          >
+            <RotateCcw className="h-3.5 w-3.5" /> Retake
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (pendingCapture && pendingPreviewUrl) {
+    return (
+      <div className="space-y-3 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4">
+        <p className="text-center text-xs font-medium text-[var(--svs-text)]">Review your photo before continuing.</p>
+        {pendingCapture.isDark ? (
+          <div className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 ring-1 ring-amber-200">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>This photo looks too dark to verify clearly. Consider retaking it somewhere brighter.</span>
+          </div>
+        ) : null}
+        <img src={pendingPreviewUrl} alt="Captured preview, not yet confirmed" className="mx-auto h-56 w-full max-w-sm rounded-lg object-cover" />
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={handleRetakeFromReview}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-2 text-sm font-semibold text-[var(--svs-text)] hover:border-[var(--svs-primary)]"
+          >
+            <RotateCcw className="h-4 w-4" /> Retake
+          </button>
+          <button
+            type="button"
+            onClick={handleUsePhoto}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--svs-primary)] px-4 py-2 text-sm font-bold text-white hover:brightness-110"
+          >
+            <Check className="h-4 w-4" /> Use This Photo
+          </button>
         </div>
         <button
           type="button"
-          onClick={handleRetake}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--svs-border)] px-3 py-2 text-xs font-semibold text-[var(--svs-text)] hover:border-[var(--svs-primary)]"
+          onClick={handleCancelReview}
+          className="flex w-full items-center justify-center gap-1 text-center text-xs font-semibold text-[var(--svs-muted)] hover:text-[var(--svs-text)] hover:underline"
         >
-          <RotateCcw className="h-3.5 w-3.5" /> Retake
+          <X className="h-3 w-3" /> Cancel
         </button>
       </div>
     );
@@ -158,19 +282,30 @@ const LiveCameraCapture = ({
       {cameraState === 'live' ? (
         <div className="flex flex-col items-center gap-3">
           <video ref={videoRef} autoPlay playsInline muted className="h-56 w-full max-w-sm rounded-lg bg-black object-cover" />
-          <button
-            type="button"
-            onClick={captureFrame}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--svs-primary)] px-4 py-2 text-sm font-bold text-white hover:brightness-110"
-          >
-            <Camera className="h-4 w-4" /> {captureLabel}
-          </button>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={captureFrame}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--svs-primary)] px-4 py-2 text-sm font-bold text-white hover:brightness-110"
+            >
+              <Camera className="h-4 w-4" /> {captureLabel}
+            </button>
+            {hasMultipleCameras ? (
+              <button
+                type="button"
+                onClick={switchCamera}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-2 text-sm font-semibold text-[var(--svs-text)] hover:border-[var(--svs-primary)]"
+              >
+                <SwitchCamera className="h-4 w-4" /> Switch Camera
+              </button>
+            ) : null}
+          </div>
         </div>
       ) : (
         <div className="flex flex-col items-center gap-2 py-2">
           <button
             type="button"
-            onClick={startCamera}
+            onClick={() => startCamera()}
             disabled={cameraState === 'starting'}
             className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-2 text-sm font-bold text-[var(--svs-text)] hover:border-[var(--svs-primary)] disabled:opacity-60"
           >
@@ -210,11 +345,23 @@ const SellerOnboardingPage = () => {
   const [idDocumentType, setIdDocumentType] = useState('');
   const [idDocumentBlob, setIdDocumentBlob] = useState(null);
   const [idDocumentPreviewUrl, setIdDocumentPreviewUrl] = useState('');
+  const [isIdDocumentDark, setIsIdDocumentDark] = useState(false);
   const [selfieBlob, setSelfieBlob] = useState(null);
   const [selfiePreviewUrl, setSelfiePreviewUrl] = useState('');
+  const [isSelfieDark, setIsSelfieDark] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('idle');
+
+  const handleIdDocumentCapture = (blob, capturedIsDark) => {
+    setIdDocumentBlob(blob);
+    setIsIdDocumentDark(Boolean(capturedIsDark));
+  };
+
+  const handleSelfieCapture = (blob, capturedIsDark) => {
+    setSelfieBlob(blob);
+    setIsSelfieDark(Boolean(capturedIsDark));
+  };
 
   useEffect(() => {
     if (!idDocumentBlob) {
@@ -547,8 +694,9 @@ const SellerOnboardingPage = () => {
               </p>
               <LiveCameraCapture
                 previewUrl={idDocumentPreviewUrl}
-                onCapture={setIdDocumentBlob}
-                onRetake={() => setIdDocumentBlob(null)}
+                isDark={isIdDocumentDark}
+                onCapture={handleIdDocumentCapture}
+                onRetake={() => { setIdDocumentBlob(null); setIsIdDocumentDark(false); }}
                 instructions="Hold your National ID or passport flat inside the frame. Make sure all four corners and the printed details are clearly visible."
                 captureLabel="Capture document"
                 capturedLabel="Document photo captured"
@@ -560,8 +708,9 @@ const SellerOnboardingPage = () => {
               <p className="mb-2 text-sm font-medium text-[var(--svs-text)]">Live selfie</p>
               <LiveCameraCapture
                 previewUrl={selfiePreviewUrl}
-                onCapture={setSelfieBlob}
-                onRetake={() => setSelfieBlob(null)}
+                isDark={isSelfieDark}
+                onCapture={handleSelfieCapture}
+                onRetake={() => { setSelfieBlob(null); setIsSelfieDark(false); }}
                 instructions="Look directly at the camera with your face clearly visible and well lit."
                 captureLabel="Capture selfie"
                 capturedLabel="Live selfie captured"
