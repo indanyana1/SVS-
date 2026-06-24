@@ -2289,3 +2289,424 @@ grant execute on function public.wallet_spend(text, numeric, text, text, uuid) t
 grant execute on function public.wallet_withdraw(text, numeric, text, uuid, uuid) to anon, authenticated;
 grant execute on function public.wallet_refund(text, numeric, text, text) to anon, authenticated;
 
+-- ------------------------------------------------------------
+-- >>> seller-verification-documents.sql
+-- ------------------------------------------------------------
+alter table public.seller_profiles
+  add column if not exists id_document_path text,
+  add column if not exists id_document_type text check (id_document_type in ('national_id', 'passport')),
+  add column if not exists selfie_path text,
+  add column if not exists selfie_captured_at timestamptz;
+
+insert into storage.buckets (id, name, public)
+values ('seller-verification', 'seller-verification', false)
+on conflict (id) do update set public = false;
+
+drop policy if exists "Public upload seller verification documents" on storage.objects;
+create policy "Public upload seller verification documents"
+on storage.objects
+for insert
+with check (bucket_id = 'seller-verification');
+
+drop policy if exists "Public read seller verification documents" on storage.objects;
+create policy "Public read seller verification documents"
+on storage.objects
+for select
+using (bucket_id = 'seller-verification');
+
+drop policy if exists "Public update seller verification documents" on storage.objects;
+create policy "Public update seller verification documents"
+on storage.objects
+for update
+using (bucket_id = 'seller-verification')
+with check (bucket_id = 'seller-verification');
+
+-- ------------------------------------------------------------
+-- >>> seller-fraud-traceability.sql
+-- ------------------------------------------------------------
+create table if not exists public.banned_identifiers (
+  id uuid primary key default gen_random_uuid(),
+  identifier_type text not null check (identifier_type in ('id_number', 'payout_account_number', 'phone_number', 'email')),
+  identifier_value text not null,
+  reason text,
+  created_at timestamptz not null default now(),
+  unique (identifier_type, identifier_value)
+);
+
+create index if not exists banned_identifiers_lookup_idx
+  on public.banned_identifiers (identifier_type, identifier_value);
+
+alter table public.banned_identifiers enable row level security;
+
+drop policy if exists "Public read banned identifiers" on public.banned_identifiers;
+create policy "Public read banned identifiers"
+on public.banned_identifiers
+for select
+using (true);
+
+create or replace function public.ban_seller_identifiers_on_rejection()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_reason text := concat('Seller profile rejected: ', coalesce(nullif(trim(new.business_name), ''), new.user_email));
+begin
+  if new.compliance_status = 'rejected' and coalesce(old.compliance_status, '') is distinct from 'rejected' then
+    insert into public.banned_identifiers (identifier_type, identifier_value, reason)
+    select identifier_type, identifier_value, v_reason
+    from (values
+      ('id_number', nullif(trim(new.id_number), '')),
+      ('payout_account_number', nullif(trim(new.payout_account_number), '')),
+      ('phone_number', nullif(trim(new.phone_number), '')),
+      ('email', nullif(trim(new.user_email), ''))
+    ) as identifiers(identifier_type, identifier_value)
+    where identifier_value is not null
+    on conflict (identifier_type, identifier_value) do nothing;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists seller_profiles_ban_on_rejection on public.seller_profiles;
+create trigger seller_profiles_ban_on_rejection
+after update on public.seller_profiles
+for each row
+execute function public.ban_seller_identifiers_on_rejection();
+
+create table if not exists public.seller_profile_audit_log (
+  id uuid primary key default gen_random_uuid(),
+  user_email text not null,
+  field_name text not null,
+  old_value text,
+  new_value text,
+  changed_at timestamptz not null default now()
+);
+
+create index if not exists seller_profile_audit_log_user_email_idx
+  on public.seller_profile_audit_log (user_email, changed_at desc);
+
+alter table public.seller_profile_audit_log enable row level security;
+
+create or replace function public.log_seller_profile_changes()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_old jsonb := to_jsonb(old);
+  v_new jsonb := to_jsonb(new);
+  v_field text;
+  v_tracked text[] := array['business_name', 'legal_full_name', 'phone_number', 'payout_account_holder', 'payout_bank_name', 'payout_account_number', 'payout_branch_code'];
+begin
+  foreach v_field in array v_tracked loop
+    if coalesce(v_old ->> v_field, '') is distinct from coalesce(v_new ->> v_field, '') then
+      insert into public.seller_profile_audit_log (user_email, field_name, old_value, new_value)
+      values (new.user_email, v_field, v_old ->> v_field, v_new ->> v_field);
+    end if;
+  end loop;
+  return new;
+end;
+$$;
+
+drop trigger if exists seller_profiles_audit_changes on public.seller_profiles;
+create trigger seller_profiles_audit_changes
+after update on public.seller_profiles
+for each row
+execute function public.log_seller_profile_changes();
+
+-- ------------------------------------------------------------
+-- >>> admin-panel.sql
+-- ------------------------------------------------------------
+create extension if not exists pgcrypto;
+
+create table if not exists public.admin_users (
+  id uuid primary key default gen_random_uuid(),
+  email text not null unique,
+  password_hash text not null,
+  full_name text not null,
+  failed_login_count int not null default 0,
+  locked_until timestamptz,
+  created_at timestamptz not null default now()
+);
+
+alter table public.admin_users enable row level security;
+
+create table if not exists public.admin_sessions (
+  token text primary key,
+  admin_email text not null references public.admin_users(email) on delete cascade,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null,
+  last_seen_at timestamptz not null default now()
+);
+
+create index if not exists admin_sessions_admin_email_idx
+  on public.admin_sessions (admin_email);
+
+alter table public.admin_sessions enable row level security;
+
+create table if not exists public.admin_action_log (
+  id uuid primary key default gen_random_uuid(),
+  admin_email text not null,
+  action text not null,
+  target_type text not null,
+  target_id text not null,
+  details jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists admin_action_log_created_idx
+  on public.admin_action_log (created_at desc);
+
+alter table public.admin_action_log enable row level security;
+
+create or replace function public.admin_login(
+  p_email text,
+  p_password text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_email text := lower(trim(p_email));
+  v_admin public.admin_users;
+  v_token text;
+  v_expires_at timestamptz := now() + interval '12 hours';
+begin
+  if v_email = '' or coalesce(p_password, '') = '' then
+    return null;
+  end if;
+
+  select * into v_admin
+  from public.admin_users
+  where email = v_email
+  for update;
+
+  if not found then
+    return null;
+  end if;
+
+  if v_admin.locked_until is not null and v_admin.locked_until > now() then
+    return null;
+  end if;
+
+  if v_admin.password_hash <> crypt(p_password, v_admin.password_hash) then
+    update public.admin_users
+    set failed_login_count = failed_login_count + 1,
+        locked_until = case when failed_login_count + 1 >= 5 then now() + interval '15 minutes' else locked_until end
+    where email = v_email;
+
+    return null;
+  end if;
+
+  update public.admin_users
+  set failed_login_count = 0, locked_until = null
+  where email = v_email;
+
+  v_token := encode(gen_random_bytes(32), 'hex');
+
+  insert into public.admin_sessions (token, admin_email, expires_at)
+  values (v_token, v_email, v_expires_at);
+
+  return jsonb_build_object('token', v_token, 'full_name', v_admin.full_name, 'expires_at', v_expires_at);
+end;
+$$;
+
+create or replace function public.admin_verify_session(
+  p_token text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_session public.admin_sessions;
+  v_admin public.admin_users;
+begin
+  if coalesce(p_token, '') = '' then
+    raise exception 'Not signed in.';
+  end if;
+
+  select * into v_session
+  from public.admin_sessions
+  where token = p_token;
+
+  if not found or v_session.expires_at < now() then
+    raise exception 'Session expired. Sign in again.';
+  end if;
+
+  select * into v_admin
+  from public.admin_users
+  where email = v_session.admin_email;
+
+  if not found then
+    raise exception 'Session expired. Sign in again.';
+  end if;
+
+  update public.admin_sessions
+  set last_seen_at = now()
+  where token = p_token;
+
+  return jsonb_build_object('admin_email', v_admin.email, 'full_name', v_admin.full_name);
+end;
+$$;
+
+create or replace function public.admin_logout(
+  p_token text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  delete from public.admin_sessions where token = p_token;
+end;
+$$;
+
+create or replace function public.admin_require_session(
+  p_token text
+)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_session public.admin_sessions;
+begin
+  if coalesce(p_token, '') = '' then
+    raise exception 'Not signed in.';
+  end if;
+
+  select * into v_session
+  from public.admin_sessions
+  where token = p_token;
+
+  if not found or v_session.expires_at < now() then
+    raise exception 'Session expired. Sign in again.';
+  end if;
+
+  update public.admin_sessions set last_seen_at = now() where token = p_token;
+
+  return v_session.admin_email;
+end;
+$$;
+
+create or replace function public.admin_review_seller(
+  p_token text,
+  p_user_email text,
+  p_decision text,
+  p_notes text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_admin_email text := public.admin_require_session(p_token);
+  v_previous_status text;
+begin
+  if p_decision not in ('approved', 'rejected') then
+    raise exception 'Decision must be approved or rejected.';
+  end if;
+
+  select compliance_status into v_previous_status
+  from public.seller_profiles
+  where user_email = lower(trim(p_user_email));
+
+  if v_previous_status is null then
+    raise exception 'Seller profile not found.';
+  end if;
+
+  update public.seller_profiles
+  set compliance_status = p_decision, updated_at = now()
+  where user_email = lower(trim(p_user_email));
+
+  insert into public.admin_action_log (admin_email, action, target_type, target_id, details)
+  values (
+    v_admin_email,
+    concat('seller_', p_decision),
+    'seller_profile',
+    lower(trim(p_user_email)),
+    jsonb_build_object('previous_status', v_previous_status, 'notes', p_notes)
+  );
+end;
+$$;
+
+create or replace function public.admin_get_profile_audit_log(
+  p_token text,
+  p_user_email text default null,
+  p_limit int default 200
+)
+returns setof public.seller_profile_audit_log
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform public.admin_require_session(p_token);
+
+  return query
+  select *
+  from public.seller_profile_audit_log
+  where p_user_email is null or user_email = lower(trim(p_user_email))
+  order by changed_at desc
+  limit greatest(p_limit, 1);
+end;
+$$;
+
+create or replace function public.admin_get_action_log(
+  p_token text,
+  p_limit int default 200
+)
+returns setof public.admin_action_log
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform public.admin_require_session(p_token);
+
+  return query
+  select *
+  from public.admin_action_log
+  order by created_at desc
+  limit greatest(p_limit, 1);
+end;
+$$;
+
+create or replace function public.admin_log_action(
+  p_token text,
+  p_action text,
+  p_target_type text,
+  p_target_id text,
+  p_details jsonb default '{}'::jsonb
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_admin_email text := public.admin_require_session(p_token);
+begin
+  insert into public.admin_action_log (admin_email, action, target_type, target_id, details)
+  values (v_admin_email, p_action, p_target_type, p_target_id, coalesce(p_details, '{}'::jsonb));
+end;
+$$;
+
+grant execute on function public.admin_login(text, text) to anon, authenticated;
+grant execute on function public.admin_verify_session(text) to anon, authenticated;
+grant execute on function public.admin_logout(text) to anon, authenticated;
+grant execute on function public.admin_review_seller(text, text, text, text) to anon, authenticated;
+grant execute on function public.admin_get_profile_audit_log(text, text, int) to anon, authenticated;
+grant execute on function public.admin_get_action_log(text, int) to anon, authenticated;
+grant execute on function public.admin_log_action(text, text, text, text, jsonb) to anon, authenticated;
+

@@ -1,9 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Camera, RotateCcw, ShieldCheck } from 'lucide-react';
 import StandalonePageShell from '../components/layout/StandalonePageShell';
 import { hasSupabaseEnv, supabase } from '../lib/supabase';
 import { clearPendingSellerSignupDraft, getPendingSellerSignupDraft } from './sellerSignupDraft';
+
+const SELLER_VERIFICATION_BUCKET = 'seller-verification';
+
+const sanitizeStorageSegment = (value) => String(value || 'seller')
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/^-+|-+$/g, '') || 'seller';
 
 const SELLER_PROFILE_REQUIRED_FIELDS = [
   'business_name',
@@ -24,6 +31,8 @@ const SELLER_PROFILE_REQUIRED_FIELDS = [
   'payout_branch_code',
   'return_contact_name',
   'return_contact_phone',
+  'id_document_path',
+  'selfie_path',
 ];
 
 const hasCompleteSellerProfile = (record) => SELLER_PROFILE_REQUIRED_FIELDS.every((field) => {
@@ -50,6 +59,125 @@ const getAccountUserErrorMessage = (error) => {
   return error.message || 'Unable to save your account details.';
 };
 
+// Forces a live camera capture — there is deliberately no file-picker
+// fallback anywhere in here, for either the ID/passport photo or the
+// selfie, since the whole point is to stop sellers substituting a
+// pre-existing, downloaded, or doctored image for either document.
+const LiveCameraCapture = ({
+  previewUrl,
+  onCapture,
+  onRetake,
+  instructions,
+  captureLabel = 'Capture photo',
+  capturedLabel = 'Photo captured',
+  capturedHint = '',
+}) => {
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const [cameraState, setCameraState] = useState('idle');
+  const [cameraError, setCameraError] = useState('');
+
+  const stopStream = () => {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+  };
+
+  useEffect(() => () => stopStream(), []);
+
+  const startCamera = async () => {
+    setCameraState('starting');
+    setCameraError('');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      setCameraState('live');
+    } catch (error) {
+      setCameraState('error');
+      setCameraError(
+        error?.name === 'NotAllowedError'
+          ? 'Camera access was blocked. Allow camera access in your browser settings, then try again.'
+          : error?.name === 'NotFoundError'
+            ? 'No camera was detected on this device. A live camera is required to verify your identity.'
+            : 'Could not start the camera. Close any other app using it and try again.',
+      );
+    }
+  };
+
+  const captureFrame = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 480;
+    canvas.height = video.videoHeight || 360;
+    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob((blob) => {
+      if (blob) onCapture(blob);
+    }, 'image/png');
+    stopStream();
+    setCameraState('idle');
+  };
+
+  const handleRetake = () => {
+    onRetake();
+    setCameraState('idle');
+    setCameraError('');
+  };
+
+  if (previewUrl) {
+    return (
+      <div className="flex items-center gap-4 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4">
+        <img src={previewUrl} alt={capturedLabel} className="h-20 w-20 rounded-lg object-cover" />
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-emerald-600">{capturedLabel}</p>
+          {capturedHint ? <p className="text-xs text-[var(--svs-muted)]">{capturedHint}</p> : null}
+        </div>
+        <button
+          type="button"
+          onClick={handleRetake}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--svs-border)] px-3 py-2 text-xs font-semibold text-[var(--svs-text)] hover:border-[var(--svs-primary)]"
+        >
+          <RotateCcw className="h-3.5 w-3.5" /> Retake
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4">
+      {instructions ? <p className="mb-3 text-center text-xs font-medium text-[var(--svs-text)]">{instructions}</p> : null}
+      {cameraState === 'live' ? (
+        <div className="flex flex-col items-center gap-3">
+          <video ref={videoRef} autoPlay playsInline muted className="h-56 w-full max-w-sm rounded-lg bg-black object-cover" />
+          <button
+            type="button"
+            onClick={captureFrame}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--svs-primary)] px-4 py-2 text-sm font-bold text-white hover:brightness-110"
+          >
+            <Camera className="h-4 w-4" /> {captureLabel}
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center gap-2 py-2">
+          <button
+            type="button"
+            onClick={startCamera}
+            disabled={cameraState === 'starting'}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-2 text-sm font-bold text-[var(--svs-text)] hover:border-[var(--svs-primary)] disabled:opacity-60"
+          >
+            <Camera className="h-4 w-4" /> {cameraState === 'starting' ? 'Starting camera…' : 'Start camera'}
+          </button>
+          <p className="text-center text-xs text-[var(--svs-muted)]">A live photo is required — uploaded photos are not accepted.</p>
+          {cameraError ? <p className="text-center text-xs font-medium text-rose-600">{cameraError}</p> : null}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const SellerOnboardingPage = () => {
   const navigate = useNavigate();
   const context = useMemo(() => getUserContext(), []);
@@ -73,9 +201,34 @@ const SellerOnboardingPage = () => {
     returnContactName: '',
     returnContactPhone: '',
   });
+  const [idDocumentType, setIdDocumentType] = useState('');
+  const [idDocumentBlob, setIdDocumentBlob] = useState(null);
+  const [idDocumentPreviewUrl, setIdDocumentPreviewUrl] = useState('');
+  const [selfieBlob, setSelfieBlob] = useState(null);
+  const [selfiePreviewUrl, setSelfiePreviewUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('idle');
+
+  useEffect(() => {
+    if (!idDocumentBlob) {
+      setIdDocumentPreviewUrl('');
+      return undefined;
+    }
+    const url = URL.createObjectURL(idDocumentBlob);
+    setIdDocumentPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [idDocumentBlob]);
+
+  useEffect(() => {
+    if (!selfieBlob) {
+      setSelfiePreviewUrl('');
+      return undefined;
+    }
+    const url = URL.createObjectURL(selfieBlob);
+    setSelfiePreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [selfieBlob]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -91,6 +244,18 @@ const SellerOnboardingPage = () => {
       return;
     }
 
+    if (!idDocumentType || !idDocumentBlob) {
+      setMessage('Select your ID document type and capture a live photo of your ID/passport using your camera. Uploaded photos are not accepted.');
+      setMessageType('error');
+      return;
+    }
+
+    if (!selfieBlob) {
+      setMessage('Capture a live selfie using your camera to verify your identity. Uploaded photos are not accepted.');
+      setMessageType('error');
+      return;
+    }
+
     if (!hasSupabaseEnv || !supabase) {
       setMessage(
         'Supabase is not configured. Add REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_ANON_KEY in .env and restart the app.',
@@ -102,6 +267,36 @@ const SellerOnboardingPage = () => {
     setIsSubmitting(true);
     setMessage('');
     setMessageType('idle');
+
+    const identifierChecks = [
+      ['id_number', formData.idNumber.trim()],
+      ['payout_account_number', formData.payoutAccountNumber.trim()],
+      ['phone_number', formData.phoneNumber.trim()],
+      ['email', context.email.trim().toLowerCase()],
+    ].filter(([, value]) => value);
+
+    for (const [identifierType, identifierValue] of identifierChecks) {
+      const { data: bannedRow, error: bannedCheckError } = await supabase
+        .from('banned_identifiers')
+        .select('id')
+        .eq('identifier_type', identifierType)
+        .eq('identifier_value', identifierValue)
+        .maybeSingle();
+
+      if (bannedCheckError) {
+        setMessage(bannedCheckError.message);
+        setMessageType('error');
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (bannedRow) {
+        setMessage('This application cannot be processed. Contact support if you believe this is a mistake.');
+        setMessageType('error');
+        setIsSubmitting(false);
+        return;
+      }
+    }
 
     if (context.pendingSignupDraft) {
       const { name, email, contact, passwordHash } = context.pendingSignupDraft;
@@ -182,6 +377,32 @@ const SellerOnboardingPage = () => {
       }
     }
 
+    const storageSegment = sanitizeStorageSegment(context.email);
+
+    const idDocumentPath = `${storageSegment}/id-document-${Date.now()}.png`;
+    const { error: idUploadError } = await supabase.storage
+      .from(SELLER_VERIFICATION_BUCKET)
+      .upload(idDocumentPath, idDocumentBlob, { cacheControl: '3600', upsert: false, contentType: 'image/png' });
+
+    if (idUploadError) {
+      setMessage(`ID document upload failed: ${idUploadError.message}. Make sure the ${SELLER_VERIFICATION_BUCKET} bucket exists and allows uploads.`);
+      setMessageType('error');
+      setIsSubmitting(false);
+      return;
+    }
+
+    const selfiePath = `${storageSegment}/selfie-${Date.now()}.png`;
+    const { error: selfieUploadError } = await supabase.storage
+      .from(SELLER_VERIFICATION_BUCKET)
+      .upload(selfiePath, selfieBlob, { cacheControl: '3600', upsert: false, contentType: 'image/png' });
+
+    if (selfieUploadError) {
+      setMessage(`Selfie upload failed: ${selfieUploadError.message}. Make sure the ${SELLER_VERIFICATION_BUCKET} bucket exists and allows uploads.`);
+      setMessageType('error');
+      setIsSubmitting(false);
+      return;
+    }
+
     const payload = {
       user_email: context.email.trim().toLowerCase(),
       business_name: formData.businessName.trim(),
@@ -202,6 +423,10 @@ const SellerOnboardingPage = () => {
       payout_branch_code: formData.payoutBranchCode.trim(),
       return_contact_name: formData.returnContactName.trim(),
       return_contact_phone: formData.returnContactPhone.trim(),
+      id_document_path: idDocumentPath,
+      id_document_type: idDocumentType,
+      selfie_path: selfiePath,
+      selfie_captured_at: new Date().toISOString(),
       onboarding_completed: true,
       compliance_status: 'submitted',
       updated_at: new Date().toISOString(),
@@ -227,7 +452,7 @@ const SellerOnboardingPage = () => {
       return;
     }
 
-    setMessage('Seller profile saved. Redirecting to dashboard...');
+    setMessage('Seller profile submitted. Your application is now pending admin approval...');
     setMessageType('success');
 
     if (context.pendingSignupDraft) {
@@ -235,8 +460,16 @@ const SellerOnboardingPage = () => {
       window.localStorage.setItem('svs-user-email', context.email.trim().toLowerCase());
       window.localStorage.setItem('svs-user-name', context.fullName.trim());
       window.localStorage.setItem('svs-user-contact', context.contactNumber.trim());
-      window.localStorage.setItem('svs-has-seller-access', 'true');
-      window.localStorage.setItem('svs-seller-home-path', '/seller/dashboard');
+      // compliance_status is always 'submitted' for a fresh onboarding
+      // submission, so this never actually grants access here — approval
+      // only happens once an admin reviews the application.
+      if (payload.compliance_status === 'approved') {
+        window.localStorage.setItem('svs-has-seller-access', 'true');
+        window.localStorage.setItem('svs-seller-home-path', '/seller/dashboard');
+      } else {
+        window.localStorage.removeItem('svs-has-seller-access');
+        window.localStorage.removeItem('svs-seller-home-path');
+      }
       clearPendingSellerSignupDraft();
       window.dispatchEvent(new Event('svs-auth-changed'));
     }
@@ -244,7 +477,7 @@ const SellerOnboardingPage = () => {
     setIsSubmitting(false);
 
     setTimeout(() => {
-      navigate('/seller/dashboard');
+      navigate(payload.compliance_status === 'approved' ? '/seller/dashboard' : '/sell/pending-approval');
     }, 500);
   };
 
@@ -283,6 +516,51 @@ const SellerOnboardingPage = () => {
               <input name="businessType" value={formData.businessType} onChange={handleChange} required placeholder="Business type (Individual, Pty Ltd, etc.)" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
               <input name="registrationNumber" value={formData.registrationNumber} onChange={handleChange} required placeholder="Company registration number" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
               <input name="taxNumber" value={formData.taxNumber} onChange={handleChange} required placeholder="Tax number" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
+            </div>
+
+            <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--svs-muted)]">Identity Verification</h2>
+            <p className="-mt-2 text-xs text-[var(--svs-muted)]">
+              Required to confirm you are who you say you are and to keep fake sellers off the platform. Both photos below
+              must be taken live with your camera — file uploads are not accepted for either one.
+            </p>
+            <select
+              name="idDocumentType"
+              value={idDocumentType}
+              onChange={(event) => setIdDocumentType(event.target.value)}
+              required
+              className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm text-[var(--svs-text)] md:w-1/2"
+            >
+              <option value="">ID document type</option>
+              <option value="national_id">National ID</option>
+              <option value="passport">Passport</option>
+            </select>
+
+            <div>
+              <p className="mb-2 text-sm font-medium text-[var(--svs-text)]">
+                {idDocumentType === 'passport' ? 'Passport photo' : 'ID document photo'}
+              </p>
+              <LiveCameraCapture
+                previewUrl={idDocumentPreviewUrl}
+                onCapture={setIdDocumentBlob}
+                onRetake={() => setIdDocumentBlob(null)}
+                instructions="Hold your National ID or passport flat inside the frame. Make sure all four corners and the printed details are clearly visible."
+                captureLabel="Capture document"
+                capturedLabel="Document photo captured"
+                capturedHint="Used only to verify your identity."
+              />
+            </div>
+
+            <div>
+              <p className="mb-2 text-sm font-medium text-[var(--svs-text)]">Live selfie</p>
+              <LiveCameraCapture
+                previewUrl={selfiePreviewUrl}
+                onCapture={setSelfieBlob}
+                onRetake={() => setSelfieBlob(null)}
+                instructions="Look directly at the camera with your face clearly visible and well lit."
+                captureLabel="Capture selfie"
+                capturedLabel="Live selfie captured"
+                capturedHint="Used only to confirm you match your ID document."
+              />
             </div>
 
             <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--svs-muted)]">Business Contact and Address</h2>

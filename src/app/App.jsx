@@ -81,6 +81,7 @@ import {
   ArrowUpToLine,
   Lock,
   Car,
+  Users,
 } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -115,6 +116,8 @@ import SellerLandingPage from '../pages/SellerLandingPage';
 import SellerOnboardingPage from '../pages/SellerOnboardingPage';
 import SellerSigninPage from '../pages/SellerSigninPage';
 import SellerSignupPage from '../pages/SellerSignupPage';
+import SellerPendingApprovalPage from '../pages/SellerPendingApprovalPage';
+import AdminSigninPage from '../pages/AdminSigninPage';
 import { TermsOfServicePage, PrivacyPolicyPage, RefundPolicyPage, CookiePolicyPage } from '../pages/LegalPages';
 import {
   PropertyMarketPage,
@@ -22166,6 +22169,866 @@ const MARKET_BADGE_COLORS = {
   hardwareSoftware: 'bg-slate-100 text-slate-700',
 };
 
+const ADMIN_TOKEN_STORAGE_KEY = 'svs-admin-token';
+
+const getAdminToken = () => (typeof window === 'undefined' ? '' : (window.localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY) || ''));
+
+const clearAdminSession = () => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+  window.localStorage.removeItem('svs-admin-name');
+};
+
+// Shows only the last 4 digits — used for bank account numbers anywhere they
+// surface in the admin UI. Never render a raw account number unmasked.
+const maskAccountNumber = (value) => {
+  const digits = String(value || '').replace(/\s+/g, '');
+  if (!digits) return '—';
+  if (digits.length <= 4) return `•••• ${digits}`;
+  return `•••• ${digits.slice(-4)}`;
+};
+
+// Generic search-box matcher reused across every admin tab: true if the
+// query is empty, or any of the given fields on the record contains it
+// (case-insensitive). `fields` can include dotted paths for one level of
+// nesting, e.g. 'wallet_bank_accounts.bank_name'.
+const adminRecordMatchesSearch = (record, query, fields) => {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return true;
+  return fields.some((field) => {
+    const [head, nested] = field.split('.');
+    const value = nested ? record?.[head]?.[nested] : record?.[head];
+    return String(value || '').toLowerCase().includes(needle);
+  });
+};
+
+const ADMIN_DASHBOARD_TABS = [
+  { key: 'overview', label: 'Overview', icon: LayoutDashboard },
+  { key: 'buyers', label: 'Buyers', icon: Users },
+  { key: 'sellers', label: 'Sellers', icon: Store },
+  { key: 'orders', label: 'Orders', icon: ClipboardList },
+  { key: 'transactions', label: 'Transactions', icon: Wallet },
+  { key: 'reports', label: 'Reports', icon: FileText },
+];
+
+const AdminDashboardPage = () => {
+  const navigate = useNavigate();
+  const [sessionState, setSessionState] = useState('checking');
+  const [adminInfo, setAdminInfo] = useState(null);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  const [buyers, setBuyers] = useState([]);
+  const [sellers, setSellers] = useState([]);
+  const [adminOrders, setAdminOrders] = useState([]);
+  const [coreDataLoaded, setCoreDataLoaded] = useState(false);
+  const [coreDataError, setCoreDataError] = useState('');
+
+  const [selectedSellerEmail, setSelectedSellerEmail] = useState(null);
+  const [sellerDetail, setSellerDetail] = useState(null);
+  const [sellerAuditLog, setSellerAuditLog] = useState([]);
+  const [idDocSignedUrl, setIdDocSignedUrl] = useState('');
+  const [selfieSignedUrl, setSelfieSignedUrl] = useState('');
+  const [reviewMessage, setReviewMessage] = useState('');
+  const [reviewMessageType, setReviewMessageType] = useState('idle');
+  const [isReviewing, setIsReviewing] = useState(false);
+  const [sellerFilter, setSellerFilter] = useState('submitted');
+
+  const [walletTransactions, setWalletTransactions] = useState([]);
+  const [withdrawalRequests, setWithdrawalRequests] = useState([]);
+  const [transactionsLoaded, setTransactionsLoaded] = useState(false);
+  const [transactionMessage, setTransactionMessage] = useState('');
+
+  const [bannedIdentifiers, setBannedIdentifiers] = useState([]);
+  const [adminActionLog, setAdminActionLog] = useState([]);
+  const [globalAuditLog, setGlobalAuditLog] = useState([]);
+  const [reportsLoaded, setReportsLoaded] = useState(false);
+
+  const [buyerSearch, setBuyerSearch] = useState('');
+  const [sellerSearch, setSellerSearch] = useState('');
+  const [orderSearch, setOrderSearch] = useState('');
+  const [transactionSearch, setTransactionSearch] = useState('');
+  const [reportSearch, setReportSearch] = useState('');
+
+  const token = getAdminToken();
+
+  useEffect(() => {
+    if (!hasSupabaseEnv || !supabase || !token) {
+      setSessionState('signed-out');
+      return undefined;
+    }
+
+    let isCancelled = false;
+
+    (async () => {
+      const { data, error } = await supabase.rpc('admin_verify_session', { p_token: token });
+      if (isCancelled) return;
+
+      if (error || !data) {
+        clearAdminSession();
+        setSessionState('signed-out');
+        return;
+      }
+
+      setAdminInfo({ adminEmail: data.admin_email, fullName: data.full_name });
+      setSessionState('signed-in');
+    })();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [token]);
+
+  useEffect(() => {
+    if (sessionState !== 'signed-in' || coreDataLoaded || !supabase) return;
+
+    let isCancelled = false;
+
+    (async () => {
+      const [buyersRes, sellersRes, ordersRes] = await Promise.all([
+        supabase.from('account_users').select('id, full_name, email_address, contact_number, created_at').order('created_at', { ascending: false }),
+        supabase.from('seller_profiles').select('id, user_email, business_name, legal_full_name, compliance_status, created_at, updated_at').order('created_at', { ascending: false }),
+        supabase.from(ORDERS_TABLE).select('user_email, order_key, reference, order_created_at, items, currency, subtotal, service_fee, total, status').order('order_created_at', { ascending: false }),
+      ]);
+
+      if (isCancelled) return;
+
+      if (buyersRes.error || sellersRes.error || ordersRes.error) {
+        setCoreDataError((buyersRes.error || sellersRes.error || ordersRes.error)?.message || 'Could not load admin data.');
+      } else {
+        setBuyers(buyersRes.data || []);
+        setSellers(sellersRes.data || []);
+        setAdminOrders(ordersRes.data || []);
+      }
+
+      setCoreDataLoaded(true);
+    })();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [sessionState, coreDataLoaded]);
+
+  useEffect(() => {
+    if (!selectedSellerEmail || !supabase) return undefined;
+
+    let isCancelled = false;
+
+    (async () => {
+      setSellerDetail(null);
+      setIdDocSignedUrl('');
+      setSelfieSignedUrl('');
+      setSellerAuditLog([]);
+      setReviewMessage('');
+      setReviewMessageType('idle');
+
+      const { data } = await supabase.from('seller_profiles').select('*').eq('user_email', selectedSellerEmail).maybeSingle();
+      if (isCancelled) return;
+      setSellerDetail(data || null);
+
+      const { data: auditRows } = await supabase.rpc('admin_get_profile_audit_log', { p_token: token, p_user_email: selectedSellerEmail });
+      if (!isCancelled) setSellerAuditLog(auditRows || []);
+    })();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedSellerEmail, token]);
+
+  useEffect(() => {
+    if (sessionState !== 'signed-in' || activeTab !== 'transactions' || transactionsLoaded || !supabase) return;
+
+    (async () => {
+      const [transactionsRes, withdrawalsRes] = await Promise.all([
+        supabase.from('wallet_transactions').select('id, user_email, kind, direction, amount, currency, status, counterparty, description, created_at').order('created_at', { ascending: false }).limit(200),
+        supabase.from('wallet_withdrawal_requests').select('id, user_email, amount, currency, status, destination_label, requested_at, processed_at, wallet_bank_accounts(bank_name, account_holder, account_number)').order('requested_at', { ascending: false }).limit(200),
+      ]);
+
+      setWalletTransactions(transactionsRes.data || []);
+      setWithdrawalRequests(withdrawalsRes.data || []);
+      setTransactionsLoaded(true);
+    })();
+  }, [sessionState, activeTab, transactionsLoaded]);
+
+  useEffect(() => {
+    if (sessionState !== 'signed-in' || activeTab !== 'reports' || reportsLoaded || !supabase) return;
+
+    (async () => {
+      const [bannedRes, actionLogRes, auditLogRes] = await Promise.all([
+        supabase.from('banned_identifiers').select('id, identifier_type, identifier_value, reason, created_at').order('created_at', { ascending: false }).limit(200),
+        supabase.rpc('admin_get_action_log', { p_token: token, p_limit: 200 }),
+        supabase.rpc('admin_get_profile_audit_log', { p_token: token, p_limit: 200 }),
+      ]);
+
+      setBannedIdentifiers(bannedRes.data || []);
+      setAdminActionLog(actionLogRes.data || []);
+      setGlobalAuditLog(auditLogRes.data || []);
+      setReportsLoaded(true);
+    })();
+  }, [sessionState, activeTab, reportsLoaded, token]);
+
+  const revealIdDocument = async () => {
+    if (!sellerDetail?.id_document_path || !supabase) return;
+    const { data } = await supabase.storage.from('seller-verification').createSignedUrl(sellerDetail.id_document_path, 300);
+    setIdDocSignedUrl(data?.signedUrl || '');
+  };
+
+  const revealSelfie = async () => {
+    if (!sellerDetail?.selfie_path || !supabase) return;
+    const { data } = await supabase.storage.from('seller-verification').createSignedUrl(sellerDetail.selfie_path, 300);
+    setSelfieSignedUrl(data?.signedUrl || '');
+  };
+
+  const handleReviewDecision = async (decision) => {
+    if (!sellerDetail || !supabase) return;
+    setIsReviewing(true);
+    setReviewMessage('');
+    setReviewMessageType('idle');
+
+    const { error } = await supabase.rpc('admin_review_seller', {
+      p_token: token,
+      p_user_email: sellerDetail.user_email,
+      p_decision: decision,
+    });
+
+    if (error) {
+      setReviewMessage(error.message);
+      setReviewMessageType('error');
+      setIsReviewing(false);
+      return;
+    }
+
+    setReviewMessage(decision === 'approved' ? 'Seller approved. They now have dashboard access.' : 'Seller rejected. Their details have been blocked from re-registering.');
+    setReviewMessageType('success');
+    setSellerDetail((current) => (current ? { ...current, compliance_status: decision } : current));
+    setSellers((current) => current.map((entry) => (entry.user_email === sellerDetail.user_email ? { ...entry, compliance_status: decision } : entry)));
+    setIsReviewing(false);
+  };
+
+  const handleWithdrawalDecision = async (request, decision) => {
+    if (!supabase) return;
+    setTransactionMessage('');
+
+    const { error } = await supabase.from('wallet_withdrawal_requests').update({ status: decision, processed_at: new Date().toISOString() }).eq('id', request.id);
+
+    if (error) {
+      setTransactionMessage(error.message);
+      return;
+    }
+
+    await supabase.rpc('admin_log_action', {
+      p_token: token,
+      p_action: `withdrawal_${decision}`,
+      p_target_type: 'wallet_withdrawal_request',
+      p_target_id: request.id,
+      p_details: { user_email: request.user_email, amount: request.amount, currency: request.currency },
+    });
+
+    setWithdrawalRequests((current) => current.map((entry) => (entry.id === request.id ? { ...entry, status: decision } : entry)));
+    setTransactionMessage(`Withdrawal marked ${decision}.`);
+  };
+
+  const handleAdminLogout = async () => {
+    if (supabase) {
+      await supabase.rpc('admin_logout', { p_token: token });
+    }
+    clearAdminSession();
+    setSessionState('signed-out');
+    setAdminInfo(null);
+    navigate('/admin/signin');
+  };
+
+  const orderLineItems = useMemo(() => (
+    adminOrders.flatMap((order) => (Array.isArray(order.items) ? order.items : []).map((item, index) => ({
+      key: `${order.order_key}-${index}`,
+      orderKey: order.order_key,
+      reference: order.reference,
+      createdAt: order.order_created_at,
+      status: order.status,
+      buyerEmail: order.user_email,
+      sellerEmail: item.sellerEmail || item.seller_email || '—',
+      title: item.title || 'Item',
+      quantity: item.quantity || 1,
+      unitPriceLabel: item.unitPriceLabel || '',
+    })))
+  ), [adminOrders]);
+
+  const pendingSellers = useMemo(() => sellers.filter((entry) => entry.compliance_status === 'submitted'), [sellers]);
+  const visibleSellers = useMemo(() => (
+    sellers
+      .filter((entry) => sellerFilter === 'all' || entry.compliance_status === sellerFilter)
+      .filter((entry) => adminRecordMatchesSearch(entry, sellerSearch, ['business_name', 'legal_full_name', 'user_email']))
+  ), [sellers, sellerFilter, sellerSearch]);
+
+  const visibleBuyers = useMemo(() => (
+    buyers.filter((buyer) => adminRecordMatchesSearch(buyer, buyerSearch, ['full_name', 'email_address', 'contact_number']))
+  ), [buyers, buyerSearch]);
+
+  const visibleOrderLineItems = useMemo(() => (
+    orderLineItems.filter((line) => adminRecordMatchesSearch(line, orderSearch, ['reference', 'orderKey', 'buyerEmail', 'sellerEmail', 'title', 'status']))
+  ), [orderLineItems, orderSearch]);
+
+  const visibleWithdrawalRequests = useMemo(() => (
+    withdrawalRequests.filter((request) => (
+      adminRecordMatchesSearch(request, transactionSearch, ['user_email', 'status', 'destination_label'])
+      || adminRecordMatchesSearch(request, transactionSearch, ['wallet_bank_accounts.bank_name', 'wallet_bank_accounts.account_holder'])
+    ))
+  ), [withdrawalRequests, transactionSearch]);
+
+  const visibleWalletTransactions = useMemo(() => (
+    walletTransactions.filter((txn) => adminRecordMatchesSearch(txn, transactionSearch, ['user_email', 'kind', 'status', 'description', 'counterparty']))
+  ), [walletTransactions, transactionSearch]);
+
+  const visibleBannedIdentifiers = useMemo(() => (
+    bannedIdentifiers.filter((entry) => adminRecordMatchesSearch(entry, reportSearch, ['identifier_type', 'identifier_value', 'reason']))
+  ), [bannedIdentifiers, reportSearch]);
+
+  const visibleAdminActionLog = useMemo(() => (
+    adminActionLog.filter((entry) => adminRecordMatchesSearch(entry, reportSearch, ['admin_email', 'action', 'target_type', 'target_id']))
+  ), [adminActionLog, reportSearch]);
+
+  const visibleGlobalAuditLog = useMemo(() => (
+    globalAuditLog.filter((entry) => adminRecordMatchesSearch(entry, reportSearch, ['user_email', 'field_name', 'old_value', 'new_value']))
+  ), [globalAuditLog, reportSearch]);
+
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const todaysGmv = useMemo(() => (
+    adminOrders
+      .filter((order) => String(order.order_created_at || '').slice(0, 10) === todayKey)
+      .reduce((sum, order) => sum + (Number(order.total) || 0), 0)
+  ), [adminOrders, todayKey]);
+
+  if (sessionState === 'checking') {
+    return (
+      <PageFrame title="Admin Dashboard" subtitle="Checking your session...">
+        <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 text-sm text-[var(--svs-muted)]">Loading...</div>
+      </PageFrame>
+    );
+  }
+
+  if (sessionState === 'signed-out') {
+    return (
+      <PageFrame title="Admin Dashboard" subtitle="Restricted access for platform administrators only.">
+        <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-6 text-sm text-[var(--svs-text)]">
+          <p className="mb-4">You need to sign in with an admin account to view this dashboard.</p>
+          <Link to="/admin/signin" className="inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white">Admin Sign In</Link>
+        </div>
+      </PageFrame>
+    );
+  }
+
+  const sidebarNav = (
+    <>
+      <div className="border-b border-[var(--svs-border)] pb-4">
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--svs-muted)]">Signed in as</p>
+        <p className="mt-1 truncate text-sm font-semibold text-[var(--svs-text)]">{adminInfo?.fullName || 'Admin'}</p>
+        <p className="truncate text-xs text-[var(--svs-muted)]">{adminInfo?.adminEmail}</p>
+      </div>
+
+      <nav className="mt-4 space-y-1">
+        {ADMIN_DASHBOARD_TABS.map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => { setActiveTab(key); setSelectedSellerEmail(null); setIsMobileSidebarOpen(false); }}
+            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold transition ${activeTab === key ? 'bg-[var(--svs-primary)] text-white shadow-sm' : 'text-[var(--svs-text)] hover:bg-[var(--svs-surface-soft)]'}`}
+          >
+            <Icon className="h-4 w-4" />
+            <span>{label}</span>
+            {key === 'sellers' && pendingSellers.length > 0 ? (
+              <span className={`ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-bold ${activeTab === key ? 'bg-white/25 text-white' : 'bg-rose-500 text-white'}`}>{pendingSellers.length}</span>
+            ) : null}
+          </button>
+        ))}
+      </nav>
+
+      <div className="mt-6 space-y-1 border-t border-[var(--svs-border)] pt-4">
+        <button
+          type="button"
+          onClick={handleAdminLogout}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-[var(--svs-muted)] transition hover:bg-[var(--svs-surface-soft)] hover:text-[var(--svs-text)]"
+        >
+          <Lock className="h-4 w-4" />
+          <span>Sign Out</span>
+        </button>
+      </div>
+    </>
+  );
+
+  return (
+    <PageFrame title="Admin Dashboard" subtitle="Manage buyers, sellers, orders, transactions, and platform reports.">
+      <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+        <aside className="hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] lg:block lg:sticky lg:top-24 lg:self-start">
+          {sidebarNav}
+        </aside>
+
+        {isMobileSidebarOpen ? (
+          <div className="fixed inset-0 z-[90] flex lg:hidden">
+            <div className="absolute inset-0 bg-black/40" onClick={() => setIsMobileSidebarOpen(false)} />
+            <div className="relative z-[91] h-full w-72 overflow-y-auto bg-[var(--svs-surface)] p-4 shadow-2xl">
+              {sidebarNav}
+            </div>
+          </div>
+        ) : null}
+
+        <main className="space-y-6">
+          <header className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <button
+                type="button"
+                onClick={() => setIsMobileSidebarOpen(true)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] text-[var(--svs-text)] lg:hidden"
+                aria-label="Open admin menu"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <div>
+                <h1 className="text-2xl font-bold text-[var(--svs-text)]">{ADMIN_DASHBOARD_TABS.find((tab) => tab.key === (selectedSellerEmail ? 'sellers' : activeTab))?.label}</h1>
+                {coreDataError ? <p className="mt-1 text-sm text-rose-600">{coreDataError}</p> : null}
+              </div>
+            </div>
+          </header>
+
+          {!coreDataLoaded ? (
+            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 text-sm text-[var(--svs-muted)]">Loading dashboard data...</div>
+          ) : activeTab === 'overview' ? (
+            <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              {[
+                { label: 'Buyers', value: buyers.length },
+                { label: 'Sellers', value: sellers.length },
+                { label: 'Pending Approval', value: pendingSellers.length },
+                { label: 'Orders', value: adminOrders.length },
+                { label: "Today's GMV", value: formatAmountInCurrency(todaysGmv) },
+              ].map(({ label, value }) => (
+                <div key={label} className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--svs-muted)]">{label}</p>
+                  <p className="mt-1 text-2xl font-bold text-[var(--svs-text)]">{value}</p>
+                </div>
+              ))}
+            </section>
+          ) : activeTab === 'buyers' ? (
+            <section className="space-y-3">
+              <div className="relative max-w-sm">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--svs-muted)]" />
+                <input
+                  type="text"
+                  value={buyerSearch}
+                  onChange={(event) => setBuyerSearch(event.target.value)}
+                  placeholder="Search by name, email, or contact..."
+                  className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] py-2 pl-9 pr-3 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                />
+              </div>
+              <div className="overflow-x-auto rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)]">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-[var(--svs-surface-soft)] text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                    <tr>
+                      <th className="px-4 py-3">Name</th>
+                      <th className="px-4 py-3">Email</th>
+                      <th className="px-4 py-3">Contact</th>
+                      <th className="px-4 py-3">Joined</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--svs-border)]">
+                    {visibleBuyers.map((buyer) => (
+                      <tr key={buyer.id}>
+                        <td className="px-4 py-3 font-semibold text-[var(--svs-text)]">{buyer.full_name}</td>
+                        <td className="px-4 py-3 text-[var(--svs-muted)]">{buyer.email_address}</td>
+                        <td className="px-4 py-3 text-[var(--svs-muted)]">{buyer.contact_number || '—'}</td>
+                        <td className="px-4 py-3 text-[var(--svs-muted)]">{new Date(buyer.created_at).toLocaleDateString()}</td>
+                      </tr>
+                    ))}
+                    {visibleBuyers.length === 0 ? (
+                      <tr><td colSpan={4} className="px-4 py-6 text-center text-[var(--svs-muted)]">{buyers.length === 0 ? 'No buyers yet.' : 'No buyers match your search.'}</td></tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          ) : activeTab === 'sellers' && selectedSellerEmail && sellerDetail ? (
+            <section className="space-y-5">
+              <button type="button" onClick={() => setSelectedSellerEmail(null)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--svs-primary)] hover:underline">
+                <ChevronLeft className="h-4 w-4" /> Back to sellers
+              </button>
+
+              {reviewMessage ? (
+                <div className={`rounded-xl px-4 py-3 text-sm font-medium ${reviewMessageType === 'success' ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' : 'bg-red-50 text-red-700 ring-1 ring-red-200'}`}>{reviewMessage}</div>
+              ) : null}
+
+              <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-bold text-[var(--svs-text)]">{sellerDetail.business_name || sellerDetail.legal_full_name}</h2>
+                    <p className="text-sm text-[var(--svs-muted)]">{sellerDetail.user_email}</p>
+                  </div>
+                  <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${sellerDetail.compliance_status === 'approved' ? 'bg-emerald-50 text-emerald-700' : sellerDetail.compliance_status === 'rejected' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'}`}>
+                    {sellerDetail.compliance_status}
+                  </span>
+                </div>
+
+                <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                  <p><span className="font-semibold text-[var(--svs-text)]">Legal name:</span> <span className="text-[var(--svs-muted)]">{sellerDetail.legal_full_name}</span></p>
+                  <p><span className="font-semibold text-[var(--svs-text)]">ID/Passport type:</span> <span className="text-[var(--svs-muted)]">{sellerDetail.id_document_type || '—'}</span></p>
+                  <p><span className="font-semibold text-[var(--svs-text)]">Business type:</span> <span className="text-[var(--svs-muted)]">{sellerDetail.business_type}</span></p>
+                  <p><span className="font-semibold text-[var(--svs-text)]">Phone:</span> <span className="text-[var(--svs-muted)]">{sellerDetail.phone_number}</span></p>
+                  <p><span className="font-semibold text-[var(--svs-text)]">Address:</span> <span className="text-[var(--svs-muted)]">{[sellerDetail.business_address_line1, sellerDetail.city, sellerDetail.province, sellerDetail.postal_code, sellerDetail.country].filter(Boolean).join(', ')}</span></p>
+                  <p><span className="font-semibold text-[var(--svs-text)]">Payout account:</span> <span className="text-[var(--svs-muted)]">{sellerDetail.payout_bank_name} {maskAccountNumber(sellerDetail.payout_account_number)}</span></p>
+                </div>
+
+                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-lg border border-[var(--svs-border)] p-3">
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">ID / Passport Photo</p>
+                    {idDocSignedUrl ? (
+                      <img src={idDocSignedUrl} alt="Seller ID document" className="h-40 w-full rounded-md object-cover" />
+                    ) : (
+                      <button type="button" onClick={revealIdDocument} disabled={!sellerDetail.id_document_path} className="rounded-lg border border-[var(--svs-border)] px-3 py-2 text-xs font-semibold text-[var(--svs-text)] hover:border-[var(--svs-primary)] disabled:opacity-50">
+                        {sellerDetail.id_document_path ? 'Reveal document' : 'No document on file'}
+                      </button>
+                    )}
+                  </div>
+                  <div className="rounded-lg border border-[var(--svs-border)] p-3">
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">Live Selfie</p>
+                    {selfieSignedUrl ? (
+                      <img src={selfieSignedUrl} alt="Seller selfie" className="h-40 w-full rounded-md object-cover" />
+                    ) : (
+                      <button type="button" onClick={revealSelfie} disabled={!sellerDetail.selfie_path} className="rounded-lg border border-[var(--svs-border)] px-3 py-2 text-xs font-semibold text-[var(--svs-text)] hover:border-[var(--svs-primary)] disabled:opacity-50">
+                        {sellerDetail.selfie_path ? 'Reveal selfie' : 'No selfie on file'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleReviewDecision('approved')}
+                    disabled={isReviewing || sellerDetail.compliance_status === 'approved'}
+                    className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50"
+                  >
+                    <Check className="h-4 w-4" /> Approve Seller
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleReviewDecision('rejected')}
+                    disabled={isReviewing || sellerDetail.compliance_status === 'rejected'}
+                    className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50"
+                  >
+                    <X className="h-4 w-4" /> Reject Seller
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5">
+                <h3 className="mb-3 text-sm font-bold text-[var(--svs-text)]">Profile Change History</h3>
+                {sellerAuditLog.length === 0 ? (
+                  <p className="text-sm text-[var(--svs-muted)]">No tracked changes for this seller.</p>
+                ) : (
+                  <div className="space-y-2 text-sm">
+                    {sellerAuditLog.map((entry) => (
+                      <div key={entry.id} className="rounded-lg border border-[var(--svs-border)] p-3">
+                        <p className="font-semibold text-[var(--svs-text)]">{entry.field_name}</p>
+                        <p className="text-[var(--svs-muted)]">{entry.old_value || '—'} → {entry.new_value || '—'}</p>
+                        <p className="text-xs text-[var(--svs-muted)]">{new Date(entry.changed_at).toLocaleString()}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          ) : activeTab === 'sellers' ? (
+            <section className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                {['submitted', 'approved', 'rejected', 'all'].map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setSellerFilter(option)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-bold capitalize transition ${sellerFilter === option ? 'bg-[var(--svs-primary)] text-white' : 'border border-[var(--svs-border)] text-[var(--svs-text)] hover:border-[var(--svs-primary)]'}`}
+                  >
+                    {option === 'submitted' ? 'Pending Approval' : option}
+                  </button>
+                ))}
+              </div>
+
+              <div className="relative max-w-sm">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--svs-muted)]" />
+                <input
+                  type="text"
+                  value={sellerSearch}
+                  onChange={(event) => setSellerSearch(event.target.value)}
+                  placeholder="Search by business name, legal name, or email..."
+                  className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] py-2 pl-9 pr-3 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                />
+              </div>
+
+              <div className="overflow-x-auto rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)]">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-[var(--svs-surface-soft)] text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                    <tr>
+                      <th className="px-4 py-3">Business</th>
+                      <th className="px-4 py-3">Email</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Submitted</th>
+                      <th className="px-4 py-3" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--svs-border)]">
+                    {visibleSellers.map((seller) => (
+                      <tr key={seller.id}>
+                        <td className="px-4 py-3 font-semibold text-[var(--svs-text)]">{seller.business_name || seller.legal_full_name}</td>
+                        <td className="px-4 py-3 text-[var(--svs-muted)]">{seller.user_email}</td>
+                        <td className="px-4 py-3">
+                          <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase ${seller.compliance_status === 'approved' ? 'bg-emerald-50 text-emerald-700' : seller.compliance_status === 'rejected' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'}`}>
+                            {seller.compliance_status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-[var(--svs-muted)]">{new Date(seller.created_at).toLocaleDateString()}</td>
+                        <td className="px-4 py-3 text-right">
+                          <button type="button" onClick={() => setSelectedSellerEmail(seller.user_email)} className="text-sm font-semibold text-[var(--svs-primary)] hover:underline">Review</button>
+                        </td>
+                      </tr>
+                    ))}
+                    {visibleSellers.length === 0 ? (
+                      <tr><td colSpan={5} className="px-4 py-6 text-center text-[var(--svs-muted)]">No sellers in this category.</td></tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          ) : activeTab === 'orders' ? (
+            <section className="space-y-3">
+              <div className="relative max-w-sm">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--svs-muted)]" />
+                <input
+                  type="text"
+                  value={orderSearch}
+                  onChange={(event) => setOrderSearch(event.target.value)}
+                  placeholder="Search by order reference, item, buyer, or seller email..."
+                  className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] py-2 pl-9 pr-3 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                />
+              </div>
+              <div className="overflow-x-auto rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)]">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-[var(--svs-surface-soft)] text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                    <tr>
+                      <th className="px-4 py-3">Order</th>
+                      <th className="px-4 py-3">Item</th>
+                      <th className="px-4 py-3">Buyer</th>
+                      <th className="px-4 py-3">Seller</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--svs-border)]">
+                    {visibleOrderLineItems.map((line) => (
+                      <tr key={line.key}>
+                        <td className="px-4 py-3 font-semibold text-[var(--svs-text)]">{line.reference || line.orderKey}</td>
+                        <td className="px-4 py-3 text-[var(--svs-muted)]">{line.title} ×{line.quantity}</td>
+                        <td className="px-4 py-3 text-[var(--svs-muted)]">{line.buyerEmail}</td>
+                        <td className="px-4 py-3 text-[var(--svs-muted)]">{line.sellerEmail}</td>
+                        <td className="px-4 py-3 text-[var(--svs-muted)]">{line.status}</td>
+                        <td className="px-4 py-3 text-[var(--svs-muted)]">{line.createdAt ? new Date(line.createdAt).toLocaleDateString() : '—'}</td>
+                      </tr>
+                    ))}
+                    {visibleOrderLineItems.length === 0 ? (
+                      <tr><td colSpan={6} className="px-4 py-6 text-center text-[var(--svs-muted)]">{orderLineItems.length === 0 ? 'No orders yet.' : 'No orders match your search.'}</td></tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          ) : activeTab === 'transactions' ? (
+            <section className="space-y-6">
+              {transactionMessage ? <div className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 ring-1 ring-emerald-200">{transactionMessage}</div> : null}
+
+              <div className="relative max-w-sm">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--svs-muted)]" />
+                <input
+                  type="text"
+                  value={transactionSearch}
+                  onChange={(event) => setTransactionSearch(event.target.value)}
+                  placeholder="Search by email, bank, or status..."
+                  className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] py-2 pl-9 pr-3 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                />
+              </div>
+
+              <div>
+                <h3 className="mb-2 text-sm font-bold text-[var(--svs-text)]">Withdrawal Requests</h3>
+                <div className="overflow-x-auto rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)]">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-[var(--svs-surface-soft)] text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                      <tr>
+                        <th className="px-4 py-3">User</th>
+                        <th className="px-4 py-3">Amount</th>
+                        <th className="px-4 py-3">Bank Account</th>
+                        <th className="px-4 py-3">Status</th>
+                        <th className="px-4 py-3" />
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--svs-border)]">
+                      {visibleWithdrawalRequests.map((request) => (
+                        <tr key={request.id}>
+                          <td className="px-4 py-3 text-[var(--svs-muted)]">{request.user_email}</td>
+                          <td className="px-4 py-3 font-semibold text-[var(--svs-text)]">{formatAmountInCurrency(request.amount, request.currency)}</td>
+                          <td className="px-4 py-3 text-[var(--svs-muted)]">{request.wallet_bank_accounts ? `${request.wallet_bank_accounts.bank_name} ${maskAccountNumber(request.wallet_bank_accounts.account_number)}` : (request.destination_label || '—')}</td>
+                          <td className="px-4 py-3">
+                            <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase ${request.status === 'paid' ? 'bg-emerald-50 text-emerald-700' : request.status === 'rejected' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'}`}>{request.status}</span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            {request.status === 'pending' || request.status === 'processing' ? (
+                              <div className="flex justify-end gap-2">
+                                <button type="button" onClick={() => handleWithdrawalDecision(request, 'paid')} className="text-xs font-bold text-emerald-700 hover:underline">Mark Paid</button>
+                                <button type="button" onClick={() => handleWithdrawalDecision(request, 'rejected')} className="text-xs font-bold text-rose-700 hover:underline">Reject</button>
+                              </div>
+                            ) : null}
+                          </td>
+                        </tr>
+                      ))}
+                      {visibleWithdrawalRequests.length === 0 ? (
+                        <tr><td colSpan={5} className="px-4 py-6 text-center text-[var(--svs-muted)]">{withdrawalRequests.length === 0 ? 'No withdrawal requests.' : 'No withdrawal requests match your search.'}</td></tr>
+                      ) : null}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="mb-2 text-sm font-bold text-[var(--svs-text)]">Wallet Transactions</h3>
+                <div className="overflow-x-auto rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)]">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-[var(--svs-surface-soft)] text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                      <tr>
+                        <th className="px-4 py-3">User</th>
+                        <th className="px-4 py-3">Kind</th>
+                        <th className="px-4 py-3">Amount</th>
+                        <th className="px-4 py-3">Status</th>
+                        <th className="px-4 py-3">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--svs-border)]">
+                      {visibleWalletTransactions.map((txn) => (
+                        <tr key={txn.id}>
+                          <td className="px-4 py-3 text-[var(--svs-muted)]">{txn.user_email}</td>
+                          <td className="px-4 py-3 text-[var(--svs-muted)] capitalize">{txn.kind}</td>
+                          <td className={`px-4 py-3 font-semibold ${txn.direction === 'credit' ? 'text-emerald-600' : 'text-rose-600'}`}>{txn.direction === 'credit' ? '+' : '-'}{formatAmountInCurrency(txn.amount, txn.currency)}</td>
+                          <td className="px-4 py-3 text-[var(--svs-muted)] capitalize">{txn.status}</td>
+                          <td className="px-4 py-3 text-[var(--svs-muted)]">{new Date(txn.created_at).toLocaleDateString()}</td>
+                        </tr>
+                      ))}
+                      {visibleWalletTransactions.length === 0 ? (
+                        <tr><td colSpan={5} className="px-4 py-6 text-center text-[var(--svs-muted)]">{walletTransactions.length === 0 ? 'No wallet transactions.' : 'No wallet transactions match your search.'}</td></tr>
+                      ) : null}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          ) : activeTab === 'reports' ? (
+            <section className="space-y-6">
+              <div className="relative max-w-sm">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--svs-muted)]" />
+                <input
+                  type="text"
+                  value={reportSearch}
+                  onChange={(event) => setReportSearch(event.target.value)}
+                  placeholder="Search by email, value, action, or field..."
+                  className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] py-2 pl-9 pr-3 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                />
+              </div>
+
+              <div>
+                <h3 className="mb-2 text-sm font-bold text-[var(--svs-text)]">Banned Identifiers</h3>
+                <div className="overflow-x-auto rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)]">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-[var(--svs-surface-soft)] text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                      <tr>
+                        <th className="px-4 py-3">Type</th>
+                        <th className="px-4 py-3">Value</th>
+                        <th className="px-4 py-3">Reason</th>
+                        <th className="px-4 py-3">Banned</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--svs-border)]">
+                      {visibleBannedIdentifiers.map((entry) => (
+                        <tr key={entry.id}>
+                          <td className="px-4 py-3 text-[var(--svs-muted)] capitalize">{entry.identifier_type.replace(/_/g, ' ')}</td>
+                          <td className="px-4 py-3 text-[var(--svs-text)]">{entry.identifier_value}</td>
+                          <td className="px-4 py-3 text-[var(--svs-muted)]">{entry.reason}</td>
+                          <td className="px-4 py-3 text-[var(--svs-muted)]">{new Date(entry.created_at).toLocaleDateString()}</td>
+                        </tr>
+                      ))}
+                      {visibleBannedIdentifiers.length === 0 ? (
+                        <tr><td colSpan={4} className="px-4 py-6 text-center text-[var(--svs-muted)]">{bannedIdentifiers.length === 0 ? 'No banned identifiers.' : 'No banned identifiers match your search.'}</td></tr>
+                      ) : null}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="mb-2 text-sm font-bold text-[var(--svs-text)]">Admin Action Log</h3>
+                <div className="overflow-x-auto rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)]">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-[var(--svs-surface-soft)] text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                      <tr>
+                        <th className="px-4 py-3">Admin</th>
+                        <th className="px-4 py-3">Action</th>
+                        <th className="px-4 py-3">Target</th>
+                        <th className="px-4 py-3">When</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--svs-border)]">
+                      {visibleAdminActionLog.map((entry) => (
+                        <tr key={entry.id}>
+                          <td className="px-4 py-3 text-[var(--svs-muted)]">{entry.admin_email}</td>
+                          <td className="px-4 py-3 text-[var(--svs-text)] capitalize">{entry.action.replace(/_/g, ' ')}</td>
+                          <td className="px-4 py-3 text-[var(--svs-muted)]">{entry.target_type}: {entry.target_id}</td>
+                          <td className="px-4 py-3 text-[var(--svs-muted)]">{new Date(entry.created_at).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                      {visibleAdminActionLog.length === 0 ? (
+                        <tr><td colSpan={4} className="px-4 py-6 text-center text-[var(--svs-muted)]">{adminActionLog.length === 0 ? 'No admin actions logged yet.' : 'No admin actions match your search.'}</td></tr>
+                      ) : null}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="mb-2 text-sm font-bold text-[var(--svs-text)]">Seller Profile Change History (All Sellers)</h3>
+                <div className="overflow-x-auto rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)]">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-[var(--svs-surface-soft)] text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                      <tr>
+                        <th className="px-4 py-3">Seller</th>
+                        <th className="px-4 py-3">Field</th>
+                        <th className="px-4 py-3">Change</th>
+                        <th className="px-4 py-3">When</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--svs-border)]">
+                      {visibleGlobalAuditLog.map((entry) => (
+                        <tr key={entry.id}>
+                          <td className="px-4 py-3 text-[var(--svs-muted)]">{entry.user_email}</td>
+                          <td className="px-4 py-3 text-[var(--svs-text)]">{entry.field_name}</td>
+                          <td className="px-4 py-3 text-[var(--svs-muted)]">{entry.old_value || '—'} → {entry.new_value || '—'}</td>
+                          <td className="px-4 py-3 text-[var(--svs-muted)]">{new Date(entry.changed_at).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                      {visibleGlobalAuditLog.length === 0 ? (
+                        <tr><td colSpan={4} className="px-4 py-6 text-center text-[var(--svs-muted)]">{globalAuditLog.length === 0 ? 'No tracked profile changes yet.' : 'No profile changes match your search.'}</td></tr>
+                      ) : null}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          ) : null}
+        </main>
+      </div>
+    </PageFrame>
+  );
+};
+
 const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerItem, onUpdateOrderStatus, initialView = 'listings' }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -22173,6 +23036,9 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
   const isAuthenticated = getAuthState();
   const userEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
   const isOrdersView = initialView === 'orders';
+
+  const [sellerComplianceStatus, setSellerComplianceStatus] = useState(null);
+  const [hasCheckedCompliance, setHasCheckedCompliance] = useState(false);
 
   const [myListings, setMyListings] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -22247,6 +23113,35 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
     };
 
     fetchMyListings();
+  }, [isAuthenticated, userEmail]);
+
+  // Re-checks the seller's own approval status on every dashboard visit —
+  // protects against a previously-approved seller being rejected later
+  // (e.g. after a fraud report) while a stale svs-has-seller-access flag is
+  // still sitting in their localStorage from before the rejection.
+  useEffect(() => {
+    if (!isAuthenticated || !hasSupabaseEnv || !supabase) {
+      setHasCheckedCompliance(true);
+      return;
+    }
+
+    let isCancelled = false;
+
+    (async () => {
+      const { data } = await supabase
+        .from('seller_profiles')
+        .select('compliance_status')
+        .eq('user_email', userEmail)
+        .maybeSingle();
+
+      if (isCancelled) return;
+      setSellerComplianceStatus(data?.compliance_status || null);
+      setHasCheckedCompliance(true);
+    })();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [isAuthenticated, userEmail]);
 
   useEffect(() => {
@@ -22686,6 +23581,23 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
           <p className="mb-4">You need to be signed in to view and manage your seller account.</p>
           <Link to="/signin" className={`${cudyBluePrimaryButtonClassName} inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
             Sign In
+          </Link>
+        </div>
+      </PageFrame>
+    );
+  }
+
+  if (hasCheckedCompliance && sellerComplianceStatus !== 'approved') {
+    return (
+      <PageFrame title={isOrdersView ? 'Seller Orders' : 'My Store'} subtitle="Your seller account is not yet approved.">
+        <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-6 text-sm text-[var(--svs-text)]">
+          <p className="mb-4">
+            {sellerComplianceStatus === 'rejected'
+              ? 'Your seller application was not approved. Contact support if you believe this is a mistake.'
+              : 'Your seller application is still under review. You will get dashboard access as soon as you are approved.'}
+          </p>
+          <Link to="/sell/pending-approval" className={`${cudyBluePrimaryButtonClassName} inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
+            View Application Status
           </Link>
         </div>
       </PageFrame>
@@ -41812,6 +42724,9 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/sell/forgot-password" element={<ForgotPasswordPage />} />
     <Route path="/sell/signup" element={<SellerSignupPage />} />
     <Route path="/sell/onboarding" element={<SellerOnboardingPage />} />
+    <Route path="/sell/pending-approval" element={<SellerPendingApprovalPage />} />
+    <Route path="/admin/signin" element={<AdminSigninPage />} />
+    <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
 
     <Route path="/about" element={<SimpleContentPage title={t('footer.about')} description={t('simplePages.about')} footnote="Est. 2026 RSA" />} />
     <Route path="/blog" element={<SimpleContentPage title={t('footer.blog')} description={t('simplePages.blog')} />} />

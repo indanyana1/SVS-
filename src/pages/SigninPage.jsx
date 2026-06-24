@@ -110,13 +110,14 @@ const SigninPage = () => {
 		}
 
 		const sellerProfileIsComplete = hasCompleteSellerProfile(sellerProfile);
+		const sellerProfileIsApproved = sellerProfile?.compliance_status === 'approved';
 
 		setMessage(`Welcome back, ${data.full_name}. Sign in successful.`);
 		setMessageType('success');
 		window.localStorage.setItem('svs-authenticated', 'true');
 		window.localStorage.setItem('svs-user-email', data.email_address);
 		window.localStorage.setItem('svs-user-name', data.full_name);
-		if (sellerProfile && sellerProfileIsComplete) {
+		if (sellerProfile && sellerProfileIsComplete && sellerProfileIsApproved) {
 			window.localStorage.setItem('svs-has-seller-access', 'true');
 			window.localStorage.setItem('svs-seller-home-path', '/seller/dashboard');
 		} else {

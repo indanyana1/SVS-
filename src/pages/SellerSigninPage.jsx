@@ -110,14 +110,15 @@ const SellerSigninPage = () => {
 		}
 
 		const sellerProfileIsComplete = hasCompleteSellerProfile(sellerProfile);
+		const sellerProfileIsApproved = sellerProfile?.compliance_status === 'approved';
 
-		setMessage(`Welcome back, ${data.full_name}. Redirecting to your store…`);
+		setMessage(`Welcome back, ${data.full_name}. Redirecting...`);
 		setMessageType('success');
 		clearPendingSellerSignupDraft();
 		window.localStorage.setItem('svs-authenticated', 'true');
 		window.localStorage.setItem('svs-user-email', normalizedEmail);
 		window.localStorage.setItem('svs-user-name', data.full_name);
-		if (sellerProfileIsComplete) {
+		if (sellerProfileIsApproved) {
 			window.localStorage.setItem('svs-has-seller-access', 'true');
 			window.localStorage.setItem('svs-seller-home-path', '/seller/dashboard');
 		} else {
@@ -129,7 +130,13 @@ const SellerSigninPage = () => {
 		setIsSubmitting(false);
 
 		setTimeout(() => {
-			navigate(sellerProfileIsComplete ? '/seller/dashboard' : '/sell/onboarding');
+			if (sellerProfileIsApproved) {
+				navigate('/seller/dashboard');
+			} else if (sellerProfileIsComplete) {
+				navigate('/sell/pending-approval');
+			} else {
+				navigate('/sell/onboarding');
+			}
 		}, 500);
 	};
 

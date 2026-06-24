@@ -131,6 +131,7 @@ const ResetPasswordPage = () => {
 
 		// Auto sign-in the user and route them to the dashboard they intended.
 		let sellerProfileIsComplete = false;
+		let sellerProfileIsApproved = false;
 		if (tokenRow.intended_role === 'seller') {
 			const { data: sellerProfile } = await supabase
 				.from('seller_profiles')
@@ -138,6 +139,7 @@ const ResetPasswordPage = () => {
 				.eq('user_email', account.email_address)
 				.maybeSingle();
 			sellerProfileIsComplete = hasCompleteSellerProfile(sellerProfile);
+			sellerProfileIsApproved = sellerProfile?.compliance_status === 'approved';
 			clearPendingSellerSignupDraft();
 		} else {
 			const { data: sellerProfile } = await supabase
@@ -146,12 +148,13 @@ const ResetPasswordPage = () => {
 				.eq('user_email', account.email_address)
 				.maybeSingle();
 			sellerProfileIsComplete = hasCompleteSellerProfile(sellerProfile);
+			sellerProfileIsApproved = sellerProfile?.compliance_status === 'approved';
 		}
 
 		window.localStorage.setItem('svs-authenticated', 'true');
 		window.localStorage.setItem('svs-user-email', account.email_address);
 		window.localStorage.setItem('svs-user-name', account.full_name);
-		if (sellerProfileIsComplete) {
+		if (sellerProfileIsApproved) {
 			window.localStorage.setItem('svs-has-seller-access', 'true');
 			window.localStorage.setItem('svs-seller-home-path', '/seller/dashboard');
 		} else {
@@ -165,7 +168,8 @@ const ResetPasswordPage = () => {
 
 		const destination = (() => {
 			if (tokenRow.intended_role === 'seller') {
-				return sellerProfileIsComplete ? '/seller/dashboard' : '/sell/onboarding';
+				if (sellerProfileIsApproved) return '/seller/dashboard';
+				return sellerProfileIsComplete ? '/sell/pending-approval' : '/sell/onboarding';
 			}
 			return '/markets';
 		})();
