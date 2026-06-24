@@ -766,6 +766,7 @@ const marketLinks = [
   { labelKey: 'markets.hardwareSoftware', href: '/hardware-software' },
   { labelKey: 'markets.mobilityVehicles', href: '/mobility-vehicles' },
   { labelKey: 'markets.naturalResources', href: '/natural-resources-minerals' },
+  { labelKey: 'markets.generalLabour', href: '/general-labour-market' },
   { labelKey: 'markets.tickets', href: '/tickets' },
   { labelKey: 'markets.votingProviders', href: '/voting-providers' },
   { labelKey: 'markets.fastFood', href: '/fast-food' },
@@ -793,6 +794,7 @@ const marketShortDescriptions = {
   '/hardware-software': 'Latest tech, gadgets & software',
   '/mobility-vehicles': 'Cars, bikes & mobility solutions',
   '/natural-resources-minerals': 'Quality raw materials & minerals',
+  '/general-labour-market': 'Skilled & unskilled workers for hire',
   '/tickets': 'Events, travel & experience bookings',
   '/voting-providers': 'Jewellery & accessories from trusted sellers',
   '/fast-food': 'Hot meals delivered fast & fresh',
@@ -822,6 +824,7 @@ const sellerMarketOptions = [
   { key: 'ecommerce', labelKey: 'markets.ecommerce', route: '/e-commerce' },
   { key: 'mobilityVehicles', labelKey: 'markets.mobilityVehicles', route: '/mobility-vehicles', externalSellRoute: '/mobility-vehicles/sell' },
   { key: 'naturalResources', labelKey: 'markets.naturalResources', route: '/natural-resources-minerals', externalSellRoute: '/natural-resources-minerals/sell' },
+  { key: 'generalLabour', labelKey: 'markets.generalLabour', route: '/general-labour-market', externalSellRoute: '/general-labour-market/sell' },
   { key: 'wellness', labelKey: 'markets.wellness', route: '/wellness' },
   { key: 'property', labelKey: 'markets.propertyHub', route: '/property-hub', externalSellRoute: '/property-hub/sell' },
   { key: 'secondhand', labelKey: 'markets.secondhand', route: '/secondhand-central' },
@@ -18662,6 +18665,1032 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
   );
 };
 
+// "Browse by category" tiles on the General Labour Market landing page.
+// `match` tokens are matched against each listing's category/title
+// (case-insensitive substring) to filter the listings grid below. `slug`
+// is the route segment for that category's dedicated listing page
+// (/general-labour-market/:slug).
+const generalLabourCategoryShowcase = [
+  {
+    slug: 'construction-workers',
+    name: 'Construction Workers',
+    description: 'Masons, carpenters, and construction site labour',
+    image: 'https://images.pexels.com/photos/12314551/pexels-photo-12314551.jpeg?auto=compress&cs=tinysrgb&w=800',
+    match: ['construction worker', 'mason', 'bricklayer', 'carpenter', 'steel fixer', 'construction helper', 'construction labourer', 'tile setter', 'site supervisor'],
+  },
+  {
+    slug: 'electricians',
+    name: 'Electricians',
+    description: 'Wiring, installation, maintenance, and electrical repairs',
+    image: 'https://images.pexels.com/photos/34054464/pexels-photo-34054464.jpeg?auto=compress&cs=tinysrgb&w=800',
+    match: ['electrician', 'solar panel installer', 'wiring'],
+  },
+  {
+    slug: 'plumbers',
+    name: 'Plumbers',
+    description: 'Pipe fitting, drainage, water systems, and plumbing work',
+    image: 'https://images.pexels.com/photos/6419128/pexels-photo-6419128.jpeg?auto=compress&cs=tinysrgb&w=800',
+    match: ['plumber', 'pipefitter', 'drainage'],
+  },
+  {
+    slug: 'painters',
+    name: 'Painters',
+    description: 'Interior painting, wall finishes, and decorating services',
+    image: 'https://images.pexels.com/photos/5493653/pexels-photo-5493653.jpeg?auto=compress&cs=tinysrgb&w=800',
+    match: ['painter', 'decorator', 'wallpaper'],
+  },
+  {
+    slug: 'mechanics',
+    name: 'Mechanics',
+    description: 'Engine repairs, vehicle maintenance, and machinery servicing',
+    image: 'https://images.pexels.com/photos/27665740/pexels-photo-27665740.jpeg?auto=compress&cs=tinysrgb&w=800',
+    match: ['mechanic'],
+  },
+  {
+    slug: 'warehouse-workers',
+    name: 'Warehouse Workers',
+    description: 'Stock handling, forklift operation, and inventory support',
+    image: 'https://images.pexels.com/photos/4483556/pexels-photo-4483556.jpeg?auto=compress&cs=tinysrgb&w=800',
+    match: ['warehouse', 'forklift', 'inventory', 'picker', 'packer'],
+  },
+  {
+    slug: 'farm-agriculture',
+    name: 'Farm & Agriculture',
+    description: 'Crop production, livestock care, and farming support',
+    image: 'https://images.pexels.com/photos/32415692/pexels-photo-32415692.jpeg?auto=compress&cs=tinysrgb&w=800',
+    match: ['farm', 'livestock', 'tractor', 'agriculture'],
+  },
+  {
+    slug: 'cleaning-staff',
+    name: 'Cleaning Staff',
+    description: 'Cleaning services, housekeeping, and sanitation work',
+    image: 'https://images.pexels.com/photos/9462636/pexels-photo-9462636.jpeg?auto=compress&cs=tinysrgb&w=800',
+    match: ['clean', 'housekeep', 'janitor', 'sanitation'],
+  },
+];
+
+const generalLabourItems = [
+  // ---- Construction Workers ----
+  {
+    id: 'gl-construction-1',
+    name: 'Michael Adeyemi',
+    title: 'Mason',
+    category: 'Mason',
+    gender: 'Male',
+    rateType: 'Daily',
+    rate: '1800',
+    serviceType: 'Monthly',
+    currency: 'ZAR',
+    skillLevel: 'Skilled Professional',
+    region: 'Lagos Island & Mainland',
+    serviceRadius: 'Up to 50 km',
+    onSite: 'Yes — brings own tools',
+    travelFee: 'No travel fee — fixed call-out rate',
+    dailyRate: 1800,
+    weeklyRate: 9900,
+    monthlyRate: 37800,
+    experienceLevel: '5+ Years',
+    city: 'Lagos',
+    country: 'Nigeria',
+    location: 'Lagos, Nigeria',
+    schedulePreference: 'Full Day',
+    availability: 'Available Immediately',
+    rating: 4.8,
+    reviewCount: 145,
+    bio: 'Skilled mason specialising in brickwork, plastering, and concrete reinforcement for residential and commercial builds.',
+    skills: ['Brick and block laying', 'Plastering and rendering', 'Reinforcement and steel fixing', 'Blueprint reading'],
+    image: 'https://images.pexels.com/photos/30081237/pexels-photo-30081237.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'gl-construction-2',
+    name: 'David Marangi',
+    title: 'Carpenter',
+    category: 'Carpenter',
+    gender: 'Male',
+    rateType: 'Daily',
+    rate: '1800',
+    serviceType: 'Weekly',
+    currency: 'ZAR',
+    skillLevel: 'Skilled Professional',
+    region: 'Nairobi Metro',
+    serviceRadius: 'Up to 30 km',
+    onSite: 'Yes — tools provided by client',
+    travelFee: 'Free within 10 km',
+    dailyRate: 1800,
+    weeklyRate: 9900,
+    monthlyRate: 37800,
+    experienceLevel: '5+ Years',
+    city: 'Nairobi',
+    country: 'Kenya',
+    location: 'Nairobi, Kenya',
+    schedulePreference: 'Full Day',
+    availability: 'Available Immediately',
+    rating: 4.8,
+    reviewCount: 145,
+    bio: 'Carpenter experienced in roof structures, shuttering, and finishing carpentry for residential and commercial sites.',
+    skills: ['Roof structure framing', 'Shuttering and formwork', 'Door and window fitting', 'Finishing carpentry'],
+    image: 'https://images.pexels.com/photos/11293624/pexels-photo-11293624.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'gl-construction-3',
+    name: 'John Okafor',
+    title: 'Steel Fixer',
+    category: 'Steel Fixer',
+    gender: 'Male',
+    rateType: 'Daily',
+    rate: '1800',
+    serviceType: 'Monthly',
+    currency: 'ZAR',
+    skillLevel: 'Skilled Professional',
+    region: 'Abuja Municipal',
+    serviceRadius: 'Up to 20 km',
+    onSite: 'No — workshop/drop-off only',
+    travelFee: 'Free within 15 km',
+    dailyRate: 1800,
+    weeklyRate: 9900,
+    monthlyRate: 37800,
+    experienceLevel: '5+ Years',
+    city: 'Abuja',
+    country: 'Nigeria',
+    location: 'Abuja, Nigeria',
+    schedulePreference: 'Weekdays',
+    availability: 'Available Immediately',
+    rating: 4.8,
+    reviewCount: 145,
+    bio: 'Steel fixer experienced in tying and positioning reinforcement bars for foundations, slabs, and columns.',
+    skills: ['Rebar cutting and bending', 'Reinforcement tying', 'Foundation and slab reinforcement', 'Reading structural drawings'],
+    image: 'https://images.pexels.com/photos/37733208/pexels-photo-37733208.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'gl-construction-4',
+    name: 'Samuel Mensah',
+    title: 'Construction Helper',
+    category: 'Helper / Labourer',
+    gender: 'Male',
+    rateType: 'Daily',
+    rate: '1200',
+    serviceType: 'Daily',
+    currency: 'ZAR',
+    skillLevel: 'Unskilled Labour',
+    region: 'Greater Accra',
+    serviceRadius: 'Up to 15 km',
+    onSite: 'No — workshop/drop-off only',
+    travelFee: 'Free within 20 km',
+    dailyRate: 1200,
+    weeklyRate: 6600,
+    monthlyRate: 25200,
+    experienceLevel: '5+ Years',
+    city: 'Accra',
+    country: 'Ghana',
+    location: 'Accra, Ghana',
+    schedulePreference: 'Full Day',
+    availability: 'Available Immediately',
+    rating: 4.8,
+    reviewCount: 145,
+    bio: 'Reliable general construction helper experienced in site preparation, material handling, and assisting skilled trades.',
+    skills: ['Site preparation and excavation', 'Material handling and mixing', 'Scaffolding assembly', 'Health & safety compliant'],
+    image: 'https://images.pexels.com/photos/38146879/pexels-photo-38146879.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'gl-construction-5',
+    name: 'Peter Korma',
+    title: 'Tile Setter',
+    category: 'Tile Setter',
+    gender: 'Male',
+    rateType: 'Daily',
+    rate: '1800',
+    serviceType: 'Monthly',
+    currency: 'ZAR',
+    skillLevel: 'Skilled Professional',
+    region: 'Kampala Central',
+    serviceRadius: 'Up to 50 km',
+    onSite: 'Yes — brings own tools',
+    travelFee: 'No travel fee — fixed call-out rate',
+    dailyRate: 1800,
+    weeklyRate: 9900,
+    monthlyRate: 37800,
+    experienceLevel: '5+ Years',
+    city: 'Kampala',
+    country: 'Uganda',
+    location: 'Kampala, Uganda',
+    schedulePreference: 'Weekdays',
+    availability: 'Available Immediately',
+    rating: 4.8,
+    reviewCount: 145,
+    bio: 'Tile setter experienced in floor and wall tiling for bathrooms, kitchens, and commercial interiors.',
+    skills: ['Floor and wall tiling', 'Tile cutting and levelling', 'Grouting and sealing', 'Waterproofing prep'],
+    image: 'https://images.pexels.com/photos/24357101/pexels-photo-24357101.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'gl-construction-6',
+    name: 'Joseph Banda',
+    title: 'Bricklayer',
+    category: 'Bricklayer',
+    gender: 'Male',
+    rateType: 'Daily',
+    rate: '1400',
+    serviceType: 'Weekly',
+    currency: 'ZAR',
+    skillLevel: 'Skilled Professional',
+    region: 'Lusaka Province',
+    serviceRadius: 'Up to 30 km',
+    onSite: 'Yes — brings own tools',
+    travelFee: 'Free within 10 km',
+    dailyRate: 1400,
+    weeklyRate: 7700,
+    monthlyRate: 29400,
+    experienceLevel: '3-5 Years',
+    city: 'Lusaka',
+    country: 'Zambia',
+    location: 'Lusaka, Zambia',
+    schedulePreference: 'Full Day',
+    availability: 'Available Immediately',
+    rating: 4.8,
+    reviewCount: 145,
+    bio: 'Bricklayer experienced in wall construction, damp-proofing courses, and block work for new builds and extensions.',
+    skills: ['Brick and block wall construction', 'Damp-proof course laying', 'Mortar mixing', 'Wall plumbing and levelling'],
+    image: 'https://images.pexels.com/photos/35281188/pexels-photo-35281188.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'gl-construction-7',
+    name: 'Grace Mwangi',
+    title: 'Site Supervisor',
+    category: 'Site Supervisor',
+    gender: 'Female',
+    rateType: 'Daily',
+    rate: '2200',
+    serviceType: 'Monthly',
+    currency: 'ZAR',
+    skillLevel: 'Professional',
+    region: 'Kigali City',
+    serviceRadius: 'Up to 20 km',
+    onSite: 'Yes — tools provided by client',
+    travelFee: 'Free within 15 km',
+    dailyRate: 2200,
+    weeklyRate: 12100,
+    monthlyRate: 46200,
+    experienceLevel: '5+ Years',
+    city: 'Kigali',
+    country: 'Rwanda',
+    location: 'Kigali, Rwanda',
+    schedulePreference: 'Weekdays',
+    availability: 'Available within 1 week',
+    rating: 4.9,
+    reviewCount: 51,
+    bio: 'Construction site supervisor coordinating trade teams, schedules, and safety compliance on residential and commercial projects.',
+    skills: ['Trade team coordination', 'Site safety compliance', 'Progress reporting', 'Quality and snag inspections'],
+    image: 'https://images.pexels.com/photos/8960992/pexels-photo-8960992.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  // ---- Electricians ----
+  {
+    id: 'gl-electrician-1',
+    name: 'Michael Chen',
+    title: 'Residential Electrician',
+    category: 'Residential Electrician',
+    gender: 'Male',
+    rateType: 'Daily',
+    rate: '1200',
+    serviceType: 'Daily',
+    currency: 'ZAR',
+    skillLevel: 'Skilled Professional',
+    region: 'New York City',
+    serviceRadius: 'Up to 50 km',
+    onSite: 'Yes — brings own tools',
+    travelFee: 'No travel fee — fixed call-out rate',
+    dailyRate: 1200,
+    weeklyRate: 6600,
+    monthlyRate: 25200,
+    experienceLevel: '1-3 Years',
+    city: 'Brooklyn',
+    country: 'USA',
+    location: 'Brooklyn, NY',
+    schedulePreference: 'Full Day',
+    availability: 'Available Immediately',
+    rating: 4.8,
+    reviewCount: 145,
+    bio: 'Licensed residential electrician handling wiring, fault-finding, and installation work for homes and small businesses.',
+    skills: ['Wiring and rewiring', 'Fault finding and repairs', 'Distribution board installation', 'Compliance certificate issuing'],
+    image: 'https://images.pexels.com/photos/29871587/pexels-photo-29871587.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'gl-electrician-2',
+    name: 'David Okafor',
+    title: 'Industrial Electrician',
+    category: 'Industrial Electrician',
+    gender: 'Male',
+    rateType: 'Monthly',
+    rate: '18500',
+    serviceType: 'Monthly',
+    currency: 'ZAR',
+    skillLevel: 'Professional',
+    region: 'KwaZulu-Natal Coast',
+    serviceRadius: 'Up to 30 km',
+    onSite: 'Yes — tools provided by client',
+    travelFee: 'Free within 10 km',
+    dailyRate: 925,
+    weeklyRate: 5088,
+    monthlyRate: 19425,
+    experienceLevel: '5+ Years',
+    city: 'Richards Bay',
+    country: 'South Africa',
+    location: 'Richards Bay, KwaZulu-Natal',
+    schedulePreference: 'Weekdays',
+    availability: 'Available within 2 weeks',
+    rating: 4.7,
+    reviewCount: 58,
+    bio: 'Industrial electrician experienced in factory wiring, motor control panels, and high-voltage maintenance on production lines.',
+    skills: ['Motor control panel wiring', 'High-voltage maintenance', 'PLC and automation support', 'Plant shutdown maintenance'],
+    image: 'https://images.pexels.com/photos/17018103/pexels-photo-17018103.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'gl-electrician-3',
+    name: 'Lerato Dlamini',
+    title: 'Solar Panel Installer',
+    category: 'Solar Panel Installer',
+    gender: 'Female',
+    rateType: 'Daily',
+    rate: '950',
+    serviceType: 'Daily',
+    currency: 'ZAR',
+    skillLevel: 'Skilled Professional',
+    region: 'Cape Winelands',
+    serviceRadius: 'Up to 20 km',
+    onSite: 'No — workshop/drop-off only',
+    travelFee: 'Free within 15 km',
+    dailyRate: 950,
+    weeklyRate: 5225,
+    monthlyRate: 19950,
+    experienceLevel: '3-5 Years',
+    city: 'Stellenbosch',
+    country: 'South Africa',
+    location: 'Stellenbosch, Western Cape',
+    schedulePreference: 'Weekends',
+    availability: 'Available Immediately',
+    rating: 4.9,
+    reviewCount: 71,
+    bio: 'Solar PV installer handling rooftop panel mounting, inverter wiring, and grid-tie connections for homes and businesses.',
+    skills: ['Rooftop panel mounting', 'Inverter and battery wiring', 'Grid-tie connections', 'Load-shedding backup setups'],
+    image: 'https://images.pexels.com/photos/29206491/pexels-photo-29206491.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  // ---- Plumbers ----
+  {
+    id: 'gl-plumber-1',
+    name: 'John Mahlangu',
+    title: 'Residential Plumber',
+    category: 'Residential Plumber',
+    gender: 'Male',
+    rateType: 'Daily',
+    rate: '700',
+    serviceType: 'Daily',
+    currency: 'ZAR',
+    skillLevel: 'Skilled Professional',
+    region: 'Gauteng North',
+    serviceRadius: 'Up to 20 km',
+    onSite: 'Yes — brings own tools',
+    travelFee: 'Free within 15 km',
+    dailyRate: 700,
+    weeklyRate: 3850,
+    monthlyRate: 14700,
+    experienceLevel: '3-5 Years',
+    city: 'Pretoria',
+    country: 'South Africa',
+    location: 'Pretoria, Gauteng',
+    schedulePreference: 'Full Day',
+    availability: 'Available Immediately',
+    rating: 4.6,
+    reviewCount: 54,
+    bio: 'Residential plumber covering leak repairs, geyser installation, and bathroom/kitchen plumbing fit-outs.',
+    skills: ['Leak detection and repair', 'Geyser installation and repair', 'Bathroom and kitchen fit-outs', 'Burst pipe emergency call-outs'],
+    image: 'https://images.pexels.com/photos/32588548/pexels-photo-32588548.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'gl-plumber-2',
+    name: 'Carlos Mendes',
+    title: 'Pipefitter',
+    category: 'Pipefitter',
+    gender: 'Male',
+    rateType: 'Daily',
+    rate: '900',
+    serviceType: 'Weekly',
+    currency: 'ZAR',
+    skillLevel: 'Skilled Professional',
+    region: 'KwaZulu-Natal Coast',
+    serviceRadius: 'Up to 15 km',
+    onSite: 'Yes — tools provided by client',
+    travelFee: 'Free within 20 km',
+    dailyRate: 900,
+    weeklyRate: 4950,
+    monthlyRate: 18900,
+    experienceLevel: '5+ Years',
+    city: 'Durban',
+    country: 'South Africa',
+    location: 'Durban, KwaZulu-Natal',
+    schedulePreference: 'Weekdays',
+    availability: 'Available within 1 week',
+    rating: 4.7,
+    reviewCount: 39,
+    bio: 'Industrial pipefitter experienced in steel and copper pipe installation for commercial and industrial systems.',
+    skills: ['Steel and copper pipe fitting', 'Pressure testing', 'Welded and threaded joints', 'Industrial system installation'],
+    image: 'https://images.pexels.com/photos/29226620/pexels-photo-29226620.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'gl-plumber-3',
+    name: 'Peter van Wyk',
+    title: 'Drainage Specialist',
+    category: 'Drainage Specialist',
+    gender: 'Male',
+    rateType: 'Daily',
+    rate: '800',
+    serviceType: 'Daily',
+    currency: 'ZAR',
+    skillLevel: 'Skilled Professional',
+    region: 'Free State Central',
+    serviceRadius: 'Up to 50 km',
+    onSite: 'Yes — tools provided by client',
+    travelFee: 'No travel fee — fixed call-out rate',
+    dailyRate: 800,
+    weeklyRate: 4400,
+    monthlyRate: 16800,
+    experienceLevel: '3-5 Years',
+    city: 'Bloemfontein',
+    country: 'South Africa',
+    location: 'Bloemfontein, Free State',
+    schedulePreference: 'Evenings',
+    availability: 'Available Immediately',
+    rating: 4.5,
+    reviewCount: 28,
+    bio: 'Drainage specialist handling blocked drains, sewer line repairs, and stormwater drainage installation.',
+    skills: ['Blocked drain clearing', 'Sewer line repair', 'Stormwater drainage installation', 'CCTV drain inspection'],
+    image: 'https://images.pexels.com/photos/35290675/pexels-photo-35290675.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  // ---- Painters ----
+  {
+    id: 'gl-painter-1',
+    name: 'Sipho Zulu',
+    title: 'Interior Painter',
+    category: 'Interior Painter',
+    gender: 'Male',
+    rateType: 'Daily',
+    rate: '550',
+    serviceType: 'Daily',
+    currency: 'ZAR',
+    skillLevel: 'Skilled Professional',
+    region: 'Gauteng Central',
+    serviceRadius: 'Up to 20 km',
+    onSite: 'Yes — brings own tools',
+    travelFee: 'Free within 15 km',
+    dailyRate: 550,
+    weeklyRate: 3025,
+    monthlyRate: 11550,
+    experienceLevel: '3-5 Years',
+    city: 'Midrand',
+    country: 'South Africa',
+    location: 'Midrand, Gauteng',
+    schedulePreference: 'Weekdays',
+    availability: 'Available Immediately',
+    rating: 4.6,
+    reviewCount: 47,
+    bio: 'Interior painter delivering clean wall finishes, ceiling work, and trim painting for homes and offices.',
+    skills: ['Wall and ceiling painting', 'Surface prep and patching', 'Trim and skirting work', 'Colour consultation'],
+    image: 'https://images.pexels.com/photos/5691610/pexels-photo-5691610.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'gl-painter-2',
+    name: 'Anna Botha',
+    title: 'Exterior / Spray Painter',
+    category: 'Exterior / Spray Painter',
+    gender: 'Female',
+    rateType: 'Daily',
+    rate: '650',
+    serviceType: 'Weekly',
+    currency: 'ZAR',
+    skillLevel: 'Skilled Professional',
+    region: 'Gauteng Central',
+    serviceRadius: 'Up to 15 km',
+    onSite: 'Yes — tools provided by client',
+    travelFee: 'Free within 20 km',
+    dailyRate: 650,
+    weeklyRate: 3575,
+    monthlyRate: 13650,
+    experienceLevel: '5+ Years',
+    city: 'Centurion',
+    country: 'South Africa',
+    location: 'Centurion, Gauteng',
+    schedulePreference: 'Full Day',
+    availability: 'Available within 1 week',
+    rating: 4.7,
+    reviewCount: 33,
+    bio: 'Exterior and spray painting specialist for facades, roofs, and high-rise buildings using rope access and lifts.',
+    skills: ['Spray painting and texture coating', 'Facade and roof painting', 'Rope access and lift work', 'Weatherproof coating application'],
+    image: 'https://images.pexels.com/photos/32115287/pexels-photo-32115287.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'gl-painter-3',
+    name: 'Grace Adeyemi',
+    title: 'Decorator & Wallpaper Hanger',
+    category: 'Decorator & Wallpaper Hanger',
+    gender: 'Female',
+    rateType: 'Daily',
+    rate: '600',
+    serviceType: 'Daily',
+    currency: 'ZAR',
+    skillLevel: 'Semi-Skilled',
+    region: 'Gauteng Central',
+    serviceRadius: 'Up to 50 km',
+    onSite: 'Yes — tools provided by client',
+    travelFee: 'No travel fee — fixed call-out rate',
+    dailyRate: 600,
+    weeklyRate: 3300,
+    monthlyRate: 12600,
+    experienceLevel: '1-3 Years',
+    city: 'Sandton',
+    country: 'South Africa',
+    location: 'Sandton, Johannesburg',
+    schedulePreference: 'Weekends',
+    availability: 'Available Immediately',
+    rating: 4.8,
+    reviewCount: 22,
+    bio: 'Decorator specialising in wallpapering, feature walls, and decorative wall finishes for residential interiors.',
+    skills: ['Wallpaper hanging', 'Feature wall design', 'Decorative wall finishes', 'Furniture-friendly clean-up'],
+    image: 'https://images.pexels.com/photos/5493650/pexels-photo-5493650.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  // ---- Mechanics ----
+  {
+    id: 'gl-mechanic-1',
+    name: 'Brian Khumalo',
+    title: 'Auto Mechanic',
+    category: 'Auto Mechanic',
+    gender: 'Male',
+    rateType: 'Daily',
+    rate: '700',
+    serviceType: 'Daily',
+    currency: 'ZAR',
+    skillLevel: 'Skilled Professional',
+    region: 'East Rand',
+    serviceRadius: 'Up to 15 km',
+    onSite: 'No — workshop/drop-off only',
+    travelFee: 'Free within 20 km',
+    dailyRate: 700,
+    weeklyRate: 3850,
+    monthlyRate: 14700,
+    experienceLevel: '5+ Years',
+    city: 'Germiston',
+    country: 'South Africa',
+    location: 'Germiston, Gauteng',
+    schedulePreference: 'Full Day',
+    availability: 'Available Immediately',
+    rating: 4.7,
+    reviewCount: 88,
+    bio: 'Experienced auto mechanic handling general repairs, diagnostics, and servicing for petrol and diesel passenger vehicles.',
+    skills: ['Engine diagnostics and repair', 'Brake and suspension work', 'Routine servicing', 'Electrical fault-finding'],
+    image: 'https://images.pexels.com/photos/7018506/pexels-photo-7018506.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'gl-mechanic-2',
+    name: 'Daniel Pretorius',
+    title: 'Heavy Equipment Mechanic',
+    category: 'Heavy Equipment Mechanic',
+    gender: 'Male',
+    rateType: 'Monthly',
+    rate: '22000',
+    serviceType: 'Monthly',
+    currency: 'ZAR',
+    skillLevel: 'Professional',
+    region: 'Mpumalanga Highveld',
+    serviceRadius: 'Up to 50 km',
+    onSite: 'Yes — brings own tools',
+    travelFee: 'No travel fee — fixed call-out rate',
+    dailyRate: 1100,
+    weeklyRate: 6050,
+    monthlyRate: 23100,
+    experienceLevel: '5+ Years',
+    city: 'Witbank',
+    country: 'South Africa',
+    location: 'Witbank, Mpumalanga',
+    schedulePreference: 'Weekdays',
+    availability: 'Available within 2 weeks',
+    rating: 4.6,
+    reviewCount: 31,
+    bio: 'Heavy equipment mechanic servicing excavators, loaders, and mining machinery on-site and in workshop.',
+    skills: ['Hydraulic system repair', 'Diesel engine overhauls', 'On-site breakdown response', 'Preventative maintenance plans'],
+    image: 'https://images.pexels.com/photos/8985727/pexels-photo-8985727.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'gl-mechanic-3',
+    name: 'Samuel Osei',
+    title: 'Motorcycle Mechanic',
+    category: 'Motorcycle Mechanic',
+    gender: 'Male',
+    rateType: 'Daily',
+    rate: '550',
+    serviceType: 'Daily',
+    currency: 'ZAR',
+    skillLevel: 'Skilled Professional',
+    region: 'Gauteng North',
+    serviceRadius: 'Up to 30 km',
+    onSite: 'Yes — brings own tools',
+    travelFee: 'Free within 10 km',
+    dailyRate: 550,
+    weeklyRate: 3025,
+    monthlyRate: 11550,
+    experienceLevel: '3-5 Years',
+    city: 'Mamelodi',
+    country: 'South Africa',
+    location: 'Mamelodi, Pretoria',
+    schedulePreference: 'Evenings',
+    availability: 'Available Immediately',
+    rating: 4.8,
+    reviewCount: 26,
+    bio: 'Motorcycle and scooter mechanic covering servicing, tuning, and repair work for commuter and delivery riders.',
+    skills: ['Engine tuning and servicing', 'Tyre and brake replacement', 'Electrical and battery diagnostics', 'Fleet servicing for delivery riders'],
+    image: 'https://images.pexels.com/photos/7564872/pexels-photo-7564872.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  // ---- Warehouse Workers ----
+  {
+    id: 'gl-warehouse-1',
+    name: 'Nomvula Sithole',
+    title: 'Warehouse Picker / Packer',
+    category: 'Warehouse Picker / Packer',
+    gender: 'Female',
+    rateType: 'Daily',
+    rate: '420',
+    serviceType: 'Daily',
+    currency: 'ZAR',
+    skillLevel: 'Unskilled Labour',
+    region: 'East Rand',
+    serviceRadius: 'Up to 20 km',
+    onSite: 'Yes — brings own tools',
+    travelFee: 'Free within 15 km',
+    dailyRate: 420,
+    weeklyRate: 2310,
+    monthlyRate: 8820,
+    experienceLevel: '1-3 Years',
+    city: 'Boksburg',
+    country: 'South Africa',
+    location: 'Boksburg, Gauteng',
+    schedulePreference: 'Full Day',
+    availability: 'Available Immediately',
+    rating: 4.5,
+    reviewCount: 41,
+    bio: 'Fast and accurate picker/packer experienced in order fulfilment for retail and e-commerce warehouses.',
+    skills: ['Order picking and packing', 'Barcode scanning systems', 'Stock rotation (FIFO)', 'Quality checking before dispatch'],
+    image: 'https://images.pexels.com/photos/31112238/pexels-photo-31112238.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'gl-warehouse-2',
+    name: 'Kevin Naidoo',
+    title: 'Forklift Operator',
+    category: 'Forklift Operator',
+    gender: 'Male',
+    rateType: 'Daily',
+    rate: '550',
+    serviceType: 'Daily',
+    currency: 'ZAR',
+    skillLevel: 'Skilled Professional',
+    region: 'KwaZulu-Natal Coast',
+    serviceRadius: 'Up to 15 km',
+    onSite: 'Yes — tools provided by client',
+    travelFee: 'Free within 20 km',
+    dailyRate: 550,
+    weeklyRate: 3025,
+    monthlyRate: 11550,
+    experienceLevel: '3-5 Years',
+    city: 'Durban',
+    country: 'South Africa',
+    location: 'Durban, KwaZulu-Natal',
+    schedulePreference: 'Weekdays',
+    availability: 'Available Immediately',
+    rating: 4.7,
+    reviewCount: 53,
+    bio: 'Licensed forklift operator with experience in counterbalance and reach trucks for warehouse and dispatch operations.',
+    skills: ['Counterbalance and reach truck operation', 'Loading and offloading', 'Racking and pallet management', 'Valid forklift operator licence'],
+    image: 'https://images.pexels.com/photos/4483556/pexels-photo-4483556.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'gl-warehouse-3',
+    name: 'Patricia Moyo',
+    title: 'Inventory Clerk',
+    category: 'Inventory Clerk',
+    gender: 'Female',
+    rateType: 'Monthly',
+    rate: '9500',
+    serviceType: 'Monthly',
+    currency: 'ZAR',
+    skillLevel: 'Semi-Skilled',
+    region: 'West Rand',
+    serviceRadius: 'Up to 50 km',
+    onSite: 'Yes — tools provided by client',
+    travelFee: 'No travel fee — fixed call-out rate',
+    dailyRate: 475,
+    weeklyRate: 2613,
+    monthlyRate: 9975,
+    experienceLevel: '1-3 Years',
+    city: 'Roodepoort',
+    country: 'South Africa',
+    location: 'Roodepoort, Gauteng',
+    schedulePreference: 'Weekdays',
+    availability: 'Available within 1 week',
+    rating: 4.6,
+    reviewCount: 19,
+    bio: 'Detail-oriented inventory clerk handling stock counts, cycle counts, and warehouse management system data entry.',
+    skills: ['Stock counts and cycle counts', 'WMS / inventory software', 'Variance investigation', 'Goods-receiving documentation'],
+    image: 'https://images.pexels.com/photos/38136632/pexels-photo-38136632.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  // ---- Farm & Agriculture ----
+  {
+    id: 'gl-farm-1',
+    name: 'Daniel Mwangi',
+    title: 'Farm Labourer',
+    category: 'Farm Labourer',
+    gender: 'Male',
+    rateType: 'Daily',
+    rate: '350',
+    serviceType: 'Daily',
+    currency: 'ZAR',
+    skillLevel: 'Unskilled Labour',
+    region: 'Limpopo Lowveld',
+    serviceRadius: 'Up to 30 km',
+    onSite: 'Yes — brings own tools',
+    travelFee: 'Free within 10 km',
+    dailyRate: 350,
+    weeklyRate: 1925,
+    monthlyRate: 7350,
+    experienceLevel: '1-3 Years',
+    city: 'Tzaneen',
+    country: 'South Africa',
+    location: 'Tzaneen, Limpopo',
+    schedulePreference: 'Full Day',
+    availability: 'Available Immediately',
+    rating: 4.5,
+    reviewCount: 36,
+    bio: 'General farm labourer experienced in planting, harvesting, and general crop maintenance on commercial farms.',
+    skills: ['Planting and harvesting', 'Irrigation maintenance', 'Pesticide and fertiliser application', 'General farm upkeep'],
+    image: 'https://images.pexels.com/photos/11678441/pexels-photo-11678441.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'gl-farm-2',
+    name: 'Ruth Chikwava',
+    title: 'Livestock Handler',
+    category: 'Livestock Handler',
+    gender: 'Female',
+    rateType: 'Monthly',
+    rate: '8500',
+    serviceType: 'Monthly',
+    currency: 'ZAR',
+    skillLevel: 'Semi-Skilled',
+    region: 'Free State Eastern',
+    serviceRadius: 'Up to 20 km',
+    onSite: 'Yes — tools provided by client',
+    travelFee: 'Free within 15 km',
+    dailyRate: 425,
+    weeklyRate: 2338,
+    monthlyRate: 8925,
+    experienceLevel: '3-5 Years',
+    city: 'Bethlehem',
+    country: 'South Africa',
+    location: 'Bethlehem, Free State',
+    schedulePreference: 'Full Day',
+    availability: 'Available within 2 weeks',
+    rating: 4.7,
+    reviewCount: 24,
+    bio: 'Livestock handler experienced in cattle, goat, and poultry care, feeding schedules, and basic veterinary support.',
+    skills: ['Cattle and goat handling', 'Feeding and health monitoring', 'Basic veterinary first aid', 'Herding and fencing maintenance'],
+    image: 'https://images.pexels.com/photos/24896219/pexels-photo-24896219.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'gl-farm-3',
+    name: 'Andries Venter',
+    title: 'Tractor Operator',
+    category: 'Tractor Operator',
+    gender: 'Male',
+    rateType: 'Daily',
+    rate: '500',
+    serviceType: 'Daily',
+    currency: 'ZAR',
+    skillLevel: 'Skilled Professional',
+    region: 'Free State Eastern',
+    serviceRadius: 'Up to 15 km',
+    onSite: 'Yes — tools provided by client',
+    travelFee: 'Free within 20 km',
+    dailyRate: 500,
+    weeklyRate: 2750,
+    monthlyRate: 10500,
+    experienceLevel: '5+ Years',
+    city: 'Ficksburg',
+    country: 'South Africa',
+    location: 'Ficksburg, Free State',
+    schedulePreference: 'Weekdays',
+    availability: 'Available Immediately',
+    rating: 4.8,
+    reviewCount: 29,
+    bio: 'Experienced tractor and farm machinery operator for ploughing, planting, and harvesting operations.',
+    skills: ['Tractor and implement operation', 'Ploughing and planting', 'Routine machinery maintenance', 'Safe operation around livestock and staff'],
+    image: 'https://images.pexels.com/photos/37201250/pexels-photo-37201250.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  // ---- Cleaning Staff ----
+  {
+    id: 'gl-cleaning-1',
+    name: 'Sarah Johnson',
+    title: 'Cleaning Supervisor',
+    category: 'Cleaning Supervisor',
+    gender: 'Female',
+    rateType: 'Monthly',
+    rate: '12000',
+    serviceType: 'Monthly',
+    currency: 'ZAR',
+    skillLevel: 'Professional',
+    region: 'Lagos Island & Mainland',
+    serviceRadius: 'Up to 50 km',
+    onSite: 'No — workshop/drop-off only',
+    travelFee: 'No travel fee — fixed call-out rate',
+    dailyRate: 600,
+    weeklyRate: 3300,
+    monthlyRate: 12600,
+    experienceLevel: '5+ Years',
+    city: 'Lagos',
+    country: 'Nigeria',
+    location: 'Lagos, Nigeria',
+    schedulePreference: 'Full Day',
+    availability: 'Available Immediately',
+    rating: 4.8,
+    reviewCount: 145,
+    bio: 'Cleaning supervisor managing teams and schedules for office, retail, and residential cleaning contracts.',
+    skills: ['Team supervision and scheduling', 'Quality control inspections', 'Stock and equipment management', 'Client liaison and reporting'],
+    image: 'https://images.pexels.com/photos/9462636/pexels-photo-9462636.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'gl-cleaning-2',
+    name: 'Beauty Ndlovu',
+    title: 'Domestic Cleaner',
+    category: 'Domestic Cleaner',
+    gender: 'Female',
+    rateType: 'Daily',
+    rate: '400',
+    serviceType: 'Daily',
+    currency: 'ZAR',
+    skillLevel: 'Semi-Skilled',
+    region: 'Gauteng South',
+    serviceRadius: 'Up to 30 km',
+    onSite: 'Yes — brings own tools',
+    travelFee: 'Free within 10 km',
+    dailyRate: 400,
+    weeklyRate: 2200,
+    monthlyRate: 8400,
+    experienceLevel: '3-5 Years',
+    city: 'Alberton',
+    country: 'South Africa',
+    location: 'Alberton, Gauteng',
+    schedulePreference: 'Weekdays',
+    availability: 'Available Immediately',
+    rating: 4.7,
+    reviewCount: 67,
+    bio: 'Trustworthy domestic cleaner offering deep cleaning, laundry, and general housekeeping for homes.',
+    skills: ['Deep cleaning and sanitising', 'Laundry and ironing', 'Kitchen and bathroom care', 'Flexible weekly schedules'],
+    image: 'https://images.pexels.com/photos/6195274/pexels-photo-6195274.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'gl-cleaning-3',
+    name: 'Michael Tau',
+    title: 'Office / Commercial Cleaner',
+    category: 'Office / Commercial Cleaner',
+    gender: 'Male',
+    rateType: 'Monthly',
+    rate: '9000',
+    serviceType: 'Monthly',
+    currency: 'ZAR',
+    skillLevel: 'Skilled Professional',
+    region: 'Gauteng Central',
+    serviceRadius: 'Up to 20 km',
+    onSite: 'Yes — brings own tools',
+    travelFee: 'Free within 15 km',
+    dailyRate: 450,
+    weeklyRate: 2475,
+    monthlyRate: 9450,
+    experienceLevel: '1-3 Years',
+    city: 'Rosebank',
+    country: 'South Africa',
+    location: 'Rosebank, Johannesburg',
+    schedulePreference: 'Evenings',
+    availability: 'Available within 1 week',
+    rating: 4.6,
+    reviewCount: 38,
+    bio: 'Office and commercial cleaner experienced in after-hours cleaning for offices, retail stores, and shared buildings.',
+    skills: ['After-hours office cleaning', 'Floor care and window cleaning', 'Sanitisation of high-touch areas', 'Waste management and recycling'],
+    image: 'https://images.pexels.com/photos/33357392/pexels-photo-33357392.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+];
+
+// Builds the rich item-detail payload for a General Labour Market worker
+// listing — Worker Overview, Key Skills, a Profile Details table, Ratings &
+// Reviews, and Similar Workers. Called for every worker listing, whether
+// it's a catalog profile or one filled in (fully or partially) through the
+// seller UI — `item.*` fields always win over the generated fallbacks below.
+// The broad market category (e.g. "Construction Workers") a worker belongs
+// to — looked up via the same showcase `match` tokens the Browse-by-Category
+// tiles and filters use, since it isn't stored as a separate field on each
+// worker (their granular role, e.g. "Mason", already is `item.category`).
+const getWorkerBroadCategoryName = (item) => {
+  const haystack = `${item.category || ''} ${item.title || ''}`.toLowerCase();
+  const matched = generalLabourCategoryShowcase.find((showcase) => showcase.match.some((token) => haystack.includes(token)));
+  return matched?.name || item.category || 'General Labour';
+};
+
+const buildWorkerDetailPayload = (item) => {
+  const title = item.title || item.category || 'Skilled Worker';
+  const broadCategory = getWorkerBroadCategoryName(item);
+  const experienceLevel = item.experienceLevel || 'Experience not specified';
+  const rateType = item.rateType || 'Daily';
+  const serviceType = item.serviceType || rateType;
+  const availability = item.availability || 'Contact for availability';
+  const schedulePreference = item.schedulePreference || null;
+  const location = item.location || 'Location on request';
+  const seed = item.id;
+
+  const productOverview = item.productOverview || item.bio
+    || `${item.name || item.title} is a ${experienceLevel.toLowerCase()} ${title.toLowerCase()} based in ${location}, available for ${rateType.toLowerCase()} hire. Vetted and ready to work, with a track record of reliable, quality service for households and businesses.`;
+
+  const keyHighlights = Array.isArray(item.keyHighlights) && item.keyHighlights.length
+    ? item.keyHighlights
+    : (Array.isArray(item.skills) && item.skills.length ? item.skills : [
+      `${experienceLevel} Experience as a ${title}`,
+      `${rateType} hire — ${availability.toLowerCase()}`,
+      'Identity and reference checked',
+      'Punctual, professional, and reliable',
+    ]);
+
+  const technicalSpecs = item.technicalSpecs && typeof item.technicalSpecs === 'object' ? item.technicalSpecs : {
+    Category: broadCategory,
+    Experience: experienceLevel,
+    'Skill Level': item.skillLevel || 'Skilled Professional',
+    City: item.city || location,
+    Region: item.region || 'Region on request',
+    Radius: item.serviceRadius || 'Up to 30 km',
+    'On-Site': item.onSite || 'Yes — brings own tools',
+    'Travel Fee': item.travelFee || 'No travel fee — fixed call-out rate',
+    'Service Type': serviceType,
+    'Rate Type': rateType,
+    Availability: availability,
+    ...(schedulePreference ? { 'Schedule Preference': schedulePreference } : {}),
+    ...(item.gender ? { Gender: item.gender } : {}),
+    'Languages Spoken': seededVehiclePick(`${seed}:lang`, ['English, Zulu', 'English, Sotho', 'English, Afrikaans', 'English, Xhosa', 'English']),
+    'Tools / Equipment': seededVehiclePick(`${seed}:tools`, ['Own basic toolkit provided', 'Own tools and safety gear provided', 'Tools provided by employer preferred']),
+    Certifications: seededVehiclePick(`${seed}:cert`, ['Trade-tested', 'Police clearance certificate available', 'References available on request']),
+  };
+
+  const badges = item.badges || ['Verified Worker', 'Background Checked', 'Flexible Contracts'];
+  const viewCount = seededVehicleRange(`${seed}:glviews`, 90, 1800);
+
+  return { productOverview, keyHighlights, technicalSpecs, specsTitle: 'Profile Details', badges, viewCount };
+};
+
+const GENERAL_LABOUR_WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+// "Available Days" pills on the worker profile page — derived from
+// schedulePreference rather than stored separately, since the two always
+// move together (e.g. a "Weekends" worker is available Saturday & Sunday).
+const getWorkerAvailableDays = (schedulePreference) => {
+  if (schedulePreference === 'Weekdays') return GENERAL_LABOUR_WEEK_DAYS.slice(0, 5);
+  if (schedulePreference === 'Weekends') return GENERAL_LABOUR_WEEK_DAYS.slice(5);
+  return GENERAL_LABOUR_WEEK_DAYS;
+};
+
+// Pricing-section tiers — prefers the worker's own explicit Daily / Weekly /
+// Monthly rates (set directly through the seller form) since real providers
+// often discount longer bookings by more than a flat multiplier would.
+// Falls back to a computed equivalent from whichever single rate + rateType
+// older or partially-filled listings quote, so the section never goes blank.
+const getWorkerPricingTiers = (item) => {
+  const hasExplicitTiers = item.dailyRate != null || item.weeklyRate != null || item.monthlyRate != null;
+  const baseRate = Number(item.rate) || 0;
+  const fallbackDaily = item.rateType === 'Monthly' ? Math.round((baseRate / 22) * 1.1) : baseRate;
+  const dailyRate = hasExplicitTiers ? (Number(item.dailyRate) || fallbackDaily) : fallbackDaily;
+  return {
+    Daily: dailyRate,
+    Weekly: item.weeklyRate != null ? Number(item.weeklyRate) : Math.round(dailyRate * 5.5),
+    Monthly: item.monthlyRate != null ? Number(item.monthlyRate) : Math.round(dailyRate * 21),
+  };
+};
+
+// Deterministic sample reviews for the worker profile page's Ratings &
+// Reviews section — catalog profiles don't have real submitted reviews yet,
+// so this mirrors the seeded-but-stable pattern already used for
+// rating/viewCount across the rest of the marketplace.
+const getWorkerSampleReviews = (item) => {
+  const seed = item.id;
+  const reviewerPool = [
+    { name: 'Michael L.', comment: 'Showed up on time and did excellent work. Would definitely hire again for future projects.' },
+    { name: 'Sarah O.', comment: 'Professional, efficient, and easy to communicate with throughout the job. Highly recommend.' },
+    { name: 'Daniel R.', comment: 'Reasonably priced and the quality of work exceeded our expectations. Will be a repeat customer.' },
+  ];
+  return reviewerPool.map((reviewer, index) => ({
+    id: `${seed}-review-${index}`,
+    name: reviewer.name,
+    date: new Date(Date.now() - seededVehicleRange(`${seed}:reviewdate${index}`, 5, 200) * 86400000).toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' }),
+    rating: seededVehicleRange(`${seed}:reviewrating${index}`, 4, 5),
+    comment: reviewer.comment,
+    helpful: seededVehicleRange(`${seed}:reviewhelpful${index}`, 4, 35),
+  }));
+};
+
 const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
   const { categorySlug = '' } = useParams();
@@ -19645,6 +20674,1483 @@ const NaturalResourcesSellPage = ({ sellerItems = [], onSellerItemCreated, onUpd
   );
 };
 
+const GeneralLabourPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { categorySlug = '' } = useParams();
+  const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'generalLabour'), ...generalLabourItems], [sellerItems]);
+  const activeCategory = generalLabourCategoryShowcase.find((category) => category.slug === categorySlug) || null;
+
+  // ---- Landing page ("Browse by Category") state ----
+  const [showAllListings, setShowAllListings] = useState(false);
+  const visibleListings = showAllListings ? marketItems : marketItems.slice(0, 6);
+
+  // ---- Category detail page state ----
+  const [categorySearchQuery, setCategorySearchQuery] = useState('');
+  const [selectedRoles, setSelectedRoles] = useState([]);
+  const [selectedServiceTypes, setSelectedServiceTypes] = useState([]);
+  const [selectedGender, setSelectedGender] = useState('Any');
+  const [selectedExperienceLevels, setSelectedExperienceLevels] = useState([]);
+  const [selectedSkillLevels, setSelectedSkillLevels] = useState([]);
+  const [selectedCountry, setSelectedCountry] = useState('');
+  const [selectedCity, setSelectedCity] = useState('');
+  const [selectedSchedules, setSelectedSchedules] = useState([]);
+  const [priceRange, setPriceRange] = useState([0, 0]);
+  const [showAllCategoryListings, setShowAllCategoryListings] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(false);
+  const featuredScrollRef = useRef(null);
+
+  // Reset category-specific filters whenever the category changes (the
+  // route param changes without unmounting this component).
+  useEffect(() => {
+    setCategorySearchQuery('');
+    setSelectedRoles([]);
+    setSelectedServiceTypes([]);
+    setSelectedGender('Any');
+    setSelectedExperienceLevels([]);
+    setSelectedSkillLevels([]);
+    setSelectedCountry('');
+    setSelectedCity('');
+    setSelectedSchedules([]);
+    setShowAllCategoryListings(false);
+  }, [categorySlug]);
+
+  const categoryItems = useMemo(() => {
+    if (!activeCategory) return [];
+    return marketItems.filter((item) => {
+      const haystack = `${item.category || ''} ${item.title || ''}`.toLowerCase();
+      return activeCategory.match.some((token) => haystack.includes(token));
+    });
+  }, [marketItems, activeCategory]);
+
+  // Filter options are derived only from data actually present so the
+  // sidebar never shows a clickable option with zero possible matches.
+  const roleOptions = useMemo(() => Array.from(new Set(categoryItems.map((item) => item.category).filter(Boolean))), [categoryItems]);
+  const serviceTypeOptions = useMemo(() => Array.from(new Set(categoryItems.map((item) => item.serviceType).filter(Boolean))), [categoryItems]);
+  const experienceLevelOptions = useMemo(() => Array.from(new Set(categoryItems.map((item) => item.experienceLevel).filter(Boolean))), [categoryItems]);
+  const skillLevelOptions = useMemo(() => Array.from(new Set(categoryItems.map((item) => item.skillLevel).filter(Boolean))), [categoryItems]);
+  const countryOptions = useMemo(() => Array.from(new Set(categoryItems.map((item) => item.country).filter(Boolean))).sort(), [categoryItems]);
+  const cityOptions = useMemo(() => Array.from(new Set(
+    categoryItems
+      .filter((item) => !selectedCountry || item.country === selectedCountry)
+      .map((item) => item.city)
+      .filter(Boolean),
+  )).sort(), [categoryItems, selectedCountry]);
+  const scheduleOptions = useMemo(() => Array.from(new Set(categoryItems.map((item) => item.schedulePreference).filter(Boolean))), [categoryItems]);
+  const categoryPriceMax = useMemo(() => {
+    const max = categoryItems.reduce((highest, item) => Math.max(highest, getNumericPriceValue(item.rate, 0, item.currency || null)), 0);
+    return Math.max(100, Math.ceil(max));
+  }, [categoryItems]);
+
+  useEffect(() => {
+    setPriceRange((prev) => (prev[1] !== categoryPriceMax ? [Math.min(prev[0], categoryPriceMax), categoryPriceMax] : prev));
+  }, [categoryPriceMax]);
+
+  // The City select depends on Country — if the city picked is no longer
+  // valid for the newly selected country, clear it instead of silently
+  // filtering on a stale value.
+  useEffect(() => {
+    if (selectedCity && !cityOptions.includes(selectedCity)) setSelectedCity('');
+  }, [cityOptions, selectedCity]);
+
+  const toggleArrayValue = (setter, value) => {
+    setter((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
+  };
+
+  const filteredCategoryItems = useMemo(() => {
+    const q = categorySearchQuery.trim().toLowerCase();
+    return categoryItems.filter((item) => {
+      if (selectedRoles.length && !selectedRoles.includes(item.category)) return false;
+      if (selectedServiceTypes.length && !selectedServiceTypes.includes(item.serviceType)) return false;
+      if (selectedGender !== 'Any' && item.gender !== selectedGender) return false;
+      if (selectedExperienceLevels.length && !selectedExperienceLevels.includes(item.experienceLevel)) return false;
+      if (selectedSkillLevels.length && !selectedSkillLevels.includes(item.skillLevel)) return false;
+      if (selectedCountry && item.country !== selectedCountry) return false;
+      if (selectedCity && item.city !== selectedCity) return false;
+      if (selectedSchedules.length && !selectedSchedules.includes(item.schedulePreference)) return false;
+      const price = getNumericPriceValue(item.rate, 0, item.currency || null);
+      if (price < priceRange[0] || price > priceRange[1]) return false;
+      if (q && !`${item.name || ''} ${item.title || ''} ${item.location || ''}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [categoryItems, selectedRoles, selectedServiceTypes, selectedGender, selectedExperienceLevels, selectedSkillLevels, selectedCountry, selectedCity, selectedSchedules, priceRange, categorySearchQuery]);
+
+  const visibleCategoryListings = showAllCategoryListings ? filteredCategoryItems : filteredCategoryItems.slice(0, 6);
+  const featuredItems = categoryItems.slice(0, 6);
+  // "Featured Electricians, Plumbers & Welders" — naturally joins the
+  // distinct roles in this category (comma-separated, "&" before the last)
+  // instead of a hardcoded string per category.
+  const featuredHeading = (() => {
+    const names = roleOptions.slice(0, 3);
+    if (names.length <= 1) return `Featured ${activeCategory?.name || 'Worker'} Selections`;
+    const joined = names.length === 2
+      ? names.join(' & ')
+      : `${names.slice(0, -1).join(', ')} & ${names[names.length - 1]}`;
+    return `Featured ${joined}`;
+  })();
+
+  const buildWishlistItem = (item) => createWishlistItem({
+    ...item,
+    title: item.name ? `${item.name} — ${item.title}` : item.title,
+    price: item.rate,
+    route: activeCategory ? `/general-labour-market/${activeCategory.slug}` : '/general-labour-market',
+    marketName: t('markets.generalLabour'),
+    details: `${item.category || 'Seller item'} • ${item.location || 'Workforce listing'}`,
+  });
+
+  // Worker profiles get their own dedicated page (Hero, About, Skills &
+  // Services, Available Days, Pricing tiers, Reviews, Similar Workers)
+  // rather than the shared item-details modal other markets use.
+  const openItemDetails = (item) => navigate(`/general-labour-market/worker/${item.id}`);
+
+  // Lets a `?focus=<id>` link (e.g. from the Trending carousel) jump
+  // straight to a worker's profile page, whether that's a catalog profile
+  // or a seller-submitted one.
+  useListingFocusFromQuery(marketItems, openItemDetails);
+
+  const renderWorkerCard = (item, { compact = false } = {}) => {
+    const itemReviewKey = getCollectionItemId(activeCategory ? `/general-labour-market/${activeCategory.slug}` : '/general-labour-market', item.id);
+    const reviewSummary = getProductReviewSummary(productReviewSummaryMap, itemReviewKey);
+    const hasStaticRating = typeof item.rating === 'number';
+    const averageRatingLabel = hasStaticRating ? item.rating.toFixed(1) : (reviewSummary.reviewCount ? reviewSummary.averageRating.toFixed(1) : '0.0');
+    const reviewCountValue = hasStaticRating ? (item.reviewCount || 0) : reviewSummary.reviewCount;
+    const isWishlisted = wishlistItemIds.includes(itemReviewKey);
+    const displayTitle = item.name ? `${item.name} — ${item.title}` : item.title;
+    return (
+      <article
+        key={item.id}
+        id={`listing-${item.id}`}
+        className={`group flex flex-col overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-[0_4px_10px_rgba(0,0,0,0.06)] transition hover:-translate-y-1 hover:shadow-[0_14px_28px_rgba(0,168,232,0.18)] ${compact ? 'w-[230px] shrink-0 snap-start' : ''}`}
+        role="button"
+        tabIndex={0}
+        onClick={() => openItemDetails(item)}
+        onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openItemDetails(item); } }}
+      >
+        <div className="relative aspect-[4/3] w-full overflow-hidden">
+          <img src={item.image} alt={displayTitle} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" loading="lazy" />
+          <button
+            type="button"
+            onClick={(event) => { event.stopPropagation(); onToggleWishlist(buildWishlistItem(item)); }}
+            aria-pressed={isWishlisted}
+            aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+            className={`absolute right-2 top-2 rounded-full border border-[var(--svs-border)] bg-white/90 p-1.5 text-[#e11d48] shadow ${isWishlisted ? 'bg-rose-50' : 'hover:bg-[#e0f7fa]'}`}
+          >
+            <Heart className={`h-3.5 w-3.5 ${isWishlisted ? 'fill-current' : ''}`} />
+          </button>
+        </div>
+        <div className="flex flex-1 flex-col p-3">
+          <h3 className="text-sm font-bold leading-tight text-[#0f6674]">{item.name || item.title}</h3>
+          <p className="mt-1 text-[11px] font-bold text-[#0f6674]">
+            <SalePrice price={item.rate} currency={item.currency} /><span className="font-semibold text-[var(--svs-muted)]">/{(item.rateType || 'Daily').toLowerCase()}</span>
+          </p>
+          {item.title ? (
+            <div className="mt-1.5 flex items-center gap-1 text-[11px] text-[var(--svs-muted)]">
+              <Cog className="h-3 w-3" />{item.serviceType ? `${item.serviceType} • ${item.title}` : item.title}
+            </div>
+          ) : null}
+          {item.experienceLevel ? (
+            <div className="mt-1 flex items-center gap-1 text-[11px] text-[var(--svs-muted)]">
+              <Clock className="h-3 w-3" />{item.experienceLevel} Experience
+            </div>
+          ) : null}
+          {item.location ? (
+            <div className="mt-1 flex items-center gap-1 text-[11px] text-[var(--svs-muted)]">
+              <MapPin className="h-3 w-3" />{item.location}
+            </div>
+          ) : null}
+          <div className="mt-1.5 flex items-center gap-1 text-[11px] text-amber-500">
+            <Star className="h-3 w-3 fill-current" />
+            <span className="font-semibold text-[var(--svs-text)]">{averageRatingLabel}</span>
+            <span className="text-[var(--svs-muted)]">({reviewCountValue} review{reviewCountValue === 1 ? '' : 's'})</span>
+          </div>
+          <button
+            type="button"
+            onClick={(event) => { event.stopPropagation(); openItemDetails(item); }}
+            className={`${cudyBluePrimaryButtonClassName} mt-3 w-full rounded-full bg-[var(--svs-primary)] py-2 text-xs font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}
+          >
+            View Details
+          </button>
+        </div>
+      </article>
+    );
+  };
+
+  if (categorySlug && !activeCategory) {
+    return <Navigate to="/general-labour-market" replace />;
+  }
+
+  if (activeCategory) {
+    return (
+      <PageFrame
+        title={`${activeCategory.name} Market Listing`}
+        subtitle="Browse verified, background-checked workers with transparent rates and flexible contract terms."
+        heroImage={activeCategory.image}
+        heroMediaClassName="scale-105"
+        heroOverlayClassName="bg-gradient-to-r from-black/80 via-black/60 to-black/45"
+        sectionClassName="px-0 pt-0 pb-8 sm:pt-0 sm:pb-10"
+        heroWrapperClassName="w-full max-w-none"
+        contentWrapperClassName="mx-auto w-full max-w-7xl px-4"
+        heroContainerClassName="rounded-none border-x-0 border-t-0 p-0 shadow-none"
+        heroContentClassName="flex min-h-[220px] flex-col items-center justify-center px-6 py-8 text-center sm:min-h-[260px] sm:px-8 sm:py-10"
+        titleClassName="text-xl text-white sm:text-2xl"
+        subtitleClassName="mt-2 max-w-2xl text-xs text-white/90 sm:text-sm"
+      >
+        <div className="mb-5">
+          <Link to="/general-labour-market" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--svs-primary-strong)] hover:underline">
+            <ChevronLeft className="h-3.5 w-3.5" /> Back to General Labour Market
+          </Link>
+        </div>
+        <div className="mb-5">
+          <div className="flex items-center gap-2 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-2.5 shadow-sm">
+            <Search className="h-4 w-4 text-[var(--svs-muted)]" />
+            <input
+              type="search"
+              value={categorySearchQuery}
+              onChange={(event) => setCategorySearchQuery(event.target.value)}
+              placeholder={`Search ${activeCategory.name.toLowerCase()}, workers, or locations...`}
+              className="w-full bg-transparent text-sm text-[var(--svs-text)] outline-none placeholder:text-[var(--svs-muted)]"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-4 lg:flex-row lg:gap-8">
+          {isFiltersOpen ? (
+            <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setIsFiltersOpen(false)} role="presentation" />
+          ) : null}
+
+          <div className={`${isFiltersOpen ? 'fixed left-0 top-0 z-50 flex h-full w-[320px] max-w-[85vw] flex-col overflow-y-auto bg-white p-4 shadow-2xl sm:w-[340px]' : 'hidden'} ${isDesktopFiltersHidden ? 'lg:hidden' : 'lg:block lg:w-[260px] lg:shrink-0 lg:static lg:h-auto lg:p-0 lg:shadow-none'}`}>
+            <button type="button" onClick={() => setIsFiltersOpen(false)} className="mb-3 self-end rounded-full p-1.5 text-[var(--svs-muted)] hover:bg-slate-100 lg:hidden" aria-label="Close filters">
+              <X className="h-5 w-5" />
+            </button>
+            <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-sm">
+              {roleOptions.length ? (
+                <div className="mb-5">
+                  <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Worker Type</h3>
+                  <div className="flex flex-col gap-2">
+                    {roleOptions.map((option) => (
+                      <label key={option} className="flex items-center gap-2 text-sm text-[var(--svs-text)]">
+                        <input type="checkbox" checked={selectedRoles.includes(option)} onChange={() => toggleArrayValue(setSelectedRoles, option)} className="accent-[var(--svs-primary)]" />
+                        {option}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {serviceTypeOptions.length ? (
+                <div className="mb-5">
+                  <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Service Type</h3>
+                  <div className="flex flex-col gap-2">
+                    {serviceTypeOptions.map((option) => (
+                      <label key={option} className="flex items-center gap-2 text-sm text-[var(--svs-text)]">
+                        <input type="checkbox" checked={selectedServiceTypes.includes(option)} onChange={() => toggleArrayValue(setSelectedServiceTypes, option)} className="accent-[var(--svs-primary)]" />
+                        {option}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              <div className="mb-5">
+                <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Professional Preference</h3>
+                <div className="flex flex-col gap-2">
+                  {['Any', 'Male', 'Female'].map((option) => (
+                    <label key={option} className="flex items-center gap-2 text-sm text-[var(--svs-text)]">
+                      <input type="radio" name="gl-gender" checked={selectedGender === option} onChange={() => setSelectedGender(option)} className="accent-[var(--svs-primary)]" />
+                      {option}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              {experienceLevelOptions.length ? (
+                <div className="mb-5">
+                  <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Experience Level</h3>
+                  <div className="flex flex-col gap-2">
+                    {experienceLevelOptions.map((option) => (
+                      <label key={option} className="flex items-center gap-2 text-sm text-[var(--svs-text)]">
+                        <input type="checkbox" checked={selectedExperienceLevels.includes(option)} onChange={() => toggleArrayValue(setSelectedExperienceLevels, option)} className="accent-[var(--svs-primary)]" />
+                        {option}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {skillLevelOptions.length ? (
+                <div className="mb-5">
+                  <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Skill Level</h3>
+                  <div className="flex flex-col gap-2">
+                    {skillLevelOptions.map((option) => (
+                      <label key={option} className="flex items-center gap-2 text-sm text-[var(--svs-text)]">
+                        <input type="checkbox" checked={selectedSkillLevels.includes(option)} onChange={() => toggleArrayValue(setSelectedSkillLevels, option)} className="accent-[var(--svs-primary)]" />
+                        {option}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {countryOptions.length ? (
+                <div className="mb-5">
+                  <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Location</h3>
+                  <div className="flex flex-col gap-2">
+                    <select value={selectedCountry} onChange={(event) => setSelectedCountry(event.target.value)} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2.5 py-2 text-sm text-[var(--svs-text)] outline-none">
+                      <option value="">All Countries</option>
+                      {countryOptions.map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
+                    <select value={selectedCity} onChange={(event) => setSelectedCity(event.target.value)} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2.5 py-2 text-sm text-[var(--svs-text)] outline-none">
+                      <option value="">All Cities</option>
+                      {cityOptions.map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              ) : null}
+              {scheduleOptions.length ? (
+                <div className="mb-5">
+                  <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Availability</h3>
+                  <div className="flex flex-col gap-2">
+                    {scheduleOptions.map((option) => (
+                      <label key={option} className="flex items-center gap-2 text-sm text-[var(--svs-text)]">
+                        <input type="checkbox" checked={selectedSchedules.includes(option)} onChange={() => toggleArrayValue(setSelectedSchedules, option)} className="accent-[var(--svs-primary)]" />
+                        {option}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              <div className="mb-5">
+                <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Price Range</h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[0], _fxState.buyerCurrency)}</span>
+                  <input type="range" min={0} max={categoryPriceMax} value={priceRange[0]} onChange={(event) => setPriceRange([Number(event.target.value), priceRange[1]])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
+                  <input type="range" min={0} max={categoryPriceMax} value={priceRange[1]} onChange={(event) => setPriceRange([priceRange[0], Number(event.target.value)])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
+                  <span className="text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[1], _fxState.buyerCurrency)}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsFiltersOpen(false)}
+                className={`${cudyBluePrimaryButtonClassName} w-full rounded-xl bg-[var(--svs-primary)] py-2.5 text-sm font-semibold text-white`}
+              >
+                Apply Filters
+              </button>
+            </div>
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="mb-4 flex items-center gap-2">
+              <button type="button" onClick={() => setIsFiltersOpen(true)} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--svs-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--svs-text)] lg:hidden">
+                <Filter className="h-3.5 w-3.5" /> Filters
+              </button>
+              <button type="button" onClick={() => setIsDesktopFiltersHidden((prev) => !prev)} className="hidden items-center gap-1.5 rounded-full border border-[var(--svs-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--svs-text)] lg:inline-flex">
+                <Filter className="h-3.5 w-3.5" /> {isDesktopFiltersHidden ? 'Show Filters' : 'Hide Filters'}
+              </button>
+              <p className="text-xs text-[var(--svs-muted)]">{filteredCategoryItems.length} worker{filteredCategoryItems.length === 1 ? '' : 's'}</p>
+            </div>
+
+            {visibleCategoryListings.length ? (
+              <>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {visibleCategoryListings.map((item) => renderWorkerCard(item))}
+                </div>
+                {!showAllCategoryListings && filteredCategoryItems.length > visibleCategoryListings.length ? (
+                  <div className="mt-6 flex justify-center">
+                    <button type="button" onClick={() => setShowAllCategoryListings(true)} className={`${cudyBluePrimaryButtonClassName} rounded-full bg-[var(--svs-primary-strong)] px-12 py-3 text-sm font-semibold text-white shadow-md hover:bg-[var(--svs-primary)]`}>
+                      View All
+                    </button>
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-[var(--svs-border)] bg-white px-5 py-12 text-center text-sm text-[var(--svs-muted)]">
+                No {activeCategory.name.toLowerCase()} match your filters yet.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {featuredItems.length ? (
+          <div className="relative mt-12 -mx-4 bg-[#0f6674] px-4 py-10 sm:-mx-8 sm:px-8">
+            <div
+              className="absolute inset-0 bg-cover bg-center opacity-30"
+              style={{ backgroundImage: `url('${MARKET_THEMES.generalLabour}')` }}
+              aria-hidden="true"
+            />
+            <div className="relative">
+              <h2 className="text-center text-xl font-bold text-white sm:text-2xl">{featuredHeading}</h2>
+              <div className="relative mt-6">
+                <div ref={featuredScrollRef} className="flex gap-4 overflow-x-auto pb-2 scroll-smooth snap-x" style={{ scrollbarWidth: 'none' }}>
+                  {featuredItems.map((item) => renderWorkerCard(item, { compact: true }))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => featuredScrollRef.current?.scrollBy({ left: -260, behavior: 'smooth' })}
+                  aria-label="Scroll left"
+                  className="absolute -left-3 top-1/2 hidden -translate-y-1/2 rounded-full bg-white p-2 text-[#0f6674] shadow-lg sm:flex"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => featuredScrollRef.current?.scrollBy({ left: 260, behavior: 'smooth' })}
+                  aria-label="Scroll right"
+                  className="absolute -right-3 top-1/2 hidden -translate-y-1/2 rounded-full bg-white p-2 text-[#0f6674] shadow-lg sm:flex"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </PageFrame>
+    );
+  }
+
+  return (
+  <MarketShowcase
+    marketKey="generalLabour"
+    title={t('markets.generalLabour')}
+    subtitle={t('pageSubtitles.generalLabour')}
+    eyebrow={t('markets.generalLabour')}
+    chips={['Skilled trades', 'Logistics', 'Agriculture']}
+    showTrustStrip={false}
+  >
+    {/* ── Browse by Category ── */}
+    <div>
+      <div className="flex items-center gap-2">
+        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-[#0f6674] text-white">
+          <LayoutDashboard className="h-4 w-4" />
+        </span>
+        <h2 className="text-lg font-bold text-[var(--svs-text)] sm:text-xl">Browse by Category</h2>
+      </div>
+      <p className="mt-1 text-xs text-[var(--svs-muted)] sm:text-sm">Explore skilled workers, labor services, and workforce solutions all in one place.</p>
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+        {generalLabourCategoryShowcase.map((category) => (
+          <Link
+            key={category.slug}
+            to={`/general-labour-market/${category.slug}`}
+            className="group flex flex-col overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] text-left shadow-[0_4px_10px_rgba(0,0,0,0.06)] transition hover:-translate-y-1 hover:shadow-[0_14px_28px_rgba(0,168,232,0.18)]"
+          >
+            <div className="relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-[#0f6674] to-[#33b9f2]">
+              <img
+                src={category.image}
+                alt={category.name}
+                loading="lazy"
+                onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
+              />
+            </div>
+            <div className="p-3 sm:p-4">
+              <p className="text-sm font-bold text-[#0f6674] sm:text-base">{category.name}</p>
+              <p className="mt-1 text-[11px] leading-snug text-[var(--svs-muted)] sm:text-xs">{category.description}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+
+    {/* ── Trending Workforce Services & Top Picks ── */}
+    <div className="mt-12 text-center">
+      <h2 className="text-xl font-bold text-[var(--svs-text)] sm:text-2xl">Trending Workforce Services &amp; Top Picks</h2>
+      <p className="mt-1 text-xs text-[var(--svs-muted)] sm:text-sm">Top-rated labor services and skilled professionals trusted by businesses and employers.</p>
+    </div>
+
+    {visibleListings.length ? (
+      <>
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {visibleListings.map((item) => renderWorkerCard(item))}
+        </div>
+        {!showAllListings && marketItems.length > visibleListings.length ? (
+          <div className="mt-6 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setShowAllListings(true)}
+              className={`${cudyBluePrimaryButtonClassName} rounded-full bg-[var(--svs-primary-strong)] px-12 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-[var(--svs-primary)]`}
+            >
+              View All
+            </button>
+          </div>
+        ) : null}
+      </>
+    ) : (
+      <div className="mt-6 rounded-xl border border-dashed border-[var(--svs-border)] bg-white px-5 py-10 text-center text-xs text-[var(--svs-muted)]">
+        No workers listed yet. Check back soon or browse another category above.
+      </div>
+    )}
+
+    {/* ── Why Choose Us? ── */}
+    <div
+      className="relative -mx-4 mt-12 bg-[#0f6674] bg-cover bg-center py-12"
+      style={{ backgroundImage: `url('${MARKET_THEMES.generalLabour}')` }}
+    >
+      <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/40 to-black/55" aria-hidden="true" />
+      <div className="relative mx-auto w-full max-w-6xl px-4 sm:px-6">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-white drop-shadow sm:text-3xl">Why Choose Us?</h2>
+          <p className="mx-auto mt-2 max-w-3xl text-sm text-white/95 drop-shadow sm:text-base">
+            From construction helpers to warehouse staff, we simplify workforce sourcing with verified opportunities.
+          </p>
+        </div>
+        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { icon: ShieldCheck, title: 'Verified Workers', body: 'Every worker has a verified identity and documented work history before being hired.' },
+            { icon: CheckCircle2, title: 'Background Checked', body: 'Comprehensive background verification conducted for all professional workers.' },
+            { icon: ClipboardList, title: 'Flexible Contracts', body: 'Daily, weekly, monthly, or long-term hiring — choose the terms that suit your needs.' },
+            { icon: HeartHandshake, title: '24/7 Support', body: 'Dedicated customer support available around the clock for employers and workers.' },
+          ].map((item) => (
+            <div key={item.title} className="flex flex-col items-center rounded-2xl border border-white/15 bg-white/10 p-5 text-center backdrop-blur">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 text-white">
+                <item.icon className="h-5 w-5" />
+              </span>
+              <p className="mt-3 text-sm font-bold text-white">{item.title}</p>
+              <p className="mt-1 text-[11px] leading-snug text-white/85 sm:text-xs">{item.body}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </MarketShowcase>
+  );
+};
+
+const GENERAL_LABOUR_SELL_CATEGORY_GROUPS = generalLabourCategoryShowcase.map((category) => ({
+  group: category.name,
+  options: Array.from(new Set(generalLabourItems.filter((item) => item.category && category.match.some((token) => `${item.category} ${item.title}`.toLowerCase().includes(token))).map((item) => item.category))),
+}));
+const GENERAL_LABOUR_EXPERIENCE_OPTIONS = ['0-1 Years', '1-3 Years', '3-5 Years', '5+ Years'];
+const GENERAL_LABOUR_RATE_TYPE_OPTIONS = ['Daily', 'Monthly'];
+const GENERAL_LABOUR_SERVICE_TYPE_OPTIONS = ['Hourly', 'Daily', 'Weekly', 'Monthly'];
+const GENERAL_LABOUR_GENDER_OPTIONS = ['Male', 'Female'];
+const GENERAL_LABOUR_SCHEDULE_OPTIONS = ['Weekdays', 'Weekends', 'Evenings', 'Full Day'];
+const GENERAL_LABOUR_SKILL_LEVEL_OPTIONS = ['Unskilled Labour', 'Semi-Skilled', 'Skilled Professional', 'Professional'];
+const GENERAL_LABOUR_RADIUS_OPTIONS = ['Up to 15 km', 'Up to 20 km', 'Up to 30 km', 'Up to 50 km', 'Citywide'];
+const GENERAL_LABOUR_ONSITE_OPTIONS = ['Yes — brings own tools', 'Yes — tools provided by client', 'No — workshop/drop-off only'];
+const emptyGeneralLabourSellForm = () => ({
+  name: '',
+  category: '',
+  gender: '',
+  experienceLevel: '',
+  skillLevel: '',
+  rateType: '',
+  serviceType: '',
+  rate: '',
+  dailyRate: '',
+  weeklyRate: '',
+  monthlyRate: '',
+  currency: '',
+  country: '',
+  city: '',
+  region: '',
+  serviceRadius: '',
+  onSite: '',
+  travelFee: '',
+  schedulePreference: '',
+  availability: '',
+  bio: '',
+  keyHighlights: '',
+  languages: '',
+  tools: '',
+  certifications: '',
+});
+
+const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdateSellerItem, onDeleteSellerItem }) => {
+  const navigate = useNavigate();
+  const [form, setForm] = useState(emptyGeneralLabourSellForm);
+  const [editingId, setEditingId] = useState(null);
+  const [existingImageUrls, setExistingImageUrls] = useState([]);
+  const [originalImageUrls, setOriginalImageUrls] = useState([]);
+  const [imageFiles, setImageFiles] = useState([]);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState('idle');
+  const isAuthenticated = getAuthState();
+  const userEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
+  const userName = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-name') || 'SVS Worker');
+
+  const myListings = useMemo(
+    () => getSellerItemsForMarket(sellerItems, 'generalLabour').filter((item) => normalizeEmail(item.sellerEmail) === userEmail),
+    [sellerItems, userEmail],
+  );
+
+  useEffect(() => {
+    if (!imageFiles.length) {
+      setImagePreviewUrls([]);
+      return undefined;
+    }
+    const nextUrls = imageFiles.map((file) => URL.createObjectURL(file));
+    setImagePreviewUrls(nextUrls);
+    return () => {
+      nextUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [imageFiles]);
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleImagePick = (event) => {
+    const pickedFiles = Array.from(event.target.files || []);
+    if (!pickedFiles.length) return;
+    setImageFiles((current) => [...current, ...pickedFiles]);
+    event.target.value = '';
+  };
+
+  const handleRemoveSelectedImage = (indexToRemove) => {
+    setImageFiles((current) => current.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleRemoveExistingImage = (urlToRemove) => {
+    setExistingImageUrls((current) => current.filter((url) => url !== urlToRemove));
+  };
+
+  const resetForm = () => {
+    setEditingId(null);
+    setForm(emptyGeneralLabourSellForm());
+    setExistingImageUrls([]);
+    setOriginalImageUrls([]);
+    setImageFiles([]);
+  };
+
+  const handleEdit = (listing) => {
+    setEditingId(listing.dbId);
+    setMessage('');
+    setMessageType('idle');
+    const listingImages = Array.isArray(listing.images) && listing.images.length
+      ? listing.images
+      : (listing.image ? [listing.image] : []);
+    setForm({
+      name: listing.name || '',
+      category: listing.category || '',
+      gender: listing.gender || '',
+      experienceLevel: listing.experienceLevel || '',
+      skillLevel: listing.skillLevel || '',
+      rateType: listing.rateType || '',
+      serviceType: listing.serviceType || '',
+      rate: listing.rate || '',
+      dailyRate: listing.dailyRate != null ? String(listing.dailyRate) : '',
+      weeklyRate: listing.weeklyRate != null ? String(listing.weeklyRate) : '',
+      monthlyRate: listing.monthlyRate != null ? String(listing.monthlyRate) : '',
+      currency: listing.currency || '',
+      country: listing.country || '',
+      city: listing.city || '',
+      region: listing.region || '',
+      serviceRadius: listing.serviceRadius || '',
+      onSite: listing.onSite || '',
+      travelFee: listing.travelFee || '',
+      schedulePreference: listing.schedulePreference || '',
+      availability: listing.availability || '',
+      bio: listing.productOverview || listing.bio || '',
+      keyHighlights: Array.isArray(listing.keyHighlights) ? listing.keyHighlights.join('\n') : (Array.isArray(listing.skills) ? listing.skills.join('\n') : ''),
+      languages: listing.technicalSpecs?.['Languages Spoken'] || '',
+      tools: listing.technicalSpecs?.['Tools / Equipment'] || '',
+      certifications: listing.technicalSpecs?.Certifications || '',
+    });
+    setExistingImageUrls(listingImages);
+    setOriginalImageUrls(listingImages);
+    setImageFiles([]);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDelete = async (listing) => {
+    if (typeof window !== 'undefined' && !window.confirm(`Remove "${listing.name || listing.title}"? This cannot be undone.`)) return;
+    const result = await onDeleteSellerItem(listing.dbId, listing.images, listing.image);
+    if (result?.error) {
+      setMessage(result.error);
+      setMessageType('error');
+      return;
+    }
+    if (editingId === listing.dbId) resetForm();
+    setMessage('Listing removed.');
+    setMessageType('success');
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!isAuthenticated) {
+      navigate('/signin');
+      return;
+    }
+
+    const trimmedName = form.name.trim();
+    const trimmedCountry = form.country.trim();
+    const trimmedCity = form.city.trim();
+    const trimmedLocation = [trimmedCity, trimmedCountry].filter(Boolean).join(', ');
+    const rawRate = form.rate.trim();
+    const cleanedRate = rawRate.replace(/[^\d.]/g, '');
+    const trimmedRate = cleanedRate || rawRate;
+
+    if (!trimmedName || !form.category || !form.gender || !form.experienceLevel || !form.skillLevel || !form.rateType || !form.serviceType || !trimmedRate || !trimmedCountry || !trimmedCity) {
+      setMessage('Add your name, role, gender, experience level, skill level, rate type, service type, rate, country, and city before publishing.');
+      setMessageType('error');
+      return;
+    }
+
+    if (!SUPPORTED_CURRENCIES.some((entry) => entry.code === form.currency)) {
+      setMessage('Select the currency you want to be paid in before publishing your listing.');
+      setMessageType('error');
+      return;
+    }
+
+    if (!hasSupabaseEnv || !supabase) {
+      setMessage('Supabase is not configured. Add the environment values first so listings can be stored.');
+      setMessageType('error');
+      return;
+    }
+
+    const combinedImageCount = existingImageUrls.length + imageFiles.length;
+    if (!combinedImageCount) {
+      setMessage('Add at least one photo before publishing.');
+      setMessageType('error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setMessage('');
+    setMessageType('idle');
+
+    const trimmedAvailability = form.availability.trim() || 'Contact for availability';
+    const trimmedRegion = form.region.trim();
+    const trimmedTravelFee = form.travelFee.trim();
+    const technicalSpecs = {
+      Category: getWorkerBroadCategoryName({ category: form.category, title: form.category }),
+      Experience: form.experienceLevel,
+      'Skill Level': form.skillLevel,
+      City: trimmedCity,
+      Region: trimmedRegion || 'Region on request',
+      Radius: form.serviceRadius || 'Up to 30 km',
+      'On-Site': form.onSite || 'Yes — brings own tools',
+      'Travel Fee': trimmedTravelFee || 'No travel fee — fixed call-out rate',
+      'Service Type': form.serviceType,
+      'Rate Type': form.rateType,
+      Availability: trimmedAvailability,
+      'Schedule Preference': form.schedulePreference,
+      Gender: form.gender,
+      ...(form.languages.trim() ? { 'Languages Spoken': form.languages.trim() } : {}),
+      ...(form.tools.trim() ? { 'Tools / Equipment': form.tools.trim() } : {}),
+      ...(form.certifications.trim() ? { Certifications: form.certifications.trim() } : {}),
+    };
+    const keyHighlights = form.keyHighlights
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    const detailsJson = {
+      name: trimmedName,
+      category: form.category,
+      title: form.category,
+      gender: form.gender,
+      experienceLevel: form.experienceLevel,
+      skillLevel: form.skillLevel,
+      rateType: form.rateType,
+      serviceType: form.serviceType,
+      rate: trimmedRate,
+      ...(form.dailyRate.trim() ? { dailyRate: Number(form.dailyRate) } : {}),
+      ...(form.weeklyRate.trim() ? { weeklyRate: Number(form.weeklyRate) } : {}),
+      ...(form.monthlyRate.trim() ? { monthlyRate: Number(form.monthlyRate) } : {}),
+      currency: form.currency,
+      country: trimmedCountry,
+      city: trimmedCity,
+      location: trimmedLocation,
+      ...(trimmedRegion ? { region: trimmedRegion } : {}),
+      ...(form.serviceRadius ? { serviceRadius: form.serviceRadius } : {}),
+      ...(form.onSite ? { onSite: form.onSite } : {}),
+      ...(trimmedTravelFee ? { travelFee: trimmedTravelFee } : {}),
+      schedulePreference: form.schedulePreference,
+      availability: trimmedAvailability,
+      ...(form.bio.trim() ? { productOverview: form.bio.trim() } : {}),
+      ...(keyHighlights.length ? { keyHighlights } : {}),
+      technicalSpecs,
+      specsTitle: 'Profile Details',
+      badges: ['Verified Worker', 'Background Checked', 'Flexible Contracts'],
+    };
+
+    if (editingId) {
+      const result = await onUpdateSellerItem(editingId, {
+        title: `${trimmedName} — ${form.category}`,
+        description: form.bio.trim(),
+        price: trimmedRate,
+        quantity: 1,
+        marketKey: 'generalLabour',
+        detailsJson,
+        imageUrls: existingImageUrls,
+        previousImageUrls: originalImageUrls,
+      }, imageFiles);
+
+      if (result?.error) {
+        setMessage(result.error);
+        setMessageType('error');
+        setIsSubmitting(false);
+        return;
+      }
+
+      setMessage('Listing updated successfully.');
+      setMessageType('success');
+      resetForm();
+      setIsSubmitting(false);
+      return;
+    }
+
+    const uploadedImageUrls = [];
+    for (const imageFile of imageFiles) {
+      const fileExtension = imageFile.name.split('.').pop() || 'jpg';
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExtension}`;
+      const filePath = `${sanitizeStorageSegment(userEmail)}/generalLabour/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(SELLER_IMAGES_BUCKET)
+        .upload(filePath, imageFile, { cacheControl: '3600', upsert: false });
+
+      if (uploadError) {
+        setMessage(`Image upload failed: ${uploadError.message}. Make sure the ${SELLER_IMAGES_BUCKET} bucket exists and allows uploads.`);
+        setMessageType('error');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const { data: publicUrlData } = supabase.storage.from(SELLER_IMAGES_BUCKET).getPublicUrl(filePath);
+      uploadedImageUrls.push(publicUrlData.publicUrl);
+    }
+
+    const { data, error } = await supabase
+      .from(SELLER_ITEMS_TABLE)
+      .insert({
+        seller_email: userEmail,
+        seller_name: trimmedName || getSellerDisplayName({ sellerName: userName, sellerEmail: userEmail }),
+        title: `${trimmedName} — ${form.category}`,
+        description: form.bio.trim(),
+        quantity: 1,
+        price: trimmedRate,
+        market_key: 'generalLabour',
+        details_json: detailsJson,
+        image_url: uploadedImageUrls[0],
+        image_urls: uploadedImageUrls,
+      })
+      .select('*')
+      .single();
+
+    if (error) {
+      setMessage(getMarketplaceItemSaveErrorMessage(error.message));
+      setMessageType('error');
+      setIsSubmitting(false);
+      return;
+    }
+
+    onSellerItemCreated(mapSellerItemRecord(data));
+    setMessage('Profile published successfully to the General Labour Market.');
+    setMessageType('success');
+    resetForm();
+    setIsSubmitting(false);
+  };
+
+  return (
+    <PageFrame title="List Your Services" subtitle="Create a worker profile so employers can find, filter, and hire you on the General Labour Market.">
+      <div className="mb-5">
+        <Link to="/seller/dashboard" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--svs-primary)] hover:underline">
+          <ChevronLeft className="h-4 w-4" /> Back to My Store
+        </Link>
+      </div>
+      {!isAuthenticated ? (
+        <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 text-sm text-[var(--svs-text)]">
+          <p>Sign in first to list your services.</p>
+          <Link to="/signin" className={`${cudyBluePrimaryButtonClassName} mt-4 inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
+            Sign In
+          </Link>
+        </div>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <form onSubmit={handleSubmit} className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
+            {/* Basics */}
+            <h2 className="text-base font-bold text-[var(--svs-text)]">Profile basics</h2>
+            <p className="mt-0.5 text-xs text-[var(--svs-muted)]">These drive the sidebar filters on the category pages, so employers can find you.</p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label htmlFor="gl-name" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Your full name <span className="text-rose-500">*</span></label>
+                <input id="gl-name" name="name" value={form.name} onChange={handleChange} required placeholder="e.g. Sarah Johnson" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+              <div>
+                <label htmlFor="gl-category" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Role <span className="text-rose-500">*</span></label>
+                <select id="gl-category" name="category" value={form.category} onChange={handleChange} required className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none">
+                  <option value="">Select role</option>
+                  {GENERAL_LABOUR_SELL_CATEGORY_GROUPS.map((group) => (
+                    <optgroup key={group.group} label={group.group}>
+                      {group.options.map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="gl-gender" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Gender <span className="text-rose-500">*</span></label>
+                <select id="gl-gender" name="gender" value={form.gender} onChange={handleChange} required className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none">
+                  <option value="">Select gender</option>
+                  {GENERAL_LABOUR_GENDER_OPTIONS.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Shown in the "Professional Preference" filter.</p>
+              </div>
+              <div>
+                <label htmlFor="gl-experienceLevel" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Experience level <span className="text-rose-500">*</span></label>
+                <select id="gl-experienceLevel" name="experienceLevel" value={form.experienceLevel} onChange={handleChange} required className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none">
+                  <option value="">Select experience level</option>
+                  {GENERAL_LABOUR_EXPERIENCE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="gl-skillLevel" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Skill level <span className="text-rose-500">*</span></label>
+                <select id="gl-skillLevel" name="skillLevel" value={form.skillLevel} onChange={handleChange} required className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none">
+                  <option value="">Select skill level</option>
+                  {GENERAL_LABOUR_SKILL_LEVEL_OPTIONS.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Shown in the "Skill Level" filter.</p>
+              </div>
+              <div>
+                <label htmlFor="gl-rateType" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Rate type <span className="text-rose-500">*</span></label>
+                <select id="gl-rateType" name="rateType" value={form.rateType} onChange={handleChange} required className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none">
+                  <option value="">Select rate type</option>
+                  {GENERAL_LABOUR_RATE_TYPE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Controls the unit shown next to your rate (per day / per month).</p>
+              </div>
+              <div>
+                <label htmlFor="gl-serviceType" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Service type <span className="text-rose-500">*</span></label>
+                <select id="gl-serviceType" name="serviceType" value={form.serviceType} onChange={handleChange} required className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none">
+                  <option value="">Select service type</option>
+                  {GENERAL_LABOUR_SERVICE_TYPE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[11px] text-[var(--svs-muted)]">The contract length you're open to — shown in the "Service Type" filter.</p>
+              </div>
+              <div>
+                <label htmlFor="gl-country" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Country <span className="text-rose-500">*</span></label>
+                <input id="gl-country" name="country" value={form.country} onChange={handleChange} required placeholder="e.g. South Africa" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+              <div>
+                <label htmlFor="gl-city" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">City <span className="text-rose-500">*</span></label>
+                <input id="gl-city" name="city" value={form.city} onChange={handleChange} required placeholder="e.g. Soweto" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+              <div>
+                <label htmlFor="gl-region" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Region</label>
+                <input id="gl-region" name="region" value={form.region} onChange={handleChange} placeholder="e.g. Lagos Island & Mainland" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+              <div>
+                <label htmlFor="gl-serviceRadius" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Service radius</label>
+                <select id="gl-serviceRadius" name="serviceRadius" value={form.serviceRadius} onChange={handleChange} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none">
+                  <option value="">Select service radius</option>
+                  {GENERAL_LABOUR_RADIUS_OPTIONS.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="gl-onSite" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">On-site / tools</label>
+                <select id="gl-onSite" name="onSite" value={form.onSite} onChange={handleChange} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none">
+                  <option value="">Select on-site option</option>
+                  {GENERAL_LABOUR_ONSITE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="gl-travelFee" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Travel fee</label>
+                <input id="gl-travelFee" name="travelFee" value={form.travelFee} onChange={handleChange} placeholder="e.g. Free within 15 km" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+              <div>
+                <label htmlFor="gl-schedulePreference" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Schedule preference</label>
+                <select id="gl-schedulePreference" name="schedulePreference" value={form.schedulePreference} onChange={handleChange} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none">
+                  <option value="">Select schedule preference</option>
+                  {GENERAL_LABOUR_SCHEDULE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="gl-availability" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Availability</label>
+                <input id="gl-availability" name="availability" value={form.availability} onChange={handleChange} placeholder="e.g. Available Immediately, Available within 1 week" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+            </div>
+
+            {/* Pricing */}
+            <h2 className="mt-6 text-base font-bold text-[var(--svs-text)]">Rate</h2>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="gl-rate" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Rate <span className="text-rose-500">*</span></label>
+                <div className="flex gap-2">
+                  <CurrencyPickerField id="gl-currency" name="currency" value={form.currency} onChange={handleChange} ariaLabel="Listing currency" />
+                  <input id="gl-rate" name="rate" value={form.rate} onChange={handleChange} required placeholder="650" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+                </div>
+                <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Per day for daily rates, per month for monthly rates. Shown on your listing card.</p>
+              </div>
+            </div>
+
+            <h2 className="mt-6 text-base font-bold text-[var(--svs-text)]">Pricing tiers</h2>
+            <p className="mt-0.5 text-xs text-[var(--svs-muted)]">Optional — set your own Daily/Weekly/Monthly rates for the Pricing section on your profile. Leave blank to use rates calculated from your rate above.</p>
+            <div className="mt-3 grid gap-4 sm:grid-cols-3">
+              <div>
+                <label htmlFor="gl-dailyRate" className="mb-1 block text-xs font-semibold text-[var(--svs-muted)]">Daily rate</label>
+                <input id="gl-dailyRate" name="dailyRate" type="number" min="0" value={form.dailyRate} onChange={handleChange} placeholder="900" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+              <div>
+                <label htmlFor="gl-weeklyRate" className="mb-1 block text-xs font-semibold text-[var(--svs-muted)]">Weekly rate</label>
+                <input id="gl-weeklyRate" name="weeklyRate" type="number" min="0" value={form.weeklyRate} onChange={handleChange} placeholder="5400" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+              <div>
+                <label htmlFor="gl-monthlyRate" className="mb-1 block text-xs font-semibold text-[var(--svs-muted)]">Monthly rate</label>
+                <input id="gl-monthlyRate" name="monthlyRate" type="number" min="0" value={form.monthlyRate} onChange={handleChange} placeholder="21600" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+            </div>
+
+            {/* Bio & highlights */}
+            <h2 className="mt-6 text-base font-bold text-[var(--svs-text)]">About you</h2>
+            <p className="mt-0.5 text-xs text-[var(--svs-muted)]">Shown on your profile's detail page, above the skills list.</p>
+            <div className="mt-3">
+              <textarea name="bio" value={form.bio} onChange={handleChange} rows={4} placeholder="Describe your experience, the work you do, and what makes you a reliable hire." className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+            </div>
+            <div className="mt-4">
+              <label htmlFor="gl-keyHighlights" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Skills &amp; highlights</label>
+              <textarea id="gl-keyHighlights" name="keyHighlights" value={form.keyHighlights} onChange={handleChange} rows={4} placeholder={'One per line, e.g.\nWiring and rewiring\nFault finding and repairs\nCompliance certificate issuing'} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Add one per line. Shown as a checklist on your profile's detail page.</p>
+            </div>
+
+            {/* Profile details */}
+            <h2 className="mt-6 text-base font-bold text-[var(--svs-text)]">Profile details</h2>
+            <p className="mt-0.5 text-xs text-[var(--svs-muted)]">Optional — fill in whichever apply. Blank rows are left out of the profile table.</p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div>
+                <label htmlFor="gl-languages" className="mb-1 block text-xs font-semibold text-[var(--svs-muted)]">Languages Spoken</label>
+                <input id="gl-languages" name="languages" value={form.languages} onChange={handleChange} placeholder="e.g. English, Zulu" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+              <div>
+                <label htmlFor="gl-tools" className="mb-1 block text-xs font-semibold text-[var(--svs-muted)]">Tools / Equipment</label>
+                <input id="gl-tools" name="tools" value={form.tools} onChange={handleChange} placeholder="e.g. Own basic toolkit provided" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="gl-certifications" className="mb-1 block text-xs font-semibold text-[var(--svs-muted)]">Certifications</label>
+                <input id="gl-certifications" name="certifications" value={form.certifications} onChange={handleChange} placeholder="e.g. Trade-tested, police clearance certificate available" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+            </div>
+
+            {/* Photos */}
+            <div className="mt-6">
+              <label htmlFor="gl-image" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Photo <span className="text-rose-500">*</span></label>
+              <input id="gl-image" type="file" accept="image/*" multiple onChange={handleImagePick} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              {existingImageUrls.length ? (
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {existingImageUrls.map((url, index) => (
+                    <div key={`${url}-${index}`} className="relative overflow-hidden rounded-md border border-[var(--svs-border)] bg-white">
+                      <img src={url} alt={`Current ${index + 1}`} className="h-24 w-full object-cover" loading="lazy" />
+                      <button type="button" onClick={() => handleRemoveExistingImage(url)} className="absolute right-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700">x</button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              {imageFiles.length ? (
+                <div className="mt-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-2 text-xs text-[var(--svs-muted)]">
+                  <p className="font-semibold text-[var(--svs-text)]">{imageFiles.length} new image{imageFiles.length === 1 ? '' : 's'} selected</p>
+                  <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {imagePreviewUrls.map((previewUrl, index) => (
+                      <div key={`${previewUrl}-${index}`} className="relative overflow-hidden rounded-md border border-[var(--svs-border)] bg-white">
+                        <img src={previewUrl} alt={`Selected preview ${index + 1}`} className="h-24 w-full object-cover" loading="lazy" />
+                        <button type="button" onClick={() => handleRemoveSelectedImage(index)} className="absolute right-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700">x</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            {message ? (
+              <div className={`mt-4 rounded-lg px-4 py-3 text-sm ${messageType === 'error' ? 'border border-rose-200 bg-rose-50 text-rose-700' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+                {message}
+              </div>
+            ) : null}
+
+            <div className="mt-5 flex gap-3">
+              <button type="submit" disabled={isSubmitting} className={`${cudyBluePrimaryButtonClassName} rounded-lg bg-[var(--svs-primary)] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70`}>
+                {isSubmitting ? (editingId ? 'Saving…' : 'Publishing…') : (editingId ? 'Save Changes' : 'Publish Profile')}
+              </button>
+              {editingId ? (
+                <button type="button" onClick={resetForm} className="rounded-lg border border-[var(--svs-border)] px-5 py-3 text-sm font-semibold text-[var(--svs-text)]">
+                  Cancel edit
+                </button>
+              ) : null}
+            </div>
+          </form>
+
+          {/* MY WORKER PROFILES */}
+          <aside className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-[0_4px_8px_rgba(0,0,0,0.04)]">
+            <h2 className="mb-3 text-sm font-bold text-[var(--svs-primary-strong)]">My Worker Profiles ({myListings.length})</h2>
+            {myListings.length === 0 ? (
+              <p className="text-xs text-[var(--svs-muted)]">You haven't published a profile yet. Submit the form to start getting hired.</p>
+            ) : (
+              <ul className="space-y-3">
+                {myListings.map((listing) => (
+                  <li key={listing.dbId} className="flex gap-3 rounded-lg border border-[var(--svs-border)] p-2">
+                    <img src={listing.image} alt={listing.name || listing.title} className="h-16 w-20 flex-shrink-0 rounded-md object-cover" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-semibold text-[var(--svs-text)]">{listing.name || listing.title}</p>
+                      <p className="truncate text-[11px] text-[var(--svs-muted)]">{listing.category} • {listing.location}</p>
+                      <p className="mt-0.5 text-[11px] font-semibold text-[var(--svs-primary-strong)]">{formatAmountInCurrency(Number(listing.rate) || 0, listing.currency)}/{(listing.rateType || 'Daily').toLowerCase()}</p>
+                    </div>
+                    <button type="button" onClick={() => handleEdit(listing)} className="self-start rounded-md p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600" aria-label="Edit listing" title="Edit">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button type="button" onClick={() => handleDelete(listing)} className="self-start rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500" aria-label="Delete listing" title="Delete">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </aside>
+        </div>
+      )}
+    </PageFrame>
+  );
+};
+
+// Dedicated full-page worker profile — Hero, About the Worker, Key
+// Highlights, Profile Details, Skills & Services, Available Days, Pricing,
+// Ratings & Reviews, and You May Also Like. Looks up the worker from the
+// catalog or, just as easily, a seller-submitted profile (both share the
+// same id space and field shape via buildWorkerDetailPayload).
+const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [] }) => {
+  const { workerId } = useParams();
+  const navigate = useNavigate();
+  const [selectedImage, setSelectedImage] = useState(0);
+  const [selectedTier, setSelectedTier] = useState('Daily');
+
+  const allWorkers = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'generalLabour'), ...generalLabourItems], [sellerItems]);
+  const worker = allWorkers.find((candidate) => candidate.id === workerId) || null;
+
+  if (!worker) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4 text-center">
+        <h2 className="text-2xl font-bold text-[var(--svs-text)]">Worker not found</h2>
+        <p className="mt-2 text-[var(--svs-muted)]">This profile doesn't exist or has been removed.</p>
+        <button type="button" onClick={() => navigate('/general-labour-market')} className="rounded-full bg-[var(--svs-primary)] px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]">
+          Back to General Labour Market
+        </button>
+      </div>
+    );
+  }
+
+  const detail = buildWorkerDetailPayload(worker);
+  const images = worker.images?.length ? worker.images : (worker.image ? [worker.image] : []);
+  const currentImage = images[selectedImage] || images[0] || '';
+  const displayTitle = worker.name ? `${worker.name} — ${worker.title}` : worker.title;
+  const availableDays = getWorkerAvailableDays(worker.schedulePreference);
+  const pricingTiers = getWorkerPricingTiers(worker);
+  const sampleReviews = getWorkerSampleReviews(worker);
+  const averageRating = sampleReviews.length ? (sampleReviews.reduce((sum, r) => sum + r.rating, 0) / sampleReviews.length) : (worker.rating || 4.5);
+  const ratingBreakdown = [5, 4, 3, 2, 1].map((star) => ({
+    star,
+    count: sampleReviews.filter((r) => Math.round(r.rating) === star).length,
+  }));
+
+  const buildCartItem = () => createCartItem({
+    ...worker,
+    title: displayTitle,
+    price: String(pricingTiers[selectedTier]),
+    rateType: selectedTier,
+    route: '/general-labour-market',
+    marketName: 'General Labour Market',
+    details: `${worker.category || 'Worker'} • ${worker.experienceLevel || ''} • ${worker.location || ''}`,
+  });
+  const buildWishlistItem = () => createWishlistItem({
+    ...worker,
+    title: displayTitle,
+    price: String(pricingTiers[selectedTier]),
+    route: '/general-labour-market',
+    marketName: 'General Labour Market',
+    details: `${worker.category || 'Worker'} • ${worker.location || ''}`,
+  });
+  const isWishlisted = wishlistItemIds.includes(getCollectionItemId('/general-labour-market', worker.id));
+
+  const renderStars = (rating, size = 'h-4 w-4') => Array.from({ length: 5 }, (_, i) => (
+    <Star key={i} className={`${size} ${i < Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'text-slate-300'}`} />
+  ));
+
+  const sameRolePool = generalLabourItems.filter((other) => other.id !== worker.id && other.category === worker.category);
+  const matchedShowcaseCategory = generalLabourCategoryShowcase.find((showcase) => {
+    const haystack = `${worker.category || ''} ${worker.title || ''}`.toLowerCase();
+    return showcase.match.some((token) => haystack.includes(token));
+  });
+  const sameMarketSectionPool = matchedShowcaseCategory
+    ? generalLabourItems.filter((other) => {
+      if (other.id === worker.id) return false;
+      const haystack = `${other.category || ''} ${other.title || ''}`.toLowerCase();
+      return matchedShowcaseCategory.match.some((token) => haystack.includes(token));
+    })
+    : [];
+  const similarWorkers = (
+    sameRolePool.length ? sameRolePool
+      : sameMarketSectionPool.length ? sameMarketSectionPool
+        : generalLabourItems.filter((other) => other.id !== worker.id)
+  ).slice(0, 3);
+
+  return (
+    <div className="min-h-screen overflow-x-hidden bg-white">
+      <div className="mx-auto w-full max-w-7xl px-4 pt-5 sm:px-6">
+        <button type="button" onClick={() => navigate(-1)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--svs-primary)] hover:underline">
+          <ChevronLeft className="h-4 w-4" /> Back to listings
+        </button>
+      </div>
+
+      {/* ── Hero: gallery + worker info ── */}
+      <section className="mx-auto w-full max-w-7xl px-4 pt-4 sm:px-6">
+        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-2">
+            {currentImage ? (
+              <img src={currentImage} alt={displayTitle} className="h-[320px] w-full rounded-lg object-cover bg-white sm:h-[380px]" />
+            ) : (
+              <div className="flex h-[320px] items-center justify-center rounded-lg bg-slate-100 text-sm text-[var(--svs-muted)]">No image available</div>
+            )}
+            {images.length > 1 ? (
+              <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+                {images.map((img, idx) => (
+                  <button key={`${img}-${idx}`} type="button" onClick={() => setSelectedImage(idx)} className={`h-16 w-24 shrink-0 overflow-hidden rounded-lg border-2 transition ${idx === selectedImage ? 'border-[var(--svs-primary)]' : 'border-transparent opacity-60 hover:opacity-100'}`}>
+                    <img src={img} alt={`${displayTitle} ${idx + 1}`} className="h-full w-full object-cover" loading="lazy" />
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <div>
+              <p className="text-sm font-semibold text-[var(--svs-primary-strong)]">General Labour Market</p>
+              <h1 className="mt-1 text-2xl font-bold text-[var(--svs-text)]">{worker.name}</h1>
+              <p className="text-sm font-semibold text-[var(--svs-muted)]">{worker.title}{matchedShowcaseCategory?.name && matchedShowcaseCategory.name !== worker.title ? ` / ${matchedShowcaseCategory.name.replace(/s$/, '')}` : ''}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--svs-muted)]">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--svs-surface-soft)] px-3 py-1 font-semibold text-[var(--svs-text)]">
+                <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                {averageRating.toFixed(1)}
+              </span>
+              <span>{worker.reviewCount || sampleReviews.length} review{(worker.reviewCount || sampleReviews.length) === 1 ? '' : 's'}</span>
+              {detail.viewCount ? (
+                <span className="inline-flex items-center gap-1"><Eye className="h-4 w-4" />{detail.viewCount.toLocaleString()} views</span>
+              ) : null}
+            </div>
+            {detail.badges?.length ? (
+              <div className="flex flex-wrap gap-2">
+                {detail.badges.map((badge) => {
+                  const BadgeIcon = MOBILITY_BADGE_ICON[badge] || CheckCircle2;
+                  return (
+                    <span key={badge} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-1 text-xs font-semibold text-[var(--svs-text)]">
+                      <BadgeIcon className="h-3.5 w-3.5 text-[var(--svs-primary)]" />
+                      {badge}
+                    </span>
+                  );
+                })}
+              </div>
+            ) : null}
+            <div className="grid grid-cols-2 gap-2 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3 sm:grid-cols-4">
+              {[
+                { label: 'Category', value: matchedShowcaseCategory?.name || worker.category },
+                { label: 'Experience', value: worker.experienceLevel },
+                { label: 'Skill Level', value: worker.skillLevel },
+                { label: 'Availability', value: worker.availability },
+              ].map(({ label, value }) => (
+                <div key={label}>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--svs-muted)]">{label}</p>
+                  <p className="text-xs font-semibold text-[var(--svs-text)]">{value || '—'}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-2xl font-bold text-[var(--svs-primary-strong)]">
+              {formatAmountInCurrency(pricingTiers[selectedTier], worker.currency)}
+              <span className="ml-1 text-sm font-semibold text-[var(--svs-muted)]">/{selectedTier.toLowerCase()}</span>
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <button type="button" onClick={() => onAddToCart?.(buildCartItem())} className={`${cudyBluePrimaryButtonClassName} rounded-lg bg-[var(--svs-primary)] px-6 py-3 text-sm font-semibold text-white shadow hover:bg-[var(--svs-primary-strong)]`}>
+                Add to Basket
+              </button>
+              <button type="button" onClick={() => onBuyNow?.(buildCartItem())} className="rounded-lg border border-[var(--svs-primary)] px-6 py-3 text-sm font-semibold text-[var(--svs-primary)] hover:bg-[var(--svs-primary-faint)]">
+                Hire Now
+              </button>
+              <button type="button" onClick={() => onToggleWishlist?.(buildWishlistItem())} className={`rounded-lg border px-6 py-3 text-sm font-semibold ${isWishlisted ? 'border-rose-400 text-rose-600 bg-rose-50' : 'border-[var(--svs-primary)] text-[var(--svs-primary)] hover:bg-[var(--svs-primary-faint)]'}`}>
+                {isWishlisted ? 'Wishlisted' : 'Add to Wishlist'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── About the Worker ── */}
+      {detail.productOverview ? (
+        <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6">
+          <h2 className="text-[22px] font-bold text-[var(--svs-text)]">About the Worker</h2>
+          <p className="mt-3 max-w-4xl text-[15px] leading-[1.7] text-slate-600">{detail.productOverview}</p>
+        </section>
+      ) : null}
+
+      {/* ── Key Highlights ── */}
+      {detail.keyHighlights?.length ? (
+        <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6">
+          <h2 className="text-[22px] font-bold text-[var(--svs-text)]">Key Highlights</h2>
+          <ul className="mt-4 space-y-3">
+            {detail.keyHighlights.map((hl, i) => (
+              <li key={i} className="flex items-start gap-3 text-[15px] text-slate-600">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--svs-primary)]" />
+                {hl}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {/* ── Profile Details ── */}
+      {detail.technicalSpecs && Object.keys(detail.technicalSpecs).length ? (
+        <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6">
+          <h2 className="text-[22px] font-bold text-[var(--svs-text)]">{detail.specsTitle || 'Profile Details'}</h2>
+          <div className="mt-4 overflow-hidden rounded-xl border border-[var(--svs-border)]">
+            <table className="w-full text-left text-[15px]">
+              <tbody>
+                {Object.entries(detail.technicalSpecs).map(([key, value], i) => (
+                  <tr key={key} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                    <td className="whitespace-nowrap px-5 py-3 font-semibold text-[var(--svs-text)]">{key}</td>
+                    <td className="px-5 py-3 text-slate-600">{value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
+
+      {/* ── Skills & Services ── */}
+      {Array.isArray(worker.skills) && worker.skills.length ? (
+        <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6">
+          <h2 className="text-[22px] font-bold text-[var(--svs-text)]">Skills &amp; Services</h2>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {worker.skills.map((skill) => (
+              <span key={skill} className="rounded-full border border-[var(--svs-primary)]/30 bg-[var(--svs-primary)]/10 px-4 py-1.5 text-sm font-semibold text-[var(--svs-primary-strong)]">
+                {skill}
+              </span>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {/* ── Available Days ── */}
+      <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6">
+        <h2 className="text-[22px] font-bold text-[var(--svs-text)]">Available Days</h2>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {GENERAL_LABOUR_WEEK_DAYS.map((day) => {
+            const isAvailable = availableDays.includes(day);
+            return (
+              <span key={day} className={`rounded-full px-4 py-1.5 text-sm font-semibold ${isAvailable ? 'bg-[var(--svs-primary)] text-white' : 'bg-slate-100 text-slate-400 line-through'}`}>
+                {day}
+              </span>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ── Pricing ── */}
+      <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6">
+        <h2 className="text-[22px] font-bold text-[var(--svs-text)]">Pricing</h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          {Object.entries(pricingTiers).map(([tier, amount]) => (
+            <div key={tier} className={`rounded-xl border-2 p-5 text-center transition ${selectedTier === tier ? 'border-[var(--svs-primary)] bg-[var(--svs-primary)]/5' : 'border-[var(--svs-border)]'}`}>
+              <p className="text-sm font-semibold text-[var(--svs-muted)]">{tier}</p>
+              <p className="mt-1 text-xl font-bold text-[var(--svs-text)]">{formatAmountInCurrency(amount, worker.currency)}</p>
+              <p className="text-xs text-[var(--svs-muted)]">per {tier === 'Daily' ? 'day' : tier === 'Weekly' ? 'week' : 'month'}</p>
+              <button
+                type="button"
+                onClick={() => setSelectedTier(tier)}
+                className={`mt-3 w-full rounded-lg py-2 text-sm font-semibold transition ${selectedTier === tier ? 'bg-[var(--svs-primary)] text-white' : 'border border-[var(--svs-border)] text-[var(--svs-text)] hover:border-[var(--svs-primary)]'}`}
+              >
+                {selectedTier === tier ? 'Selected' : 'Select'}
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Ratings & Reviews ── */}
+      <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6">
+        <h2 className="text-[22px] font-bold text-[var(--svs-text)]">Ratings &amp; Reviews</h2>
+        <div className="mt-4 flex flex-col gap-6 rounded-xl border border-[var(--svs-border)] bg-white p-5 shadow-[0_2px_8px_rgba(15,23,42,0.06)] sm:flex-row sm:items-start sm:p-6">
+          <div className="flex flex-col items-center sm:border-r sm:border-[var(--svs-border)] sm:pr-8">
+            <span className="text-5xl font-bold text-[var(--svs-text)]">{averageRating.toFixed(1)}</span>
+            <div className="mt-1.5 flex">{renderStars(averageRating, 'h-5 w-5')}</div>
+            <p className="mt-1 text-sm text-[var(--svs-muted)]">{(worker.reviewCount || sampleReviews.length).toLocaleString()} reviews</p>
+          </div>
+          <div className="flex-1 space-y-2">
+            {ratingBreakdown.map(({ star, count }) => {
+              const pct = sampleReviews.length ? Math.round((count / sampleReviews.length) * 100) : 0;
+              return (
+                <div key={star} className="flex items-center gap-3 text-sm">
+                  <span className="w-8 text-right font-medium">{star}★</span>
+                  <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                    <div className="h-full rounded-full bg-amber-400" style={{ width: `${pct}%` }} />
+                  </div>
+                  <span className="w-10 text-right text-[var(--svs-muted)]">{pct}%</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div className="mt-6 space-y-4">
+          {sampleReviews.map((review) => (
+            <div key={review.id} className="rounded-xl border border-[var(--svs-border)] bg-white p-5 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-semibold">{review.name}</span>
+                <span className="text-xs text-[var(--svs-muted)]">{review.date}</span>
+              </div>
+              <div className="mt-1 flex">{renderStars(review.rating, 'h-4 w-4')}</div>
+              <p className="mt-2 text-[15px] leading-relaxed text-slate-600">{review.comment}</p>
+              <p className="mt-2 text-xs text-[var(--svs-muted)]">👍 {review.helpful} found this helpful</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── You May Also Like ── */}
+      {similarWorkers.length ? (
+        <section className="mx-auto max-w-7xl px-4 pt-10 pb-16 sm:px-6">
+          <h2 className="text-[22px] font-bold text-[var(--svs-text)]">You May Also Like</h2>
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
+            {similarWorkers.map((sim) => (
+              <article key={sim.id} className="flex flex-col overflow-hidden rounded-xl bg-white shadow-[0_2px_12px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_8px_28px_rgba(15,23,42,0.14)]">
+                <img src={sim.image} alt={sim.name} className="h-[180px] w-full object-cover" loading="lazy" />
+                <div className="flex flex-1 flex-col p-4">
+                  <h3 className="text-[15px] font-bold text-[var(--svs-text)]">{sim.name}</h3>
+                  <p className="text-xs text-[var(--svs-muted)]">{sim.title}</p>
+                  <p className="mt-1 text-base font-bold text-[var(--svs-primary-strong)]">{formatAmountInCurrency(Number(sim.rate) || 0, sim.currency)}<span className="text-xs font-semibold text-[var(--svs-muted)]">/{(sim.rateType || 'Daily').toLowerCase()}</span></p>
+                  {sim.location ? (
+                    <p className="mt-1 flex items-center gap-1.5 text-xs text-[var(--svs-muted)]"><MapPin className="h-3.5 w-3.5 shrink-0 text-[var(--svs-primary)]" />{sim.location}</p>
+                  ) : null}
+                  <div className="mt-auto pt-4">
+                    <button type="button" onClick={() => navigate(`/general-labour-market/worker/${sim.id}`)} className={`${cudyBluePrimaryButtonClassName} w-full rounded-lg bg-[var(--svs-primary)] py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}>
+                      View Details
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+    </div>
+  );
+};
+
 const MARKET_BADGE_COLORS = {
   ecommerce: 'bg-blue-100 text-blue-700',
   groceries: 'bg-green-100 text-green-700',
@@ -20266,6 +22772,13 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
         >
           <Landmark className="h-4 w-4" />
           <span>Resource Listings</span>
+        </Link>
+        <Link
+          to="/general-labour-market/sell"
+          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)]"
+        >
+          <User className="h-4 w-4" />
+          <span>Worker Profiles</span>
         </Link>
       </nav>
 
@@ -26507,6 +29020,7 @@ const MarketsPage = ({ sellerItems = [] }) => {
           const isLivestock = market.href === '/livestock-hub';
           const isHomeCare = market.href === '/home-care';
           const isNaturalResources = market.href === '/natural-resources-minerals';
+          const isGeneralLabour = market.href === '/general-labour-market';
           const isWellness = market.href === '/wellness';
           const isStationery = market.href === '/stationery-office';
           const isProperty = market.href === '/property-hub';
@@ -26522,7 +29036,7 @@ const MarketsPage = ({ sellerItems = [] }) => {
             ? 'absolute inset-0 bg-gradient-to-t from-[#041a26]/70 via-[#0f6f84]/35 to-[#14b8a6]/15'
             : 'absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent';
           const marketTitleClassName = 'text-base font-bold leading-tight text-white drop-shadow line-clamp-3 sm:text-lg sm:line-clamp-none';
-          const hasHeroImage = isFastFood || isFashion || isBookings || isBeverages || isGroceries || isMobility || isEcommerce || isElectronics || isBetting || isConstruction || isLivestock || isHomeCare || isNaturalResources || isWellness || isStationery || isProperty || isHerbs || isSecondhand || isBeautyFitnessSports || isToysKids || isJewelleryAccessories || isDirectLinks || isInformalMarket;
+          const hasHeroImage = isFastFood || isFashion || isBookings || isBeverages || isGroceries || isMobility || isEcommerce || isElectronics || isBetting || isConstruction || isLivestock || isHomeCare || isNaturalResources || isGeneralLabour || isWellness || isStationery || isProperty || isHerbs || isSecondhand || isBeautyFitnessSports || isToysKids || isJewelleryAccessories || isDirectLinks || isInformalMarket;
           const heroImageUrl = isFastFood
             ? 'https://images.pexels.com/photos/2983101/pexels-photo-2983101.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isFashion
@@ -26549,6 +29063,8 @@ const MarketsPage = ({ sellerItems = [] }) => {
             ? 'https://images.pexels.com/photos/3846022/pexels-photo-3846022.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isNaturalResources
             ? 'https://images.pexels.com/photos/2101137/pexels-photo-2101137.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            : isGeneralLabour
+            ? 'https://images.pexels.com/photos/36574302/pexels-photo-36574302.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isWellness
             ? 'https://images.pexels.com/photos/159211/headache-pain-pills-medication-159211.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isStationery
@@ -36623,6 +39139,7 @@ const MARKET_THEMES = {
   mobilityVehicles: 'https://images.pexels.com/photos/170811/pexels-photo-170811.jpeg?auto=compress&cs=tinysrgb&w=1600',
   fashionStyle: 'https://images.pexels.com/photos/996329/pexels-photo-996329.jpeg?auto=compress&cs=tinysrgb&w=1600',
   naturalResources: 'https://images.pexels.com/photos/2581922/pexels-photo-2581922.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  generalLabour: 'https://images.pexels.com/photos/36574302/pexels-photo-36574302.jpeg?auto=compress&cs=tinysrgb&w=1600',
   livestock: 'https://images.pexels.com/photos/422218/pexels-photo-422218.jpeg?auto=compress&cs=tinysrgb&w=1600',
   safety: 'https://images.pexels.com/photos/3661193/pexels-photo-3661193.jpeg?auto=compress&cs=tinysrgb&w=1600',
 };
@@ -37699,7 +40216,7 @@ const ItemDetailsModal = ({
   // Rich, full-page-style detail layout (Product Overview, Key Highlights,
   // spec table, ratings breakdown, similar-products grid). Shared by the
   // electronics and construction/building markets.
-  const isRichDetail = item.detailVariant === 'electronics' || item.detailVariant === 'construction' || item.detailVariant === 'vehicle' || item.detailVariant === 'naturalResource';
+  const isRichDetail = item.detailVariant === 'electronics' || item.detailVariant === 'construction' || item.detailVariant === 'vehicle' || item.detailVariant === 'naturalResource' || item.detailVariant === 'generalLabour';
 
   return (
     <div
@@ -37967,13 +40484,13 @@ const ItemDetailsModal = ({
           <div className="space-y-6 border-t border-[var(--svs-border)] px-6 py-6">
             {item.productOverview ? (
               <div>
-                <h3 className="text-lg font-bold text-[var(--svs-primary-strong)]">Product Overview</h3>
+                <h3 className="text-lg font-bold text-[var(--svs-primary-strong)]">{item.detailVariant === 'generalLabour' ? 'Worker Overview' : 'Product Overview'}</h3>
                 <p className="mt-2 text-[15px] leading-relaxed text-slate-600">{item.productOverview}</p>
               </div>
             ) : null}
             {item.keyHighlights?.length ? (
               <div>
-                <h3 className="text-lg font-bold text-[var(--svs-primary-strong)]">Key Highlights</h3>
+                <h3 className="text-lg font-bold text-[var(--svs-primary-strong)]">{item.detailVariant === 'generalLabour' ? 'Key Skills' : 'Key Highlights'}</h3>
                 <ul className="mt-2 space-y-2">
                   {item.keyHighlights.map((highlight, idx) => (
                     <li key={idx} className="flex items-start gap-2 text-[15px] text-[var(--svs-primary-strong)]">
@@ -39261,6 +41778,9 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/mobility-vehicles/:categorySlug" element={<MobilityVehiclesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/natural-resources-minerals" element={<NaturalResourcesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/natural-resources-minerals/:categorySlug" element={<NaturalResourcesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
+    <Route path="/general-labour-market" element={<GeneralLabourPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
+    <Route path="/general-labour-market/:categorySlug" element={<GeneralLabourPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
+    <Route path="/general-labour-market/worker/:workerId" element={<GeneralLabourWorkerDetailPage sellerItems={sellerItems} onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} />} />
     <Route path="/seller/upload" element={<SellerUploadPage onSellerItemCreated={onSellerItemCreated} />} />
     <Route path="/seller/dashboard" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onUpdateOrderStatus={onUpdateOrderStatus} initialView="listings" />} />
     <Route path="/seller/orders" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onUpdateOrderStatus={onUpdateOrderStatus} initialView="orders" />} />
@@ -39271,6 +41791,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/home-care/sell" element={<HomeCareSellPage onSellerItemCreated={onSellerItemCreated} />} />
     <Route path="/mobility-vehicles/sell" element={<MobilityVehicleSellPage sellerItems={sellerItems} onSellerItemCreated={onSellerItemCreated} onUpdateSellerItem={onUpdateSellerItem} onDeleteSellerItem={onDeleteSellerItem} />} />
     <Route path="/natural-resources-minerals/sell" element={<NaturalResourcesSellPage sellerItems={sellerItems} onSellerItemCreated={onSellerItemCreated} onUpdateSellerItem={onUpdateSellerItem} onDeleteSellerItem={onDeleteSellerItem} />} />
+    <Route path="/general-labour-market/sell" element={<GeneralLabourSellPage sellerItems={sellerItems} onSellerItemCreated={onSellerItemCreated} onUpdateSellerItem={onUpdateSellerItem} onDeleteSellerItem={onDeleteSellerItem} />} />
     <Route path="/property-hub/category/:categoryKey" element={<PropertyCategoryPage />} />
     <Route path="/property-hub/listing/:listingId" element={<PropertyDetailPage />} />
     <Route path="/property-hub/visit/:listingId" element={<PropertyVisitStatusPage />} />
