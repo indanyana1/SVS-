@@ -84,16 +84,22 @@ const LiveCameraCapture = ({
 
   useEffect(() => () => stopStream(), []);
 
+  // The <video> element only mounts once cameraState becomes 'live', so
+  // videoRef.current is still null at the point getUserMedia resolves —
+  // attaching the stream has to wait for the next render (this effect),
+  // not happen inline inside startCamera, or the feed never appears.
+  useEffect(() => {
+    if (cameraState !== 'live' || !videoRef.current || !streamRef.current) return;
+    videoRef.current.srcObject = streamRef.current;
+    videoRef.current.play().catch(() => {});
+  }, [cameraState]);
+
   const startCamera = async () => {
     setCameraState('starting');
     setCameraError('');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
       setCameraState('live');
     } catch (error) {
       setCameraState('error');
