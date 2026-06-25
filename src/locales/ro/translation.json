@@ -63,14 +63,13 @@
     "wellness": "Farmacie și produse de sănătate",
     "homeCare": "Book @ Home-Care Services",
     "hardwareSoftware": "Magazin de electronice și gadgeturi",
-    "bettingHub": "Centru de pariuri sportive",
-    "bettingVoting": "Clasamente de predicții sportive",
     "safety": "Ghid de conformitate și siguranță",
     "propertyHub": "Piața imobiliară",
-    "internationalLotteryGames": "Jocuri de loterie",
     "livestockHub": "Piața de animale",
     "stationery": "Piata de Papetarie si Carti",
-    "constructionTools": "Instrumente de constructii si constructii"
+    "constructionTools": "Instrumente de constructii si constructii",
+    "informalMarket": "Piață Informală",
+    "bettingLotteryGames": "Jocuri de Pariuri și Loterie"
   },
   "footer": {
     "about": "About Us",
@@ -89,7 +88,7 @@
     "securePayments": "Secure Payments and Verified Transactions"
   },
   "ecommercePage": {
-    "subtitle": "Browse categories, weekly deals, and personalized recommendations with secure checkout."
+    "subtitle": "Browse categories, today's best deals, and trusted lifestyle and tech essentials with secure checkout."
   },
   "ticketsPage": {
     "subtitle": "Book movies, concerts, sports, and travel instantly with date and location filters.",
@@ -141,12 +140,12 @@
     "wellness": "Browse pharmacy and health products, emergency delivery, and prescription-friendly options.",
     "homeCare": "Search providers by location and service type, then book or chat instantly.",
     "hardwareSoftware": "Tech gadgets, software bundles, and secure electronics purchasing.",
-    "bettingHub": "Aggregated voting and betting preview with popular matches and hot travel deal highlights.",
-    "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
     "safety": "Compliance standards, age restrictions, and secure transaction guarantees.",
     "stationery": "Cumpărați pixuri, cărți, cărți de facturi, caiete și rechizite de birou pentru școală sau afaceri.",
-    "internationalLotteryGames": "Comparați grupurile de jackpot, zilele de extragere și jocurile de loterie disponibile într-un singur loc.",
-    "constructionTools": "Răsfoiți materiale de construcție, unelte de mână și scule electrice pentru proiecte de orice dimensiune."
+    "constructionTools": "Răsfoiți materiale de construcție, unelte de mână și scule electrice pentru proiecte de orice dimensiune.",
+    "informalMarket": "Răsfoiește comercianți ambulanți, magazine spaza și vânzători informali cu anunțuri reale, categorii și locații ale vânzătorilor din apropierea ta.",
+    "bettingLotteryGames": "Alege-ți jocul, optează pentru numere rapide sau manuale și cumpără în siguranță bilete de loterie pentru cele mai importante extrageri internaționale.",
+    "secondhand": "Cumpara si vinde telefoane, laptopuri, moda, mobila second-hand de calitate si multe altele — toate la preturi imbatabile."
   },
   "searchResults": {
     "title": "Search Results",

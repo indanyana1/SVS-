@@ -377,6 +377,8 @@ const MARKET_FIELD_SPEC = {
       { name: 'brand', label: 'Brand', type: 'text', required: true, placeholder: 'e.g. Nivea, Solgar' },
       { name: 'volume', label: 'Pack size / Volume', type: 'text', placeholder: 'e.g. 60 capsules, 250ml' },
       { name: 'suitableFor', label: 'Suitable for', type: 'select', options: ['Adults', 'Kids', 'Infants', 'Seniors', 'All Ages'] },
+      { name: 'prescriptionRequired', label: 'Requires a prescription?', type: 'select', required: true, options: ['No', 'Yes'], helper: 'Select "Yes" only if this product is legally restricted to prescription-holders.' },
+      { name: 'expiryDate', label: 'Expiry date', type: 'date', helper: 'Leave blank for durable goods (e.g. equipment) that do not expire.' },
     ],
   },
   // Aligned with StationeryPage filter facets: category (Product Category),
@@ -497,7 +499,9 @@ const MARKET_FIELD_SPEC = {
     ],
   },
   // Aligned with TraditionalMedicinesPage. Static items use category:
-  // Herbs, Traditional Supplements, Traditional Remedies, Medicinal Herbs, Botanical Remedies.
+  // Herbs, Traditional Supplements, Traditional Remedies, Medicinal Herbs, Botanical Remedies,
+  // Teas, Tinctures, Capsules, Oils, Powders. Botanical fields (scientificName, partUsed,
+  // preparationMethod, traditionalUses) populate the detail page's taxonomy table.
   traditionalMedicines: {
     title: 'Traditional Medicines and Herbs Listing Details',
     helper: 'Pick the herb/remedy category and the form so buyers can find it.',
@@ -506,6 +510,10 @@ const MARKET_FIELD_SPEC = {
       { name: 'formType', label: 'Form', type: 'select', options: ['Powder', 'Oil', 'Tea', 'Capsule', 'Liquid', 'Raw / Dried', 'Cream', 'Bark', 'Root', 'Other'] },
       { name: 'volume', label: 'Pack size / Volume', type: 'text', placeholder: 'e.g. 100g, 250ml' },
       { name: 'origin', label: 'Origin', type: 'text', placeholder: 'e.g. Eastern Cape' },
+      { name: 'scientificName', label: 'Scientific / botanical name', type: 'text', placeholder: 'e.g. Artemisia afra' },
+      { name: 'partUsed', label: 'Part used', type: 'select', options: ['Root', 'Leaf', 'Bark', 'Seed', 'Flower', 'Stem', 'Whole Plant', 'Other'] },
+      { name: 'preparationMethod', label: 'Preparation method', type: 'textarea', placeholder: 'e.g. Steep 1-2 tsp in hot water for 5-7 minutes.' },
+      { name: 'traditionalUses', label: 'Traditional uses', type: 'textarea', placeholder: 'e.g. Used traditionally to ease colds and coughs.' },
     ],
   },
   // Aligned with LivestockHubPage filter (item.categoryId derived from
@@ -784,7 +792,7 @@ const marketLinks = [
   { labelKey: 'markets.secondhand', href: '/secondhand-central' },
   { labelKey: 'markets.stationery', href: '/stationery-office' },
   { labelKey: 'markets.directLinks', href: '/retailer-direct-links' },
-  { labelKey: 'markets.informalMarket', label: 'Informal Market', href: '/informal-market' },
+  { labelKey: 'markets.informalMarket', href: '/informal-market' },
 ];
 
 // Short marketing taglines shown beneath the market name on the Markets page cards.
@@ -837,7 +845,7 @@ const sellerMarketOptions = [
   { key: 'toysKids', labelKey: 'markets.safety', route: '/safety' },
   { key: 'jewelleryAccessories', labelKey: 'markets.votingProviders', route: '/voting-providers' },
   { key: 'livestock', labelKey: 'markets.livestockHub', route: '/livestock-hub' },
-  { key: 'informalMarket', labelKey: 'markets.informalMarket', label: 'Informal Market', route: '/informal-market' },
+  { key: 'informalMarket', labelKey: 'markets.informalMarket', route: '/informal-market' },
 ];
 
 const sellerMarketConfig = sellerMarketOptions.reduce((accumulator, option) => {
@@ -910,6 +918,10 @@ const productCards = [
     id: 'p1',
     title: 'Smart Wireless Earbuds',
     subtitle: 'Audio and Tech',
+    category: 'Electronics',
+    brand: 'SoundCore',
+    color: 'Black',
+    condition: 'Brand New',
     price: '129.99',
     image:
       'https://images.pexels.com/photos/3394662/pexels-photo-3394662.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -918,6 +930,10 @@ const productCards = [
     id: 'p2',
     title: 'Classic Gold Watch',
     subtitle: 'Lifestyle',
+    category: 'Apparel',
+    brand: 'Fossil',
+    color: 'Gold',
+    condition: 'Brand New',
     price: '249.00',
     image:
       'https://images.pexels.com/photos/190819/pexels-photo-190819.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -926,6 +942,10 @@ const productCards = [
     id: 'p3',
     title: 'Urban Travel Backpack',
     subtitle: 'Fashion',
+    category: 'Apparel',
+    brand: 'Samsonite',
+    color: 'Grey',
+    condition: 'Brand New',
     price: '79.00',
     image:
       'https://images.pexels.com/photos/1546003/pexels-photo-1546003.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -933,10 +953,182 @@ const productCards = [
   {
     id: 'p4',
     title: 'Premium Office Chair',
-    subtitle: 'Book @ Home-Care Services',
+    subtitle: 'Home and Office',
+    category: 'Home & Garden',
+    brand: 'IKEA',
+    color: 'Black',
+    condition: 'Brand New',
     price: '189.00',
     image:
       'https://images.pexels.com/photos/1957478/pexels-photo-1957478.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'p5',
+    title: '4K Smart LED TV 50"',
+    subtitle: 'Audio and Tech',
+    category: 'Electronics',
+    brand: 'Samsung',
+    color: 'Black',
+    condition: 'Brand New',
+    price: '499.00',
+    image:
+      'https://images.pexels.com/photos/4108273/pexels-photo-4108273.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'p6',
+    title: 'Noise-Cancelling Headphones',
+    subtitle: 'Audio and Tech',
+    category: 'Electronics',
+    brand: 'Sony',
+    color: 'Black',
+    condition: 'Brand New',
+    price: '159.00',
+    image:
+      'https://images.pexels.com/photos/4239031/pexels-photo-4239031.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'p7',
+    title: 'Portable Power Bank 20000mAh',
+    subtitle: 'Audio and Tech',
+    category: 'Electronics',
+    brand: 'Anker',
+    color: 'Black',
+    condition: 'Brand New',
+    price: '45.00',
+    image:
+      'https://images.pexels.com/photos/998586/pexels-photo-998586.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'p8',
+    title: "Men's Slim Fit Denim Jacket",
+    subtitle: 'Fashion',
+    category: 'Apparel',
+    brand: "Levi's",
+    color: 'Blue',
+    condition: 'Brand New',
+    price: '69.00',
+    image:
+      'https://images.pexels.com/photos/2092078/pexels-photo-2092078.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'p9',
+    title: "Women's Running Sneakers",
+    subtitle: 'Sports and Fitness',
+    category: 'Sports',
+    brand: 'Nike',
+    color: 'White',
+    condition: 'Brand New',
+    price: '89.00',
+    image:
+      'https://images.pexels.com/photos/1148957/pexels-photo-1148957.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'p10',
+    title: 'Yoga Mat with Carry Strap',
+    subtitle: 'Sports and Fitness',
+    category: 'Sports',
+    brand: 'Decathlon',
+    color: 'Purple',
+    condition: 'Brand New',
+    price: '25.00',
+    image:
+      'https://images.pexels.com/photos/1350789/pexels-photo-1350789.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'p11',
+    title: 'Adjustable Dumbbell Set',
+    subtitle: 'Sports and Fitness',
+    category: 'Sports',
+    brand: 'Bowflex',
+    color: 'Black',
+    condition: 'Brand New',
+    price: '120.00',
+    image:
+      'https://images.pexels.com/photos/213162/pexels-photo-213162.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'p12',
+    title: 'Organic Vitamin C Face Serum',
+    subtitle: 'Beauty and Self-Care',
+    category: 'Beauty',
+    brand: 'The Ordinary',
+    color: 'N/A',
+    condition: 'Brand New',
+    price: '19.00',
+    image:
+      'https://images.pexels.com/photos/3637837/pexels-photo-3637837.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'p13',
+    title: 'Professional Hair Dryer',
+    subtitle: 'Beauty and Self-Care',
+    category: 'Beauty',
+    brand: 'Dyson',
+    color: 'Pink',
+    condition: 'Brand New',
+    price: '299.00',
+    image:
+      'https://images.pexels.com/photos/3855960/pexels-photo-3855960.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'p14',
+    title: 'Luxury Scented Candle Set',
+    subtitle: 'Beauty and Self-Care',
+    category: 'Beauty',
+    brand: 'Yankee Candle',
+    color: 'Multicolour',
+    condition: 'Brand New',
+    price: '35.00',
+    image:
+      'https://images.pexels.com/photos/1029243/pexels-photo-1029243.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'p15',
+    title: 'Modern Table Lamp',
+    subtitle: 'Home and Office',
+    category: 'Home & Garden',
+    brand: 'IKEA',
+    color: 'White',
+    condition: 'Brand New',
+    price: '42.00',
+    image:
+      'https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'p16',
+    title: 'Non-Stick Cookware Set',
+    subtitle: 'Home and Office',
+    category: 'Home & Garden',
+    brand: 'Tefal',
+    color: 'Black',
+    condition: 'Brand New',
+    price: '95.00',
+    image:
+      'https://images.pexels.com/photos/275033/pexels-photo-275033.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'p17',
+    title: 'Refurbished Smartphone 128GB',
+    subtitle: 'Audio and Tech',
+    category: 'Electronics',
+    brand: 'Samsung',
+    color: 'Black',
+    condition: 'Refurbished',
+    price: '279.00',
+    image:
+      'https://images.pexels.com/photos/209235/pexels-photo-209235.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'p18',
+    title: 'Stainless Steel Travel Mug',
+    subtitle: 'Lifestyle',
+    category: 'Other',
+    brand: 'Generic',
+    color: 'Silver',
+    condition: 'Brand New',
+    price: '15.00',
+    image:
+      'https://images.pexels.com/photos/834892/pexels-photo-834892.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
 ];
 
@@ -1585,8 +1777,8 @@ const featureSlides = [
   {
     id: 'feat-17',
     image: 'https://images.pexels.com/photos/3279691/pexels-photo-3279691.jpeg?auto=compress&cs=tinysrgb&w=1600',
-    title: 'Betting, Lottery & Games',
-    subtitle: 'Play, predict, and win with secure betting and lottery experiences.',
+    title: 'Betting and Lottery Games',
+    subtitle: 'Pick your numbers and securely purchase lottery tickets for top international draws.',
     route: '/betting-lottery-games',
   },
   {
@@ -2783,6 +2975,13 @@ const wellnessItems = [
   {
     id: 'w1',
     title: 'Daily Immunity Boost',
+    category: 'Vitamins & Supplements',
+    description: 'Daily multivitamin blend formulated to support everyday immune health.',
+    brand: 'WellCore',
+    volume: '60 capsules',
+    suitableFor: 'Adults',
+    prescriptionRequired: false,
+    expiryDate: '2027-06-01',
     price: '18.99',
     image:
       'https://images.pexels.com/photos/3683098/pexels-photo-3683098.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -2790,6 +2989,13 @@ const wellnessItems = [
   {
     id: 'w2',
     title: 'Pain Relief Tablets',
+    category: 'Pain Relief',
+    description: 'Fast-acting over-the-counter tablets for headaches, muscle aches, and minor pain.',
+    brand: 'ReliefMax',
+    volume: '24 tablets',
+    suitableFor: 'Adults',
+    prescriptionRequired: false,
+    expiryDate: '2027-03-01',
     price: '6.75',
     image:
       'https://images.pexels.com/photos/3683074/pexels-photo-3683074.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -2797,9 +3003,198 @@ const wellnessItems = [
   {
     id: 'w3',
     title: 'First Aid Home Kit',
+    category: 'First Aid',
+    description: 'Compact household first aid kit with bandages, antiseptic wipes, and basic supplies.',
+    brand: 'SafeHome',
+    volume: '1 kit (45 pieces)',
+    suitableFor: 'All Ages',
+    prescriptionRequired: false,
+    expiryDate: '2028-01-01',
     price: '24.00',
     image:
       'https://images.pexels.com/photos/4021779/pexels-photo-4021779.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'w4',
+    title: 'Multivitamin Gummies',
+    category: 'Vitamins & Supplements',
+    description: 'Chewable daily multivitamin gummies with essential vitamins and minerals.',
+    brand: 'Centrum',
+    volume: '90 gummies',
+    suitableFor: 'Adults',
+    prescriptionRequired: false,
+    expiryDate: '2027-08-01',
+    price: '22.50',
+    image:
+      'https://images.pexels.com/photos/4792283/pexels-photo-4792283.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'w5',
+    title: 'Omega-3 Fish Oil Capsules',
+    category: 'Vitamins & Supplements',
+    description: 'High-strength omega-3 fish oil capsules to support heart and joint health.',
+    brand: 'Solgar',
+    volume: '120 capsules',
+    suitableFor: 'Adults',
+    prescriptionRequired: false,
+    expiryDate: '2027-09-01',
+    price: '27.00',
+    image:
+      'https://images.pexels.com/photos/5483245/pexels-photo-5483245.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'w6',
+    title: 'Hydrating Face Moisturizer',
+    category: 'Skincare',
+    description: 'Lightweight daily moisturizer for dry and sensitive skin types.',
+    brand: 'Nivea',
+    volume: '100ml',
+    suitableFor: 'All Ages',
+    prescriptionRequired: false,
+    expiryDate: '2028-02-01',
+    price: '14.25',
+    image:
+      'https://images.pexels.com/photos/5861185/pexels-photo-5861185.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'w7',
+    title: 'Prescription Acne Treatment Cream',
+    category: 'Skincare',
+    description: 'Dermatologist-prescribed topical cream for moderate to severe acne. Requires a valid prescription.',
+    brand: 'DermaCare',
+    volume: '30g tube',
+    suitableFor: 'Adults',
+    prescriptionRequired: true,
+    expiryDate: '2027-05-01',
+    price: '32.00',
+    image:
+      'https://images.pexels.com/photos/14525781/pexels-photo-14525781.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'w8',
+    title: 'Argan Oil Hair Treatment',
+    category: 'Haircare',
+    description: 'Nourishing argan oil treatment for dry and damaged hair.',
+    brand: 'Moroccanoil',
+    volume: '100ml',
+    suitableFor: 'Adults',
+    prescriptionRequired: false,
+    expiryDate: '2028-04-01',
+    price: '28.00',
+    image:
+      'https://images.pexels.com/photos/8961065/pexels-photo-8961065.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'w9',
+    title: 'Anti-Dandruff Shampoo',
+    category: 'Haircare',
+    description: 'Medicated shampoo formulated to relieve dandruff and scalp itchiness.',
+    brand: 'Head & Shoulders',
+    volume: '400ml',
+    suitableFor: 'All Ages',
+    prescriptionRequired: false,
+    expiryDate: '2028-05-01',
+    price: '9.50',
+    image:
+      'https://images.pexels.com/photos/1108101/pexels-photo-1108101.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'w10',
+    title: 'Electric Toothbrush',
+    category: 'Personal Care',
+    description: 'Rechargeable electric toothbrush with multiple cleaning modes.',
+    brand: 'Oral-B',
+    volume: '1 unit',
+    suitableFor: 'All Ages',
+    prescriptionRequired: false,
+    expiryDate: '',
+    price: '45.00',
+    image:
+      'https://images.pexels.com/photos/2469122/pexels-photo-2469122.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'w11',
+    title: 'Body Wash and Deodorant Combo Pack',
+    category: 'Personal Care',
+    description: 'Everyday body wash and deodorant combo for daily hygiene.',
+    brand: 'Dove',
+    volume: '2-piece set',
+    suitableFor: 'Adults',
+    prescriptionRequired: false,
+    expiryDate: '2028-06-01',
+    price: '12.00',
+    image:
+      'https://images.pexels.com/photos/6192511/pexels-photo-6192511.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'w12',
+    title: 'Resistance Bands Set',
+    category: 'Fitness & Equipment',
+    description: 'Set of 5 resistance bands for home strength and rehab workouts.',
+    brand: 'Decathlon',
+    volume: '5-piece set',
+    suitableFor: 'Adults',
+    prescriptionRequired: false,
+    expiryDate: '',
+    price: '18.00',
+    image:
+      'https://images.pexels.com/photos/5554666/pexels-photo-5554666.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'w13',
+    title: 'Digital Blood Pressure Monitor',
+    category: 'Fitness & Equipment',
+    description: 'Automatic upper-arm blood pressure monitor for home health tracking.',
+    brand: 'Omron',
+    volume: '1 unit',
+    suitableFor: 'Adults',
+    prescriptionRequired: false,
+    expiryDate: '',
+    price: '39.99',
+    image:
+      'https://images.pexels.com/photos/6187589/pexels-photo-6187589.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'w14',
+    title: 'Lavender Essential Oil',
+    category: 'Aromatherapy',
+    description: 'Pure lavender essential oil for relaxation and calming aromatherapy.',
+    brand: 'NOW Foods',
+    volume: '30ml',
+    suitableFor: 'Adults',
+    prescriptionRequired: false,
+    expiryDate: '2028-07-01',
+    price: '11.00',
+    image:
+      'https://images.pexels.com/photos/965118/pexels-photo-965118.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'w15',
+    title: 'Baby Diaper Rash Cream',
+    category: 'Maternal & Baby',
+    description: 'Gentle barrier cream to soothe and protect against diaper rash.',
+    brand: "Johnson's",
+    volume: '120ml',
+    suitableFor: 'Infants',
+    prescriptionRequired: false,
+    expiryDate: '2027-12-01',
+    price: '8.75',
+    image:
+      'https://images.pexels.com/photos/194098/pexels-photo-194098.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'w16',
+    title: 'Prescription Migraine Relief Tablets',
+    category: 'Pain Relief',
+    description: 'Doctor-prescribed migraine relief medication. Requires a valid prescription to purchase.',
+    brand: 'NeuroCare',
+    volume: '12 tablets',
+    suitableFor: 'Adults',
+    prescriptionRequired: true,
+    expiryDate: '2027-04-01',
+    price: '21.00',
+    image:
+      'https://images.pexels.com/photos/4108714/pexels-photo-4108714.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
 ];
 
@@ -2809,6 +3204,12 @@ const traditionalMedicinesItems = [
     title: 'Wild Harvested African Ginger Root',
     category: 'Herbs',
     description: 'Dried root cuts for teas, tonics, and traditional wellness blends.',
+    scientificName: 'Siphonochilus aethiopicus',
+    partUsed: 'Root',
+    formType: 'Raw / Dried',
+    preparationMethod: 'Simmer 1-2 tsp of dried root in water for 10 minutes to make a tea, or add to tonics.',
+    traditionalUses: 'Used traditionally to ease colds, coughs, and respiratory discomfort.',
+    origin: 'Limpopo, South Africa',
     price: '14.50',
     image:
       'https://images.pexels.com/photos/4198166/pexels-photo-4198166.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -2818,6 +3219,12 @@ const traditionalMedicinesItems = [
     title: 'Moringa Leaf Powder Blend',
     category: 'Traditional Supplements',
     description: 'Stone-milled moringa leaf powder prepared for daily herbal use.',
+    scientificName: 'Moringa oleifera',
+    partUsed: 'Leaf',
+    formType: 'Powder',
+    preparationMethod: 'Stir 1 teaspoon into water, juice, or smoothies once daily.',
+    traditionalUses: 'Used traditionally as a daily nutrient-rich supplement to support general wellbeing.',
+    origin: 'KwaZulu-Natal, South Africa',
     price: '11.20',
     image:
       'https://images.pexels.com/photos/6693658/pexels-photo-6693658.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -2827,6 +3234,12 @@ const traditionalMedicinesItems = [
     title: 'Herbal Steam Relief Mix',
     category: 'Traditional Remedies',
     description: 'Aromatic leaf and bark blend for home steam and inhalation rituals.',
+    scientificName: 'Mixed botanical blend',
+    partUsed: 'Leaf and Bark',
+    formType: 'Raw / Dried',
+    preparationMethod: 'Add a handful to boiling water and inhale the steam, covered with a towel, for 5-10 minutes.',
+    traditionalUses: 'Used traditionally for sinus and chest congestion relief through steam inhalation.',
+    origin: 'Eastern Cape, South Africa',
     price: '9.80',
     image:
       'https://images.pexels.com/photos/6157223/pexels-photo-6157223.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -2836,6 +3249,12 @@ const traditionalMedicinesItems = [
     title: 'Dried Artemisia Herbal Bundle',
     category: 'Medicinal Herbs',
     description: 'Sun-dried herbal stems and leaves packaged for decoctions and infusions.',
+    scientificName: 'Artemisia afra',
+    partUsed: 'Stem and Leaf',
+    formType: 'Raw / Dried',
+    preparationMethod: 'Steep a small bundle in hot water for 8-10 minutes to make a decoction.',
+    traditionalUses: 'Used traditionally for coughs, colds, and digestive discomfort.',
+    origin: 'Western Cape, South Africa',
     price: '12.40',
     image:
       'https://images.pexels.com/photos/6941876/pexels-photo-6941876.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -2845,9 +3264,90 @@ const traditionalMedicinesItems = [
     title: 'Traditional Wellness Bark Pack',
     category: 'Botanical Remedies',
     description: 'Mixed bark selection sourced for traditional healing preparations.',
+    scientificName: 'Mixed botanical blend',
+    partUsed: 'Bark',
+    formType: 'Bark',
+    preparationMethod: 'Boil bark pieces for 15-20 minutes to prepare a traditional decoction.',
+    traditionalUses: 'Used traditionally as a general wellness tonic in home herbal preparations.',
+    origin: 'Mpumalanga, South Africa',
     price: '16.90',
     image:
       'https://images.pexels.com/photos/6693652/pexels-photo-6693652.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'tm6',
+    title: 'Rooibos Herbal Tea Bundle',
+    category: 'Teas',
+    description: 'Naturally caffeine-free fermented rooibos leaves for daily herbal tea.',
+    scientificName: 'Aspalathus linearis',
+    partUsed: 'Leaf',
+    formType: 'Tea',
+    preparationMethod: 'Steep 1-2 teaspoons in hot water for 5-7 minutes.',
+    traditionalUses: 'Used traditionally as a calming, antioxidant-rich daily herbal tea.',
+    origin: 'Cederberg, South Africa',
+    price: '8.50',
+    image:
+      'https://images.pexels.com/photos/6048394/pexels-photo-6048394.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'tm7',
+    title: 'African Wormwood Tincture',
+    category: 'Tinctures',
+    description: 'Concentrated liquid extract prepared from sun-dried wormwood leaves.',
+    scientificName: 'Artemisia afra',
+    partUsed: 'Leaf',
+    formType: 'Liquid',
+    preparationMethod: 'Add 10-15 drops to water, up to twice daily, or as advised by a practitioner.',
+    traditionalUses: 'Used traditionally to support digestion and relieve mild stomach discomfort.',
+    origin: 'Free State, South Africa',
+    price: '19.90',
+    image:
+      'https://images.pexels.com/photos/3151717/pexels-photo-3151717.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'tm8',
+    title: 'Devil\'s Claw Root Capsules',
+    category: 'Capsules',
+    description: 'Encapsulated dried root extract for convenient daily dosing.',
+    scientificName: 'Harpagophytum procumbens',
+    partUsed: 'Root',
+    formType: 'Capsule',
+    preparationMethod: 'Take 1-2 capsules daily with water, with or after meals.',
+    traditionalUses: 'Used traditionally to support joint and muscle comfort.',
+    origin: 'Kalahari, Namibia',
+    price: '21.00',
+    image:
+      'https://images.pexels.com/photos/4108714/pexels-photo-4108714.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'tm9',
+    title: 'Buchu Leaf Essential Oil',
+    category: 'Oils',
+    description: 'Steam-distilled essential oil pressed from wild buchu leaves.',
+    scientificName: 'Agathosma betulina',
+    partUsed: 'Leaf',
+    formType: 'Oil',
+    preparationMethod: 'Dilute a few drops in a carrier oil for topical massage, or use in a diffuser.',
+    traditionalUses: 'Used traditionally for soothing massage blends and aromatic wellness rituals.',
+    origin: 'Cederberg, South Africa',
+    price: '17.40',
+    image:
+      'https://images.pexels.com/photos/4108273/pexels-photo-4108273.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'tm10',
+    title: 'Hibiscus and Ginger Root Powder',
+    category: 'Powders',
+    description: 'Sun-dried hibiscus flower and ginger root, finely milled.',
+    scientificName: 'Hibiscus sabdariffa & Zingiber officinale',
+    partUsed: 'Flower and Root',
+    formType: 'Powder',
+    preparationMethod: 'Mix 1 teaspoon into warm water or tea, once or twice daily.',
+    traditionalUses: 'Used traditionally as a warming daily tonic blend.',
+    origin: 'Limpopo, South Africa',
+    price: '13.20',
+    image:
+      'https://images.pexels.com/photos/4792283/pexels-photo-4792283.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
 ];
 
@@ -4737,6 +5237,11 @@ const toysKidsItems = [
     title: 'Wooden Building Blocks Set',
     category: 'Educational Toys',
     description: '100-piece set of colourful blocks for creative construction play.',
+    ageRange: '3-5 years',
+    gender: 'Unisex',
+    brand: 'Melissa & Doug',
+    material: 'Wood',
+    safetyCertification: 'EN71',
     price: '34.99',
     image:
       'https://images.pexels.com/photos/3661193/pexels-photo-3661193.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -4746,6 +5251,11 @@ const toysKidsItems = [
     title: 'Plush Teddy Bear 60cm',
     category: 'Soft Toys',
     description: 'Extra-soft hypoallergenic teddy bear perfect for cuddles and naps.',
+    ageRange: '0-12 months',
+    gender: 'Unisex',
+    brand: 'Generic',
+    material: 'Plush / Fabric',
+    safetyCertification: 'CE',
     price: '19.99',
     image:
       'https://images.pexels.com/photos/1648376/pexels-photo-1648376.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -4755,6 +5265,11 @@ const toysKidsItems = [
     title: 'Remote Control Sports Car',
     category: 'Action Toys',
     description: 'High-speed RC car with rechargeable battery and easy controls.',
+    ageRange: '6-8 years',
+    gender: 'Boys',
+    brand: 'Hot Wheels',
+    material: 'Plastic',
+    safetyCertification: 'ASTM F963',
     price: '45.00',
     image:
       'https://images.pexels.com/photos/35619/capri-ford-oldtimer-automotive.jpg?auto=compress&cs=tinysrgb&w=1200',
@@ -4764,6 +5279,11 @@ const toysKidsItems = [
     title: 'Princess Doll Playset',
     category: 'Dolls',
     description: 'Fashion doll with multiple outfits, accessories, and styling kit.',
+    ageRange: '3-5 years',
+    gender: 'Girls',
+    brand: 'Mattel',
+    material: 'Plastic',
+    safetyCertification: 'EN71',
     price: '29.99',
     image:
       'https://images.pexels.com/photos/5905857/pexels-photo-5905857.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -4773,6 +5293,11 @@ const toysKidsItems = [
     title: 'Educational Board Game Bundle',
     category: 'Board Games',
     description: 'Pack of 3 classic family board games for ages 6 and up.',
+    ageRange: '6-8 years',
+    gender: 'Unisex',
+    brand: 'Hasbro',
+    material: 'Mixed / Composite',
+    safetyCertification: 'CE',
     price: '39.50',
     image:
       'https://images.pexels.com/photos/4691567/pexels-photo-4691567.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -4782,6 +5307,11 @@ const toysKidsItems = [
     title: 'Baby Walker with Music',
     category: 'Baby Gear',
     description: 'Sturdy walker with adjustable height, toys, and music tray.',
+    ageRange: '0-12 months',
+    gender: 'Unisex',
+    brand: 'Fisher-Price',
+    material: 'Plastic',
+    safetyCertification: 'ASTM F963',
     price: '69.00',
     image:
       'https://images.pexels.com/photos/207891/pexels-photo-207891.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -4791,6 +5321,11 @@ const toysKidsItems = [
     title: 'Kids School Backpack',
     category: 'Kids Accessories',
     description: 'Ergonomic padded backpack with reflective strips and bottle pocket.',
+    ageRange: '6-8 years',
+    gender: 'Unisex',
+    brand: 'Generic',
+    material: 'Mixed / Composite',
+    safetyCertification: 'N/A',
     price: '24.99',
     image:
       'https://images.pexels.com/photos/207697/pexels-photo-207697.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -4800,6 +5335,11 @@ const toysKidsItems = [
     title: 'Art & Craft Supplies Kit',
     category: 'Educational Toys',
     description: 'Crayons, markers, glitter, glue, and craft paper in one big pack.',
+    ageRange: '3-5 years',
+    gender: 'Unisex',
+    brand: 'Crayola',
+    material: 'Mixed / Composite',
+    safetyCertification: 'EN71',
     price: '27.50',
     image:
       'https://images.pexels.com/photos/159579/crayons-coloring-book-coloring-book-159579.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -4809,6 +5349,11 @@ const toysKidsItems = [
     title: 'Ride-On Push Tricycle',
     category: 'Outdoor Play',
     description: 'Safe push-and-ride trike for toddlers with parent handle.',
+    ageRange: '1-2 years',
+    gender: 'Unisex',
+    brand: 'Generic',
+    material: 'Plastic',
+    safetyCertification: 'EN71',
     price: '79.00',
     image:
       'https://images.pexels.com/photos/1648387/pexels-photo-1648387.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -4818,6 +5363,11 @@ const toysKidsItems = [
     title: 'STEM Robot Building Kit',
     category: 'Educational Toys',
     description: 'Hands-on robotics kit teaching coding basics for ages 8+.',
+    ageRange: '9-12 years',
+    gender: 'Unisex',
+    brand: 'Lego',
+    material: 'Plastic',
+    safetyCertification: 'CE',
     price: '89.00',
     image:
       'https://images.pexels.com/photos/8566472/pexels-photo-8566472.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -11343,9 +11893,163 @@ const TicketsSellerFields = ({ formData, onFieldChange, prefix = 'seller-ticket'
   );
 };
 
+const ECommerceFilterCheckbox = ({ label, checked, onChange }) => (
+  <label className="flex cursor-pointer items-center gap-2 py-1 text-sm text-[var(--svs-text)]">
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={onChange}
+      className="h-4 w-4 rounded border-[var(--svs-border)] text-[var(--svs-primary)] focus:ring-[var(--svs-primary)]"
+    />
+    <span>{label}</span>
+  </label>
+);
+
+const ECommerceFiltersPanel = ({
+  categories, brands, colors, conditions,
+  selectedCategories, setSelectedCategories,
+  selectedBrands, setSelectedBrands,
+  selectedColors, setSelectedColors,
+  selectedConditions, setSelectedConditions,
+  toggleSelection, onApply,
+}) => (
+  <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-sm">
+    <div>
+      <h3 className="text-sm font-bold text-[var(--svs-text)]">Category</h3>
+      <div className="mt-2 max-h-56 overflow-y-auto pr-1">
+        {categories.map((category) => (
+          <ECommerceFilterCheckbox
+            key={category}
+            label={category}
+            checked={selectedCategories.includes(category)}
+            onChange={() => toggleSelection(selectedCategories, setSelectedCategories, category, true)}
+          />
+        ))}
+      </div>
+    </div>
+    <hr className="my-4 border-[var(--svs-border)]" />
+    <div>
+      <h3 className="text-sm font-bold text-[var(--svs-text)]">Brand</h3>
+      <div className="mt-2 max-h-56 overflow-y-auto pr-1">
+        {brands.map((brand) => (
+          <ECommerceFilterCheckbox
+            key={brand}
+            label={brand}
+            checked={selectedBrands.includes(brand)}
+            onChange={() => toggleSelection(selectedBrands, setSelectedBrands, brand, true)}
+          />
+        ))}
+      </div>
+    </div>
+    <hr className="my-4 border-[var(--svs-border)]" />
+    <div>
+      <h3 className="text-sm font-bold text-[var(--svs-text)]">Colour</h3>
+      <div className="mt-2 max-h-44 overflow-y-auto pr-1">
+        {colors.map((color) => (
+          <ECommerceFilterCheckbox
+            key={color}
+            label={color}
+            checked={selectedColors.includes(color)}
+            onChange={() => toggleSelection(selectedColors, setSelectedColors, color, false)}
+          />
+        ))}
+      </div>
+    </div>
+    <hr className="my-4 border-[var(--svs-border)]" />
+    <div>
+      <h3 className="text-sm font-bold text-[var(--svs-text)]">Condition</h3>
+      <div className="mt-2">
+        {conditions.map((condition) => (
+          <ECommerceFilterCheckbox
+            key={condition}
+            label={condition}
+            checked={selectedConditions.includes(condition)}
+            onChange={() => toggleSelection(selectedConditions, setSelectedConditions, condition, false)}
+          />
+        ))}
+      </div>
+    </div>
+    <button
+      type="button"
+      onClick={onApply}
+      className="mt-5 w-full rounded-lg bg-[var(--svs-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-[var(--svs-primary-strong)]"
+    >
+      Apply Filters
+    </button>
+  </div>
+);
+
+const ECOMMERCE_BASE_CATEGORIES = ['Electronics', 'Apparel', 'Beauty', 'Home & Garden', 'Sports', 'Other'];
+
 const ECommercePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'ecommerce'), ...productCards], [sellerItems]);
+
+  const dynamicCategories = useMemo(() => {
+    const set = new Set(ECOMMERCE_BASE_CATEGORIES);
+    marketItems.forEach((item) => { if (item.category) set.add(item.category); });
+    return ['All', ...Array.from(set)];
+  }, [marketItems]);
+  const dynamicBrands = useMemo(() => {
+    const set = new Set();
+    marketItems.forEach((item) => { if (item.brand) set.add(item.brand); });
+    return ['All', ...Array.from(set)];
+  }, [marketItems]);
+  const dynamicColors = useMemo(() => {
+    const set = new Set();
+    marketItems.forEach((item) => { if (item.color && item.color !== 'N/A') set.add(item.color); });
+    return Array.from(set);
+  }, [marketItems]);
+  const dynamicConditions = ['Brand New', 'Refurbished', 'Used'];
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState(['All']);
+  const [selectedBrands, setSelectedBrands] = useState(['All']);
+  const [selectedColors, setSelectedColors] = useState([]);
+  const [selectedConditions, setSelectedConditions] = useState([]);
+  const [showAll, setShowAll] = useState(false);
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+
+  const toggleSelection = useCallback((current, setter, value, exclusiveAll = false) => {
+    if (exclusiveAll && value === 'All') {
+      setter(['All']);
+      return;
+    }
+    setter((prev) => {
+      const without = prev.filter((entry) => entry !== 'All');
+      if (without.includes(value)) {
+        const next = without.filter((entry) => entry !== value);
+        return next.length ? next : (exclusiveAll ? ['All'] : []);
+      }
+      return [...without, value];
+    });
+  }, []);
+
+  const handleApplyFilters = () => {
+    setShowAll(false);
+    setIsMobileFiltersOpen(false);
+  };
+
+  const filteredItems = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return marketItems.filter((item) => {
+      if (query) {
+        const haystack = [item.title, item.category, item.brand, item.color, item.sellerName, item.description]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        if (!haystack.includes(query)) return false;
+      }
+      if (selectedCategories.length && !selectedCategories.includes('All') && !selectedCategories.includes(item.category)) return false;
+      if (selectedBrands.length && !selectedBrands.includes('All') && !selectedBrands.includes(item.brand)) return false;
+      if (selectedColors.length && !selectedColors.includes(item.color)) return false;
+      if (selectedConditions.length && !selectedConditions.includes(item.condition)) return false;
+      return true;
+    });
+  }, [marketItems, searchQuery, selectedCategories, selectedBrands, selectedColors, selectedConditions]);
+
+  const visibleItems = showAll ? filteredItems : filteredItems.slice(0, 12);
+
   const buildCartItem = (item) => createCartItem({
     ...item,
     route: '/e-commerce',
@@ -11359,6 +12063,25 @@ const ECommercePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
     details: item.subtitle || item.description || item.sellerName,
   });
 
+  const filtersPanel = (
+    <ECommerceFiltersPanel
+      categories={dynamicCategories}
+      brands={dynamicBrands}
+      colors={dynamicColors}
+      conditions={dynamicConditions}
+      selectedCategories={selectedCategories}
+      setSelectedCategories={setSelectedCategories}
+      selectedBrands={selectedBrands}
+      setSelectedBrands={setSelectedBrands}
+      selectedColors={selectedColors}
+      setSelectedColors={setSelectedColors}
+      selectedConditions={selectedConditions}
+      setSelectedConditions={setSelectedConditions}
+      toggleSelection={toggleSelection}
+      onApply={handleApplyFilters}
+    />
+  );
+
   return (
     <MarketShowcase
       marketKey="ecommerce"
@@ -11367,32 +12090,79 @@ const ECommercePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
       eyebrow={t('markets.ecommerce')}
       chips={['Verified retailers', 'Same-day delivery', 'Secure checkout']}
     >
-      <CardGrid
-        items={marketItems}
-        buttonLabel={t('common.addToCart')}
-        secondaryButtonLabel={t('common.viewMore')}
-        reviewSummaryMap={productReviewSummaryMap}
-        getItemReviewKey={(item) => getCollectionItemId('/e-commerce', item.id)}
-        onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-        onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
-        onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
-        onOpenItemDetails={(item) => {
-          const wishlistItem = buildWishlistItem(item);
-          onOpenItemDetails?.({
-            title: getTranslatedValue(t, item.titleKey, item.title),
-            image: item.image,
-            images: item.images || (item.image ? [item.image] : []),
-            ...getItemDetailSizeProps(item),
-            marketName: t('markets.ecommerce'),
-            details: item.subtitle || item.description || item.sellerName,
-            priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
-            cartItem: buildCartItem(item),
-            wishlistItem,
-          });
-        }}
-        isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/e-commerce', item.id))}
-        metaRenderer={(item) => <p className="text-sm text-slate-500">{item.subtitle || item.sellerName || 'Seller item'} • <SalePrice price={item.price} currency={item.currency} /></p>}
-      />
+      <div className="flex items-center gap-2 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-3 shadow-sm">
+        <Search className="h-5 w-5 text-[var(--svs-primary-strong)]" />
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          placeholder="Search products, brands, or categories..."
+          className="w-full bg-transparent text-sm text-[var(--svs-text)] placeholder:text-[var(--svs-muted)] focus:outline-none"
+        />
+      </div>
+      <div className="mt-3 flex justify-end lg:hidden">
+        <button
+          type="button"
+          onClick={() => setIsMobileFiltersOpen((prev) => !prev)}
+          className="inline-flex items-center gap-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-2 text-sm font-semibold text-[var(--svs-text)] shadow-sm"
+          aria-expanded={isMobileFiltersOpen}
+        >
+          <Filter className="h-4 w-4" />
+          {isMobileFiltersOpen ? 'Hide Filters' : 'Show Filters'}
+        </button>
+      </div>
+
+      <div className="mt-5 grid w-full grid-cols-1 gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <aside className="hidden lg:block">{filtersPanel}</aside>
+        {isMobileFiltersOpen ? <div className="lg:hidden">{filtersPanel}</div> : null}
+
+        <div>
+          <CardGrid
+            items={visibleItems}
+            buttonLabel={t('common.addToCart')}
+            secondaryButtonLabel={t('common.viewMore')}
+            reviewSummaryMap={productReviewSummaryMap}
+            getItemReviewKey={(item) => getCollectionItemId('/e-commerce', item.id)}
+            onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+            onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
+            onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+            onOpenItemDetails={(item) => {
+              const wishlistItem = buildWishlistItem(item);
+              onOpenItemDetails?.({
+                title: getTranslatedValue(t, item.titleKey, item.title),
+                image: item.image,
+                images: item.images || (item.image ? [item.image] : []),
+                ...getItemDetailSizeProps(item),
+                marketName: t('markets.ecommerce'),
+                details: item.subtitle || item.description || item.sellerName,
+                priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
+                category: item.category || '',
+                brand: item.brand || '',
+                cartItem: buildCartItem(item),
+                wishlistItem,
+              });
+            }}
+            isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/e-commerce', item.id))}
+            metaRenderer={(item) => <p className="text-sm text-slate-500">{item.subtitle || item.sellerName || 'Seller item'} • <SalePrice price={item.price} currency={item.currency} /></p>}
+          />
+          {!filteredItems.length ? (
+            <div className="rounded-2xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface)] p-10 text-center text-sm text-[var(--svs-muted)]">
+              No products match your filters.
+            </div>
+          ) : null}
+          {filteredItems.length > 12 ? (
+            <div className="mt-6 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setShowAll((prev) => !prev)}
+                className="rounded-lg bg-[var(--svs-primary)] px-8 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-[var(--svs-primary-strong)]"
+              >
+                {showAll ? 'Show Less' : 'View All'}
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </div>
     </MarketShowcase>
   );
 };
@@ -12655,8 +13425,8 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
   // Render groceries categories grid on main /groceries page
   return (
     <PageFrame
-      title="Groceries Market"
-      subtitle="Browse and order fresh groceries and pantry essentials from trusted brands"
+      title={t('markets.groceries')}
+      subtitle={t('pageSubtitles.groceries')}
       heroImage="https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg?auto=compress&cs=tinysrgb&w=1600"
       heroMediaClassName="scale-105 blur-[2px]"
       heroOverlayClassName="bg-gradient-to-r from-black/75 via-black/65 to-black/55"
@@ -12951,7 +13721,7 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
     <MarketShowcase
       marketKey="secondhand"
       title={t('markets.secondhand')}
-      subtitle="Buy and sell quality pre-owned phones, laptops, fashion, furniture, and more — all at unbeatable prices"
+      subtitle={t('pageSubtitles.secondhand')}
       eyebrow={t('markets.secondhand')}
       chips={['Verified condition', 'Inspected listings', 'Buyer protection']}
     >
@@ -13300,7 +14070,7 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
       <MarketHero
         marketKey="fastFood"
         title={t('markets.fastFood')}
-        subtitle="Order your favorite meals, snacks, and drinks. Fast, fresh, and delivered to your door."
+        subtitle={t('pageSubtitles.fastFood')}
         eyebrow={t('markets.fastFood')}
         chips={['Burgers', 'Pizza', 'Chicken', 'Sides']}
       />
@@ -13485,7 +14255,7 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
 
 const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   // --- BookingsTicketsPage-inspired UI ---
-  // Removed unused t
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [sortOrder, setSortOrder] = useState('Newest');
@@ -13603,9 +14373,9 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
   return (
     <MarketShowcase
       marketKey="beveragesLiquors"
-      title="Beverages & Liquors"
-      subtitle="Shop wine, beer, spirits, and more."
-      eyebrow="Beverages & Liquors"
+      title={t('markets.beverages')}
+      subtitle={t('pageSubtitles.beverages')}
+      eyebrow={t('markets.beverages')}
       chips={['Wine', 'Beer', 'Spirits', 'Soft drinks']}
     >
       {/* Search + Filter Bar */}
@@ -13741,9 +14511,157 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
   );
 };
 
+const isWellnessPrescriptionRequired = (item) => item.prescriptionRequired === true || item.prescriptionRequired === 'Yes';
+
+const WellnessFilterCheckbox = ({ label, checked, onChange }) => (
+  <label className="flex cursor-pointer items-center gap-2 py-1 text-sm text-[var(--svs-text)]">
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={onChange}
+      className="h-4 w-4 rounded border-[var(--svs-border)] text-[var(--svs-primary)] focus:ring-[var(--svs-primary)]"
+    />
+    <span>{label}</span>
+  </label>
+);
+
+const WellnessFiltersPanel = ({
+  categories, brands, suitableForOptions,
+  selectedCategories, setSelectedCategories,
+  selectedBrands, setSelectedBrands,
+  selectedSuitableFor, setSelectedSuitableFor,
+  prescriptionOnly, setPrescriptionOnly,
+  toggleSelection, onApply,
+}) => (
+  <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-sm">
+    <div>
+      <h3 className="text-sm font-bold text-[var(--svs-text)]">Category</h3>
+      <div className="mt-2 max-h-56 overflow-y-auto pr-1">
+        {categories.map((category) => (
+          <WellnessFilterCheckbox
+            key={category}
+            label={category}
+            checked={selectedCategories.includes(category)}
+            onChange={() => toggleSelection(selectedCategories, setSelectedCategories, category, true)}
+          />
+        ))}
+      </div>
+    </div>
+    <hr className="my-4 border-[var(--svs-border)]" />
+    <div>
+      <h3 className="text-sm font-bold text-[var(--svs-text)]">Brand</h3>
+      <div className="mt-2 max-h-56 overflow-y-auto pr-1">
+        {brands.map((brand) => (
+          <WellnessFilterCheckbox
+            key={brand}
+            label={brand}
+            checked={selectedBrands.includes(brand)}
+            onChange={() => toggleSelection(selectedBrands, setSelectedBrands, brand, true)}
+          />
+        ))}
+      </div>
+    </div>
+    <hr className="my-4 border-[var(--svs-border)]" />
+    <div>
+      <h3 className="text-sm font-bold text-[var(--svs-text)]">Suitable For</h3>
+      <div className="mt-2">
+        {suitableForOptions.map((option) => (
+          <WellnessFilterCheckbox
+            key={option}
+            label={option}
+            checked={selectedSuitableFor.includes(option)}
+            onChange={() => toggleSelection(selectedSuitableFor, setSelectedSuitableFor, option, false)}
+          />
+        ))}
+      </div>
+    </div>
+    <hr className="my-4 border-[var(--svs-border)]" />
+    <div>
+      <h3 className="text-sm font-bold text-[var(--svs-text)]">Prescription</h3>
+      <WellnessFilterCheckbox
+        label="Prescription items only"
+        checked={prescriptionOnly}
+        onChange={() => setPrescriptionOnly((prev) => !prev)}
+      />
+    </div>
+    <button
+      type="button"
+      onClick={onApply}
+      className="mt-5 w-full rounded-lg bg-[var(--svs-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-[var(--svs-primary-strong)]"
+    >
+      Apply Filters
+    </button>
+  </div>
+);
+
 const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'wellness'), ...wellnessItems], [sellerItems]);
+
+  const dynamicCategories = useMemo(() => {
+    const set = new Set();
+    marketItems.forEach((item) => { if (item.category) set.add(item.category); });
+    return ['All', ...Array.from(set)];
+  }, [marketItems]);
+  const dynamicBrands = useMemo(() => {
+    const set = new Set();
+    marketItems.forEach((item) => { if (item.brand) set.add(item.brand); });
+    return ['All', ...Array.from(set)];
+  }, [marketItems]);
+  const dynamicSuitableFor = useMemo(() => {
+    const set = new Set();
+    marketItems.forEach((item) => { if (item.suitableFor) set.add(item.suitableFor); });
+    return Array.from(set);
+  }, [marketItems]);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState(['All']);
+  const [selectedBrands, setSelectedBrands] = useState(['All']);
+  const [selectedSuitableFor, setSelectedSuitableFor] = useState([]);
+  const [prescriptionOnly, setPrescriptionOnly] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+
+  const toggleSelection = useCallback((current, setter, value, exclusiveAll = false) => {
+    if (exclusiveAll && value === 'All') {
+      setter(['All']);
+      return;
+    }
+    setter((prev) => {
+      const without = prev.filter((entry) => entry !== 'All');
+      if (without.includes(value)) {
+        const next = without.filter((entry) => entry !== value);
+        return next.length ? next : (exclusiveAll ? ['All'] : []);
+      }
+      return [...without, value];
+    });
+  }, []);
+
+  const handleApplyFilters = () => {
+    setShowAll(false);
+    setIsMobileFiltersOpen(false);
+  };
+
+  const filteredItems = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return marketItems.filter((item) => {
+      if (query) {
+        const haystack = [item.title, item.category, item.brand, item.description, item.sellerName]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        if (!haystack.includes(query)) return false;
+      }
+      if (selectedCategories.length && !selectedCategories.includes('All') && !selectedCategories.includes(item.category)) return false;
+      if (selectedBrands.length && !selectedBrands.includes('All') && !selectedBrands.includes(item.brand)) return false;
+      if (selectedSuitableFor.length && !selectedSuitableFor.includes(item.suitableFor)) return false;
+      if (prescriptionOnly && !isWellnessPrescriptionRequired(item)) return false;
+      return true;
+    });
+  }, [marketItems, searchQuery, selectedCategories, selectedBrands, selectedSuitableFor, prescriptionOnly]);
+
+  const visibleItems = showAll ? filteredItems : filteredItems.slice(0, 12);
+
   const buildCartItem = (item) => createCartItem({
     ...item,
     route: '/wellness',
@@ -13757,6 +14675,24 @@ const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
     details: item.sellerName,
   });
 
+  const filtersPanel = (
+    <WellnessFiltersPanel
+      categories={dynamicCategories}
+      brands={dynamicBrands}
+      suitableForOptions={dynamicSuitableFor}
+      selectedCategories={selectedCategories}
+      setSelectedCategories={setSelectedCategories}
+      selectedBrands={selectedBrands}
+      setSelectedBrands={setSelectedBrands}
+      selectedSuitableFor={selectedSuitableFor}
+      setSelectedSuitableFor={setSelectedSuitableFor}
+      prescriptionOnly={prescriptionOnly}
+      setPrescriptionOnly={setPrescriptionOnly}
+      toggleSelection={toggleSelection}
+      onApply={handleApplyFilters}
+    />
+  );
+
   return (
   <MarketShowcase
     marketKey="wellness"
@@ -13765,32 +14701,94 @@ const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
     eyebrow={t('markets.wellness')}
     chips={['Pharmacy', 'Self-care', 'Telehealth ready']}
   >
-    <CardGrid
-      items={marketItems}
-      buttonLabel={t('common.add')}
-      secondaryButtonLabel={t('common.uploadPrescription')}
-      reviewSummaryMap={productReviewSummaryMap}
-      getItemReviewKey={(item) => getCollectionItemId('/wellness', item.id)}
-      onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-      onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
-      onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
-      onOpenItemDetails={(item) => {
-        const wishlistItem = buildWishlistItem(item);
-        onOpenItemDetails?.({
-          title: getTranslatedValue(t, item.titleKey, item.title),
-          image: item.image,
-          images: item.images || (item.image ? [item.image] : []),
-          ...getItemDetailSizeProps(item),
-          marketName: t('markets.wellness'),
-          details: item.description || item.sellerName,
-          priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
-          cartItem: buildCartItem(item),
-          wishlistItem,
-        });
-      }}
-      isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/wellness', item.id))}
-      metaRenderer={(item) => <p className="text-sm text-slate-600"><SalePrice price={item.price} currency={item.currency} />{item.sellerName ? ` • ${item.sellerName}` : ''}</p>}
-    />
+    <div className="flex items-center gap-2 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-3 shadow-sm">
+      <Search className="h-5 w-5 text-[var(--svs-primary-strong)]" />
+      <input
+        type="search"
+        value={searchQuery}
+        onChange={(event) => setSearchQuery(event.target.value)}
+        placeholder="Search wellness products, brands, or categories..."
+        className="w-full bg-transparent text-sm text-[var(--svs-text)] placeholder:text-[var(--svs-muted)] focus:outline-none"
+      />
+    </div>
+    <div className="mt-3 flex justify-end lg:hidden">
+      <button
+        type="button"
+        onClick={() => setIsMobileFiltersOpen((prev) => !prev)}
+        className="inline-flex items-center gap-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-2 text-sm font-semibold text-[var(--svs-text)] shadow-sm"
+        aria-expanded={isMobileFiltersOpen}
+      >
+        <Filter className="h-4 w-4" />
+        {isMobileFiltersOpen ? 'Hide Filters' : 'Show Filters'}
+      </button>
+    </div>
+
+    <div className="mt-5 grid w-full grid-cols-1 gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+      <aside className="hidden lg:block">{filtersPanel}</aside>
+      {isMobileFiltersOpen ? <div className="lg:hidden">{filtersPanel}</div> : null}
+
+      <div>
+        <CardGrid
+          items={visibleItems}
+          buttonLabel={t('common.add')}
+          secondaryButtonLabel={t('common.viewDetails')}
+          reviewSummaryMap={productReviewSummaryMap}
+          getItemReviewKey={(item) => getCollectionItemId('/wellness', item.id)}
+          onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+          onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
+          onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+          onOpenItemDetails={(item) => {
+            const wishlistItem = buildWishlistItem(item);
+            const requiresPrescription = isWellnessPrescriptionRequired(item);
+            onOpenItemDetails?.({
+              title: getTranslatedValue(t, item.titleKey, item.title),
+              image: item.image,
+              images: item.images || (item.image ? [item.image] : []),
+              ...getItemDetailSizeProps(item),
+              marketName: t('markets.wellness'),
+              details: item.description || item.sellerName,
+              priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
+              detailsTable: {
+                Category: item.category || 'Wellness',
+                Brand: item.brand || 'Generic',
+                'Pack Size / Volume': item.volume || 'N/A',
+                'Suitable For': item.suitableFor || 'All Ages',
+                'Prescription Required': requiresPrescription ? 'Yes — upload your prescription at checkout' : 'No — available over the counter',
+                'Expiry Date': item.expiryDate || 'N/A',
+              },
+              cartItem: buildCartItem(item),
+              wishlistItem,
+            });
+          }}
+          isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/wellness', item.id))}
+          metaRenderer={(item) => (
+            <p className="flex flex-wrap items-center gap-1.5 text-sm text-slate-600">
+              <SalePrice price={item.price} currency={item.currency} />
+              {item.sellerName ? ` • ${item.sellerName}` : ''}
+              {isWellnessPrescriptionRequired(item) ? (
+                <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-700">Rx Required</span>
+              ) : null}
+            </p>
+          )}
+        />
+        {!filteredItems.length ? (
+          <div className="rounded-2xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface)] p-10 text-center text-sm text-[var(--svs-muted)]">
+            No wellness products match your filters.
+          </div>
+        ) : null}
+        {filteredItems.length > 12 ? (
+          <div className="mt-6 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setShowAll((prev) => !prev)}
+              className="rounded-lg bg-[var(--svs-primary)] px-8 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-[var(--svs-primary-strong)]"
+            >
+              {showAll ? 'Show Less' : 'View All'}
+            </button>
+          </div>
+        ) : null}
+      </div>
+    </div>
   </MarketShowcase>
   );
 };
@@ -13798,6 +14796,18 @@ const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
 const TraditionalMedicinesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'traditionalMedicines'), ...traditionalMedicinesItems], [sellerItems]);
+
+  const dynamicCategories = useMemo(() => {
+    const set = new Set();
+    marketItems.forEach((item) => { if (item.category) set.add(item.category); });
+    return ['All', ...Array.from(set)];
+  }, [marketItems]);
+  const [selectedCategory, setSelectedCategory] = useState('All');
+
+  const filteredItems = useMemo(() => (
+    selectedCategory === 'All' ? marketItems : marketItems.filter((item) => item.category === selectedCategory)
+  ), [marketItems, selectedCategory]);
+
   const buildCartItem = (item) => createCartItem({
     ...item,
     route: '/traditional-medicines-herbs',
@@ -13822,8 +14832,20 @@ const TraditionalMedicinesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wis
     <div className="mb-5 rounded-xl border border-[#d6c8a3] bg-[#fff9ec] p-3 text-sm text-[#7b5b12]">
       Traditional remedies should be used responsibly. Buyers should follow local guidance and consult qualified practitioners when needed.
     </div>
+    <div className="mb-5 flex flex-wrap gap-2">
+      {dynamicCategories.map((category) => (
+        <button
+          key={category}
+          type="button"
+          onClick={() => setSelectedCategory(category)}
+          className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition ${selectedCategory === category ? 'border-[#7b5b12] bg-[#7b5b12] text-white' : 'border-[#d6c8a3] bg-white text-[#7b5b12] hover:bg-[#fff9ec]'}`}
+        >
+          {category}
+        </button>
+      ))}
+    </div>
     <CardGrid
-      items={marketItems}
+      items={filteredItems}
       buttonLabel={t('common.addToCart')}
       secondaryButtonLabel={t('common.viewDetails')}
       reviewSummaryMap={productReviewSummaryMap}
@@ -13833,6 +14855,17 @@ const TraditionalMedicinesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wis
       onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
       onOpenItemDetails={(item) => {
         const wishlistItem = buildWishlistItem(item);
+        const similar = marketItems
+          .filter((other) => other.id !== item.id && other.category === item.category)
+          .slice(0, 6)
+          .map((other) => ({
+            id: other.id,
+            title: other.title,
+            image: other.image,
+            price: getSalePrices(other.price, getItemSaleDiscountRate(other), other.currency || null).nowPrice,
+            category: other.category,
+            sellerName: other.sellerName,
+          }));
         onOpenItemDetails?.({
           title: getTranslatedValue(t, item.titleKey, item.title),
           image: item.image,
@@ -13841,6 +14874,15 @@ const TraditionalMedicinesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wis
           marketName: t('markets.traditionalMedicines'),
           details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Traditional herbal listing'}`,
           priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
+          highlights: [item.traditionalUses, item.preparationMethod].filter(Boolean),
+          detailsTable: {
+            Category: item.category || 'Traditional Medicine',
+            'Scientific / Botanical Name': item.scientificName || 'Not specified',
+            'Part Used': item.partUsed || 'Not specified',
+            Form: item.formType || 'Not specified',
+            Origin: item.origin || 'Not specified',
+          },
+          similarProducts: similar,
           cartItem: buildCartItem(item),
           wishlistItem,
         });
@@ -14581,13 +15623,13 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
   const buildCartItem = (item) => createCartItem({
     ...item,
     route: '/informal-market',
-    marketName: 'Informal Market',
+    marketName: t('markets.informalMarket'),
     details: `${item.category || 'Informal listing'} • ${item.description || item.sellerName || 'Local informal seller'}`,
   });
   const buildWishlistItem = (item) => createWishlistItem({
     ...item,
     route: '/informal-market',
-    marketName: 'Informal Market',
+    marketName: t('markets.informalMarket'),
     details: `${item.category || 'Informal listing'} • ${item.sellerName || 'Local informal seller'}`,
   });
 
@@ -14618,7 +15660,7 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
       image: item.image,
       images: item.images || (item.image ? [item.image] : []),
       ...getItemDetailSizeProps(item),
-      marketName: 'Informal Market',
+      marketName: t('markets.informalMarket'),
       marketKey: 'informalMarket',
       category: item.category || '',
       sellerName: item.normalizedVendor || item.sellerName || '',
@@ -14645,9 +15687,9 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
   return (
   <MarketShowcase
     marketKey="informalMarket"
-    title="Informal Market"
-    subtitle="Discover goods sold near your area by township and street vendors"
-    eyebrow="Informal Market"
+    title={t('markets.informalMarket')}
+    subtitle={t('pageSubtitles.informalMarket')}
+    eyebrow={t('markets.informalMarket')}
     chips={['Township sellers', 'Local pickup', 'Direct trade']}
   >
     <div className="mt-7 space-y-7 bg-[radial-gradient(circle_at_top,#e3f6ff_0,#f8fbff_42%,#ffffff_100%)] pb-8 sm:mt-9 sm:space-y-9">
@@ -17569,7 +18611,7 @@ const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       <MarketHero
         marketKey="hardwareSoftware"
         title={t('markets.hardwareSoftware')}
-        subtitle="Explore a comprehensive hardware and software marketplace offering verified vendors, secure solutions, and performance-driven tools built for modern business requirements."
+        subtitle={t('pageSubtitles.hardwareSoftware')}
         eyebrow={t('markets.hardwareSoftware')}
         chips={['Verified vendors', 'Enterprise grade', 'Secure licensing']}
       />
@@ -19675,10 +20717,15 @@ const buildWorkerDetailPayload = (item) => {
 };
 
 const GENERAL_LABOUR_WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-// "Available Days" pills on the worker profile page — derived from
-// schedulePreference rather than stored separately, since the two always
-// move together (e.g. a "Weekends" worker is available Saturday & Sunday).
-const getWorkerAvailableDays = (schedulePreference) => {
+// "Available Days" pills on the worker profile page — prefers the worker's
+// own explicit day selection (set at listing time) and falls back to a
+// schedulePreference-derived guess for older/catalog workers that never set
+// availableDays explicitly (e.g. a "Weekends" worker defaults to Sat & Sun).
+const getWorkerAvailableDays = (worker = {}) => {
+  if (Array.isArray(worker.availableDays) && worker.availableDays.length) {
+    return GENERAL_LABOUR_WEEK_DAYS.filter((day) => worker.availableDays.includes(day));
+  }
+  const schedulePreference = worker.schedulePreference;
   if (schedulePreference === 'Weekdays') return GENERAL_LABOUR_WEEK_DAYS.slice(0, 5);
   if (schedulePreference === 'Weekends') return GENERAL_LABOUR_WEEK_DAYS.slice(5);
   return GENERAL_LABOUR_WEEK_DAYS;
@@ -21278,6 +22325,7 @@ const emptyGeneralLabourSellForm = () => ({
   travelFee: '',
   schedulePreference: '',
   availability: '',
+  availableDays: [],
   phone: '',
   bio: '',
   keyHighlights: '',
@@ -21321,6 +22369,15 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
   const handleChange = (event) => {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleToggleAvailableDay = (day) => {
+    setForm((current) => ({
+      ...current,
+      availableDays: current.availableDays.includes(day)
+        ? current.availableDays.filter((entry) => entry !== day)
+        : [...current.availableDays, day],
+    }));
   };
 
   const handleImagePick = (event) => {
@@ -21374,6 +22431,7 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
       travelFee: listing.travelFee || '',
       schedulePreference: listing.schedulePreference || '',
       availability: listing.availability || '',
+      availableDays: Array.isArray(listing.availableDays) ? listing.availableDays : [],
       phone: listing.phone || '',
       bio: listing.productOverview || listing.bio || '',
       keyHighlights: Array.isArray(listing.keyHighlights) ? listing.keyHighlights.join('\n') : (Array.isArray(listing.skills) ? listing.skills.join('\n') : ''),
@@ -21463,6 +22521,7 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
       'Rate Type': form.rateType,
       Availability: trimmedAvailability,
       'Schedule Preference': form.schedulePreference,
+      ...(form.availableDays.length ? { 'Available Days': form.availableDays.join(', ') } : {}),
       Gender: form.gender,
       Phone: trimmedPhone,
       ...(form.languages.trim() ? { 'Languages Spoken': form.languages.trim() } : {}),
@@ -21497,6 +22556,7 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
       ...(trimmedTravelFee ? { travelFee: trimmedTravelFee } : {}),
       schedulePreference: form.schedulePreference,
       availability: trimmedAvailability,
+      ...(form.availableDays.length ? { availableDays: form.availableDays } : {}),
       phone: trimmedPhone,
       ...(form.bio.trim() ? { productOverview: form.bio.trim() } : {}),
       ...(keyHighlights.length ? { keyHighlights } : {}),
@@ -21718,6 +22778,26 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
                 <input id="gl-availability" name="availability" value={form.availability} onChange={handleChange} placeholder="e.g. Available Immediately, Available within 1 week" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
               </div>
             </div>
+            <div className="mt-4">
+              <label className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Days available</label>
+              <p className="mb-2 text-xs text-[var(--svs-muted)]">Select every day you're available to work. Leave blank to use your schedule preference above.</p>
+              <div className="flex flex-wrap gap-2">
+                {GENERAL_LABOUR_WEEK_DAYS.map((day) => {
+                  const isSelected = form.availableDays.includes(day);
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => handleToggleAvailableDay(day)}
+                      aria-pressed={isSelected}
+                      className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition ${isSelected ? 'border-[var(--svs-primary)] bg-[var(--svs-primary)] text-white' : 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)] text-[var(--svs-text)] hover:bg-[var(--svs-cyan-surface)]'}`}
+                    >
+                      {day}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
             {/* Contact — how employers reach this worker */}
             <h2 className="mt-6 text-base font-bold text-[var(--svs-text)]">Contact</h2>
@@ -21903,7 +22983,7 @@ const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onAddToCart, onBuyNow
   const images = worker.images?.length ? worker.images : (worker.image ? [worker.image] : []);
   const currentImage = images[selectedImage] || images[0] || '';
   const displayTitle = worker.name ? `${worker.name} — ${worker.title}` : worker.title;
-  const availableDays = getWorkerAvailableDays(worker.schedulePreference);
+  const availableDays = getWorkerAvailableDays(worker);
   const pricingTiers = getWorkerPricingTiers(worker);
   const sampleReviews = getWorkerSampleReviews(worker);
   const averageRating = sampleReviews.length ? (sampleReviews.reduce((sum, r) => sum + r.rating, 0) / sampleReviews.length) : (worker.rating || 4.5);
@@ -29912,12 +30992,148 @@ const LivestockHubPage = ({
   );
 };
 
+const SafetyFilterCheckbox = ({ label, checked, onChange }) => (
+  <label className="flex cursor-pointer items-center gap-2 py-1 text-sm text-[var(--svs-text)]">
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={onChange}
+      className="h-4 w-4 rounded border-[var(--svs-border)] text-[var(--svs-primary)] focus:ring-[var(--svs-primary)]"
+    />
+    <span>{label}</span>
+  </label>
+);
+
+const SAFETY_AGE_RANGE_ORDER = ['0-12 months', '1-2 years', '3-5 years', '6-8 years', '9-12 years', '13+ years', 'All Ages'];
+
+const SafetyFiltersPanel = ({
+  categories, ageRanges, brands,
+  selectedCategories, setSelectedCategories,
+  selectedAgeRanges, setSelectedAgeRanges,
+  selectedBrands, setSelectedBrands,
+  toggleSelection, onApply,
+}) => (
+  <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-sm">
+    <div>
+      <h3 className="text-sm font-bold text-[var(--svs-text)]">Category</h3>
+      <div className="mt-2 max-h-56 overflow-y-auto pr-1">
+        {categories.map((category) => (
+          <SafetyFilterCheckbox
+            key={category}
+            label={category}
+            checked={selectedCategories.includes(category)}
+            onChange={() => toggleSelection(selectedCategories, setSelectedCategories, category, true)}
+          />
+        ))}
+      </div>
+    </div>
+    <hr className="my-4 border-[var(--svs-border)]" />
+    <div>
+      <h3 className="text-sm font-bold text-[var(--svs-text)]">Recommended Age</h3>
+      <div className="mt-2">
+        {ageRanges.map((ageRange) => (
+          <SafetyFilterCheckbox
+            key={ageRange}
+            label={ageRange}
+            checked={selectedAgeRanges.includes(ageRange)}
+            onChange={() => toggleSelection(selectedAgeRanges, setSelectedAgeRanges, ageRange, false)}
+          />
+        ))}
+      </div>
+    </div>
+    <hr className="my-4 border-[var(--svs-border)]" />
+    <div>
+      <h3 className="text-sm font-bold text-[var(--svs-text)]">Brand</h3>
+      <div className="mt-2 max-h-44 overflow-y-auto pr-1">
+        {brands.map((brand) => (
+          <SafetyFilterCheckbox
+            key={brand}
+            label={brand}
+            checked={selectedBrands.includes(brand)}
+            onChange={() => toggleSelection(selectedBrands, setSelectedBrands, brand, true)}
+          />
+        ))}
+      </div>
+    </div>
+    <button
+      type="button"
+      onClick={onApply}
+      className="mt-5 w-full rounded-lg bg-[var(--svs-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-[var(--svs-primary-strong)]"
+    >
+      Apply Filters
+    </button>
+  </div>
+);
+
 const SafetyPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(
     () => [...getSellerItemsForMarket(sellerItems, 'toysKids'), ...toysKidsItems],
     [sellerItems],
   );
+
+  const dynamicCategories = useMemo(() => {
+    const set = new Set();
+    marketItems.forEach((item) => { if (item.category) set.add(item.category); });
+    return ['All', ...Array.from(set)];
+  }, [marketItems]);
+  const dynamicAgeRanges = useMemo(() => {
+    const set = new Set();
+    marketItems.forEach((item) => { if (item.ageRange) set.add(item.ageRange); });
+    return SAFETY_AGE_RANGE_ORDER.filter((range) => set.has(range));
+  }, [marketItems]);
+  const dynamicBrands = useMemo(() => {
+    const set = new Set();
+    marketItems.forEach((item) => { if (item.brand) set.add(item.brand); });
+    return ['All', ...Array.from(set)];
+  }, [marketItems]);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState(['All']);
+  const [selectedAgeRanges, setSelectedAgeRanges] = useState([]);
+  const [selectedBrands, setSelectedBrands] = useState(['All']);
+  const [showAll, setShowAll] = useState(false);
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+
+  const toggleSelection = useCallback((current, setter, value, exclusiveAll = false) => {
+    if (exclusiveAll && value === 'All') {
+      setter(['All']);
+      return;
+    }
+    setter((prev) => {
+      const without = prev.filter((entry) => entry !== 'All');
+      if (without.includes(value)) {
+        const next = without.filter((entry) => entry !== value);
+        return next.length ? next : (exclusiveAll ? ['All'] : []);
+      }
+      return [...without, value];
+    });
+  }, []);
+
+  const handleApplyFilters = () => {
+    setShowAll(false);
+    setIsMobileFiltersOpen(false);
+  };
+
+  const filteredItems = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return marketItems.filter((item) => {
+      if (query) {
+        const haystack = [item.title, item.category, item.brand, item.description, item.sellerName]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        if (!haystack.includes(query)) return false;
+      }
+      if (selectedCategories.length && !selectedCategories.includes('All') && !selectedCategories.includes(item.category)) return false;
+      if (selectedAgeRanges.length && !selectedAgeRanges.includes(item.ageRange)) return false;
+      if (selectedBrands.length && !selectedBrands.includes('All') && !selectedBrands.includes(item.brand)) return false;
+      return true;
+    });
+  }, [marketItems, searchQuery, selectedCategories, selectedAgeRanges, selectedBrands]);
+
+  const visibleItems = showAll ? filteredItems : filteredItems.slice(0, 12);
+
   const buildCartItem = (item) => createCartItem({
     ...item,
     route: '/safety',
@@ -29931,6 +31147,22 @@ const SafetyPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds =
     details: `${item.category || 'Seller item'} • ${item.sellerName || 'Toys & kids'}`,
   });
 
+  const filtersPanel = (
+    <SafetyFiltersPanel
+      categories={dynamicCategories}
+      ageRanges={dynamicAgeRanges}
+      brands={dynamicBrands}
+      selectedCategories={selectedCategories}
+      setSelectedCategories={setSelectedCategories}
+      selectedAgeRanges={selectedAgeRanges}
+      setSelectedAgeRanges={setSelectedAgeRanges}
+      selectedBrands={selectedBrands}
+      setSelectedBrands={setSelectedBrands}
+      toggleSelection={toggleSelection}
+      onApply={handleApplyFilters}
+    />
+  );
+
   return (
     <MarketShowcase
       marketKey="safety"
@@ -29939,32 +31171,109 @@ const SafetyPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds =
       eyebrow={t('markets.safety')}
       chips={['Toys', 'Kids essentials', 'Safety gear']}
     >
-      <CardGrid
-        items={marketItems}
-        buttonLabel={t('common.addToCart')}
-        secondaryButtonLabel={t('common.viewDetails')}
-        reviewSummaryMap={productReviewSummaryMap}
-        getItemReviewKey={(item) => getCollectionItemId('/safety', item.id)}
-        onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-        onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
-        onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
-        onOpenItemDetails={(item) => {
-          const wishlistItem = buildWishlistItem(item);
-          onOpenItemDetails?.({
-            title: getTranslatedValue(t, item.titleKey, item.title),
-            image: item.image,
-            images: item.images || (item.image ? [item.image] : []),
-            ...getItemDetailSizeProps(item),
-            marketName: t('markets.safety'),
-            details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Toys & kids'}`,
-            priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
-            cartItem: buildCartItem(item),
-            wishlistItem,
-          });
-        }}
-        isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/safety', item.id))}
-        metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • <SalePrice price={item.price} currency={item.currency} /></p>}
-      />
+      <div className="flex items-center gap-2 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-3 shadow-sm">
+        <Search className="h-5 w-5 text-[var(--svs-primary-strong)]" />
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          placeholder="Search toys, brands, or categories..."
+          className="w-full bg-transparent text-sm text-[var(--svs-text)] placeholder:text-[var(--svs-muted)] focus:outline-none"
+        />
+      </div>
+      <div className="mt-3 flex justify-end lg:hidden">
+        <button
+          type="button"
+          onClick={() => setIsMobileFiltersOpen((prev) => !prev)}
+          className="inline-flex items-center gap-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-2 text-sm font-semibold text-[var(--svs-text)] shadow-sm"
+          aria-expanded={isMobileFiltersOpen}
+        >
+          <Filter className="h-4 w-4" />
+          {isMobileFiltersOpen ? 'Hide Filters' : 'Show Filters'}
+        </button>
+      </div>
+
+      <div className="mt-5 grid w-full grid-cols-1 gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <aside className="hidden lg:block">{filtersPanel}</aside>
+        {isMobileFiltersOpen ? <div className="lg:hidden">{filtersPanel}</div> : null}
+
+        <div>
+          <CardGrid
+            items={visibleItems}
+            buttonLabel={t('common.addToCart')}
+            secondaryButtonLabel={t('common.viewDetails')}
+            reviewSummaryMap={productReviewSummaryMap}
+            getItemReviewKey={(item) => getCollectionItemId('/safety', item.id)}
+            onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+            onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
+            onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+            onOpenItemDetails={(item) => {
+              const wishlistItem = buildWishlistItem(item);
+              const similar = marketItems
+                .filter((other) => other.id !== item.id && other.category === item.category)
+                .slice(0, 6)
+                .map((other) => ({
+                  id: other.id,
+                  title: other.title,
+                  image: other.image,
+                  price: getSalePrices(other.price, getItemSaleDiscountRate(other), other.currency || null).nowPrice,
+                  category: other.category,
+                  sellerName: other.sellerName,
+                }));
+              onOpenItemDetails?.({
+                title: getTranslatedValue(t, item.titleKey, item.title),
+                image: item.image,
+                images: item.images || (item.image ? [item.image] : []),
+                ...getItemDetailSizeProps(item),
+                marketName: t('markets.safety'),
+                details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Toys & kids'}`,
+                priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
+                highlights: [
+                  item.ageRange ? `Recommended for ${item.ageRange}` : null,
+                  item.safetyCertification ? `Safety certified: ${item.safetyCertification}` : null,
+                  item.material ? `Made from ${item.material}` : null,
+                ].filter(Boolean),
+                detailsTable: {
+                  Category: item.category || 'Toys & Kids',
+                  Brand: item.brand || 'Generic',
+                  'Recommended Age': item.ageRange || 'All Ages',
+                  Audience: item.gender || 'Unisex',
+                  Material: item.material || 'N/A',
+                  'Safety Certification': item.safetyCertification || 'N/A',
+                },
+                similarProducts: similar,
+                cartItem: buildCartItem(item),
+                wishlistItem,
+              });
+            }}
+            isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/safety', item.id))}
+            metaRenderer={(item) => (
+              <p className="flex flex-wrap items-center gap-1.5 text-sm text-slate-600">
+                {item.category || 'Seller item'} • <SalePrice price={item.price} currency={item.currency} />
+                {item.ageRange ? (
+                  <span className="rounded-full bg-[var(--svs-cyan-surface)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--svs-primary-strong)]">{item.ageRange}</span>
+                ) : null}
+              </p>
+            )}
+          />
+          {!filteredItems.length ? (
+            <div className="rounded-2xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface)] p-10 text-center text-sm text-[var(--svs-muted)]">
+              No toys match your filters.
+            </div>
+          ) : null}
+          {filteredItems.length > 12 ? (
+            <div className="mt-6 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setShowAll((prev) => !prev)}
+                className="rounded-lg bg-[var(--svs-primary)] px-8 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-[var(--svs-primary-strong)]"
+              >
+                {showAll ? 'Show Less' : 'View All'}
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </div>
     </MarketShowcase>
   );
 };
@@ -40751,6 +42060,7 @@ const ItemDetailsModal = ({
   reviewNotice = '',
 }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const itemImages = useMemo(() => {
     const rawImages = Array.isArray(item?.images) ? item.images : [];
     const cleanImages = rawImages.filter((url) => typeof url === 'string' && url.trim());
@@ -40839,7 +42149,7 @@ const ItemDetailsModal = ({
   const selectedSizeSoldOut = itemHasSizeStock && Boolean(selectedSize) && isItemSizeSoldOut(item, selectedSize);
   const allSizesSoldOut = itemHasSizeStock && sizeOptions.length > 0 && getItemInStockSizes(item).length === 0;
   const isModalOutOfStock = selectedSizeSoldOut || allSizesSoldOut;
-  const isInformalMarketItem = String(item.marketName || '').toLowerCase().includes('informal market');
+  const isInformalMarketItem = item.marketKey === 'informalMarket' || String(item.marketName || '').toLowerCase().includes('informal market');
   const rawSellerName = String(
     actionCartItem?.sellerName
     || item?.sellerName
@@ -41042,7 +42352,7 @@ const ItemDetailsModal = ({
         >
           {/* Close button */}
           <div className="flex items-center justify-between border-b border-[#e5eef8] bg-gradient-to-r from-[#0f6674] via-[#0f889a] to-[#0f6674] px-4 py-3 text-white">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-100">Informal Market</p>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-100">{t('markets.informalMarket')}</p>
             <button
               type="button"
               onClick={onClose}
@@ -42150,6 +43460,643 @@ const secondhandProductDetailData = {
       { id: 'sim1', title: 'Samsung Galaxy S22 Ultra', price: '62,999/-', location: 'Nairobi', image: 'https://images.pexels.com/photos/214487/pexels-photo-214487.jpeg?auto=compress&cs=tinysrgb&w=600' },
       { id: 'sim2', title: 'iPhone 12 Pro 128GB', price: '52,499/-', location: 'Mombasa', image: 'https://images.pexels.com/photos/607812/pexels-photo-607812.jpeg?auto=compress&cs=tinysrgb&w=600' },
       { id: 'sim3', title: 'Google Pixel 7 Pro', price: '48,999/-', location: 'Kisumu', image: 'https://images.pexels.com/photos/699122/pexels-photo-699122.jpeg?auto=compress&cs=tinysrgb&w=600' },
+    ],
+  },
+  sh1: {
+    id: 'sh1',
+    title: 'iPhone 14 Pro – 128 GB',
+    category: 'Phones & Tablets',
+    brand: 'Apple',
+    price: '549.99',
+    rating: 4.7,
+    ratingCount: 3,
+    overallRating: 4.7,
+    totalReviews: 3,
+    condition: 'Excellent',
+    sellerType: 'Individual',
+    location: 'Cape Town (South Africa)',
+    availability: 'Available Now',
+    images: ['https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=1200'],
+    description: ['Minor signs of use, battery health 92%. Includes original charger and box. Fully tested and unlocked for all carriers.'],
+    highlights: ['Battery health 92%', 'Includes original charger and box', 'Unlocked — works with all carriers', '128GB storage', 'Minimal cosmetic wear'],
+    specs: [
+      { label: 'Display', value: '6.1" Super Retina XDR' },
+      { label: 'Processor', value: 'A16 Bionic' },
+      { label: 'Storage', value: '128GB' },
+      { label: 'Camera', value: '48MP Triple Camera' },
+      { label: 'Battery Health', value: '92%' },
+      { label: 'Condition', value: 'Excellent' },
+    ],
+    trustSafety: [
+      { icon: 'shield', text: 'Verified Seller' },
+      { icon: 'check', text: 'Device Quality Check' },
+      { icon: 'lock', text: 'Secure communication' },
+    ],
+    seller: { name: 'Lindiwe M.', type: 'Individual', location: 'Cape Town (South Africa)', avatar: '' },
+    reviews: [
+      { id: 'sh1-r1', name: 'Thabo N.', date: '1 week ago', rating: 5, comment: 'Phone is exactly as described, battery lasts all day. Great deal.', helpful: 9 },
+      { id: 'sh1-r2', name: 'Aisha P.', date: '3 weeks ago', rating: 5, comment: 'Came with box and charger, looked barely used. Very happy.', helpful: 6 },
+      { id: 'sh1-r3', name: 'Kyle R.', date: '1 month ago', rating: 4, comment: 'Tiny scuff on the frame not mentioned but works perfectly.', helpful: 3 },
+    ],
+    ratingBreakdown: { 5: 70, 4: 25, 3: 5, 2: 0, 1: 0 },
+    similarProducts: [
+      { id: 'sh2', title: 'Samsung Galaxy S23 Ultra', price: '469.00', location: 'Cape Town', image: 'https://images.pexels.com/photos/214487/pexels-photo-214487.jpeg?auto=compress&cs=tinysrgb&w=600' },
+      { id: 'sh3', title: 'Google Pixel 8 – 256 GB', price: '399.00', location: 'Cape Town', image: 'https://images.pexels.com/photos/607812/pexels-photo-607812.jpeg?auto=compress&cs=tinysrgb&w=600' },
+      { id: 'sh16', title: 'iPhone 13 Mini – 128 GB', price: '319.00', location: 'Cape Town', image: 'https://images.pexels.com/photos/607812/pexels-photo-607812.jpeg?auto=compress&cs=tinysrgb&w=600' },
+    ],
+  },
+  sh2: {
+    id: 'sh2',
+    title: 'Samsung Galaxy S23 Ultra',
+    category: 'Phones & Tablets',
+    brand: 'Samsung',
+    price: '469.00',
+    rating: 4.4,
+    ratingCount: 2,
+    overallRating: 4.4,
+    totalReviews: 2,
+    condition: 'Good',
+    sellerType: 'Individual',
+    location: 'Johannesburg (South Africa)',
+    availability: 'Available Now',
+    images: ['https://images.pexels.com/photos/214487/pexels-photo-214487.jpeg?auto=compress&cs=tinysrgb&w=1200'],
+    description: ['Light scratches on back, fully functional. No box. S-Pen included and working perfectly.'],
+    highlights: ['200MP camera system', 'S-Pen included', 'Light cosmetic wear only', 'Fully functional', 'No original box'],
+    specs: [
+      { label: 'Display', value: '6.8" Dynamic AMOLED' },
+      { label: 'Processor', value: 'Snapdragon 8 Gen 2' },
+      { label: 'Storage', value: '256GB' },
+      { label: 'Camera', value: '200MP Quad Camera' },
+      { label: 'Battery', value: '5000 mAh' },
+      { label: 'Condition', value: 'Good' },
+    ],
+    trustSafety: [
+      { icon: 'shield', text: 'Verified Seller' },
+      { icon: 'check', text: 'Device Quality Check' },
+      { icon: 'lock', text: 'Secure communication' },
+    ],
+    seller: { name: 'Pieter V.', type: 'Individual', location: 'Johannesburg (South Africa)', avatar: '' },
+    reviews: [
+      { id: 'sh2-r1', name: 'Naledi K.', date: '2 weeks ago', rating: 4, comment: 'Great phone, scratches are exactly where described. S-Pen works great.', helpful: 5 },
+      { id: 'sh2-r2', name: 'Mark D.', date: '1 month ago', rating: 5, comment: 'Camera quality is amazing for a used phone. Happy with the purchase.', helpful: 4 },
+    ],
+    ratingBreakdown: { 5: 50, 4: 50, 3: 0, 2: 0, 1: 0 },
+    similarProducts: [
+      { id: 'sh1', title: 'iPhone 14 Pro – 128 GB', price: '549.99', location: 'Cape Town', image: 'https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=600' },
+      { id: 'sh3', title: 'Google Pixel 8 – 256 GB', price: '399.00', location: 'Johannesburg', image: 'https://images.pexels.com/photos/607812/pexels-photo-607812.jpeg?auto=compress&cs=tinysrgb&w=600' },
+      { id: 'sh16', title: 'iPhone 13 Mini – 128 GB', price: '319.00', location: 'Johannesburg', image: 'https://images.pexels.com/photos/607812/pexels-photo-607812.jpeg?auto=compress&cs=tinysrgb&w=600' },
+    ],
+  },
+  sh3: {
+    id: 'sh3',
+    title: 'Google Pixel 8 – 256 GB',
+    category: 'Phones & Tablets',
+    brand: 'Google',
+    price: '399.00',
+    rating: 4.8,
+    ratingCount: 2,
+    overallRating: 4.8,
+    totalReviews: 2,
+    condition: 'Like New',
+    sellerType: 'Individual',
+    location: 'Durban (South Africa)',
+    availability: 'Available Now',
+    images: ['https://images.pexels.com/photos/607812/pexels-photo-607812.jpeg?auto=compress&cs=tinysrgb&w=1200'],
+    description: ['Barely used, original packaging included. Clean stock Android experience with the latest security updates.'],
+    highlights: ['Barely used, like-new condition', 'Original packaging included', 'Tensor G3 chip', '256GB storage', 'Clean stock Android'],
+    specs: [
+      { label: 'Display', value: '6.2" OLED' },
+      { label: 'Processor', value: 'Google Tensor G3' },
+      { label: 'Storage', value: '256GB' },
+      { label: 'Camera', value: '50MP Dual Camera' },
+      { label: 'Battery', value: '4575 mAh' },
+      { label: 'Condition', value: 'Like New' },
+    ],
+    trustSafety: [
+      { icon: 'shield', text: 'Verified Seller' },
+      { icon: 'check', text: 'Device Quality Check' },
+      { icon: 'lock', text: 'Secure communication' },
+    ],
+    seller: { name: 'Sipho Z.', type: 'Individual', location: 'Durban (South Africa)', avatar: '' },
+    reviews: [
+      { id: 'sh3-r1', name: 'Megan T.', date: '5 days ago', rating: 5, comment: 'Looks brand new, exactly as described. Great camera.', helpful: 7 },
+      { id: 'sh3-r2', name: 'Bongani S.', date: '3 weeks ago', rating: 5, comment: 'Fast delivery, phone works flawlessly.', helpful: 2 },
+    ],
+    ratingBreakdown: { 5: 90, 4: 10, 3: 0, 2: 0, 1: 0 },
+    similarProducts: [
+      { id: 'sh1', title: 'iPhone 14 Pro – 128 GB', price: '549.99', location: 'Durban', image: 'https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=600' },
+      { id: 'sh2', title: 'Samsung Galaxy S23 Ultra', price: '469.00', location: 'Durban', image: 'https://images.pexels.com/photos/214487/pexels-photo-214487.jpeg?auto=compress&cs=tinysrgb&w=600' },
+      { id: 'sh16', title: 'iPhone 13 Mini – 128 GB', price: '319.00', location: 'Durban', image: 'https://images.pexels.com/photos/607812/pexels-photo-607812.jpeg?auto=compress&cs=tinysrgb&w=600' },
+    ],
+  },
+  sh4: {
+    id: 'sh4',
+    title: 'MacBook Air M2 – 2022',
+    category: 'Laptops & Computers',
+    brand: 'Apple',
+    price: '729.00',
+    rating: 4.9,
+    ratingCount: 3,
+    overallRating: 4.9,
+    totalReviews: 3,
+    condition: 'Excellent',
+    sellerType: 'Individual',
+    location: 'Cape Town (South Africa)',
+    availability: 'Available Now',
+    images: ['https://images.pexels.com/photos/18105/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=1200'],
+    description: ['8 GB RAM, 256 GB SSD. Battery cycle count: 87. Lightweight fanless design, runs silent even under load.'],
+    highlights: ['Apple M2 chip', '8GB RAM / 256GB SSD', 'Battery cycle count only 87', 'Lightweight fanless design', 'Excellent cosmetic condition'],
+    specs: [
+      { label: 'Display', value: '13.6" Liquid Retina' },
+      { label: 'Processor', value: 'Apple M2' },
+      { label: 'RAM', value: '8GB' },
+      { label: 'Storage', value: '256GB SSD' },
+      { label: 'Battery Cycle Count', value: '87' },
+      { label: 'Condition', value: 'Excellent' },
+    ],
+    trustSafety: [
+      { icon: 'shield', text: 'Verified Seller' },
+      { icon: 'check', text: 'Device Quality Check' },
+      { icon: 'lock', text: 'Secure communication' },
+    ],
+    seller: { name: 'Chloe A.', type: 'Individual', location: 'Cape Town (South Africa)', avatar: '' },
+    reviews: [
+      { id: 'sh4-r1', name: 'Ryan B.', date: '1 week ago', rating: 5, comment: 'Battery cycle count checks out, runs perfectly silent. Great laptop.', helpful: 8 },
+      { id: 'sh4-r2', name: 'Zanele M.', date: '2 weeks ago', rating: 5, comment: 'Looks brand new, super fast for everyday work.', helpful: 5 },
+      { id: 'sh4-r3', name: 'Liam F.', date: '1 month ago', rating: 5, comment: 'Exactly as described, would buy from this seller again.', helpful: 3 },
+    ],
+    ratingBreakdown: { 5: 90, 4: 10, 3: 0, 2: 0, 1: 0 },
+    similarProducts: [
+      { id: 'sh5', title: 'Dell XPS 15 – i7, 16 GB', price: '595.00', location: 'Cape Town', image: 'https://images.pexels.com/photos/7974/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=600' },
+      { id: 'sh15', title: 'Lenovo ThinkPad X1 Carbon Gen 10', price: '685.00', location: 'Cape Town', image: 'https://images.pexels.com/photos/7974/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=600' },
+    ],
+  },
+  sh5: {
+    id: 'sh5',
+    title: 'Dell XPS 15 – i7, 16 GB',
+    category: 'Laptops & Computers',
+    brand: 'Dell',
+    price: '595.00',
+    rating: 4.5,
+    ratingCount: 2,
+    overallRating: 4.5,
+    totalReviews: 2,
+    condition: 'Good',
+    sellerType: 'Individual',
+    location: 'Pretoria (South Africa)',
+    availability: 'Available Now',
+    images: ['https://images.pexels.com/photos/7974/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=1200'],
+    description: ['Refurbished, new battery installed. Minor cosmetic wear on the lid, fully functional otherwise.'],
+    highlights: ['Intel i7 / 16GB RAM', 'New battery installed', 'Professionally refurbished', '4K display option', 'Minor cosmetic wear only'],
+    specs: [
+      { label: 'Display', value: '15.6" FHD+' },
+      { label: 'Processor', value: 'Intel Core i7' },
+      { label: 'RAM', value: '16GB' },
+      { label: 'Storage', value: '512GB SSD' },
+      { label: 'Battery', value: 'New replacement' },
+      { label: 'Condition', value: 'Good' },
+    ],
+    trustSafety: [
+      { icon: 'shield', text: 'Verified Seller' },
+      { icon: 'check', text: 'Device Quality Check' },
+      { icon: 'lock', text: 'Secure communication' },
+    ],
+    seller: { name: 'Werner K.', type: 'Individual', location: 'Pretoria (South Africa)', avatar: '' },
+    reviews: [
+      { id: 'sh5-r1', name: 'Priya N.', date: '2 weeks ago', rating: 4, comment: 'New battery makes a big difference, runs all day. Good buy.', helpful: 4 },
+      { id: 'sh5-r2', name: 'Andre L.', date: '1 month ago', rating: 5, comment: 'Solid laptop, the refurbishment quality is excellent.', helpful: 3 },
+    ],
+    ratingBreakdown: { 5: 50, 4: 50, 3: 0, 2: 0, 1: 0 },
+    similarProducts: [
+      { id: 'sh4', title: 'MacBook Air M2 – 2022', price: '729.00', location: 'Pretoria', image: 'https://images.pexels.com/photos/18105/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=600' },
+      { id: 'sh15', title: 'Lenovo ThinkPad X1 Carbon Gen 10', price: '685.00', location: 'Pretoria', image: 'https://images.pexels.com/photos/7974/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=600' },
+    ],
+  },
+  sh6: {
+    id: 'sh6',
+    title: 'PlayStation 5 – Disc Edition',
+    category: 'Gaming & Consoles',
+    brand: 'Sony',
+    price: '349.99',
+    rating: 4.6,
+    ratingCount: 3,
+    overallRating: 4.6,
+    totalReviews: 3,
+    condition: 'Good',
+    sellerType: 'Individual',
+    location: 'Cape Town (South Africa)',
+    availability: 'Available Now',
+    images: ['https://images.pexels.com/photos/275033/pexels-photo-275033.jpeg?auto=compress&cs=tinysrgb&w=1200'],
+    description: ['Comes with 2 controllers and 3 games. Disc drive fully functional, original box included.'],
+    highlights: ['Includes 2 controllers', '3 games included', 'Disc drive fully functional', 'Original box included', 'Tested and working'],
+    specs: [
+      { label: 'Storage', value: '825GB SSD' },
+      { label: 'Controllers Included', value: '2' },
+      { label: 'Games Included', value: '3' },
+      { label: 'Edition', value: 'Disc Edition' },
+      { label: 'Condition', value: 'Good' },
+    ],
+    trustSafety: [
+      { icon: 'shield', text: 'Verified Seller' },
+      { icon: 'check', text: 'Device Quality Check' },
+      { icon: 'lock', text: 'Secure communication' },
+    ],
+    seller: { name: 'Jordan P.', type: 'Individual', location: 'Cape Town (South Africa)', avatar: '' },
+    reviews: [
+      { id: 'sh6-r1', name: 'Sibusiso D.', date: '1 week ago', rating: 5, comment: 'Great bundle, both controllers work perfectly and games are genuine.', helpful: 6 },
+      { id: 'sh6-r2', name: 'Tarryn W.', date: '3 weeks ago', rating: 4, comment: 'Console runs a bit warm but otherwise great value.', helpful: 3 },
+      { id: 'sh6-r3', name: 'Kabelo M.', date: '1 month ago', rating: 5, comment: 'Exactly as advertised, very happy with this purchase.', helpful: 2 },
+    ],
+    ratingBreakdown: { 5: 67, 4: 33, 3: 0, 2: 0, 1: 0 },
+    similarProducts: [
+      { id: 'sh7', title: 'Nintendo Switch OLED', price: '239.00', location: 'Cape Town', image: 'https://images.pexels.com/photos/371924/pexels-photo-371924.jpeg?auto=compress&cs=tinysrgb&w=600' },
+    ],
+  },
+  sh7: {
+    id: 'sh7',
+    title: 'Nintendo Switch OLED',
+    category: 'Gaming & Consoles',
+    brand: 'Nintendo',
+    price: '239.00',
+    rating: 4.7,
+    ratingCount: 2,
+    overallRating: 4.7,
+    totalReviews: 2,
+    condition: 'Like New',
+    sellerType: 'Individual',
+    location: 'Port Elizabeth (South Africa)',
+    availability: 'Available Now',
+    images: ['https://images.pexels.com/photos/371924/pexels-photo-371924.jpeg?auto=compress&cs=tinysrgb&w=1200'],
+    description: ['With case and screen protector. Manufacturer warranty valid until December 2026.'],
+    highlights: ['OLED 7" screen', 'Case and screen protector included', 'Manufacturer warranty until Dec 2026', 'Barely used', 'All original accessories'],
+    specs: [
+      { label: 'Display', value: '7" OLED' },
+      { label: 'Storage', value: '64GB' },
+      { label: 'Battery Life', value: '~5 hours' },
+      { label: 'Warranty', value: 'Until Dec 2026' },
+      { label: 'Condition', value: 'Like New' },
+    ],
+    trustSafety: [
+      { icon: 'shield', text: 'Verified Seller' },
+      { icon: 'check', text: 'Device Quality Check' },
+      { icon: 'lock', text: 'Secure communication' },
+    ],
+    seller: { name: 'Anita R.', type: 'Individual', location: 'Port Elizabeth (South Africa)', avatar: '' },
+    reviews: [
+      { id: 'sh7-r1', name: 'Dean C.', date: '4 days ago', rating: 5, comment: 'Looks brand new, screen protector already on. Great find.', helpful: 5 },
+      { id: 'sh7-r2', name: 'Faith O.', date: '2 weeks ago', rating: 4, comment: 'Works great, case is a nice bonus.', helpful: 2 },
+    ],
+    ratingBreakdown: { 5: 60, 4: 40, 3: 0, 2: 0, 1: 0 },
+    similarProducts: [
+      { id: 'sh6', title: 'PlayStation 5 – Disc Edition', price: '349.99', location: 'Port Elizabeth', image: 'https://images.pexels.com/photos/275033/pexels-photo-275033.jpeg?auto=compress&cs=tinysrgb&w=600' },
+    ],
+  },
+  sh8: {
+    id: 'sh8',
+    title: 'Nike Air Jordan 1 Retro – Size 10',
+    category: 'Clothing & Shoes',
+    brand: 'Nike',
+    price: '89.00',
+    rating: 4.5,
+    ratingCount: 2,
+    overallRating: 4.5,
+    totalReviews: 2,
+    condition: 'Lightly Worn',
+    sellerType: 'Individual',
+    location: 'Johannesburg (South Africa)',
+    availability: 'Available Now',
+    images: ['https://images.pexels.com/photos/1148957/pexels-photo-1148957.jpeg?auto=compress&cs=tinysrgb&w=1200'],
+    description: ['Authentic, cleaned and sanitised. Iconic colourway with minimal sole wear.'],
+    highlights: ['Authentic, verified pair', 'Professionally cleaned & sanitised', 'Size US 10', 'Iconic colourway', 'Minimal sole wear'],
+    specs: [
+      { label: 'Size', value: 'US 10' },
+      { label: 'Material', value: 'Leather' },
+      { label: 'Authenticity', value: 'Verified' },
+      { label: 'Condition', value: 'Lightly Worn' },
+    ],
+    trustSafety: [
+      { icon: 'shield', text: 'Verified Seller' },
+      { icon: 'check', text: 'Authenticity Check' },
+      { icon: 'lock', text: 'Secure communication' },
+    ],
+    seller: { name: 'Bandile T.', type: 'Individual', location: 'Johannesburg (South Africa)', avatar: '' },
+    reviews: [
+      { id: 'sh8-r1', name: 'Connor H.', date: '1 week ago', rating: 5, comment: 'Authentic and cleaned perfectly, smells fresh. Great pair.', helpful: 4 },
+      { id: 'sh8-r2', name: 'Refilwe B.', date: '3 weeks ago', rating: 4, comment: 'Slight sole wear as mentioned but otherwise great condition.', helpful: 2 },
+    ],
+    ratingBreakdown: { 5: 50, 4: 50, 3: 0, 2: 0, 1: 0 },
+    similarProducts: [
+      { id: 'sh9', title: "Levi's 501 Vintage Jeans – W32", price: '45.00', location: 'Johannesburg', image: 'https://images.pexels.com/photos/1082529/pexels-photo-1082529.jpeg?auto=compress&cs=tinysrgb&w=600' },
+    ],
+  },
+  sh9: {
+    id: 'sh9',
+    title: "Levi's 501 Vintage Jeans – W32",
+    category: 'Clothing & Shoes',
+    brand: "Levi's",
+    price: '45.00',
+    rating: 4.3,
+    ratingCount: 1,
+    overallRating: 4.3,
+    totalReviews: 1,
+    condition: 'Good',
+    sellerType: 'Individual',
+    location: 'Bloemfontein (South Africa)',
+    availability: 'Available Now',
+    images: ['https://images.pexels.com/photos/1082529/pexels-photo-1082529.jpeg?auto=compress&cs=tinysrgb&w=1200'],
+    description: ['Classic wash, no rips. True vintage piece with authentic Levi\'s detailing.'],
+    highlights: ["Classic 501 straight fit", 'No rips or tears', 'True vintage piece', 'Waist size 32', "Authentic Levi's wash"],
+    specs: [
+      { label: 'Waist Size', value: 'W32' },
+      { label: 'Fit', value: 'Straight' },
+      { label: 'Material', value: 'Denim' },
+      { label: 'Era', value: 'Vintage' },
+      { label: 'Condition', value: 'Good' },
+    ],
+    trustSafety: [
+      { icon: 'shield', text: 'Verified Seller' },
+      { icon: 'check', text: 'Authenticity Check' },
+      { icon: 'lock', text: 'Secure communication' },
+    ],
+    seller: { name: 'Nomvula S.', type: 'Individual', location: 'Bloemfontein (South Africa)', avatar: '' },
+    reviews: [
+      { id: 'sh9-r1', name: 'Grant E.', date: '2 weeks ago', rating: 4, comment: 'Great vintage find, fits true to size. Happy with this.', helpful: 2 },
+    ],
+    ratingBreakdown: { 5: 0, 4: 100, 3: 0, 2: 0, 1: 0 },
+    similarProducts: [
+      { id: 'sh8', title: 'Nike Air Jordan 1 Retro – Size 10', price: '89.00', location: 'Bloemfontein', image: 'https://images.pexels.com/photos/1148957/pexels-photo-1148957.jpeg?auto=compress&cs=tinysrgb&w=600' },
+    ],
+  },
+  sh10: {
+    id: 'sh10',
+    title: 'IKEA KALLAX Shelf Unit – White',
+    category: 'Furniture & Decor',
+    brand: 'IKEA',
+    price: '55.00',
+    rating: 4.4,
+    ratingCount: 2,
+    overallRating: 4.4,
+    totalReviews: 2,
+    condition: 'Good',
+    sellerType: 'Individual',
+    location: 'Cape Town (South Africa)',
+    availability: 'Available Now',
+    images: ['https://images.pexels.com/photos/1350789/pexels-photo-1350789.jpeg?auto=compress&cs=tinysrgb&w=1200'],
+    description: ['4 x 4 cube shelving, fully assembled. Minor scuffs from normal use, sturdy and stable.'],
+    highlights: ['4x4 cube configuration', 'Fully assembled, ready to use', 'Minor scuffs only', 'Sturdy and stable', 'Versatile storage unit'],
+    specs: [
+      { label: 'Dimensions', value: '4x4 cubes' },
+      { label: 'Color', value: 'White' },
+      { label: 'Material', value: 'Particleboard' },
+      { label: 'Assembly', value: 'Pre-assembled' },
+      { label: 'Condition', value: 'Good' },
+    ],
+    trustSafety: [
+      { icon: 'shield', text: 'Verified Seller' },
+      { icon: 'check', text: 'Condition Check' },
+      { icon: 'lock', text: 'Secure communication' },
+    ],
+    seller: { name: 'Marius B.', type: 'Individual', location: 'Cape Town (South Africa)', avatar: '' },
+    reviews: [
+      { id: 'sh10-r1', name: 'Lerato F.', date: '1 week ago', rating: 4, comment: 'Sturdy shelf, scuffs are barely noticeable once styled.', helpful: 2 },
+      { id: 'sh10-r2', name: 'Brendan K.', date: '1 month ago', rating: 5, comment: 'Saved me from buying new, came fully assembled too.', helpful: 1 },
+    ],
+    ratingBreakdown: { 5: 50, 4: 50, 3: 0, 2: 0, 1: 0 },
+    similarProducts: [
+      { id: 'sh11', title: 'Dyson V11 Cordless Vacuum', price: '199.00', location: 'Cape Town', image: 'https://images.pexels.com/photos/213162/pexels-photo-213162.jpeg?auto=compress&cs=tinysrgb&w=600' },
+    ],
+  },
+  sh11: {
+    id: 'sh11',
+    title: 'Dyson V11 Cordless Vacuum',
+    category: 'Home Appliances',
+    brand: 'Dyson',
+    price: '199.00',
+    rating: 4.6,
+    ratingCount: 2,
+    overallRating: 4.6,
+    totalReviews: 2,
+    condition: 'Excellent',
+    sellerType: 'Individual',
+    location: 'Durban (South Africa)',
+    availability: 'Available Now',
+    images: ['https://images.pexels.com/photos/213162/pexels-photo-213162.jpeg?auto=compress&cs=tinysrgb&w=1200'],
+    description: ['Battery holds 50 min charge. All attachments included and recently serviced.'],
+    highlights: ['50-minute battery life', 'All attachments included', 'Excellent suction power', 'Lightweight cordless design', 'Recently serviced'],
+    specs: [
+      { label: 'Battery Life', value: '50 minutes' },
+      { label: 'Attachments Included', value: '5' },
+      { label: 'Power Mode', value: 'Up to 185 AW' },
+      { label: 'Condition', value: 'Excellent' },
+    ],
+    trustSafety: [
+      { icon: 'shield', text: 'Verified Seller' },
+      { icon: 'check', text: 'Device Quality Check' },
+      { icon: 'lock', text: 'Secure communication' },
+    ],
+    seller: { name: 'Candice O.', type: 'Individual', location: 'Durban (South Africa)', avatar: '' },
+    reviews: [
+      { id: 'sh11-r1', name: 'Mthunzi V.', date: '1 week ago', rating: 5, comment: 'Suction is still very strong, battery lasts as described.', helpful: 3 },
+      { id: 'sh11-r2', name: 'Janice M.', date: '3 weeks ago', rating: 4, comment: 'Great vacuum, all attachments were included as promised.', helpful: 1 },
+    ],
+    ratingBreakdown: { 5: 50, 4: 50, 3: 0, 2: 0, 1: 0 },
+    similarProducts: [
+      { id: 'sh10', title: 'IKEA KALLAX Shelf Unit – White', price: '55.00', location: 'Durban', image: 'https://images.pexels.com/photos/1350789/pexels-photo-1350789.jpeg?auto=compress&cs=tinysrgb&w=600' },
+    ],
+  },
+  sh12: {
+    id: 'sh12',
+    title: 'Apple AirPods Pro 2nd Gen',
+    category: 'Audio & Wearables',
+    brand: 'Apple',
+    price: '129.00',
+    rating: 4.6,
+    ratingCount: 2,
+    overallRating: 4.6,
+    totalReviews: 2,
+    condition: 'Good',
+    sellerType: 'Individual',
+    location: 'Cape Town (South Africa)',
+    availability: 'Available Now',
+    images: ['https://images.pexels.com/photos/3394666/pexels-photo-3394666.jpeg?auto=compress&cs=tinysrgb&w=1200'],
+    description: ['Noise cancellation working perfectly. Includes charging case and all ear tip sizes.'],
+    highlights: ['Active noise cancellation works perfectly', 'Includes charging case', 'Comfortable ear tip fit', 'Bluetooth 5.3 connectivity', 'Tested battery health'],
+    specs: [
+      { label: 'Type', value: 'In-ear' },
+      { label: 'Noise Cancellation', value: 'Active' },
+      { label: 'Battery Life', value: 'Up to 6 hours' },
+      { label: 'Case Included', value: 'Yes' },
+      { label: 'Condition', value: 'Good' },
+    ],
+    trustSafety: [
+      { icon: 'shield', text: 'Verified Seller' },
+      { icon: 'check', text: 'Device Quality Check' },
+      { icon: 'lock', text: 'Secure communication' },
+    ],
+    seller: { name: 'Tumi L.', type: 'Individual', location: 'Cape Town (South Africa)', avatar: '' },
+    reviews: [
+      { id: 'sh12-r1', name: 'Sarah J.', date: '5 days ago', rating: 5, comment: 'Noise cancellation works great, case included as promised.', helpful: 4 },
+      { id: 'sh12-r2', name: 'Vusi N.', date: '2 weeks ago', rating: 4, comment: 'Good battery life, sound quality is solid.', helpful: 1 },
+    ],
+    ratingBreakdown: { 5: 50, 4: 50, 3: 0, 2: 0, 1: 0 },
+    similarProducts: [
+      { id: 'sh13', title: 'Samsung Galaxy Watch 5 – 44 mm', price: '159.00', location: 'Cape Town', image: 'https://images.pexels.com/photos/437037/pexels-photo-437037.jpeg?auto=compress&cs=tinysrgb&w=600' },
+    ],
+  },
+  sh13: {
+    id: 'sh13',
+    title: 'Samsung Galaxy Watch 5 – 44 mm',
+    category: 'Audio & Wearables',
+    brand: 'Samsung',
+    price: '159.00',
+    rating: 4.5,
+    ratingCount: 1,
+    overallRating: 4.5,
+    totalReviews: 1,
+    condition: 'Like New',
+    sellerType: 'Individual',
+    location: 'Pretoria (South Africa)',
+    availability: 'Available Now',
+    images: ['https://images.pexels.com/photos/437037/pexels-photo-437037.jpeg?auto=compress&cs=tinysrgb&w=1200'],
+    description: ['Sapphire crystal, no scratches. Original band included, barely used.'],
+    highlights: ['Sapphire crystal glass, scratch-free', 'Original band included', 'Heart rate & sleep tracking', 'Water resistant', 'Barely used'],
+    specs: [
+      { label: 'Case Size', value: '44mm' },
+      { label: 'Display', value: 'Sapphire Crystal' },
+      { label: 'Battery Life', value: '~40 hours' },
+      { label: 'Water Resistance', value: '5ATM' },
+      { label: 'Condition', value: 'Like New' },
+    ],
+    trustSafety: [
+      { icon: 'shield', text: 'Verified Seller' },
+      { icon: 'check', text: 'Device Quality Check' },
+      { icon: 'lock', text: 'Secure communication' },
+    ],
+    seller: { name: 'Caitlin M.', type: 'Individual', location: 'Pretoria (South Africa)', avatar: '' },
+    reviews: [
+      { id: 'sh13-r1', name: 'Owen S.', date: '1 week ago', rating: 5, comment: 'Looks brand new, glass is flawless. Great deal.', helpful: 2 },
+    ],
+    ratingBreakdown: { 5: 100, 4: 0, 3: 0, 2: 0, 1: 0 },
+    similarProducts: [
+      { id: 'sh12', title: 'Apple AirPods Pro 2nd Gen', price: '129.00', location: 'Pretoria', image: 'https://images.pexels.com/photos/3394666/pexels-photo-3394666.jpeg?auto=compress&cs=tinysrgb&w=600' },
+    ],
+  },
+  sh14: {
+    id: 'sh14',
+    title: 'Harry Potter Complete Box Set',
+    category: 'Books & Media',
+    brand: 'Bloomsbury',
+    price: '25.00',
+    rating: 4.7,
+    ratingCount: 2,
+    overallRating: 4.7,
+    totalReviews: 2,
+    condition: 'Good',
+    sellerType: 'Individual',
+    location: 'Cape Town (South Africa)',
+    availability: 'Available Now',
+    images: ['https://images.pexels.com/photos/159711/books-bookstore-book-reading-159711.jpeg?auto=compress&cs=tinysrgb&w=1200'],
+    description: ['All 7 books, paperback. Light shelf wear, complete series ready for a new reader.'],
+    highlights: ['All 7 books included', 'Paperback edition', 'Light shelf wear only', 'Complete series', 'Great gift set'],
+    specs: [
+      { label: 'Format', value: 'Paperback' },
+      { label: 'Volumes', value: '7 books' },
+      { label: 'Language', value: 'English' },
+      { label: 'Condition', value: 'Good' },
+    ],
+    trustSafety: [
+      { icon: 'shield', text: 'Verified Seller' },
+      { icon: 'check', text: 'Condition Check' },
+      { icon: 'lock', text: 'Secure communication' },
+    ],
+    seller: { name: 'Heather P.', type: 'Individual', location: 'Cape Town (South Africa)', avatar: '' },
+    reviews: [
+      { id: 'sh14-r1', name: 'Sandile K.', date: '2 weeks ago', rating: 5, comment: 'Complete set, all books in great shape. Perfect gift.', helpful: 3 },
+      { id: 'sh14-r2', name: 'Olivia G.', date: '1 month ago', rating: 4, comment: 'Some shelf wear but all pages intact and readable.', helpful: 1 },
+    ],
+    ratingBreakdown: { 5: 50, 4: 50, 3: 0, 2: 0, 1: 0 },
+    similarProducts: [],
+  },
+  sh15: {
+    id: 'sh15',
+    title: 'Lenovo ThinkPad X1 Carbon Gen 10',
+    category: 'Laptops & Computers',
+    brand: 'Lenovo',
+    price: '685.00',
+    rating: 4.8,
+    ratingCount: 2,
+    overallRating: 4.8,
+    totalReviews: 2,
+    condition: 'Excellent',
+    sellerType: 'Individual',
+    location: 'Johannesburg (South Africa)',
+    availability: 'Available Now',
+    images: ['https://images.pexels.com/photos/7974/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=1200'],
+    description: ['i7, 16 GB, 512 GB SSD. Business-grade build quality, like new condition.'],
+    highlights: ['Intel i7 / 16GB RAM / 512GB SSD', 'Business-grade build quality', 'Like-new condition', 'Lightweight carbon fiber chassis', 'Full warranty documentation'],
+    specs: [
+      { label: 'Display', value: '14" FHD+' },
+      { label: 'Processor', value: 'Intel Core i7' },
+      { label: 'RAM', value: '16GB' },
+      { label: 'Storage', value: '512GB SSD' },
+      { label: 'Build', value: 'Carbon fiber' },
+      { label: 'Condition', value: 'Excellent' },
+    ],
+    trustSafety: [
+      { icon: 'shield', text: 'Verified Seller' },
+      { icon: 'check', text: 'Device Quality Check' },
+      { icon: 'lock', text: 'Secure communication' },
+    ],
+    seller: { name: 'Pravesh G.', type: 'Individual', location: 'Johannesburg (South Africa)', avatar: '' },
+    reviews: [
+      { id: 'sh15-r1', name: 'Michelle V.', date: '1 week ago', rating: 5, comment: 'Business-grade quality really shows, runs everything smoothly.', helpful: 4 },
+      { id: 'sh15-r2', name: 'Thapelo R.', date: '3 weeks ago', rating: 5, comment: 'Like new, exactly as described. Great for work.', helpful: 2 },
+    ],
+    ratingBreakdown: { 5: 100, 4: 0, 3: 0, 2: 0, 1: 0 },
+    similarProducts: [
+      { id: 'sh4', title: 'MacBook Air M2 – 2022', price: '729.00', location: 'Johannesburg', image: 'https://images.pexels.com/photos/18105/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=600' },
+      { id: 'sh5', title: 'Dell XPS 15 – i7, 16 GB', price: '595.00', location: 'Johannesburg', image: 'https://images.pexels.com/photos/7974/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=600' },
+    ],
+  },
+  sh16: {
+    id: 'sh16',
+    title: 'iPhone 13 Mini – 128 GB',
+    category: 'Phones & Tablets',
+    brand: 'Apple',
+    price: '319.00',
+    rating: 4.5,
+    ratingCount: 2,
+    overallRating: 4.5,
+    totalReviews: 2,
+    condition: 'Good',
+    sellerType: 'Individual',
+    location: 'Cape Town (South Africa)',
+    availability: 'Available Now',
+    images: ['https://images.pexels.com/photos/607812/pexels-photo-607812.jpeg?auto=compress&cs=tinysrgb&w=1200'],
+    description: ['Compact powerhouse. Battery health 88%, unlocked and ready for any carrier.'],
+    highlights: ['Compact 5.4" form factor', 'Battery health 88%', '128GB storage', 'Unlocked for all carriers', 'Great value flagship'],
+    specs: [
+      { label: 'Display', value: '5.4" Super Retina XDR' },
+      { label: 'Processor', value: 'A15 Bionic' },
+      { label: 'Storage', value: '128GB' },
+      { label: 'Battery Health', value: '88%' },
+      { label: 'Condition', value: 'Good' },
+    ],
+    trustSafety: [
+      { icon: 'shield', text: 'Verified Seller' },
+      { icon: 'check', text: 'Device Quality Check' },
+      { icon: 'lock', text: 'Secure communication' },
+    ],
+    seller: { name: 'Devon C.', type: 'Individual', location: 'Cape Town (South Africa)', avatar: '' },
+    reviews: [
+      { id: 'sh16-r1', name: 'Palesa M.', date: '1 week ago', rating: 5, comment: 'Small but powerful, battery lasts a full day for me.', helpful: 3 },
+      { id: 'sh16-r2', name: 'Greg T.', date: '1 month ago', rating: 4, comment: 'Great compact phone, exactly as described.', helpful: 1 },
+    ],
+    ratingBreakdown: { 5: 50, 4: 50, 3: 0, 2: 0, 1: 0 },
+    similarProducts: [
+      { id: 'sh1', title: 'iPhone 14 Pro – 128 GB', price: '549.99', location: 'Cape Town', image: 'https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=600' },
+      { id: 'sh2', title: 'Samsung Galaxy S23 Ultra', price: '469.00', location: 'Cape Town', image: 'https://images.pexels.com/photos/214487/pexels-photo-214487.jpeg?auto=compress&cs=tinysrgb&w=600' },
+      { id: 'sh3', title: 'Google Pixel 8 – 256 GB', price: '399.00', location: 'Cape Town', image: 'https://images.pexels.com/photos/607812/pexels-photo-607812.jpeg?auto=compress&cs=tinysrgb&w=600' },
     ],
   },
 };

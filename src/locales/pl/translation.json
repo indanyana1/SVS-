@@ -63,14 +63,13 @@
     "wellness": "Produkty farmaceutyczne i zdrowotne",
     "homeCare": "Book @ Home-Care Services",
     "hardwareSoftware": "Sklep z elektroniką i gadżetami",
-    "bettingHub": "Centrum zakładów sportowych",
-    "bettingVoting": "Tabele wyników prognoz sportowych",
     "safety": "Wytyczne dotyczące zgodności i bezpieczeństwa",
     "propertyHub": "Rynek Nieruchomości",
-    "internationalLotteryGames": "Gry loteryjne",
     "livestockHub": "Targowisko bydła",
     "stationery": "Rynek Artykułów Papierniczych i Książek",
-    "constructionTools": "Budownictwo i narzędzia budowlane"
+    "constructionTools": "Budownictwo i narzędzia budowlane",
+    "informalMarket": "Rynek Nieformalny",
+    "bettingLotteryGames": "Gry Hazardowe i Loteryjne"
   },
   "footer": {
     "about": "About Us",
@@ -89,7 +88,7 @@
     "securePayments": "Secure Payments and Verified Transactions"
   },
   "ecommercePage": {
-    "subtitle": "Browse categories, weekly deals, and personalized recommendations with secure checkout."
+    "subtitle": "Browse categories, today's best deals, and trusted lifestyle and tech essentials with secure checkout."
   },
   "ticketsPage": {
     "subtitle": "Book movies, concerts, sports, and travel instantly with date and location filters.",
@@ -141,12 +140,12 @@
     "wellness": "Browse pharmacy and health products, emergency delivery, and prescription-friendly options.",
     "homeCare": "Search providers by location and service type, then book or chat instantly.",
     "hardwareSoftware": "Tech gadgets, software bundles, and secure electronics purchasing.",
-    "bettingHub": "Aggregated voting and betting preview with popular matches and hot travel deal highlights.",
-    "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
     "safety": "Compliance standards, age restrictions, and secure transaction guarantees.",
     "stationery": "Kupuj długopisy, książki, książeczki do faktur, notesy i artykuły biurowe dla szkoły lub firmy.",
-    "internationalLotteryGames": "Porównaj pule jackpotów, dni losowań i dostępne gry loteryjne w jednym miejscu.",
-    "constructionTools": "Przeglądaj materiały budowlane, narzędzia ręczne i elektronarzędzia do projektów dowolnej wielkości."
+    "constructionTools": "Przeglądaj materiały budowlane, narzędzia ręczne i elektronarzędzia do projektów dowolnej wielkości.",
+    "informalMarket": "Przeglądaj sprzedawców ulicznych, sklepy spaza i nieformalnych sprzedawców z prawdziwymi ogłoszeniami, kategoriami i lokalizacjami sprzedawców w Twojej okolicy.",
+    "bettingLotteryGames": "Wybierz swoją grę, zdecyduj się na szybki wybór lub własne liczby i bezpiecznie kup losy na loterię w największych międzynarodowych losowaniach.",
+    "secondhand": "Kupuj i sprzedawaj wysokiej jakosci uzywane telefony, laptopy, ubrania, meble i wiecej — wszystko w niepokonanych cenach."
   },
   "searchResults": {
     "title": "Search Results",

@@ -63,14 +63,13 @@
     "wellness": "फार्मेसी और स्वास्थ्य उत्पाद",
     "homeCare": "Book @ Home-Care Services",
     "hardwareSoftware": "इलेक्ट्रॉनिक्स और गैजेट्स की दुकान",
-    "bettingHub": "खेल सट्टेबाजी हब",
-    "bettingVoting": "खेल भविष्यवाणी लीडरबोर्ड",
     "safety": "अनुपालन और सुरक्षा दिशानिर्देश",
     "propertyHub": "संपत्ति बाज़ार",
-    "internationalLotteryGames": "लॉटरी खेल",
     "livestockHub": "पशुधन बाज़ार",
     "stationery": "स्टेशनरी और किताबें बाज़ार",
-    "constructionTools": "भवन एवं निर्माण उपकरण"
+    "constructionTools": "भवन एवं निर्माण उपकरण",
+    "informalMarket": "अनौपचारिक बाज़ार",
+    "bettingLotteryGames": "सट्टेबाजी और लॉटरी गेम्स"
   },
   "footer": {
     "about": "About Us",
@@ -89,7 +88,7 @@
     "securePayments": "Secure Payments and Verified Transactions"
   },
   "ecommercePage": {
-    "subtitle": "Browse categories, weekly deals, and personalized recommendations with secure checkout."
+    "subtitle": "Browse categories, today's best deals, and trusted lifestyle and tech essentials with secure checkout."
   },
   "ticketsPage": {
     "subtitle": "Book movies, concerts, sports, and travel instantly with date and location filters.",
@@ -141,12 +140,12 @@
     "wellness": "Browse pharmacy and health products, emergency delivery, and prescription-friendly options.",
     "homeCare": "Search providers by location and service type, then book or chat instantly.",
     "hardwareSoftware": "Tech gadgets, software bundles, and secure electronics purchasing.",
-    "bettingHub": "Aggregated voting and betting preview with popular matches and hot travel deal highlights.",
-    "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
     "safety": "Compliance standards, age restrictions, and secure transaction guarantees.",
     "stationery": "स्कूल या व्यवसाय के लिए पेन, किताबें, इनवॉइस बुक, नोटबुक और कार्यालय आपूर्ति खरीदें।",
-    "internationalLotteryGames": "एक ही स्थान पर जैकपॉट पूल, ड्रा दिवस और उपलब्ध लॉटरी गेम की तुलना करें।",
-    "constructionTools": "किसी भी आकार की परियोजनाओं के लिए भवन निर्माण आपूर्ति, हाथ उपकरण और बिजली उपकरण ब्राउज़ करें।"
+    "constructionTools": "किसी भी आकार की परियोजनाओं के लिए भवन निर्माण आपूर्ति, हाथ उपकरण और बिजली उपकरण ब्राउज़ करें।",
+    "informalMarket": "अपने आस-पास के वास्तविक लिस्टिंग, श्रेणियों और विक्रेता स्थानों के साथ फेरीवालों, स्पाज़ा दुकानों और अनौपचारिक विक्रेताओं को ब्राउज़ करें।",
+    "bettingLotteryGames": "अपना गेम चुनें, क्विक-पिक या मैन्युअल नंबर चुनें, और प्रमुख अंतरराष्ट्रीय ड्रॉ के लिए सुरक्षित रूप से लॉटरी टिकट खरीदें।",
+    "secondhand": "गुणवत्तापूर्ण पुराने फोन, लैपटॉप, फैशन, फर्नीचर और बहुत कुछ खरीदें और बेचें — सभी अद्वितीय कीमतों पर।"
   },
   "searchResults": {
     "title": "Search Results",

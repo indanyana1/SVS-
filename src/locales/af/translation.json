@@ -64,14 +64,13 @@
     "wellness": "Apteek en Gesondheidsprodukte",
     "homeCare": "Book @ Home-Care Services",
     "hardwareSoftware": "Elektroniese en Gadgets Winkel",
-    "bettingHub": "Hub vir sportweddenskappe",
-    "bettingVoting": "Sportvoorspelling ranglyste",
     "safety": "Voldoening en Veiligheidsriglyne",
     "propertyHub": "Eiendomsmark",
-    "internationalLotteryGames": "Lotery Speletjies",
     "livestockHub": "Veemark",
     "stationery": "Skryfbehoeftes en Boeke Mark",
-    "constructionTools": "Bou- en konstruksiegereedskap"
+    "constructionTools": "Bou- en konstruksiegereedskap",
+    "informalMarket": "Informele Mark",
+    "bettingLotteryGames": "Wedding en Lotteryspeletjies"
   },
   "footer": {
     "about": "Oor Ons",
@@ -90,7 +89,7 @@
     "securePayments": "Veilige betalings en geverifieerde transaksies"
   },
   "ecommercePage": {
-    "subtitle": "Blaai deur kategoriee, weeklikse aanbiedinge en persoonlike aanbevelings met veilige afhandeling."
+    "subtitle": "Blaai deur kategoriee, vandag se beste aanbiedinge, en betroubare lewensstyl- en tegnologie-essensiele items met veilige afhandeling."
   },
   "ticketsPage": {
     "subtitle": "Bespreek flieks, konserte, sport en reis onmiddellik met datum- en liggingfilters.",
@@ -142,14 +141,14 @@
     "wellness": "Blaai deur apteek- en gesondheidsprodukte met noodaflewering en voorskrifvriendelike opsies.",
     "homeCare": "Soek verskaffers volgens ligging en dienstipe, en bespreek of gesels onmiddellik.",
     "hardwareSoftware": "Tegnologie-gadgets, sagtewarebundels en veilige elektroniese aankope.",
-    "bettingHub": "Saamgestelde weddery- en stemoorsig met gewilde wedstryde en warm reisaanbiedinge.",
-    "bettingVoting": "Verenigde ervaring vir voorspellings, odds-insigte en geverifieerde kundige kanale.",
     "safety": "Nakomingstandaarde, ouderdomsbeperkings en veilige transaksiewaarborge.",
     "propertyHub": "Blaai deur verhurings, huise te koop en kommersiële ruimtes met ryk liggingbesonderhede.",
-    "internationalLotteryGames": "Vergelyk boerpotpoele, trekkingsdae en beskikbare loteryspeletjies op een plek.",
     "livestockHub": "Koop en verkoop beeste, skape en bokke met plaasgereed-lysbesonderhede en verkoperliggings.",
     "stationery": "Winkelpenne, boeke, faktuurboeke, notaboeke en kantoorbenodigdhede vir skool of besigheid.",
-    "constructionTools": "Blaai deur boubenodigdhede, handgereedskap en elektriese gereedskap vir projekte van enige grootte."
+    "constructionTools": "Blaai deur boubenodigdhede, handgereedskap en elektriese gereedskap vir projekte van enige grootte.",
+    "informalMarket": "Blaai deur straathandelaars, spazawinkels en informele verkopers met regte lyste, kategorieë en verkoperliggings naby jou.",
+    "bettingLotteryGames": "Kies jou speletjie, kies kitskeuse of self gekose nommers, en koop veilig lotterykaartjies vir top internasionale trekkings.",
+    "secondhand": "Koop en verkoop kwaliteit tweedehandse foone, skootrekenaars, mode, meubels en meer — alles teen onklopbare pryse."
   },
   "searchResults": {
     "title": "Soekresultate",

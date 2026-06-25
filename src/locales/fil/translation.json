@@ -63,14 +63,13 @@
     "wellness": "Parmasya at Mga Produktong Pangkalusugan",
     "homeCare": "Book @ Home-Care Services",
     "hardwareSoftware": "Tindahan ng Electronics at Gadgets",
-    "bettingHub": "Sports Betting Hub",
-    "bettingVoting": "Mga Leaderboard ng Hula sa Sports",
     "safety": "Pagsunod at Mga Alituntunin sa Kaligtasan",
     "propertyHub": "Marketplace ng Ari-arian",
-    "internationalLotteryGames": "Mga Larong Lottery",
     "livestockHub": "Livestock Marketplace",
     "stationery": "Stationery at Books Market",
-    "constructionTools": "Mga Tool sa Pagbuo at Konstruksyon"
+    "constructionTools": "Mga Tool sa Pagbuo at Konstruksyon",
+    "informalMarket": "Impormal na Palengke",
+    "bettingLotteryGames": "Mga Larong Pusta at Lottery"
   },
   "footer": {
     "about": "About Us",
@@ -89,7 +88,7 @@
     "securePayments": "Secure Payments and Verified Transactions"
   },
   "ecommercePage": {
-    "subtitle": "Browse categories, weekly deals, and personalized recommendations with secure checkout."
+    "subtitle": "Browse categories, today's best deals, and trusted lifestyle and tech essentials with secure checkout."
   },
   "ticketsPage": {
     "subtitle": "Book movies, concerts, sports, and travel instantly with date and location filters.",
@@ -141,12 +140,12 @@
     "wellness": "Browse pharmacy and health products, emergency delivery, and prescription-friendly options.",
     "homeCare": "Search providers by location and service type, then book or chat instantly.",
     "hardwareSoftware": "Tech gadgets, software bundles, and secure electronics purchasing.",
-    "bettingHub": "Aggregated voting and betting preview with popular matches and hot travel deal highlights.",
-    "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
     "safety": "Compliance standards, age restrictions, and secure transaction guarantees.",
     "stationery": "Mamili ng mga panulat, libro, invoice book, notebook, at mga gamit sa opisina para sa paaralan o negosyo.",
-    "internationalLotteryGames": "Ikumpara ang mga jackpot pool, draw days, at available na mga laro sa lottery sa isang lugar.",
-    "constructionTools": "Mag-browse ng mga kagamitan sa gusali, mga tool sa kamay, at mga tool sa kapangyarihan para sa mga proyekto sa anumang laki."
+    "constructionTools": "Mag-browse ng mga kagamitan sa gusali, mga tool sa kamay, at mga tool sa kapangyarihan para sa mga proyekto sa anumang laki.",
+    "informalMarket": "Tuklasin ang mga street vendor, spaza shop, at impormal na nagtitinda na may totoong listahan, kategorya, at lokasyon ng nagtitinda na malapit sa iyo.",
+    "bettingLotteryGames": "Piliin ang iyong laro, pumili ng quick-pick o manual na numero, at ligtas na bumili ng mga tiket sa lottery para sa nangungunang internasyonal na guhitan.",
+    "secondhand": "Bumili at magbenta ng de-kalidad na segunda manong telepono, laptop, fashion, muwebles, at iba pa — lahat sa hindi matutularang presyo."
   },
   "searchResults": {
     "title": "Search Results",

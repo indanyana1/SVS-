@@ -64,14 +64,13 @@
     "wellness": "Pharmazie und Gesundheitsprodukte",
     "homeCare": "Book @ Home-Care Services",
     "hardwareSoftware": "Elektronik- und Gadgets-Shop",
-    "bettingHub": "Sportwetten-Hub",
-    "bettingVoting": "Bestenlisten für Sportvorhersagen",
     "safety": "Compliance- und Sicherheitsrichtlinien",
     "propertyHub": "Immobilienmarktplatz",
-    "internationalLotteryGames": "Lotteriespiele",
     "livestockHub": "Viehmarkt",
     "stationery": "Schreibwaren- und Büchermarkt",
-    "constructionTools": "Bau- und Konstruktionswerkzeuge"
+    "constructionTools": "Bau- und Konstruktionswerkzeuge",
+    "informalMarket": "Informeller Markt",
+    "bettingLotteryGames": "Wett- und Lotteriespiele"
   },
   "footer": {
     "about": "Über uns",
@@ -90,7 +89,7 @@
     "securePayments": "Sichere Zahlungen und verifizierte Transaktionen"
   },
   "ecommercePage": {
-    "subtitle": "Durchsuchen Sie Kategorien, wöchentliche Angebote und personalisierte Empfehlungen mit sicherem Checkout."
+    "subtitle": "Durchsuchen Sie Kategorien, die besten Angebote des Tages und vertrauenswuerdige Lifestyle- und Tech-Essentials mit sicherem Checkout."
   },
   "ticketsPage": {
     "subtitle": "Buchen Sie Filme, Konzerte, Sportveranstaltungen und Reisen sofort mit Datums- und Ortsfiltern.",
@@ -142,14 +141,14 @@
     "wellness": "Entdecken Sie Apotheken- und Gesundheitsprodukte, Notfalllieferungen und verschreibungspflichtige Optionen.",
     "homeCare": "Suchen Sie nach Anbietern nach Standort und Servicetyp und buchen oder chatten Sie dann sofort.",
     "hardwareSoftware": "Technische Gadgets, Softwarepakete und sicherer Elektronikeinkauf.",
-    "bettingHub": "Aggregierte Abstimmungs- und Wettvorschau mit beliebten Spielen und aktuellen Highlights zu Reiseangeboten.",
-    "bettingVoting": "Einheitliche Erfahrung für Vorhersagen, Quoteneinblicke und verifizierte Expertenkanäle.",
     "safety": "Compliance-Standards, Altersbeschränkungen und sichere Transaktionsgarantien.",
     "propertyHub": "Durchsuchen Sie Mietobjekte, zum Verkauf stehende Häuser und Gewerbeflächen mit umfangreichen Standortdetails.",
-    "internationalLotteryGames": "Vergleichen Sie Jackpot-Pools, Ziehungstage und verfügbare Lotteriespiele an einem Ort.",
     "livestockHub": "Kaufen und verkaufen Sie Rinder, Schafe und Ziegen mit betriebsbereiten Auflistungsdetails und Verkäuferstandorten.",
     "stationery": "Kaufen Sie Stifte, Bücher, Rechnungsbücher, Notizbücher und Bürobedarf für Schule oder Unternehmen.",
-    "constructionTools": "Durchsuchen Sie Baumaterialien, Handwerkzeuge und Elektrowerkzeuge für Projekte jeder Größe."
+    "constructionTools": "Durchsuchen Sie Baumaterialien, Handwerkzeuge und Elektrowerkzeuge für Projekte jeder Größe.",
+    "informalMarket": "Durchsuchen Sie Straßenhändler, Spaza-Shops und informelle Verkäufer mit echten Angeboten, Kategorien und Verkäuferstandorten in Ihrer Nähe.",
+    "bettingLotteryGames": "Wählen Sie Ihr Spiel, entscheiden Sie sich für Schnellauswahl oder manuelle Zahlen und kaufen Sie sicher Lottoscheine für die wichtigsten internationalen Ziehungen.",
+    "secondhand": "Kaufen und verkaufen Sie hochwertige gebrauchte Telefone, Laptops, Mode, Möbel und mehr — alles zu unschlagbaren Preisen."
   },
   "searchResults": {
     "title": "Suchergebnisse",

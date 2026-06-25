@@ -64,14 +64,13 @@
     "wellness": "Productos de Farmacia y Salud",
     "homeCare": "Book @ Home-Care Services",
     "hardwareSoftware": "Tienda de electrónica y gadgets",
-    "bettingHub": "Centro de apuestas deportivas",
-    "bettingVoting": "Tablas de clasificación de predicción deportiva",
     "safety": "Pautas de cumplimiento y seguridad",
     "propertyHub": "Mercado inmobiliario",
-    "internationalLotteryGames": "Juegos de lotería",
     "livestockHub": "Mercado de ganado",
     "stationery": "Mercado de Papelería y Libros",
-    "constructionTools": "Herramientas de edificación y construcción"
+    "constructionTools": "Herramientas de edificación y construcción",
+    "informalMarket": "Mercado Informal",
+    "bettingLotteryGames": "Juegos de Apuestas y Lotería"
   },
   "footer": {
     "about": "About Us",
@@ -90,7 +89,7 @@
     "securePayments": "Secure Payments and Verified Transactions"
   },
   "ecommercePage": {
-    "subtitle": "Browse categories, weekly deals, and personalized recommendations with secure checkout."
+    "subtitle": "Browse categories, today's best deals, and trusted lifestyle and tech essentials with secure checkout."
   },
   "ticketsPage": {
     "subtitle": "Book movies, concerts, sports, and travel instantly with date and location filters.",
@@ -142,14 +141,14 @@
     "wellness": "Browse pharmacy and health products, emergency delivery, and prescription-friendly options.",
     "homeCare": "Search providers by location and service type, then book or chat instantly.",
     "hardwareSoftware": "Tech gadgets, software bundles, and secure electronics purchasing.",
-    "bettingHub": "Aggregated voting and betting preview with popular matches and hot travel deal highlights.",
-    "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
     "safety": "Compliance standards, age restrictions, and secure transaction guarantees.",
     "propertyHub": "Explore alquileres, casas en venta y espacios comerciales con ricos detalles de ubicación.",
-    "internationalLotteryGames": "Compare los premios acumulados, los días de sorteo y los juegos de lotería disponibles en un solo lugar.",
     "livestockHub": "Compre y venda ganado vacuno, ovino y caprino con detalles de listado listos para la granja y ubicaciones de vendedores.",
     "stationery": "Compre bolígrafos, libros, libretas de facturas, cuadernos y material de oficina para la escuela o la empresa.",
-    "constructionTools": "Busque materiales de construcción, herramientas manuales y eléctricas para proyectos de cualquier tamaño."
+    "constructionTools": "Busque materiales de construcción, herramientas manuales y eléctricas para proyectos de cualquier tamaño.",
+    "informalMarket": "Explora vendedores ambulantes, tiendas spaza y vendedores informales con anuncios reales, categorías y ubicaciones de vendedores cerca de ti.",
+    "bettingLotteryGames": "Elige tu juego, escoge números rápidos o manuales, y compra de forma segura boletos de lotería para los principales sorteos internacionales.",
+    "secondhand": "Compra y vende telefonos, portatiles, moda, muebles y mas de calidad usados, todo a precios imbatibles."
   },
   "searchResults": {
     "title": "Search Results",

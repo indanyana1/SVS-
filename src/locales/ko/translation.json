@@ -63,14 +63,13 @@
     "wellness": "약국 및 건강 제품",
     "homeCare": "Book @ Home-Care Services",
     "hardwareSoftware": "전자제품 및 가전제품 매장",
-    "bettingHub": "스포츠 베팅 허브",
-    "bettingVoting": "스포츠 예측 순위표",
     "safety": "규정 준수 및 안전 지침",
     "propertyHub": "부동산 시장",
-    "internationalLotteryGames": "복권 게임",
     "livestockHub": "가축 시장",
     "stationery": "문구류 및 서적 시장",
-    "constructionTools": "건축 및 건설 도구"
+    "constructionTools": "건축 및 건설 도구",
+    "informalMarket": "비정형 시장",
+    "bettingLotteryGames": "베팅 및 로또 게임"
   },
   "footer": {
     "about": "About Us",
@@ -89,7 +88,7 @@
     "securePayments": "Secure Payments and Verified Transactions"
   },
   "ecommercePage": {
-    "subtitle": "Browse categories, weekly deals, and personalized recommendations with secure checkout."
+    "subtitle": "Browse categories, today's best deals, and trusted lifestyle and tech essentials with secure checkout."
   },
   "ticketsPage": {
     "subtitle": "Book movies, concerts, sports, and travel instantly with date and location filters.",
@@ -141,12 +140,12 @@
     "wellness": "Browse pharmacy and health products, emergency delivery, and prescription-friendly options.",
     "homeCare": "Search providers by location and service type, then book or chat instantly.",
     "hardwareSoftware": "Tech gadgets, software bundles, and secure electronics purchasing.",
-    "bettingHub": "Aggregated voting and betting preview with popular matches and hot travel deal highlights.",
-    "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
     "safety": "Compliance standards, age restrictions, and secure transaction guarantees.",
     "stationery": "학교나 기업용 펜, 책, 청구서 책, 노트북, 사무용품을 쇼핑하세요.",
-    "internationalLotteryGames": "잭팟 풀, 추첨일, 이용 가능한 복권 게임을 한 곳에서 비교해 보세요.",
-    "constructionTools": "모든 규모의 프로젝트에 적합한 건축 자재, 수공구 및 전동 공구를 찾아보세요."
+    "constructionTools": "모든 규모의 프로젝트에 적합한 건축 자재, 수공구 및 전동 공구를 찾아보세요.",
+    "informalMarket": "실제 등록 정보, 카테고리, 판매자 위치와 함께 주변의 거리 상인, 스파자 상점, 비정형 판매자를 둘러보세요.",
+    "bettingLotteryGames": "게임을 선택하고 퀵픽 또는 직접 번호를 골라 주요 국제 추첨의 로또 티켓을 안전하게 구매하세요.",
+    "secondhand": "품질 좋은 중고 휴대폰, 노트북, 패션, 가구 등을 사고팔 수 있습니다 — 모두 압도적인 가격으로."
   },
   "searchResults": {
     "title": "Search Results",

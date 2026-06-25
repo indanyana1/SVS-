@@ -63,14 +63,13 @@
     "wellness": "மருந்தகம் மற்றும் சுகாதார பொருட்கள்",
     "homeCare": "Book @ Home-Care Services",
     "hardwareSoftware": "எலெக்ட்ரானிக்ஸ் மற்றும் கேஜெட்கள் கடை",
-    "bettingHub": "விளையாட்டு பந்தய மையம்",
-    "bettingVoting": "விளையாட்டு முன்னறிவிப்பு லீடர்போர்டுகள்",
     "safety": "இணக்கம் மற்றும் பாதுகாப்பு வழிகாட்டுதல்கள்",
     "propertyHub": "சொத்து சந்தை",
-    "internationalLotteryGames": "லாட்டரி விளையாட்டுகள்",
     "livestockHub": "கால்நடை சந்தை",
     "stationery": "எழுதுபொருள் மற்றும் புத்தக சந்தை",
-    "constructionTools": "கட்டிடம் மற்றும் கட்டுமான கருவிகள்"
+    "constructionTools": "கட்டிடம் மற்றும் கட்டுமான கருவிகள்",
+    "informalMarket": "முறைசாரா சந்தை",
+    "bettingLotteryGames": "சூதாட்டம் மற்றும் லாட்டரி விளையாட்டுகள்"
   },
   "footer": {
     "about": "About Us",
@@ -89,7 +88,7 @@
     "securePayments": "Secure Payments and Verified Transactions"
   },
   "ecommercePage": {
-    "subtitle": "Browse categories, weekly deals, and personalized recommendations with secure checkout."
+    "subtitle": "Browse categories, today's best deals, and trusted lifestyle and tech essentials with secure checkout."
   },
   "ticketsPage": {
     "subtitle": "Book movies, concerts, sports, and travel instantly with date and location filters.",
@@ -141,12 +140,12 @@
     "wellness": "Browse pharmacy and health products, emergency delivery, and prescription-friendly options.",
     "homeCare": "Search providers by location and service type, then book or chat instantly.",
     "hardwareSoftware": "Tech gadgets, software bundles, and secure electronics purchasing.",
-    "bettingHub": "Aggregated voting and betting preview with popular matches and hot travel deal highlights.",
-    "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
     "safety": "Compliance standards, age restrictions, and secure transaction guarantees.",
     "stationery": "பள்ளி அல்லது வணிகத்திற்கான பேனாக்கள், புத்தகங்கள், விலைப்பட்டியல் புத்தகங்கள், குறிப்பேடுகள் மற்றும் அலுவலகப் பொருட்களை வாங்கவும்.",
-    "internationalLotteryGames": "ஜாக்பாட் குளங்களை ஒப்பிடவும், நாட்கள் வரையவும் மற்றும் ஒரே இடத்தில் கிடைக்கும் லாட்டரி கேம்களை ஒப்பிடவும்.",
-    "constructionTools": "கட்டிடப் பொருட்கள், கைக் கருவிகள் மற்றும் எந்த அளவிலான திட்டங்களுக்கான மின் கருவிகளை உலாவவும்."
+    "constructionTools": "கட்டிடப் பொருட்கள், கைக் கருவிகள் மற்றும் எந்த அளவிலான திட்டங்களுக்கான மின் கருவிகளை உலாவவும்.",
+    "informalMarket": "உங்களுக்கு அருகிலுள்ள உண்மையான பட்டியல்கள், வகைகள் மற்றும் விற்பனையாளர் இடங்களுடன் தெரு வியாபாரிகள், ஸ்பாசா கடைகள் மற்றும் முறைசாரா விற்பனையாளர்களை உலாவவும்.",
+    "bettingLotteryGames": "உங்கள் விளையாட்டைத் தேர்வுசெய்து, விரைவு தேர்வு அல்லது கைமுறை எண்களைத் தேர்ந்து, முன்னணி சர்வதேச டிராக்களுக்கான லாட்டரி டிக்கெட்டுகளை பாதுகாப்பாக வாங்கவும்.",
+    "secondhand": "தரமான பழைய தொலைபேசிகள், லேப்டாப்புகள், ஃபேஷன், மரச்சாமான்கள் மற்றும் பலவற்றை வாங்கி விற்கவும் — அனைத்தும் சிறந்த விலையில்."
   },
   "searchResults": {
     "title": "Search Results",

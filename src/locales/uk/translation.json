@@ -63,14 +63,13 @@
     "wellness": "Фармація та товари для здоров'я",
     "homeCare": "Book @ Home-Care Services",
     "hardwareSoftware": "Магазин електроніки та гаджетів",
-    "bettingHub": "Центр ставок на спорт",
-    "bettingVoting": "Таблиці лідерів спортивних прогнозів",
     "safety": "Інструкції з дотримання вимог і безпеки",
     "propertyHub": "Ринок нерухомості",
-    "internationalLotteryGames": "Ігри в лотерею",
     "livestockHub": "Тваринний ринок",
     "stationery": "Канцтовари та книжковий ринок",
-    "constructionTools": "Будівельні інструменти"
+    "constructionTools": "Будівельні інструменти",
+    "informalMarket": "Неформальний ринок",
+    "bettingLotteryGames": "Ігри Ставок і Лотереї"
   },
   "footer": {
     "about": "About Us",
@@ -89,7 +88,7 @@
     "securePayments": "Secure Payments and Verified Transactions"
   },
   "ecommercePage": {
-    "subtitle": "Browse categories, weekly deals, and personalized recommendations with secure checkout."
+    "subtitle": "Browse categories, today's best deals, and trusted lifestyle and tech essentials with secure checkout."
   },
   "ticketsPage": {
     "subtitle": "Book movies, concerts, sports, and travel instantly with date and location filters.",
@@ -141,12 +140,12 @@
     "wellness": "Browse pharmacy and health products, emergency delivery, and prescription-friendly options.",
     "homeCare": "Search providers by location and service type, then book or chat instantly.",
     "hardwareSoftware": "Tech gadgets, software bundles, and secure electronics purchasing.",
-    "bettingHub": "Aggregated voting and betting preview with popular matches and hot travel deal highlights.",
-    "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
     "safety": "Compliance standards, age restrictions, and secure transaction guarantees.",
     "stationery": "Купуйте ручки, книги, книги для рахунків, блокноти та канцелярське приладдя для школи чи бізнесу.",
-    "internationalLotteryGames": "Порівняйте джекпоти, дні розіграшів і доступні лотереї в одному місці.",
-    "constructionTools": "Перегляньте будівельні матеріали, ручні та електроінструменти для проектів будь-якого розміру."
+    "constructionTools": "Перегляньте будівельні матеріали, ручні та електроінструменти для проектів будь-якого розміру.",
+    "informalMarket": "Перегляньте вуличних торговців, спаза-магазини та неформальних продавців із реальними оголошеннями, категоріями та місцезнаходженням продавців поблизу вас.",
+    "bettingLotteryGames": "Виберіть свою гру, оберіть швидкий вибір або введіть числа вручну та безпечно купуйте лотерейні квитки для провідних міжнародних розіграшів.",
+    "secondhand": "Купуйте та продавайте якісні вживані телефони, ноутбуки, одяг, меблі та багато іншого — все за неперевершеними цінами."
   },
   "searchResults": {
     "title": "Search Results",

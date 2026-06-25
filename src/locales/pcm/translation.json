@@ -63,14 +63,13 @@
     "wellness": "Pharmacy and Health Products",
     "homeCare": "Book @ Home-Care Services",
     "hardwareSoftware": "Electronics and Gadgets Shop",
-    "bettingHub": "Sports Betting Hub",
-    "bettingVoting": "Sports Prediction Leaderboard",
     "safety": "Compliance and Safety Guideline",
     "propertyHub": "Property Market",
-    "internationalLotteryGames": "Lottery Games",
     "livestockHub": "Livestock Market",
     "stationery": "Stationery and Books Market",
-    "constructionTools": "Building and Construction Tools"
+    "constructionTools": "Building and Construction Tools",
+    "informalMarket": "Informal Market",
+    "bettingLotteryGames": "Betting and Lottery Games"
   },
   "footer": {
     "about": "About Us",
@@ -89,7 +88,7 @@
     "securePayments": "Secure Payments and Verified Transactions"
   },
   "ecommercePage": {
-    "subtitle": "Browse categories, weekly deals, and personalized recommendations with secure checkout."
+    "subtitle": "Browse categories, today's best deals, and trusted lifestyle and tech essentials with secure checkout."
   },
   "ticketsPage": {
     "subtitle": "Book movies, concerts, sports, and travel instantly with date and location filters.",
@@ -141,12 +140,12 @@
     "wellness": "Browse pharmacy and health products, emergency delivery, and prescription-friendly options.",
     "homeCare": "Search providers by location and service type, then book or chat instantly.",
     "hardwareSoftware": "Tech gadgets, software bundles, and secure electronics purchasing.",
-    "bettingHub": "Aggregated voting and betting preview with popular matches and hot travel deal highlights.",
-    "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
     "safety": "Compliance standards, age restrictions, and secure transaction guarantees.",
     "stationery": "Shop pens, books, invoice books, notebooks, and office supplies for school or business.",
-    "internationalLotteryGames": "Compare jackpot pools, draw days, and available lottery games in one place.",
-    "constructionTools": "Browse building supplies, hand tools, and power tools for projects of any size."
+    "constructionTools": "Browse building supplies, hand tools, and power tools for projects of any size.",
+    "informalMarket": "Waka through street sellers, spaza shops, and informal vendors wey dey near you, with real listings, categories, and seller location.",
+    "bettingLotteryGames": "Choose your game, pick quick-pick or your own numbers, then buy lottery ticket safe-safe for top international draws.",
+    "secondhand": "Buy and sell quality second-hand phones, laptops, fashion, furniture, and more — all for price wey no get match."
   },
   "searchResults": {
     "title": "Search Results",

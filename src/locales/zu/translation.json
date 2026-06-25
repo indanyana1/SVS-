@@ -63,14 +63,13 @@
     "wellness": "Ikhemisi kanye Nemikhiqizo Yezempilo",
     "homeCare": "Book @ Home-Care Services",
     "hardwareSoftware": "Isitolo sikagesi namagajethi",
-    "bettingHub": "Ihabhu Lokubheja Ezemidlalo",
-    "bettingVoting": "Amabhodi wabaphambili wokubikezela kwezemidlalo",
     "safety": "Imihlahlandlela Yokuhambisana Nokuphepha",
     "propertyHub": "Indawo Marketplace",
-    "internationalLotteryGames": "Imidlalo Yelotho",
     "livestockHub": "Imakethe Yemfuyo",
     "stationery": "Imakethe Yezincwadi Zokubhala kanye Nezincwadi",
-    "constructionTools": "Amathuluzi Okwakha Nokwakha"
+    "constructionTools": "Amathuluzi Okwakha Nokwakha",
+    "informalMarket": "Imakethe Engahleliwe",
+    "bettingLotteryGames": "Imidlalo Yokubheja Nelotho"
   },
   "footer": {
     "about": "About Us",
@@ -89,7 +88,7 @@
     "securePayments": "Secure Payments and Verified Transactions"
   },
   "ecommercePage": {
-    "subtitle": "Browse categories, weekly deals, and personalized recommendations with secure checkout."
+    "subtitle": "Browse categories, today's best deals, and trusted lifestyle and tech essentials with secure checkout."
   },
   "ticketsPage": {
     "subtitle": "Book movies, concerts, sports, and travel instantly with date and location filters.",
@@ -141,12 +140,12 @@
     "wellness": "Browse pharmacy and health products, emergency delivery, and prescription-friendly options.",
     "homeCare": "Search providers by location and service type, then book or chat instantly.",
     "hardwareSoftware": "Tech gadgets, software bundles, and secure electronics purchasing.",
-    "bettingHub": "Aggregated voting and betting preview with popular matches and hot travel deal highlights.",
-    "bettingVoting": "Unified experience for predictions, odds insights, and verified expert channels.",
     "safety": "Compliance standards, age restrictions, and secure transaction guarantees.",
     "stationery": "Thenga amapeni, izincwadi, izincwadi zama-invoyisi, amanothibhuku, nezinto zasehhovisi zesikole noma zebhizinisi.",
-    "internationalLotteryGames": "Qhathanisa amachibi e-jackpot, izinsuku zokudweba, nemidlalo yelotho etholakalayo endaweni eyodwa.",
-    "constructionTools": "Phequlula izinto zokwakha, amathuluzi ezandla, namathuluzi kagesi amaphrojekthi anoma yimuphi usayizi."
+    "constructionTools": "Phequlula izinto zokwakha, amathuluzi ezandla, namathuluzi kagesi amaphrojekthi anoma yimuphi usayizi.",
+    "informalMarket": "Phequlula abathengisi basesitaladeni, izitolo zespaza, kanye nabathengisi abangahleliwe ngezohlu zangempela, izigaba, kanye nezindawo zabathengisi eziseduze nawe.",
+    "bettingLotteryGames": "Khetha umdlalo wakho, khetha izinombolo ezisheshayo noma ozikhethele wena, bese uthenga amathikithi elotho ngokuphepha emidlalweni emikhulu yamazwe ngamazwe.",
+    "secondhand": "Thenga futhi uthengise amafoni, ama-laptop, imfashini, nefenisha okusethandiwe okusezingeni eliphezulu, kanye nokunye — konke ngamanani angenakuncintiswana nawo."
   },
   "searchResults": {
     "title": "Search Results",
