@@ -22287,7 +22287,7 @@ const AdminDashboardPage = () => {
     (async () => {
       const [buyersRes, sellersRes, ordersRes] = await Promise.all([
         supabase.from('account_users').select('id, full_name, email_address, contact_number, created_at').order('created_at', { ascending: false }),
-        supabase.from('seller_profiles').select('id, user_email, business_name, legal_full_name, compliance_status, created_at, updated_at').order('created_at', { ascending: false }),
+        supabase.from('seller_profiles').select('id, user_email, business_name, legal_full_name, phone_number, id_number, tax_number, compliance_status, created_at, updated_at').order('created_at', { ascending: false }),
         supabase.from(ORDERS_TABLE).select('user_email, order_key, reference, order_created_at, items, currency, subtotal, service_fee, total, status').order('order_created_at', { ascending: false }),
       ]);
 
@@ -22457,7 +22457,7 @@ const AdminDashboardPage = () => {
   const visibleSellers = useMemo(() => (
     sellers
       .filter((entry) => sellerFilter === 'all' || entry.compliance_status === sellerFilter)
-      .filter((entry) => adminRecordMatchesSearch(entry, sellerSearch, ['business_name', 'legal_full_name', 'user_email']))
+      .filter((entry) => adminRecordMatchesSearch(entry, sellerSearch, ['business_name', 'legal_full_name', 'user_email', 'phone_number', 'id_number', 'tax_number']))
   ), [sellers, sellerFilter, sellerSearch]);
 
   const visibleBuyers = useMemo(() => (
@@ -22468,16 +22468,31 @@ const AdminDashboardPage = () => {
     orderLineItems.filter((line) => adminRecordMatchesSearch(line, orderSearch, ['reference', 'orderKey', 'buyerEmail', 'sellerEmail', 'title', 'status']))
   ), [orderLineItems, orderSearch]);
 
+  // Neither wallet table stores a name or phone — both buyers and sellers
+  // share the same account_users row, so this lookup (built off the buyers
+  // list already loaded for the Buyers tab) lets transaction search match
+  // on name/phone without an extra query.
+  const accountByEmail = useMemo(() => (
+    buyers.reduce((map, buyer) => {
+      map[normalizeEmail(buyer.email_address)] = buyer;
+      return map;
+    }, {})
+  ), [buyers]);
+
   const visibleWithdrawalRequests = useMemo(() => (
     withdrawalRequests.filter((request) => (
       adminRecordMatchesSearch(request, transactionSearch, ['user_email', 'status', 'destination_label'])
       || adminRecordMatchesSearch(request, transactionSearch, ['wallet_bank_accounts.bank_name', 'wallet_bank_accounts.account_holder'])
+      || adminRecordMatchesSearch(accountByEmail[normalizeEmail(request.user_email)], transactionSearch, ['full_name', 'contact_number'])
     ))
-  ), [withdrawalRequests, transactionSearch]);
+  ), [withdrawalRequests, transactionSearch, accountByEmail]);
 
   const visibleWalletTransactions = useMemo(() => (
-    walletTransactions.filter((txn) => adminRecordMatchesSearch(txn, transactionSearch, ['user_email', 'kind', 'status', 'description', 'counterparty']))
-  ), [walletTransactions, transactionSearch]);
+    walletTransactions.filter((txn) => (
+      adminRecordMatchesSearch(txn, transactionSearch, ['user_email', 'kind', 'status', 'description', 'counterparty'])
+      || adminRecordMatchesSearch(accountByEmail[normalizeEmail(txn.user_email)], transactionSearch, ['full_name', 'contact_number'])
+    ))
+  ), [walletTransactions, transactionSearch, accountByEmail]);
 
   const visibleBannedIdentifiers = useMemo(() => (
     bannedIdentifiers.filter((entry) => adminRecordMatchesSearch(entry, reportSearch, ['identifier_type', 'identifier_value', 'reason']))
@@ -22666,12 +22681,25 @@ const AdminDashboardPage = () => {
                 </div>
 
                 <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-                  <p><span className="font-semibold text-[var(--svs-text)]">Legal name:</span> <span className="text-[var(--svs-muted)]">{sellerDetail.legal_full_name}</span></p>
+                  <p><span className="font-semibold text-[var(--svs-text)]">Legal name:</span> <span className="text-[var(--svs-muted)]">{sellerDetail.legal_full_name || '—'}</span></p>
                   <p><span className="font-semibold text-[var(--svs-text)]">ID/Passport type:</span> <span className="text-[var(--svs-muted)]">{sellerDetail.id_document_type || '—'}</span></p>
-                  <p><span className="font-semibold text-[var(--svs-text)]">Business type:</span> <span className="text-[var(--svs-muted)]">{sellerDetail.business_type}</span></p>
-                  <p><span className="font-semibold text-[var(--svs-text)]">Phone:</span> <span className="text-[var(--svs-muted)]">{sellerDetail.phone_number}</span></p>
-                  <p><span className="font-semibold text-[var(--svs-text)]">Address:</span> <span className="text-[var(--svs-muted)]">{[sellerDetail.business_address_line1, sellerDetail.city, sellerDetail.province, sellerDetail.postal_code, sellerDetail.country].filter(Boolean).join(', ')}</span></p>
-                  <p><span className="font-semibold text-[var(--svs-text)]">Payout account:</span> <span className="text-[var(--svs-muted)]">{sellerDetail.payout_bank_name} {maskAccountNumber(sellerDetail.payout_account_number)}</span></p>
+                  <p><span className="font-semibold text-[var(--svs-text)]">ID/Passport number:</span> <span className="text-[var(--svs-muted)]">{sellerDetail.id_number || '—'}</span></p>
+                  <p><span className="font-semibold text-[var(--svs-text)]">Business type:</span> <span className="text-[var(--svs-muted)]">{sellerDetail.business_type || '—'}</span></p>
+                  <p><span className="font-semibold text-[var(--svs-text)]">Registration number:</span> <span className="text-[var(--svs-muted)]">{sellerDetail.registration_number || '—'}</span></p>
+                  <p><span className="font-semibold text-[var(--svs-text)]">Tax number:</span> <span className="text-[var(--svs-muted)]">{sellerDetail.tax_number || '—'}</span></p>
+                  <p><span className="font-semibold text-[var(--svs-text)]">Phone:</span> <span className="text-[var(--svs-muted)]">{sellerDetail.phone_number || '—'}</span></p>
+                  <p><span className="font-semibold text-[var(--svs-text)]">Address:</span> <span className="text-[var(--svs-muted)]">{[sellerDetail.business_address_line1, sellerDetail.city, sellerDetail.province, sellerDetail.postal_code, sellerDetail.country].filter(Boolean).join(', ') || '—'}</span></p>
+                  <p><span className="font-semibold text-[var(--svs-text)]">Return contact:</span> <span className="text-[var(--svs-muted)]">{[sellerDetail.return_contact_name, sellerDetail.return_contact_phone].filter(Boolean).join(' • ') || '—'}</span></p>
+                </div>
+
+                <div className="mt-5 rounded-lg border border-[var(--svs-border)] p-3">
+                  <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">Payout / Transaction Account Details</p>
+                  <div className="grid gap-3 text-sm sm:grid-cols-2">
+                    <p><span className="font-semibold text-[var(--svs-text)]">Account holder:</span> <span className="text-[var(--svs-muted)]">{sellerDetail.payout_account_holder || '—'}</span></p>
+                    <p><span className="font-semibold text-[var(--svs-text)]">Bank:</span> <span className="text-[var(--svs-muted)]">{sellerDetail.payout_bank_name || '—'}</span></p>
+                    <p><span className="font-semibold text-[var(--svs-text)]">Account number:</span> <span className="text-[var(--svs-muted)]">{sellerDetail.payout_account_number || '—'}</span></p>
+                    <p><span className="font-semibold text-[var(--svs-text)]">Branch code:</span> <span className="text-[var(--svs-muted)]">{sellerDetail.payout_branch_code || '—'}</span></p>
+                  </div>
                 </div>
 
                 <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -22755,7 +22783,7 @@ const AdminDashboardPage = () => {
                   type="text"
                   value={sellerSearch}
                   onChange={(event) => setSellerSearch(event.target.value)}
-                  placeholder="Search by business name, legal name, or email..."
+                  placeholder="Search by business, name, email, phone, ID, or tax no..."
                   className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] py-2 pl-9 pr-3 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
                 />
               </div>
@@ -22765,7 +22793,11 @@ const AdminDashboardPage = () => {
                   <thead className="bg-[var(--svs-surface-soft)] text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
                     <tr>
                       <th className="px-4 py-3">Business</th>
+                      <th className="px-4 py-3">Full Name</th>
                       <th className="px-4 py-3">Email</th>
+                      <th className="px-4 py-3">Phone</th>
+                      <th className="px-4 py-3">ID Number</th>
+                      <th className="px-4 py-3">Tax Number</th>
                       <th className="px-4 py-3">Status</th>
                       <th className="px-4 py-3">Submitted</th>
                       <th className="px-4 py-3" />
@@ -22775,7 +22807,11 @@ const AdminDashboardPage = () => {
                     {visibleSellers.map((seller) => (
                       <tr key={seller.id}>
                         <td className="px-4 py-3 font-semibold text-[var(--svs-text)]">{seller.business_name || seller.legal_full_name}</td>
+                        <td className="px-4 py-3 text-[var(--svs-muted)]">{seller.legal_full_name || '—'}</td>
                         <td className="px-4 py-3 text-[var(--svs-muted)]">{seller.user_email}</td>
+                        <td className="px-4 py-3 text-[var(--svs-muted)]">{seller.phone_number || '—'}</td>
+                        <td className="px-4 py-3 text-[var(--svs-muted)]">{seller.id_number || '—'}</td>
+                        <td className="px-4 py-3 text-[var(--svs-muted)]">{seller.tax_number || '—'}</td>
                         <td className="px-4 py-3">
                           <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase ${seller.compliance_status === 'approved' ? 'bg-emerald-50 text-emerald-700' : seller.compliance_status === 'rejected' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'}`}>
                             {seller.compliance_status}
@@ -22788,7 +22824,7 @@ const AdminDashboardPage = () => {
                       </tr>
                     ))}
                     {visibleSellers.length === 0 ? (
-                      <tr><td colSpan={5} className="px-4 py-6 text-center text-[var(--svs-muted)]">No sellers in this category.</td></tr>
+                      <tr><td colSpan={9} className="px-4 py-6 text-center text-[var(--svs-muted)]">No sellers in this category.</td></tr>
                     ) : null}
                   </tbody>
                 </table>
@@ -22802,7 +22838,7 @@ const AdminDashboardPage = () => {
                   type="text"
                   value={orderSearch}
                   onChange={(event) => setOrderSearch(event.target.value)}
-                  placeholder="Search by order reference, item, buyer, or seller email..."
+                  placeholder="Search by reference, item, or email..."
                   className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] py-2 pl-9 pr-3 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
                 />
               </div>
@@ -22846,7 +22882,7 @@ const AdminDashboardPage = () => {
                   type="text"
                   value={transactionSearch}
                   onChange={(event) => setTransactionSearch(event.target.value)}
-                  placeholder="Search by email, bank, or status..."
+                  placeholder="Search by name, email, phone, or bank..."
                   className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] py-2 pl-9 pr-3 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
                 />
               </div>
@@ -22858,6 +22894,7 @@ const AdminDashboardPage = () => {
                     <thead className="bg-[var(--svs-surface-soft)] text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
                       <tr>
                         <th className="px-4 py-3">User</th>
+                        <th className="px-4 py-3">Phone</th>
                         <th className="px-4 py-3">Amount</th>
                         <th className="px-4 py-3">Bank Account</th>
                         <th className="px-4 py-3">Status</th>
@@ -22868,6 +22905,7 @@ const AdminDashboardPage = () => {
                       {visibleWithdrawalRequests.map((request) => (
                         <tr key={request.id}>
                           <td className="px-4 py-3 text-[var(--svs-muted)]">{request.user_email}</td>
+                          <td className="px-4 py-3 text-[var(--svs-muted)]">{accountByEmail[normalizeEmail(request.user_email)]?.contact_number || '—'}</td>
                           <td className="px-4 py-3 font-semibold text-[var(--svs-text)]">{formatAmountInCurrency(request.amount, request.currency)}</td>
                           <td className="px-4 py-3 text-[var(--svs-muted)]">{request.wallet_bank_accounts ? `${request.wallet_bank_accounts.bank_name} ${maskAccountNumber(request.wallet_bank_accounts.account_number)}` : (request.destination_label || '—')}</td>
                           <td className="px-4 py-3">
@@ -22884,7 +22922,7 @@ const AdminDashboardPage = () => {
                         </tr>
                       ))}
                       {visibleWithdrawalRequests.length === 0 ? (
-                        <tr><td colSpan={5} className="px-4 py-6 text-center text-[var(--svs-muted)]">{withdrawalRequests.length === 0 ? 'No withdrawal requests.' : 'No withdrawal requests match your search.'}</td></tr>
+                        <tr><td colSpan={6} className="px-4 py-6 text-center text-[var(--svs-muted)]">{withdrawalRequests.length === 0 ? 'No withdrawal requests.' : 'No withdrawal requests match your search.'}</td></tr>
                       ) : null}
                     </tbody>
                   </table>
@@ -22898,6 +22936,7 @@ const AdminDashboardPage = () => {
                     <thead className="bg-[var(--svs-surface-soft)] text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
                       <tr>
                         <th className="px-4 py-3">User</th>
+                        <th className="px-4 py-3">Phone</th>
                         <th className="px-4 py-3">Kind</th>
                         <th className="px-4 py-3">Amount</th>
                         <th className="px-4 py-3">Status</th>
@@ -22908,6 +22947,7 @@ const AdminDashboardPage = () => {
                       {visibleWalletTransactions.map((txn) => (
                         <tr key={txn.id}>
                           <td className="px-4 py-3 text-[var(--svs-muted)]">{txn.user_email}</td>
+                          <td className="px-4 py-3 text-[var(--svs-muted)]">{accountByEmail[normalizeEmail(txn.user_email)]?.contact_number || '—'}</td>
                           <td className="px-4 py-3 text-[var(--svs-muted)] capitalize">{txn.kind}</td>
                           <td className={`px-4 py-3 font-semibold ${txn.direction === 'credit' ? 'text-emerald-600' : 'text-rose-600'}`}>{txn.direction === 'credit' ? '+' : '-'}{formatAmountInCurrency(txn.amount, txn.currency)}</td>
                           <td className="px-4 py-3 text-[var(--svs-muted)] capitalize">{txn.status}</td>
@@ -22915,7 +22955,7 @@ const AdminDashboardPage = () => {
                         </tr>
                       ))}
                       {visibleWalletTransactions.length === 0 ? (
-                        <tr><td colSpan={5} className="px-4 py-6 text-center text-[var(--svs-muted)]">{walletTransactions.length === 0 ? 'No wallet transactions.' : 'No wallet transactions match your search.'}</td></tr>
+                        <tr><td colSpan={6} className="px-4 py-6 text-center text-[var(--svs-muted)]">{walletTransactions.length === 0 ? 'No wallet transactions.' : 'No wallet transactions match your search.'}</td></tr>
                       ) : null}
                     </tbody>
                   </table>

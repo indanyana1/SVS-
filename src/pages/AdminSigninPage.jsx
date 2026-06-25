@@ -127,7 +127,7 @@ const AdminSigninPage = () => {
         </div>
 
         <p className="mt-6 text-center text-sm text-[var(--svs-muted)]">
-          <Link to="/" className="transition hover:text-[var(--svs-text)]">Back to SVS</Link>
+          <Link to="/" className="transition hover:text-[var(--svs-text)]">Back to SVS E-Commerce</Link>
         </p>
       </div>
     </StandalonePageShell>

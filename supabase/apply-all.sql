@@ -1392,7 +1392,7 @@ begin
   ) then
     alter publication supabase_realtime add table public.user_presence;
   end if;
-end $$;
+end $$;3
 
 -- ------------------------------------------------------------
 -- >>> chat-media-storage.sql
