@@ -18756,6 +18756,7 @@ const generalLabourItems = [
     city: 'Lagos',
     country: 'Nigeria',
     location: 'Lagos, Nigeria',
+    phone: '+234 80 100 000',
     schedulePreference: 'Full Day',
     availability: 'Available Immediately',
     rating: 4.8,
@@ -18786,6 +18787,7 @@ const generalLabourItems = [
     city: 'Nairobi',
     country: 'Kenya',
     location: 'Nairobi, Kenya',
+    phone: '+254 71 100 137',
     schedulePreference: 'Full Day',
     availability: 'Available Immediately',
     rating: 4.8,
@@ -18816,6 +18818,7 @@ const generalLabourItems = [
     city: 'Abuja',
     country: 'Nigeria',
     location: 'Abuja, Nigeria',
+    phone: '+234 80 100 274',
     schedulePreference: 'Weekdays',
     availability: 'Available Immediately',
     rating: 4.8,
@@ -18846,6 +18849,7 @@ const generalLabourItems = [
     city: 'Accra',
     country: 'Ghana',
     location: 'Accra, Ghana',
+    phone: '+233 24 100 411',
     schedulePreference: 'Full Day',
     availability: 'Available Immediately',
     rating: 4.8,
@@ -18876,6 +18880,7 @@ const generalLabourItems = [
     city: 'Kampala',
     country: 'Uganda',
     location: 'Kampala, Uganda',
+    phone: '+256 77 100 548',
     schedulePreference: 'Weekdays',
     availability: 'Available Immediately',
     rating: 4.8,
@@ -18906,6 +18911,7 @@ const generalLabourItems = [
     city: 'Lusaka',
     country: 'Zambia',
     location: 'Lusaka, Zambia',
+    phone: '+260 97 100 685',
     schedulePreference: 'Full Day',
     availability: 'Available Immediately',
     rating: 4.8,
@@ -18936,6 +18942,7 @@ const generalLabourItems = [
     city: 'Kigali',
     country: 'Rwanda',
     location: 'Kigali, Rwanda',
+    phone: '+250 78 100 822',
     schedulePreference: 'Weekdays',
     availability: 'Available within 1 week',
     rating: 4.9,
@@ -18967,6 +18974,7 @@ const generalLabourItems = [
     city: 'Brooklyn',
     country: 'USA',
     location: 'Brooklyn, NY',
+    phone: '+1 718 100959',
     schedulePreference: 'Full Day',
     availability: 'Available Immediately',
     rating: 4.8,
@@ -18997,6 +19005,7 @@ const generalLabourItems = [
     city: 'Richards Bay',
     country: 'South Africa',
     location: 'Richards Bay, KwaZulu-Natal',
+    phone: '+27 82 101 096',
     schedulePreference: 'Weekdays',
     availability: 'Available within 2 weeks',
     rating: 4.7,
@@ -19027,6 +19036,7 @@ const generalLabourItems = [
     city: 'Stellenbosch',
     country: 'South Africa',
     location: 'Stellenbosch, Western Cape',
+    phone: '+27 82 101 233',
     schedulePreference: 'Weekends',
     availability: 'Available Immediately',
     rating: 4.9,
@@ -19058,6 +19068,7 @@ const generalLabourItems = [
     city: 'Pretoria',
     country: 'South Africa',
     location: 'Pretoria, Gauteng',
+    phone: '+27 82 101 370',
     schedulePreference: 'Full Day',
     availability: 'Available Immediately',
     rating: 4.6,
@@ -19088,6 +19099,7 @@ const generalLabourItems = [
     city: 'Durban',
     country: 'South Africa',
     location: 'Durban, KwaZulu-Natal',
+    phone: '+27 82 101 507',
     schedulePreference: 'Weekdays',
     availability: 'Available within 1 week',
     rating: 4.7,
@@ -19118,6 +19130,7 @@ const generalLabourItems = [
     city: 'Bloemfontein',
     country: 'South Africa',
     location: 'Bloemfontein, Free State',
+    phone: '+27 82 101 644',
     schedulePreference: 'Evenings',
     availability: 'Available Immediately',
     rating: 4.5,
@@ -19149,6 +19162,7 @@ const generalLabourItems = [
     city: 'Midrand',
     country: 'South Africa',
     location: 'Midrand, Gauteng',
+    phone: '+27 82 101 781',
     schedulePreference: 'Weekdays',
     availability: 'Available Immediately',
     rating: 4.6,
@@ -19179,6 +19193,7 @@ const generalLabourItems = [
     city: 'Centurion',
     country: 'South Africa',
     location: 'Centurion, Gauteng',
+    phone: '+27 82 101 918',
     schedulePreference: 'Full Day',
     availability: 'Available within 1 week',
     rating: 4.7,
@@ -19209,6 +19224,7 @@ const generalLabourItems = [
     city: 'Sandton',
     country: 'South Africa',
     location: 'Sandton, Johannesburg',
+    phone: '+27 82 102 055',
     schedulePreference: 'Weekends',
     availability: 'Available Immediately',
     rating: 4.8,
@@ -19240,6 +19256,7 @@ const generalLabourItems = [
     city: 'Germiston',
     country: 'South Africa',
     location: 'Germiston, Gauteng',
+    phone: '+27 82 102 192',
     schedulePreference: 'Full Day',
     availability: 'Available Immediately',
     rating: 4.7,
@@ -19270,6 +19287,7 @@ const generalLabourItems = [
     city: 'Witbank',
     country: 'South Africa',
     location: 'Witbank, Mpumalanga',
+    phone: '+27 82 102 329',
     schedulePreference: 'Weekdays',
     availability: 'Available within 2 weeks',
     rating: 4.6,
@@ -19300,6 +19318,7 @@ const generalLabourItems = [
     city: 'Mamelodi',
     country: 'South Africa',
     location: 'Mamelodi, Pretoria',
+    phone: '+27 82 102 466',
     schedulePreference: 'Evenings',
     availability: 'Available Immediately',
     rating: 4.8,
@@ -19331,6 +19350,7 @@ const generalLabourItems = [
     city: 'Boksburg',
     country: 'South Africa',
     location: 'Boksburg, Gauteng',
+    phone: '+27 82 102 603',
     schedulePreference: 'Full Day',
     availability: 'Available Immediately',
     rating: 4.5,
@@ -19361,6 +19381,7 @@ const generalLabourItems = [
     city: 'Durban',
     country: 'South Africa',
     location: 'Durban, KwaZulu-Natal',
+    phone: '+27 82 102 740',
     schedulePreference: 'Weekdays',
     availability: 'Available Immediately',
     rating: 4.7,
@@ -19391,6 +19412,7 @@ const generalLabourItems = [
     city: 'Roodepoort',
     country: 'South Africa',
     location: 'Roodepoort, Gauteng',
+    phone: '+27 82 102 877',
     schedulePreference: 'Weekdays',
     availability: 'Available within 1 week',
     rating: 4.6,
@@ -19422,6 +19444,7 @@ const generalLabourItems = [
     city: 'Tzaneen',
     country: 'South Africa',
     location: 'Tzaneen, Limpopo',
+    phone: '+27 82 103 014',
     schedulePreference: 'Full Day',
     availability: 'Available Immediately',
     rating: 4.5,
@@ -19452,6 +19475,7 @@ const generalLabourItems = [
     city: 'Bethlehem',
     country: 'South Africa',
     location: 'Bethlehem, Free State',
+    phone: '+27 82 103 151',
     schedulePreference: 'Full Day',
     availability: 'Available within 2 weeks',
     rating: 4.7,
@@ -19482,6 +19506,7 @@ const generalLabourItems = [
     city: 'Ficksburg',
     country: 'South Africa',
     location: 'Ficksburg, Free State',
+    phone: '+27 82 103 288',
     schedulePreference: 'Weekdays',
     availability: 'Available Immediately',
     rating: 4.8,
@@ -19513,6 +19538,7 @@ const generalLabourItems = [
     city: 'Lagos',
     country: 'Nigeria',
     location: 'Lagos, Nigeria',
+    phone: '+234 80 103 425',
     schedulePreference: 'Full Day',
     availability: 'Available Immediately',
     rating: 4.8,
@@ -19543,6 +19569,7 @@ const generalLabourItems = [
     city: 'Alberton',
     country: 'South Africa',
     location: 'Alberton, Gauteng',
+    phone: '+27 82 103 562',
     schedulePreference: 'Weekdays',
     availability: 'Available Immediately',
     rating: 4.7,
@@ -19573,6 +19600,7 @@ const generalLabourItems = [
     city: 'Rosebank',
     country: 'South Africa',
     location: 'Rosebank, Johannesburg',
+    phone: '+27 82 103 699',
     schedulePreference: 'Evenings',
     availability: 'Available within 1 week',
     rating: 4.6,
@@ -21250,6 +21278,7 @@ const emptyGeneralLabourSellForm = () => ({
   travelFee: '',
   schedulePreference: '',
   availability: '',
+  phone: '',
   bio: '',
   keyHighlights: '',
   languages: '',
@@ -21345,6 +21374,7 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
       travelFee: listing.travelFee || '',
       schedulePreference: listing.schedulePreference || '',
       availability: listing.availability || '',
+      phone: listing.phone || '',
       bio: listing.productOverview || listing.bio || '',
       keyHighlights: Array.isArray(listing.keyHighlights) ? listing.keyHighlights.join('\n') : (Array.isArray(listing.skills) ? listing.skills.join('\n') : ''),
       languages: listing.technicalSpecs?.['Languages Spoken'] || '',
@@ -21386,8 +21416,10 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
     const cleanedRate = rawRate.replace(/[^\d.]/g, '');
     const trimmedRate = cleanedRate || rawRate;
 
-    if (!trimmedName || !form.category || !form.gender || !form.experienceLevel || !form.skillLevel || !form.rateType || !form.serviceType || !trimmedRate || !trimmedCountry || !trimmedCity) {
-      setMessage('Add your name, role, gender, experience level, skill level, rate type, service type, rate, country, and city before publishing.');
+    const trimmedPhone = form.phone.trim();
+
+    if (!trimmedName || !form.category || !form.gender || !form.experienceLevel || !form.skillLevel || !form.rateType || !form.serviceType || !trimmedRate || !trimmedCountry || !trimmedCity || !trimmedPhone) {
+      setMessage('Add your name, role, gender, experience level, skill level, rate type, service type, rate, country, city, and a phone number before publishing.');
       setMessageType('error');
       return;
     }
@@ -21432,6 +21464,7 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
       Availability: trimmedAvailability,
       'Schedule Preference': form.schedulePreference,
       Gender: form.gender,
+      Phone: trimmedPhone,
       ...(form.languages.trim() ? { 'Languages Spoken': form.languages.trim() } : {}),
       ...(form.tools.trim() ? { 'Tools / Equipment': form.tools.trim() } : {}),
       ...(form.certifications.trim() ? { Certifications: form.certifications.trim() } : {}),
@@ -21464,6 +21497,7 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
       ...(trimmedTravelFee ? { travelFee: trimmedTravelFee } : {}),
       schedulePreference: form.schedulePreference,
       availability: trimmedAvailability,
+      phone: trimmedPhone,
       ...(form.bio.trim() ? { productOverview: form.bio.trim() } : {}),
       ...(keyHighlights.length ? { keyHighlights } : {}),
       technicalSpecs,
@@ -21685,6 +21719,16 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
               </div>
             </div>
 
+            {/* Contact — how employers reach this worker */}
+            <h2 className="mt-6 text-base font-bold text-[var(--svs-text)]">Contact</h2>
+            <p className="mt-1 text-xs text-[var(--svs-muted)]">Shown to employers as Call / Chat buttons on your profile.</p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="gl-phone" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Phone number <span className="text-rose-500">*</span></label>
+                <input id="gl-phone" name="phone" value={form.phone} onChange={handleChange} required placeholder="e.g. +27 82 123 4567" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+            </div>
+
             {/* Pricing */}
             <h2 className="mt-6 text-base font-bold text-[var(--svs-text)]">Rate</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -21806,6 +21850,11 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
                       <p className="truncate text-xs font-semibold text-[var(--svs-text)]">{listing.name || listing.title}</p>
                       <p className="truncate text-[11px] text-[var(--svs-muted)]">{listing.category} • {listing.location}</p>
                       <p className="mt-0.5 text-[11px] font-semibold text-[var(--svs-primary-strong)]">{formatAmountInCurrency(Number(listing.rate) || 0, listing.currency)}/{(listing.rateType || 'Daily').toLowerCase()}</p>
+                      {listing.phone ? (
+                        <p className="mt-0.5 flex items-center gap-1 truncate text-[11px] text-[var(--svs-muted)]">
+                          <Phone className="h-3 w-3 flex-shrink-0" /> {listing.phone}
+                        </p>
+                      ) : null}
                     </div>
                     <button type="button" onClick={() => handleEdit(listing)} className="self-start rounded-md p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600" aria-label="Edit listing" title="Edit">
                       <Pencil className="h-3.5 w-3.5" />
@@ -21881,6 +21930,32 @@ const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onAddToCart, onBuyNow
     details: `${worker.category || 'Worker'} • ${worker.location || ''}`,
   });
   const isWishlisted = wishlistItemIds.includes(getCollectionItemId('/general-labour-market', worker.id));
+
+  // Seller-submitted workers carry a real sellerEmail; the static catalog
+  // workers don't, so fall back to a deterministic synthetic address — same
+  // pattern used for Home-Care, Property Hub, and Mobility & Vehicles
+  // "chat with seller" buttons.
+  const workerChatName = worker.name || 'Worker';
+  const workerChatEmail = (
+    worker.sellerEmail
+    || `${workerChatName.toLowerCase().replace(/[^a-z0-9]/g, '')}@seller.marketplace.local`
+  ).trim().toLowerCase();
+  const goToWorkerChat = () => {
+    navigate('/support/chat', {
+      state: {
+        recipientEmail: workerChatEmail,
+        recipientName: workerChatName,
+        recipientRole: 'seller',
+        issueType: 'Item Enquiry',
+        itemKey: worker.id,
+        itemTitle: worker.name,
+        itemImage: worker.image || '',
+        itemLink: `/general-labour-market/worker/${worker.id}`,
+      },
+    });
+  };
+  const workerPhone = String(worker.phone || '').trim();
+  const workerPhoneTel = workerPhone.replace(/[^\d+]/g, '');
 
   const renderStars = (rating, size = 'h-4 w-4') => Array.from({ length: 5 }, (_, i) => (
     <Star key={i} className={`${size} ${i < Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'text-slate-300'}`} />
@@ -21988,6 +22063,27 @@ const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onAddToCart, onBuyNow
               <button type="button" onClick={() => onToggleWishlist?.(buildWishlistItem())} className={`rounded-lg border px-6 py-3 text-sm font-semibold ${isWishlisted ? 'border-rose-400 text-rose-600 bg-rose-50' : 'border-[var(--svs-primary)] text-[var(--svs-primary)] hover:bg-[var(--svs-primary-faint)]'}`}>
                 {isWishlisted ? 'Wishlisted' : 'Add to Wishlist'}
               </button>
+            </div>
+
+            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3">
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">Contact {worker.name || 'this worker'} directly</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={goToWorkerChat}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white hover:brightness-110"
+                >
+                  <MessageCircle className="h-4 w-4" /> Chat
+                </button>
+                {workerPhoneTel ? (
+                  <a
+                    href={`tel:${workerPhoneTel}`}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-2 text-sm font-semibold text-[var(--svs-text)] hover:border-[var(--svs-primary)]"
+                  >
+                    <Phone className="h-4 w-4" /> Call
+                  </a>
+                ) : null}
+              </div>
             </div>
           </div>
         </div>
@@ -22202,6 +22298,13 @@ const adminRecordMatchesSearch = (record, query, fields) => {
   });
 };
 
+const getComplianceStatusBadgeClass = (status) => {
+  if (status === 'approved') return 'bg-emerald-50 text-emerald-700';
+  if (status === 'rejected') return 'bg-rose-50 text-rose-700';
+  if (status === 'changes_requested') return 'bg-sky-50 text-sky-700';
+  return 'bg-amber-50 text-amber-700';
+};
+
 const ADMIN_DASHBOARD_TABS = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard },
   { key: 'buyers', label: 'Buyers', icon: Users },
@@ -22211,7 +22314,18 @@ const ADMIN_DASHBOARD_TABS = [
   { key: 'reports', label: 'Reports', icon: FileText },
 ];
 
-const AdminDashboardPage = () => {
+// Section keys an admin can flag for a seller to revisit — kept at the
+// section level (not per-field) so this is a handful of checkboxes rather
+// than 20+. Mirrored in SellerOnboardingPage.jsx / SellerPendingApprovalPage.jsx
+// (same key strings) so the seller-facing labels match what the admin picked.
+const SELLER_PROFILE_SECTIONS = [
+  { key: 'business_identity', label: 'Business Identity' },
+  { key: 'identity_verification', label: 'Identity Verification (ID/Passport photo, Selfie)' },
+  { key: 'contact_address', label: 'Business Contact and Address' },
+  { key: 'payout_returns', label: 'Payout and Returns' },
+];
+
+const AdminDashboardPage = ({ onPushNotificationToUser }) => {
   const navigate = useNavigate();
   const [sessionState, setSessionState] = useState('checking');
   const [adminInfo, setAdminInfo] = useState(null);
@@ -22232,6 +22346,10 @@ const AdminDashboardPage = () => {
   const [reviewMessage, setReviewMessage] = useState('');
   const [reviewMessageType, setReviewMessageType] = useState('idle');
   const [isReviewing, setIsReviewing] = useState(false);
+  const [rejectionNotes, setRejectionNotes] = useState('');
+  const [changeRequestMessage, setChangeRequestMessage] = useState('');
+  const [changeRequestFields, setChangeRequestFields] = useState([]);
+  const [changeRequestEntireProfile, setChangeRequestEntireProfile] = useState(false);
   const [sellerFilter, setSellerFilter] = useState('submitted');
 
   const [walletTransactions, setWalletTransactions] = useState([]);
@@ -22287,7 +22405,7 @@ const AdminDashboardPage = () => {
     (async () => {
       const [buyersRes, sellersRes, ordersRes] = await Promise.all([
         supabase.from('account_users').select('id, full_name, email_address, contact_number, created_at').order('created_at', { ascending: false }),
-        supabase.from('seller_profiles').select('id, user_email, business_name, legal_full_name, phone_number, id_number, tax_number, compliance_status, created_at, updated_at').order('created_at', { ascending: false }),
+        supabase.from('seller_profiles').select('id, user_email, business_name, legal_full_name, phone_number, id_number, tax_number, compliance_status, id_document_is_dark, selfie_is_dark, created_at, updated_at').order('created_at', { ascending: false }),
         supabase.from(ORDERS_TABLE).select('user_email, order_key, reference, order_created_at, items, currency, subtotal, service_fee, total, status').order('order_created_at', { ascending: false }),
       ]);
 
@@ -22321,6 +22439,10 @@ const AdminDashboardPage = () => {
       setSellerAuditLog([]);
       setReviewMessage('');
       setReviewMessageType('idle');
+      setRejectionNotes('');
+      setChangeRequestMessage('');
+      setChangeRequestFields([]);
+      setChangeRequestEntireProfile(false);
 
       const { data } = await supabase.from('seller_profiles').select('*').eq('user_email', selectedSellerEmail).maybeSingle();
       if (isCancelled) return;
@@ -22381,6 +22503,14 @@ const AdminDashboardPage = () => {
 
   const handleReviewDecision = async (decision) => {
     if (!sellerDetail || !supabase) return;
+
+    const trimmedNotes = rejectionNotes.trim();
+    if (decision === 'rejected' && !trimmedNotes) {
+      setReviewMessage('Add a reason before rejecting — the seller sees this so they know what to fix.');
+      setReviewMessageType('error');
+      return;
+    }
+
     setIsReviewing(true);
     setReviewMessage('');
     setReviewMessageType('idle');
@@ -22389,6 +22519,7 @@ const AdminDashboardPage = () => {
       p_token: token,
       p_user_email: sellerDetail.user_email,
       p_decision: decision,
+      p_notes: decision === 'rejected' ? trimmedNotes : null,
     });
 
     if (error) {
@@ -22398,10 +22529,110 @@ const AdminDashboardPage = () => {
       return;
     }
 
+    onPushNotificationToUser?.(sellerDetail.user_email, {
+      type: decision === 'approved' ? 'success' : 'rejected',
+      title: decision === 'approved' ? 'Seller application approved' : 'Seller application rejected',
+      message: decision === 'approved'
+        ? 'Your seller application has been approved. You now have access to your seller dashboard.'
+        : `Your seller application was rejected: ${trimmedNotes}`,
+      href: decision === 'approved' ? '/seller/dashboard' : '/sell/pending-approval',
+    });
+
     setReviewMessage(decision === 'approved' ? 'Seller approved. They now have dashboard access.' : 'Seller rejected. Their details have been blocked from re-registering.');
     setReviewMessageType('success');
-    setSellerDetail((current) => (current ? { ...current, compliance_status: decision } : current));
+    setSellerDetail((current) => (current ? { ...current, compliance_status: decision, rejection_reason: decision === 'rejected' ? trimmedNotes : null } : current));
     setSellers((current) => current.map((entry) => (entry.user_email === sellerDetail.user_email ? { ...entry, compliance_status: decision } : entry)));
+    setRejectionNotes('');
+    setIsReviewing(false);
+  };
+
+  const handleCancelRejection = async () => {
+    if (!sellerDetail || !supabase) return;
+    setIsReviewing(true);
+    setReviewMessage('');
+    setReviewMessageType('idle');
+
+    const { error } = await supabase.rpc('admin_cancel_rejection', {
+      p_token: token,
+      p_user_email: sellerDetail.user_email,
+    });
+
+    if (error) {
+      setReviewMessage(error.message);
+      setReviewMessageType('error');
+      setIsReviewing(false);
+      return;
+    }
+
+    onPushNotificationToUser?.(sellerDetail.user_email, {
+      type: 'info',
+      title: 'Seller application back under review',
+      message: 'Your previous rejection has been reconsidered. Your application is being reviewed again.',
+      href: '/sell/pending-approval',
+    });
+
+    setReviewMessage('Rejection cancelled. The seller is back under review.');
+    setReviewMessageType('success');
+    setSellerDetail((current) => (current ? { ...current, compliance_status: 'submitted', rejection_reason: null } : current));
+    setSellers((current) => current.map((entry) => (entry.user_email === sellerDetail.user_email ? { ...entry, compliance_status: 'submitted' } : entry)));
+    setRejectionNotes('');
+    setIsReviewing(false);
+  };
+
+  const toggleChangeRequestField = (key) => {
+    setChangeRequestFields((current) => (current.includes(key) ? current.filter((entry) => entry !== key) : [...current, key]));
+  };
+
+  const handleRequestChanges = async () => {
+    if (!sellerDetail || !supabase) return;
+
+    const trimmedMessage = changeRequestMessage.trim();
+    if (!trimmedMessage) {
+      setReviewMessage('Add a message telling the seller what to fix.');
+      setReviewMessageType('error');
+      return;
+    }
+
+    if (!changeRequestEntireProfile && changeRequestFields.length === 0) {
+      setReviewMessage('Pick which section(s) need changes, or mark the entire profile.');
+      setReviewMessageType('error');
+      return;
+    }
+
+    setIsReviewing(true);
+    setReviewMessage('');
+    setReviewMessageType('idle');
+
+    const fieldsToSend = changeRequestEntireProfile ? ['all'] : changeRequestFields;
+
+    const { error } = await supabase.rpc('admin_request_changes', {
+      p_token: token,
+      p_user_email: sellerDetail.user_email,
+      p_message: trimmedMessage,
+      p_fields: fieldsToSend,
+    });
+
+    if (error) {
+      setReviewMessage(error.message);
+      setReviewMessageType('error');
+      setIsReviewing(false);
+      return;
+    }
+
+    onPushNotificationToUser?.(sellerDetail.user_email, {
+      type: 'info',
+      title: 'Update needed on your seller application',
+      message: trimmedMessage,
+      href: '/sell/pending-approval',
+    });
+
+    setReviewMessage('Change request sent to the seller.');
+    setReviewMessageType('success');
+    setSellerDetail((current) => (current ? { ...current, compliance_status: 'changes_requested', admin_message: trimmedMessage, fields_to_edit: fieldsToSend, rejection_reason: null } : current));
+    setSellers((current) => current.map((entry) => (entry.user_email === sellerDetail.user_email ? { ...entry, compliance_status: 'changes_requested' } : entry)));
+    setChangeRequestMessage('');
+    setChangeRequestFields([]);
+    setChangeRequestEntireProfile(false);
     setIsReviewing(false);
   };
 
@@ -22675,8 +22906,8 @@ const AdminDashboardPage = () => {
                     <h2 className="text-lg font-bold text-[var(--svs-text)]">{sellerDetail.business_name || sellerDetail.legal_full_name}</h2>
                     <p className="text-sm text-[var(--svs-muted)]">{sellerDetail.user_email}</p>
                   </div>
-                  <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${sellerDetail.compliance_status === 'approved' ? 'bg-emerald-50 text-emerald-700' : sellerDetail.compliance_status === 'rejected' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'}`}>
-                    {sellerDetail.compliance_status}
+                  <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${getComplianceStatusBadgeClass(sellerDetail.compliance_status)}`}>
+                    {sellerDetail.compliance_status?.replace(/_/g, ' ')}
                   </span>
                 </div>
 
@@ -22704,7 +22935,14 @@ const AdminDashboardPage = () => {
 
                 <div className="mt-5 grid gap-4 sm:grid-cols-2">
                   <div className="rounded-lg border border-[var(--svs-border)] p-3">
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">ID / Passport Photo</p>
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">ID / Passport Photo</p>
+                      {sellerDetail.id_document_is_dark ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 ring-1 ring-amber-200">
+                          <AlertTriangle className="h-3 w-3" /> Flagged dark
+                        </span>
+                      ) : null}
+                    </div>
                     {idDocSignedUrl ? (
                       <img src={idDocSignedUrl} alt="Seller ID document" className="h-40 w-full rounded-md object-cover" />
                     ) : (
@@ -22714,7 +22952,14 @@ const AdminDashboardPage = () => {
                     )}
                   </div>
                   <div className="rounded-lg border border-[var(--svs-border)] p-3">
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">Live Selfie</p>
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">Live Selfie</p>
+                      {sellerDetail.selfie_is_dark ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 ring-1 ring-amber-200">
+                          <AlertTriangle className="h-3 w-3" /> Flagged dark
+                        </span>
+                      ) : null}
+                    </div>
                     {selfieSignedUrl ? (
                       <img src={selfieSignedUrl} alt="Seller selfie" className="h-40 w-full rounded-md object-cover" />
                     ) : (
@@ -22724,6 +22969,85 @@ const AdminDashboardPage = () => {
                     )}
                   </div>
                 </div>
+
+                {sellerDetail.compliance_status === 'changes_requested' ? (
+                  <div className="mt-5 rounded-lg bg-sky-50 px-4 py-3 text-sm text-sky-800 ring-1 ring-sky-200">
+                    <p className="text-xs font-bold uppercase tracking-wide text-sky-700">Changes requested from seller</p>
+                    <p className="mt-1">{sellerDetail.admin_message}</p>
+                    {Array.isArray(sellerDetail.fields_to_edit) && sellerDetail.fields_to_edit.length ? (
+                      <p className="mt-1 text-xs text-sky-700">
+                        Flagged: {sellerDetail.fields_to_edit.includes('all')
+                          ? 'Entire profile'
+                          : sellerDetail.fields_to_edit.map((key) => SELLER_PROFILE_SECTIONS.find((section) => section.key === key)?.label || key).join(', ')}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {sellerDetail.compliance_status !== 'approved' ? (
+                  <div className="mt-5">
+                    <label htmlFor="admin-rejection-notes" className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                      Rejection reason <span className="font-normal text-[var(--svs-muted)]">(required to reject — the seller will see this)</span>
+                    </label>
+                    <textarea
+                      id="admin-rejection-notes"
+                      value={rejectionNotes}
+                      onChange={(event) => setRejectionNotes(event.target.value)}
+                      rows={2}
+                      placeholder="e.g. ID photo is blurry — please retake in better lighting."
+                      className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                    />
+                  </div>
+                ) : null}
+
+                {sellerDetail.compliance_status !== 'approved' ? (
+                  <div className="mt-5 rounded-lg border border-[var(--svs-border)] p-3">
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                      Request Changes <span className="font-normal text-[var(--svs-muted)]">(send the seller a note instead of rejecting)</span>
+                    </p>
+                    <textarea
+                      value={changeRequestMessage}
+                      onChange={(event) => setChangeRequestMessage(event.target.value)}
+                      rows={2}
+                      placeholder="e.g. Please retake your ID photo in better lighting and double-check your tax number."
+                      className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                    />
+                    <div className="mt-2 flex flex-wrap gap-3">
+                      {SELLER_PROFILE_SECTIONS.map((section) => (
+                        <label key={section.key} className="flex items-center gap-1.5 text-xs text-[var(--svs-text)]">
+                          <input
+                            type="checkbox"
+                            checked={changeRequestFields.includes(section.key)}
+                            onChange={() => toggleChangeRequestField(section.key)}
+                            disabled={changeRequestEntireProfile}
+                            className="accent-[var(--svs-primary)] disabled:opacity-50"
+                          />
+                          {section.label}
+                        </label>
+                      ))}
+                      <label className="flex items-center gap-1.5 text-xs font-semibold text-[var(--svs-text)]">
+                        <input
+                          type="checkbox"
+                          checked={changeRequestEntireProfile}
+                          onChange={(event) => {
+                            setChangeRequestEntireProfile(event.target.checked);
+                            if (event.target.checked) setChangeRequestFields([]);
+                          }}
+                          className="accent-[var(--svs-primary)]"
+                        />
+                        Entire profile
+                      </label>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRequestChanges}
+                      disabled={isReviewing}
+                      className="mt-3 inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50"
+                    >
+                      <Send className="h-4 w-4" /> Request Changes
+                    </button>
+                  </div>
+                ) : null}
 
                 <div className="mt-5 flex flex-wrap gap-3">
                   <button
@@ -22742,6 +23066,16 @@ const AdminDashboardPage = () => {
                   >
                     <X className="h-4 w-4" /> Reject Seller
                   </button>
+                  {sellerDetail.compliance_status === 'rejected' ? (
+                    <button
+                      type="button"
+                      onClick={handleCancelRejection}
+                      disabled={isReviewing}
+                      className="inline-flex items-center gap-2 rounded-lg border border-[var(--svs-border)] px-4 py-2.5 text-sm font-bold text-[var(--svs-text)] hover:border-[var(--svs-primary)] disabled:opacity-50"
+                    >
+                      <RefreshCw className="h-4 w-4" /> Cancel Rejection
+                    </button>
+                  ) : null}
                 </div>
               </div>
 
@@ -22765,14 +23099,14 @@ const AdminDashboardPage = () => {
           ) : activeTab === 'sellers' ? (
             <section className="space-y-3">
               <div className="flex flex-wrap gap-2">
-                {['submitted', 'approved', 'rejected', 'all'].map((option) => (
+                {['submitted', 'changes_requested', 'approved', 'rejected', 'all'].map((option) => (
                   <button
                     key={option}
                     type="button"
                     onClick={() => setSellerFilter(option)}
                     className={`rounded-full px-3 py-1.5 text-xs font-bold capitalize transition ${sellerFilter === option ? 'bg-[var(--svs-primary)] text-white' : 'border border-[var(--svs-border)] text-[var(--svs-text)] hover:border-[var(--svs-primary)]'}`}
                   >
-                    {option === 'submitted' ? 'Pending Approval' : option}
+                    {option === 'submitted' ? 'Pending Approval' : option === 'changes_requested' ? 'Changes Requested' : option}
                   </button>
                 ))}
               </div>
@@ -22806,15 +23140,22 @@ const AdminDashboardPage = () => {
                   <tbody className="divide-y divide-[var(--svs-border)]">
                     {visibleSellers.map((seller) => (
                       <tr key={seller.id}>
-                        <td className="px-4 py-3 font-semibold text-[var(--svs-text)]">{seller.business_name || seller.legal_full_name}</td>
+                        <td className="px-4 py-3 font-semibold text-[var(--svs-text)]">
+                          <span className="inline-flex items-center gap-1.5">
+                            {seller.business_name || seller.legal_full_name}
+                            {seller.id_document_is_dark || seller.selfie_is_dark ? (
+                              <AlertTriangle className="h-3.5 w-3.5 text-amber-500" aria-label="A submitted photo was flagged as too dark" />
+                            ) : null}
+                          </span>
+                        </td>
                         <td className="px-4 py-3 text-[var(--svs-muted)]">{seller.legal_full_name || '—'}</td>
                         <td className="px-4 py-3 text-[var(--svs-muted)]">{seller.user_email}</td>
                         <td className="px-4 py-3 text-[var(--svs-muted)]">{seller.phone_number || '—'}</td>
                         <td className="px-4 py-3 text-[var(--svs-muted)]">{seller.id_number || '—'}</td>
                         <td className="px-4 py-3 text-[var(--svs-muted)]">{seller.tax_number || '—'}</td>
                         <td className="px-4 py-3">
-                          <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase ${seller.compliance_status === 'approved' ? 'bg-emerald-50 text-emerald-700' : seller.compliance_status === 'rejected' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'}`}>
-                            {seller.compliance_status}
+                          <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase ${getComplianceStatusBadgeClass(seller.compliance_status)}`}>
+                            {seller.compliance_status?.replace(/_/g, ' ')}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-[var(--svs-muted)]">{new Date(seller.created_at).toLocaleDateString()}</td>
@@ -42766,7 +43107,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/sell/onboarding" element={<SellerOnboardingPage />} />
     <Route path="/sell/pending-approval" element={<SellerPendingApprovalPage />} />
     <Route path="/admin/signin" element={<AdminSigninPage />} />
-    <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+    <Route path="/admin/dashboard" element={<AdminDashboardPage onPushNotificationToUser={onPushNotificationToUser} />} />
 
     <Route path="/about" element={<SimpleContentPage title={t('footer.about')} description={t('simplePages.about')} footnote="Est. 2026 RSA" />} />
     <Route path="/blog" element={<SimpleContentPage title={t('footer.blog')} description={t('simplePages.blog')} />} />

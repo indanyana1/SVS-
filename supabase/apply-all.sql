@@ -1392,7 +1392,7 @@ begin
   ) then
     alter publication supabase_realtime add table public.user_presence;
   end if;
-end $$;3
+end $$;
 
 -- ------------------------------------------------------------
 -- >>> chat-media-storage.sql
@@ -2710,3 +2710,206 @@ grant execute on function public.admin_get_profile_audit_log(text, text, int) to
 grant execute on function public.admin_get_action_log(text, int) to anon, authenticated;
 grant execute on function public.admin_log_action(text, text, text, text, jsonb) to anon, authenticated;
 
+-- ------------------------------------------------------------
+-- >>> seller-verification-advancements.sql
+-- ------------------------------------------------------------
+alter table public.seller_profiles
+  add column if not exists id_document_is_dark boolean not null default false,
+  add column if not exists selfie_is_dark boolean not null default false,
+  add column if not exists rejection_reason text;
+
+create or replace function public.admin_review_seller(
+  p_token text,
+  p_user_email text,
+  p_decision text,
+  p_notes text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_admin_email text := public.admin_require_session(p_token);
+  v_previous_status text;
+begin
+  if p_decision not in ('approved', 'rejected') then
+    raise exception 'Decision must be approved or rejected.';
+  end if;
+
+  select compliance_status into v_previous_status
+  from public.seller_profiles
+  where user_email = lower(trim(p_user_email));
+
+  if v_previous_status is null then
+    raise exception 'Seller profile not found.';
+  end if;
+
+  update public.seller_profiles
+  set compliance_status = p_decision,
+      rejection_reason = case when p_decision = 'rejected' then nullif(trim(p_notes), '') else null end,
+      updated_at = now()
+  where user_email = lower(trim(p_user_email));
+
+  insert into public.admin_action_log (admin_email, action, target_type, target_id, details)
+  values (
+    v_admin_email,
+    concat('seller_', p_decision),
+    'seller_profile',
+    lower(trim(p_user_email)),
+    jsonb_build_object('previous_status', v_previous_status, 'notes', p_notes)
+  );
+end;
+$$;
+
+
+create or replace function public.admin_cancel_rejection(
+  p_token text,
+  p_user_email text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_admin_email text := public.admin_require_session(p_token);
+  v_profile public.seller_profiles;
+begin
+  select * into v_profile
+  from public.seller_profiles
+  where user_email = lower(trim(p_user_email));
+
+  if not found then
+    raise exception 'Seller profile not found.';
+  end if;
+
+  if v_profile.compliance_status <> 'rejected' then
+    raise exception 'This seller is not currently rejected.';
+  end if;
+
+  update public.seller_profiles
+  set compliance_status = 'submitted', rejection_reason = null, updated_at = now()
+  where user_email = v_profile.user_email;
+
+  delete from public.banned_identifiers
+  where (identifier_type = 'email' and identifier_value = v_profile.user_email)
+     or (identifier_type = 'id_number' and identifier_value = nullif(trim(v_profile.id_number), ''))
+     or (identifier_type = 'payout_account_number' and identifier_value = nullif(trim(v_profile.payout_account_number), ''))
+     or (identifier_type = 'phone_number' and identifier_value = nullif(trim(v_profile.phone_number), ''));
+
+  insert into public.admin_action_log (admin_email, action, target_type, target_id, details)
+  values (v_admin_email, 'seller_rejection_cancelled', 'seller_profile', v_profile.user_email, jsonb_build_object('previous_status', 'rejected'));
+end;
+$$;
+
+grant execute on function public.admin_cancel_rejection(text, text) to anon, authenticated;
+
+-- ------------------------------------------------------------
+-- >>> seller-changes-requested.sql
+-- ------------------------------------------------------------
+alter table public.seller_profiles
+  drop constraint if exists seller_profiles_compliance_status_check;
+
+alter table public.seller_profiles
+  add constraint seller_profiles_compliance_status_check
+  check (compliance_status in ('pending', 'submitted', 'approved', 'rejected', 'changes_requested'));
+
+alter table public.seller_profiles
+  add column if not exists admin_message text,
+  add column if not exists fields_to_edit jsonb not null default '[]'::jsonb;
+
+create or replace function public.admin_request_changes(
+  p_token text,
+  p_user_email text,
+  p_message text,
+  p_fields jsonb default '[]'::jsonb
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_admin_email text := public.admin_require_session(p_token);
+  v_profile public.seller_profiles;
+  v_trimmed_message text := nullif(trim(p_message), '');
+begin
+  if v_trimmed_message is null then
+    raise exception 'Add a message telling the seller what to fix.';
+  end if;
+
+  select * into v_profile
+  from public.seller_profiles
+  where user_email = lower(trim(p_user_email));
+
+  if not found then
+    raise exception 'Seller profile not found.';
+  end if;
+
+  update public.seller_profiles
+  set compliance_status = 'changes_requested',
+      admin_message = v_trimmed_message,
+      fields_to_edit = coalesce(p_fields, '[]'::jsonb),
+      rejection_reason = null,
+      updated_at = now()
+  where user_email = v_profile.user_email;
+
+  insert into public.admin_action_log (admin_email, action, target_type, target_id, details)
+  values (
+    v_admin_email,
+    'seller_changes_requested',
+    'seller_profile',
+    v_profile.user_email,
+    jsonb_build_object('message', v_trimmed_message, 'fields', p_fields)
+  );
+end;
+$$;
+
+grant execute on function public.admin_request_changes(text, text, text, jsonb) to anon, authenticated;
+
+create or replace function public.admin_review_seller(
+  p_token text,
+  p_user_email text,
+  p_decision text,
+  p_notes text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_admin_email text := public.admin_require_session(p_token);
+  v_previous_status text;
+begin
+  if p_decision not in ('approved', 'rejected') then
+    raise exception 'Decision must be approved or rejected.';
+  end if;
+
+  select compliance_status into v_previous_status
+  from public.seller_profiles
+  where user_email = lower(trim(p_user_email));
+
+  if v_previous_status is null then
+    raise exception 'Seller profile not found.';
+  end if;
+
+  update public.seller_profiles
+  set compliance_status = p_decision,
+      rejection_reason = case when p_decision = 'rejected' then nullif(trim(p_notes), '') else null end,
+      admin_message = null,
+      fields_to_edit = '[]'::jsonb,
+      updated_at = now()
+  where user_email = lower(trim(p_user_email));
+
+  insert into public.admin_action_log (admin_email, action, target_type, target_id, details)
+  values (
+    v_admin_email,
+    concat('seller_', p_decision),
+    'seller_profile',
+    lower(trim(p_user_email)),
+    jsonb_build_object('previous_status', v_previous_status, 'notes', p_notes)
+  );
+end;
+$$;

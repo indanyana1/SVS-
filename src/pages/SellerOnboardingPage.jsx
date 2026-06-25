@@ -40,6 +40,36 @@ const hasCompleteSellerProfile = (record) => SELLER_PROFILE_REQUIRED_FIELDS.ever
   return typeof value === 'string' ? value.trim().length > 0 : Boolean(value);
 });
 
+// Same section keys an admin picks from in the admin dashboard's "Request
+// Changes" tool — used here to badge which sections still need attention.
+const SELLER_PROFILE_SECTIONS = {
+  business_identity: 'Business Identity',
+  identity_verification: 'Identity Verification (ID/Passport photo, Selfie)',
+  contact_address: 'Business Contact and Address',
+  payout_returns: 'Payout and Returns',
+};
+
+const SELLER_PROFILE_FIELD_TO_FORM_KEY = {
+  business_name: 'businessName',
+  legal_full_name: 'legalFullName',
+  id_number: 'idNumber',
+  business_type: 'businessType',
+  registration_number: 'registrationNumber',
+  tax_number: 'taxNumber',
+  phone_number: 'phoneNumber',
+  business_address_line1: 'businessAddressLine1',
+  city: 'city',
+  province: 'province',
+  postal_code: 'postalCode',
+  country: 'country',
+  payout_account_holder: 'payoutAccountHolder',
+  payout_bank_name: 'payoutBankName',
+  payout_account_number: 'payoutAccountNumber',
+  payout_branch_code: 'payoutBranchCode',
+  return_contact_name: 'returnContactName',
+  return_contact_phone: 'returnContactPhone',
+};
+
 const getUserContext = () => ({
   email: typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || getPendingSellerSignupDraft()?.email || ''),
   fullName: typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-name') || getPendingSellerSignupDraft()?.name || ''),
@@ -352,6 +382,47 @@ const SellerOnboardingPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('idle');
+  const [adminMessage, setAdminMessage] = useState('');
+  const [flaggedSections, setFlaggedSections] = useState([]);
+
+  // A returning seller (resubmitting after a rejection or a changes-requested
+  // note) shouldn't have to retype everything — pre-fill from their existing
+  // profile. Live photos still always need a fresh capture (no exceptions
+  // there — see LiveCameraCapture), but every other field carries over.
+  useEffect(() => {
+    if (!context.email || !hasSupabaseEnv || !supabase) return;
+
+    let isCancelled = false;
+
+    (async () => {
+      const { data } = await supabase
+        .from('seller_profiles')
+        .select('*')
+        .eq('user_email', context.email.trim().toLowerCase())
+        .maybeSingle();
+
+      if (isCancelled || !data) return;
+
+      setFormData((current) => {
+        const next = { ...current };
+        Object.entries(SELLER_PROFILE_FIELD_TO_FORM_KEY).forEach(([column, formKey]) => {
+          if (data[column]) next[formKey] = data[column];
+        });
+        return next;
+      });
+
+      if (data.compliance_status === 'changes_requested') {
+        setAdminMessage(data.admin_message || '');
+        setFlaggedSections(Array.isArray(data.fields_to_edit) ? data.fields_to_edit : []);
+      }
+    })();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [context.email]);
+
+  const isSectionFlagged = (sectionKey) => flaggedSections.includes('all') || flaggedSections.includes(sectionKey);
 
   const handleIdDocumentCapture = (blob, capturedIsDark) => {
     setIdDocumentBlob(blob);
@@ -578,10 +649,15 @@ const SellerOnboardingPage = () => {
       return_contact_phone: formData.returnContactPhone.trim(),
       id_document_path: idDocumentPath,
       id_document_type: idDocumentType,
+      id_document_is_dark: isIdDocumentDark,
       selfie_path: selfiePath,
       selfie_captured_at: new Date().toISOString(),
+      selfie_is_dark: isSelfieDark,
       onboarding_completed: true,
       compliance_status: 'submitted',
+      rejection_reason: null,
+      admin_message: null,
+      fields_to_edit: [],
       updated_at: new Date().toISOString(),
     };
 
@@ -661,7 +737,24 @@ const SellerOnboardingPage = () => {
               </div>
             ) : null}
 
-            <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--svs-muted)]">Business Identity</h2>
+            {adminMessage ? (
+              <div className="rounded-xl bg-sky-50 px-4 py-3 text-sm text-sky-800 ring-1 ring-sky-200">
+                <p className="text-xs font-bold uppercase tracking-wide text-sky-700">Update requested by our team</p>
+                <p className="mt-1">{adminMessage}</p>
+                <p className="mt-1 text-xs text-sky-700">
+                  {flaggedSections.includes('all')
+                    ? 'Please review your entire profile.'
+                    : `Sections to update: ${flaggedSections.map((key) => SELLER_PROFILE_SECTIONS[key] || key).join(', ')}`}
+                </p>
+              </div>
+            ) : null}
+
+            <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+              Business Identity
+              {isSectionFlagged('business_identity') ? (
+                <span className="ml-2 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold normal-case text-sky-700 ring-1 ring-sky-200">Needs update</span>
+              ) : null}
+            </h2>
             <div className="grid gap-4 md:grid-cols-2">
               <input name="businessName" value={formData.businessName} onChange={handleChange} required placeholder="Business name" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
               <input name="legalFullName" value={formData.legalFullName} onChange={handleChange} required placeholder="Legal full name" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
@@ -671,7 +764,12 @@ const SellerOnboardingPage = () => {
               <input name="taxNumber" value={formData.taxNumber} onChange={handleChange} required placeholder="Tax number" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
             </div>
 
-            <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--svs-muted)]">Identity Verification</h2>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+              Identity Verification
+              {isSectionFlagged('identity_verification') ? (
+                <span className="ml-2 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold normal-case text-sky-700 ring-1 ring-sky-200">Needs update</span>
+              ) : null}
+            </h2>
             <p className="-mt-2 text-xs text-[var(--svs-muted)]">
               Required to confirm you are who you say you are and to keep fake sellers off the platform. Both photos below
               must be taken live with your camera — file uploads are not accepted for either one.
@@ -718,7 +816,12 @@ const SellerOnboardingPage = () => {
               />
             </div>
 
-            <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--svs-muted)]">Business Contact and Address</h2>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+              Business Contact and Address
+              {isSectionFlagged('contact_address') ? (
+                <span className="ml-2 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold normal-case text-sky-700 ring-1 ring-sky-200">Needs update</span>
+              ) : null}
+            </h2>
             <div className="grid gap-4 md:grid-cols-2">
               <input name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} required placeholder="Business phone number" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
               <input name="businessAddressLine1" value={formData.businessAddressLine1} onChange={handleChange} required placeholder="Street address" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
@@ -728,7 +831,12 @@ const SellerOnboardingPage = () => {
               <input name="country" value={formData.country} onChange={handleChange} required placeholder="Country" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
             </div>
 
-            <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--svs-muted)]">Payout and Returns</h2>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+              Payout and Returns
+              {isSectionFlagged('payout_returns') ? (
+                <span className="ml-2 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold normal-case text-sky-700 ring-1 ring-sky-200">Needs update</span>
+              ) : null}
+            </h2>
             <div className="grid gap-4 md:grid-cols-2">
               <input name="payoutAccountHolder" value={formData.payoutAccountHolder} onChange={handleChange} required placeholder="Payout account holder" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
               <input name="payoutBankName" value={formData.payoutBankName} onChange={handleChange} required placeholder="Bank name" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
