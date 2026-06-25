@@ -3536,6 +3536,7 @@ const homeCareProviders = [
     location: 'Cape Town, South Africa',
     serviceType: 'Weekly',
     availabilityWindow: 'Full Day',
+    availableDays: ['Monday', 'Wednesday', 'Friday'],
     experience: '5 Years Experience',
     experienceYears: 5,
     image: 'https://images.pexels.com/photos/3760263/pexels-photo-3760263.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -3549,6 +3550,7 @@ const homeCareProviders = [
     location: 'Durban, South Africa',
     serviceType: 'Daily',
     availabilityWindow: 'Morning',
+    availableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
     experience: '4 Years Experience',
     experienceYears: 4,
     image: 'https://images.pexels.com/photos/5327580/pexels-photo-5327580.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -3562,6 +3564,7 @@ const homeCareProviders = [
     location: 'Johannesburg, South Africa',
     serviceType: 'Monthly',
     availabilityWindow: 'Afternoon',
+    availableDays: ['Tuesday', 'Thursday'],
     experience: '6 Years Experience',
     experienceYears: 6,
     image: 'https://images.pexels.com/photos/7176300/pexels-photo-7176300.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -3575,6 +3578,7 @@ const homeCareProviders = [
     location: 'Pretoria, South Africa',
     serviceType: 'Hourly',
     availabilityWindow: 'Morning',
+    availableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
     experience: '3 Years Experience',
     experienceYears: 3,
     image: 'https://images.pexels.com/photos/7551687/pexels-photo-7551687.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -3588,6 +3592,7 @@ const homeCareProviders = [
     location: 'Pietermaritzburg, South Africa',
     serviceType: 'Daily',
     availabilityWindow: 'Full Day',
+    availableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
     experience: '8 Years Experience',
     experienceYears: 8,
     image: 'https://images.pexels.com/photos/8486972/pexels-photo-8486972.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -3601,6 +3606,7 @@ const homeCareProviders = [
     location: 'Nairobi, Kenya',
     serviceType: 'Daily',
     availabilityWindow: 'Morning',
+    availableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
     experience: '5 Years Experience',
     experienceYears: 5,
     image: 'https://images.pexels.com/photos/4108714/pexels-photo-4108714.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -3614,6 +3620,7 @@ const homeCareProviders = [
     location: 'Kampala, Uganda',
     serviceType: 'Daily',
     availabilityWindow: 'Afternoon',
+    availableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
     experience: '7 Years Experience',
     experienceYears: 7,
     image: 'https://images.pexels.com/photos/8092483/pexels-photo-8092483.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -3627,6 +3634,7 @@ const homeCareProviders = [
     location: 'Lagos, Nigeria',
     serviceType: 'Daily',
     availabilityWindow: 'Evening',
+    availableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
     experience: '2 Years Experience',
     experienceYears: 2,
     image: 'https://images.pexels.com/photos/3769135/pexels-photo-3769135.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -3646,9 +3654,10 @@ const homeCareProviderDetailPrototype = {
   aboutText: 'Compassionate and dedicated nursing professional with over 6 years of experience providing exceptional in-home care. Specialized in elderly care, post-surgery recovery, and chronic condition management. Committed to improving quality of life through personalized, patient-centered care.',
   languages: ['English', 'Spanish', 'French'],
   servicesOffered: ['Nursing Care', 'Post-Surgery Care', 'Medication Management', 'Wound Care', 'Vital Monitoring'],
+  availableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
 };
 
-const homeCareAvailabilityDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const HOME_CARE_WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 const homeCareAvailabilityTimeSlots = [
   'Morning (8AM - 12PM)',
@@ -3710,6 +3719,7 @@ const homeCareRelatedProviders = [
     location: 'Brooklyn, NY',
     experience: '5 Years Experience',
     availability: 'Weekly',
+    availableDays: ['Monday', 'Wednesday', 'Friday'],
     image: 'https://images.pexels.com/photos/8486972/pexels-photo-8486972.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
   {
@@ -3719,6 +3729,7 @@ const homeCareRelatedProviders = [
     location: 'Manhattan, NY',
     experience: '4 Years Experience',
     availability: 'Daily',
+    availableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
     image: 'https://images.pexels.com/photos/7551687/pexels-photo-7551687.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
   {
@@ -3728,17 +3739,22 @@ const homeCareRelatedProviders = [
     location: 'Staten Island, NY',
     experience: '6 Years Experience',
     availability: 'Morning',
+    availableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
     image: 'https://images.pexels.com/photos/4108714/pexels-photo-4108714.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
 ];
 
-const HomeCareProviderDetailPage = ({ sellerItems = [] }) => {
+const HomeCareProviderDetailPage = ({ sellerItems = [], onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [] }) => {
   const navigate = useNavigate();
   const { providerId } = useParams();
   // Subscribe to buyer currency so seller-listed prices format correctly.
   useBuyerCurrency();
   const carouselRef = useRef(null);
-  const [bookingSelection, setBookingSelection] = useState('');
+  const [activeBooking, setActiveBooking] = useState(null);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
+  const [bookingDate, setBookingDate] = useState('');
+  const [bookingDateError, setBookingDateError] = useState('');
+  const [bookingConfirmed, setBookingConfirmed] = useState(false);
   const [selectedOptions, setSelectedOptions] = useState(() => {
     const defaults = {};
     homeCarePricingSections.forEach((section) => {
@@ -3766,6 +3782,9 @@ const HomeCareProviderDetailPage = ({ sellerItems = [] }) => {
         ? getSalePrices(sellerItem.price, getItemSaleDiscountRate(sellerItem), sellerItem.currency || null).nowPrice
         : '';
       const billingCycle = sellerItem.serviceType || 'Service';
+      const sellerAvailableDays = Array.isArray(sellerItem.availableDays)
+        ? sellerItem.availableDays
+        : splitList(sellerItem.availableDays);
       return {
         name: sellerItem.title || 'Home-Care Service',
         badge: sellerItem.category ? `${sellerItem.category} Specialist` : 'Home-Care Service',
@@ -3779,6 +3798,7 @@ const HomeCareProviderDetailPage = ({ sellerItems = [] }) => {
         servicesOffered: servicesOffered.length ? servicesOffered : (sellerItem.category ? [sellerItem.category] : []),
         certifications: certifications.length ? certifications : (sellerItem.experience ? [sellerItem.experience] : []),
         availabilityWindow: sellerItem.availability || '',
+        availableDays: sellerAvailableDays.length ? sellerAvailableDays : HOME_CARE_WEEK_DAYS,
         pricingSections: priceLabel
           ? [{
             id: 'seller-service',
@@ -3804,6 +3824,7 @@ const HomeCareProviderDetailPage = ({ sellerItems = [] }) => {
         aboutText: `Compassionate and dedicated ${providerFromMainList.category.toLowerCase()} professional with over ${providerFromMainList.experienceYears || 6} years of experience providing exceptional in-home care. Specialized in personalized support and committed to improving quality of life through trusted, client-centered care.`,
         languages: homeCareProviderDetailPrototype.languages,
         servicesOffered: [providerFromMainList.category, ...homeCareProviderDetailPrototype.servicesOffered.filter((service) => service !== providerFromMainList.category)],
+        availableDays: providerFromMainList.availableDays || HOME_CARE_WEEK_DAYS,
       };
     }
 
@@ -3820,6 +3841,7 @@ const HomeCareProviderDetailPage = ({ sellerItems = [] }) => {
         aboutText: `Compassionate and dedicated ${providerFromRelatedList.category.toLowerCase()} professional focused on reliable, in-home support services with a client-first approach.`,
         languages: homeCareProviderDetailPrototype.languages,
         servicesOffered: [providerFromRelatedList.category, ...homeCareProviderDetailPrototype.servicesOffered.filter((service) => service !== providerFromRelatedList.category)],
+        availableDays: providerFromRelatedList.availableDays || HOME_CARE_WEEK_DAYS,
       };
     }
 
@@ -3857,13 +3879,91 @@ const HomeCareProviderDetailPage = ({ sellerItems = [] }) => {
     }));
   };
 
-  const openBookingModal = (label) => {
-    setBookingSelection(label);
+  const activePricingSections = (Array.isArray(activeProvider.pricingSections) && activeProvider.pricingSections.length)
+    ? activeProvider.pricingSections
+    : homeCarePricingSections;
+  const defaultServiceOption = activePricingSections[0]?.options?.[0] || null;
+  const providerAvailableDays = activeProvider.availableDays || HOME_CARE_WEEK_DAYS;
+
+  const openBookingModal = (label, price) => {
+    setActiveBooking({ label, price: price || '' });
+    setBookingDateError('');
+    setBookingConfirmed(false);
   };
 
   const closeBookingModal = () => {
-    setBookingSelection('');
+    setActiveBooking(null);
+    setBookingDate('');
+    setBookingDateError('');
+    setBookingConfirmed(false);
   };
+
+  const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const handleBookingDateChange = (event) => {
+    const value = event.target.value;
+    setBookingDate(value);
+    setBookingConfirmed(false);
+    if (!value) {
+      setBookingDateError('');
+      return;
+    }
+    const [year, month, day] = value.split('-').map(Number);
+    const parsedDate = new Date(year, (month || 1) - 1, day || 1);
+    const weekdayName = WEEKDAY_NAMES[parsedDate.getDay()];
+    if (!providerAvailableDays.includes(weekdayName)) {
+      setBookingDateError(`${activeProvider.name} is not available on ${weekdayName}s. Available days: ${providerAvailableDays.join(', ')}.`);
+    } else {
+      setBookingDateError('');
+    }
+  };
+
+  const canConfirmBooking = Boolean(activeBooking) && Boolean(bookingDate) && Boolean(selectedTimeSlot) && !bookingDateError;
+
+  const buildWishlistItem = () => createWishlistItem({
+    id: providerId,
+    title: activeProvider.name,
+    image: activeProvider.image,
+    price: defaultServiceOption?.price || '0',
+    route: '/home-care',
+    marketName: 'Book @ Home-Care Services',
+    details: `${activeProvider.badge || 'Home-Care Service'} • ${activeProvider.location || ''}`,
+    sellerEmail: activeProvider.sellerEmail || '',
+  });
+
+  const buildBookingCartItem = () => {
+    const formattedDate = bookingDate
+      ? new Date(bookingDate).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })
+      : '';
+    const details = [
+      activeBooking?.label,
+      formattedDate ? `Booked for ${formattedDate}` : '',
+      selectedTimeSlot,
+    ].filter(Boolean).join(' • ');
+    return createCartItem({
+      id: providerId,
+      title: activeProvider.name,
+      image: activeProvider.image,
+      price: activeBooking?.price || defaultServiceOption?.price || '0',
+      route: '/home-care',
+      marketName: 'Book @ Home-Care Services',
+      details,
+      sellerEmail: activeProvider.sellerEmail || '',
+    });
+  };
+
+  const handleAddBookingToCart = () => {
+    if (!canConfirmBooking) return;
+    onAddToCart?.(buildBookingCartItem());
+    setBookingConfirmed(true);
+  };
+
+  const handleConfirmBooking = () => {
+    if (!canConfirmBooking) return;
+    onBuyNow?.(buildBookingCartItem());
+  };
+
+  const isProviderWishlisted = wishlistItemIds.includes(getCollectionItemId('/home-care', providerId));
+  const handleToggleWishlist = () => onToggleWishlist?.(buildWishlistItem());
 
   const scrollRelatedListings = (direction) => {
     if (!carouselRef.current) {
@@ -3917,9 +4017,9 @@ const HomeCareProviderDetailPage = ({ sellerItems = [] }) => {
                 <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-2 text-sm font-medium"><MapPin className="h-4 w-4" /> {activeProvider.location}</span>
               </div>
               <div className="mt-6 flex flex-wrap gap-3">
-                <button type="button" onClick={() => openBookingModal('Book Service')} className="h-12 rounded-lg border border-[#0f9fb2] bg-white px-5 text-sm font-bold text-[#0f9fb2] transition hover:bg-[#f0fdff]">Book Service</button>
+                <button type="button" onClick={() => openBookingModal(defaultServiceOption?.label || 'Service', defaultServiceOption?.price)} className="h-12 rounded-lg border border-[#0f9fb2] bg-white px-5 text-sm font-bold text-[#0f9fb2] transition hover:bg-[#f0fdff]">Book Service</button>
                 <button type="button" onClick={goToProviderChat} className="inline-flex h-12 items-center gap-2 rounded-lg border border-[#D1D5DB] bg-white px-5 text-sm font-bold text-[#1F2937] transition hover:bg-[#F8FAFC]"><MessageCircle className="h-4 w-4" /> Chat with Provider</button>
-                <button type="button" className="inline-flex h-12 items-center gap-2 rounded-lg border border-[#D1D5DB] bg-white px-5 text-sm font-bold text-[#1F2937] transition hover:bg-[#F8FAFC]"><Heart className="h-4 w-4" /> Add to Wishlist</button>
+                <button type="button" onClick={handleToggleWishlist} aria-pressed={isProviderWishlisted} className="inline-flex h-12 items-center gap-2 rounded-lg border border-[#D1D5DB] bg-white px-5 text-sm font-bold text-[#1F2937] transition hover:bg-[#F8FAFC]"><Heart className={`h-4 w-4 ${isProviderWishlisted ? 'fill-[#e11d48] text-[#e11d48]' : ''}`} /> {isProviderWishlisted ? 'Wishlisted' : 'Add to Wishlist'}</button>
               </div>
             </div>
           </div>
@@ -3954,16 +4054,32 @@ const HomeCareProviderDetailPage = ({ sellerItems = [] }) => {
           <h2 className="text-[20px] font-bold text-[#0052CC]">Availability Schedule</h2>
           <p className="mt-4 flex items-center gap-2 text-sm font-semibold text-[#0052CC]"><CalendarDays className="h-4 w-4" /> Available Days</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            {Array.isArray(homeCareAvailabilityDays) && homeCareAvailabilityDays.map((day) => (
-              <span key={`day-${day}`} className="rounded-full bg-[#E6F3FF] px-3 py-1 text-xs font-semibold text-[#0052CC]">{typeof day === 'object' ? JSON.stringify(day) : day}</span>
-            ))}
+            {HOME_CARE_WEEK_DAYS.map((day) => {
+              const isAvailable = providerAvailableDays.includes(day);
+              return (
+                <span key={`day-${day}`} className={`rounded-full px-3 py-1 text-xs font-semibold ${isAvailable ? 'bg-[#E6F3FF] text-[#0052CC]' : 'bg-slate-100 text-slate-400 line-through'}`}>{day}</span>
+              );
+            })}
           </div>
 
-          <div className="mt-5 grid gap-3 md:grid-cols-3">
-            {Array.isArray(homeCareAvailabilityTimeSlots) && homeCareAvailabilityTimeSlots.map((slot) => (
-              <button key={`slot-${slot}`} type="button" className="h-14 rounded-lg bg-[#0f9fb2] px-4 text-sm font-bold text-white transition hover:bg-[#0d8a9c]">{typeof slot === 'object' ? JSON.stringify(slot) : slot}</button>
-            ))}
+          <p className="mt-5 text-sm font-semibold text-[#0052CC]">Pick a time slot</p>
+          <div className="mt-3 grid gap-3 md:grid-cols-3">
+            {homeCareAvailabilityTimeSlots.map((slot) => {
+              const isSelected = selectedTimeSlot === slot;
+              return (
+                <button
+                  key={`slot-${slot}`}
+                  type="button"
+                  onClick={() => setSelectedTimeSlot(slot)}
+                  aria-pressed={isSelected}
+                  className={`h-14 rounded-lg px-4 text-sm font-bold transition ${isSelected ? 'bg-[#003366] text-white' : 'bg-[#0f9fb2] text-white hover:bg-[#0d8a9c]'}`}
+                >
+                  {slot}
+                </button>
+              );
+            })}
           </div>
+          <p className="mt-3 text-xs text-[#64748B]">Choose a time slot above, then book a service below — your selected slot carries over into the booking confirmation.</p>
         </section>
 
         <section className="border-b border-[#E5E7EB] py-8">
@@ -3998,7 +4114,7 @@ const HomeCareProviderDetailPage = ({ sellerItems = [] }) => {
                       </label>
                       <button
                         type="button"
-                        onClick={() => openBookingModal(option.label)}
+                        onClick={() => openBookingModal(option.label, option.price)}
                         className="h-10 rounded-md bg-[#0f9fb2] px-5 text-sm font-semibold text-white transition hover:bg-[#0d8a9c]"
                       >
                         Book Now
@@ -4051,15 +4167,68 @@ const HomeCareProviderDetailPage = ({ sellerItems = [] }) => {
         </section>
       </div>
 
-      {bookingSelection ? (
+      {activeBooking ? (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/45 p-4" role="dialog" aria-modal="true" aria-label="Booking modal">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
-            <h3 className="text-lg font-bold text-[#0052CC]">Book Service</h3>
-            <p className="mt-2 text-sm text-[#475569]">You selected: {bookingSelection}</p>
-            <p className="mt-2 text-sm text-[#475569]">Booking modal prototype is active. Final booking flow can be connected next.</p>
-            <div className="mt-5 flex justify-end">
-              <button type="button" onClick={closeBookingModal} className="h-10 rounded-md bg-[#0f9fb2] px-4 text-sm font-semibold text-white transition hover:bg-[#0d8a9c]">Close</button>
+            <h3 className="text-lg font-bold text-[#0052CC]">Book {activeProvider.name}</h3>
+            <p className="mt-1 text-sm text-[#475569]">{activeBooking.label}{activeBooking.price ? ` — ${activeBooking.price}` : ''}</p>
+
+            <div className="mt-4">
+              <label htmlFor="hc-booking-date" className="mb-1 block text-sm font-semibold text-[#1F2937]">Choose a date</label>
+              <input
+                id="hc-booking-date"
+                type="date"
+                min={new Date().toISOString().slice(0, 10)}
+                value={bookingDate}
+                onChange={handleBookingDateChange}
+                className="w-full rounded-lg border border-[#D1D5DB] px-3 py-2.5 text-sm text-[#1F2937] outline-none focus:border-[#0052CC]"
+              />
+              {bookingDateError ? <p className="mt-1.5 text-xs font-semibold text-rose-600">{bookingDateError}</p> : null}
             </div>
+
+            <div className="mt-4">
+              <label className="mb-1 block text-sm font-semibold text-[#1F2937]">Choose a time slot</label>
+              <div className="grid grid-cols-1 gap-2">
+                {homeCareAvailabilityTimeSlots.map((slot) => (
+                  <button
+                    key={`modal-slot-${slot}`}
+                    type="button"
+                    onClick={() => setSelectedTimeSlot(slot)}
+                    aria-pressed={selectedTimeSlot === slot}
+                    className={`rounded-lg border px-3 py-2 text-left text-sm font-semibold transition ${selectedTimeSlot === slot ? 'border-[#0052CC] bg-[#E6F3FF] text-[#0052CC]' : 'border-[#D1D5DB] text-[#1F2937] hover:bg-[#F8FAFC]'}`}
+                  >
+                    {slot}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {bookingConfirmed ? (
+              <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">Added to cart. You can review it before checking out.</p>
+            ) : null}
+
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button type="button" onClick={closeBookingModal} className="h-10 rounded-md border border-[#D1D5DB] px-4 text-sm font-semibold text-[#1F2937] transition hover:bg-[#F8FAFC]">Cancel</button>
+              <button
+                type="button"
+                disabled={!canConfirmBooking}
+                onClick={handleAddBookingToCart}
+                className="h-10 rounded-md border border-[#0052CC] px-4 text-sm font-semibold text-[#0052CC] transition hover:bg-[#F0F9FF] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Add to Cart
+              </button>
+              <button
+                type="button"
+                disabled={!canConfirmBooking}
+                onClick={handleConfirmBooking}
+                className="h-10 rounded-md bg-[#0f9fb2] px-4 text-sm font-semibold text-white transition hover:bg-[#0d8a9c] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Confirm &amp; Checkout
+              </button>
+            </div>
+            {!selectedTimeSlot || !bookingDate ? (
+              <p className="mt-3 text-xs text-[#94A3B8]">Pick a date and a time slot to enable booking.</p>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -28721,6 +28890,7 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
     professionalPreference: '',
     experience: '',
     availability: '',
+    availableDays: [],
     serviceArea: '',
     bookings: '',
     languages: '',
@@ -28754,6 +28924,15 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
   const handleChange = (event) => {
     const { name, value } = event.target;
     setFormData((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleToggleAvailableDay = (day) => {
+    setFormData((current) => ({
+      ...current,
+      availableDays: current.availableDays.includes(day)
+        ? current.availableDays.filter((entry) => entry !== day)
+        : [...current.availableDays, day],
+    }));
   };
 
   const handleImagePick = (event) => {
@@ -28833,7 +29012,10 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
       uploadedImageUrls.push(publicUrlData.publicUrl);
     }
 
-    const detailsJson = buildSellerItemDetailsJson({ ...formData, marketKey: 'homeCare' });
+    const detailsJson = {
+      ...buildSellerItemDetailsJson({ ...formData, marketKey: 'homeCare' }),
+      ...(formData.availableDays.length ? { availableDays: formData.availableDays } : {}),
+    };
     const normalizedBookings = normalizeListingQuantity(formData.bookings, 99);
 
     const { data, error } = await supabase
@@ -28865,7 +29047,7 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
     setMessageType('success');
     setFormData({
       title: '', category: '', brand: '', currency: '', price: '', serviceType: '',
-      professionalPreference: '', experience: '', availability: '', serviceArea: '', bookings: '',
+      professionalPreference: '', experience: '', availability: '', availableDays: [], serviceArea: '', bookings: '',
       languages: '', servicesOffered: '', certifications: '', description: '',
     });
     setImageFiles([]);
@@ -28949,6 +29131,26 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
                 <label htmlFor="hc-bookings" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Bookings available</label>
                 <input id="hc-bookings" name="bookings" type="number" min="0" step="1" value={formData.bookings} onChange={handleChange} placeholder="99" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
                 <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Optional. How many bookings you can take. Leave blank for unlimited.</p>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Days available</label>
+                <p className="mb-2 text-xs text-[var(--svs-muted)]">Select every day you're available to take bookings. Buyers can only book you on these days.</p>
+                <div className="flex flex-wrap gap-2">
+                  {HOME_CARE_WEEK_DAYS.map((day) => {
+                    const isSelected = formData.availableDays.includes(day);
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => handleToggleAvailableDay(day)}
+                        aria-pressed={isSelected}
+                        className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition ${isSelected ? 'border-[var(--svs-primary)] bg-[var(--svs-primary)] text-white' : 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)] text-[var(--svs-text)] hover:bg-[var(--svs-cyan-surface)]'}`}
+                      >
+                        {day}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
@@ -45012,7 +45214,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/secondhand-central/product/:itemId" element={<SecondHandProductDetailPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} />} />
     <Route path="/secondhand-central/:categoryKey" element={<SecondHandPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/home-care" element={<HomeCarePage sellerItems={sellerItems} />} />
-    <Route path="/home-care/provider/:providerId" element={<HomeCareProviderDetailPage sellerItems={sellerItems} />} />
+    <Route path="/home-care/provider/:providerId" element={<HomeCareProviderDetailPage sellerItems={sellerItems} onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} />} />
     <Route path="/hardware-software" element={<HardwareSoftwarePage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/mobility-vehicles" element={<MobilityVehiclesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/mobility-vehicles/:categorySlug" element={<MobilityVehiclesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
