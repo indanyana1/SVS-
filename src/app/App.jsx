@@ -362,6 +362,7 @@ const MARKET_FIELD_SPEC = {
       { name: 'availability', label: 'Availability', type: 'select', options: ['Morning', 'Afternoon', 'Evening', 'Full Day', 'By Appointment'] },
       { name: 'serviceArea', label: 'Service area / City', type: 'text', required: true, placeholder: 'e.g. Cape Town, Durban, Lagos' },
       { name: 'brand', label: 'Provider name / Brand', type: 'text', placeholder: 'e.g. SVS Cleaners' },
+      { name: 'phone', label: 'Contact number', type: 'text', placeholder: 'e.g. +27 82 555 1234', helper: 'Shown as the Call button on your service page.' },
       { name: 'languages', label: 'Languages spoken', type: 'text', placeholder: 'e.g. English, Zulu, French' },
       { name: 'servicesOffered', label: 'Services offered', type: 'text', placeholder: 'e.g. Nursing Care, Wound Care, Medication Management' },
       { name: 'certifications', label: 'Certifications & qualifications', type: 'textarea', placeholder: 'One per line, e.g. Registered Nurse (RN)\nCPR & First Aid Certified' },
@@ -3541,6 +3542,7 @@ const homeCareProviders = [
     experienceYears: 5,
     image: 'https://images.pexels.com/photos/3760263/pexels-photo-3760263.jpeg?auto=compress&cs=tinysrgb&w=1200',
     buttonLabel: 'View Details',
+    phone: '+27 82 201 001',
   },
   {
     id: 'hc2',
@@ -3555,6 +3557,7 @@ const homeCareProviders = [
     experienceYears: 4,
     image: 'https://images.pexels.com/photos/5327580/pexels-photo-5327580.jpeg?auto=compress&cs=tinysrgb&w=1200',
     buttonLabel: 'View Profile',
+    phone: '+27 82 201 138',
   },
   {
     id: 'hc3',
@@ -3569,6 +3572,7 @@ const homeCareProviders = [
     experienceYears: 6,
     image: 'https://images.pexels.com/photos/7176300/pexels-photo-7176300.jpeg?auto=compress&cs=tinysrgb&w=1200',
     buttonLabel: 'View Profile',
+    phone: '+27 82 201 275',
   },
   {
     id: 'hc4',
@@ -3583,6 +3587,7 @@ const homeCareProviders = [
     experienceYears: 3,
     image: 'https://images.pexels.com/photos/7551687/pexels-photo-7551687.jpeg?auto=compress&cs=tinysrgb&w=1200',
     buttonLabel: 'View Profile',
+    phone: '+27 82 201 412',
   },
   {
     id: 'hc5',
@@ -3597,6 +3602,7 @@ const homeCareProviders = [
     experienceYears: 8,
     image: 'https://images.pexels.com/photos/8486972/pexels-photo-8486972.jpeg?auto=compress&cs=tinysrgb&w=1200',
     buttonLabel: 'View Profile',
+    phone: '+27 82 201 549',
   },
   {
     id: 'hc6',
@@ -3611,6 +3617,7 @@ const homeCareProviders = [
     experienceYears: 5,
     image: 'https://images.pexels.com/photos/4108714/pexels-photo-4108714.jpeg?auto=compress&cs=tinysrgb&w=1200',
     buttonLabel: 'View Profile',
+    phone: '+254 71 200 686',
   },
   {
     id: 'hc7',
@@ -3625,6 +3632,7 @@ const homeCareProviders = [
     experienceYears: 7,
     image: 'https://images.pexels.com/photos/8092483/pexels-photo-8092483.jpeg?auto=compress&cs=tinysrgb&w=1200',
     buttonLabel: 'View Profile',
+    phone: '+256 77 200 823',
   },
   {
     id: 'hc8',
@@ -3639,6 +3647,7 @@ const homeCareProviders = [
     experienceYears: 2,
     image: 'https://images.pexels.com/photos/3769135/pexels-photo-3769135.jpeg?auto=compress&cs=tinysrgb&w=1200',
     buttonLabel: 'View Profile',
+    phone: '+234 80 200 960',
   },
 ];
 
@@ -3655,6 +3664,7 @@ const homeCareProviderDetailPrototype = {
   languages: ['English', 'Spanish', 'French'],
   servicesOffered: ['Nursing Care', 'Post-Surgery Care', 'Medication Management', 'Wound Care', 'Vital Monitoring'],
   availableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+  phone: '+1 718 100 5521',
 };
 
 const HOME_CARE_WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -3729,6 +3739,7 @@ const homeCareRelatedProviders = [
     availability: 'Weekly',
     availableDays: ['Monday', 'Wednesday', 'Friday'],
     image: 'https://images.pexels.com/photos/8486972/pexels-photo-8486972.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    phone: '+1 718 100 6041',
   },
   {
     id: 'rel-nina-max',
@@ -3739,6 +3750,7 @@ const homeCareRelatedProviders = [
     availability: 'Daily',
     availableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
     image: 'https://images.pexels.com/photos/7551687/pexels-photo-7551687.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    phone: '+1 718 100 6178',
   },
   {
     id: 'rel-maria-santos',
@@ -3749,6 +3761,7 @@ const homeCareRelatedProviders = [
     availability: 'Morning',
     availableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
     image: 'https://images.pexels.com/photos/4108714/pexels-photo-4108714.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    phone: '+1 718 100 6305',
   },
 ];
 
@@ -3819,6 +3832,7 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
           : [],
         sellerEmail: sellerItem.sellerEmail || '',
         isSellerListing: true,
+        phone: sellerItem.phone || '',
       };
     }
 
@@ -3836,6 +3850,7 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
         languages: homeCareProviderDetailPrototype.languages,
         servicesOffered: [providerFromMainList.category, ...homeCareProviderDetailPrototype.servicesOffered.filter((service) => service !== providerFromMainList.category)],
         availableDays: providerFromMainList.availableDays || HOME_CARE_WEEK_DAYS,
+        phone: providerFromMainList.phone || '',
       };
     }
 
@@ -3853,6 +3868,7 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
         languages: homeCareProviderDetailPrototype.languages,
         servicesOffered: [providerFromRelatedList.category, ...homeCareProviderDetailPrototype.servicesOffered.filter((service) => service !== providerFromRelatedList.category)],
         availableDays: providerFromRelatedList.availableDays || HOME_CARE_WEEK_DAYS,
+        phone: providerFromRelatedList.phone || '',
       };
     }
 
@@ -3882,6 +3898,8 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
       },
     });
   };
+  const providerPhone = String(activeProvider.phone || '').trim();
+  const providerPhoneTel = providerPhone.replace(/[^\d+]/g, '');
 
   const toggleOption = (optionId) => {
     setSelectedOptions((current) => ({
@@ -4061,6 +4079,9 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
               <div className="mt-6 flex flex-wrap gap-3">
                 <button type="button" onClick={() => openBookingModal(defaultServiceOption?.label || 'Service', defaultServiceOption?.price)} className="h-12 rounded-lg border border-[#0f9fb2] bg-white px-5 text-sm font-bold text-[#0f9fb2] transition hover:bg-[#f0fdff]">Book Service</button>
                 <button type="button" onClick={goToProviderChat} className="inline-flex h-12 items-center gap-2 rounded-lg border border-[#D1D5DB] bg-white px-5 text-sm font-bold text-[#1F2937] transition hover:bg-[#F8FAFC]"><MessageCircle className="h-4 w-4" /> Chat with Provider</button>
+                {providerPhoneTel ? (
+                  <a href={`tel:${providerPhoneTel}`} className="inline-flex h-12 items-center gap-2 rounded-lg border border-[#D1D5DB] bg-white px-5 text-sm font-bold text-[#1F2937] transition hover:bg-[#F8FAFC]"><Phone className="h-4 w-4" /> Call</a>
+                ) : null}
               </div>
               <p className="mt-3 text-xs text-white/70">No payment is taken when you place a booking — {activeProvider.name || 'the provider'} will be notified and you'll finalize details together in chat.</p>
             </div>
@@ -23267,6 +23288,11 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
                           <Phone className="h-3 w-3 flex-shrink-0" /> {listing.phone}
                         </p>
                       ) : null}
+                      {Array.isArray(listing.availableDays) && listing.availableDays.includes('Public Holiday') ? (
+                        <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                          <CalendarDays className="h-3 w-3 flex-shrink-0" /> Public Holidays
+                        </span>
+                      ) : null}
                     </div>
                     <button type="button" onClick={() => handleEdit(listing)} className="self-start rounded-md p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600" aria-label="Edit listing" title="Edit">
                       <Pencil className="h-3.5 w-3.5" />
@@ -26244,6 +26270,16 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                           <h3 className="line-clamp-2 text-sm font-bold leading-snug text-[var(--svs-text)]">{item.title}</h3>
                           <p className="mt-1 text-sm font-semibold text-[var(--svs-primary-strong)]"><SalePrice price={item.price} currency={item.currency} /></p>
                           <span className={`mt-2 inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-semibold ${stockClass}`}>{stockLabel}</span>
+                          {item.phone ? (
+                            <p className="mt-1.5 flex items-center gap-1 truncate text-[11px] text-[var(--svs-muted)]">
+                              <Phone className="h-3 w-3 flex-shrink-0" /> {item.phone}
+                            </p>
+                          ) : null}
+                          {Array.isArray(item.availableDays) && item.availableDays.includes('Public Holiday') ? (
+                            <span className="mt-1.5 inline-flex w-fit items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                              <CalendarDays className="h-3 w-3 flex-shrink-0" /> Public Holidays
+                            </span>
+                          ) : null}
                           <div className="mt-auto flex gap-2 pt-4">
                             <button
                               type="button"
@@ -29511,6 +29547,7 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
     availableDays: [],
     serviceArea: '',
     bookings: '',
+    phone: '',
     languages: '',
     servicesOffered: '',
     certifications: '',
@@ -29717,7 +29754,7 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
     setFormData({
       title: '', category: '', brand: '', currency: '', price: '', serviceType: '',
       professionalPreference: '', experience: '', availability: '', availableDays: [], serviceArea: '', bookings: '',
-      languages: '', servicesOffered: '', certifications: '', description: '',
+      phone: '', languages: '', servicesOffered: '', certifications: '', description: '',
     });
     setImageFiles([]);
     setIsSubmitting(false);
@@ -29764,6 +29801,11 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
               <div>
                 <label htmlFor="hc-brand" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Provider name / Brand</label>
                 <input id="hc-brand" name="brand" value={formData.brand} onChange={handleChange} placeholder="e.g. SVS Care Pros" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              </div>
+              <div>
+                <label htmlFor="hc-phone" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Contact number</label>
+                <input id="hc-phone" name="phone" value={formData.phone} onChange={handleChange} placeholder="e.g. +27 82 555 1234" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+                <p className="mt-1 text-xs text-[var(--svs-muted)]">Shown as the Call button on your service page.</p>
               </div>
             </div>
 
