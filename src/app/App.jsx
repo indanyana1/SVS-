@@ -3658,6 +3658,14 @@ const homeCareProviderDetailPrototype = {
 };
 
 const HOME_CARE_WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+// "Public Holiday" is a declarative 8th category, not a calendar weekday — it
+// lets a provider state up front whether they work public holidays at all,
+// so buyers don't have to ask. It's kept out of HOME_CARE_WEEK_DAYS itself
+// (which represents "every day of the week" and backs date-validation/
+// fallback-to-all-days logic) so an unset/default provider never silently
+// reads as "available on public holidays". Only used for the picker UI and
+// the Available Days display.
+const HOME_CARE_AVAILABILITY_OPTIONS = [...HOME_CARE_WEEK_DAYS, 'Public Holiday'];
 
 const homeCareAvailabilityTimeSlots = [
   'Morning (8AM - 12PM)',
@@ -3744,7 +3752,7 @@ const homeCareRelatedProviders = [
   },
 ];
 
-const HomeCareProviderDetailPage = ({ sellerItems = [], onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [] }) => {
+const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser }) => {
   const navigate = useNavigate();
   const { providerId } = useParams();
   // Subscribe to buyer currency so seller-listed prices format correctly.
@@ -3754,7 +3762,10 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onAddToCart, onBuyNow, o
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
   const [bookingDate, setBookingDate] = useState('');
   const [bookingDateError, setBookingDateError] = useState('');
-  const [bookingConfirmed, setBookingConfirmed] = useState(false);
+  const [bookingNotes, setBookingNotes] = useState('');
+  const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
+  const [bookingSubmitError, setBookingSubmitError] = useState('');
+  const [submittedBooking, setSubmittedBooking] = useState(null);
   const [selectedOptions, setSelectedOptions] = useState(() => {
     const defaults = {};
     homeCarePricingSections.forEach((section) => {
@@ -3886,23 +3897,29 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onAddToCart, onBuyNow, o
   const providerAvailableDays = activeProvider.availableDays || HOME_CARE_WEEK_DAYS;
 
   const openBookingModal = (label, price) => {
+    if (!getAuthState()) {
+      navigate('/signin');
+      return;
+    }
     setActiveBooking({ label, price: price || '' });
     setBookingDateError('');
-    setBookingConfirmed(false);
+    setBookingSubmitError('');
+    setSubmittedBooking(null);
   };
 
   const closeBookingModal = () => {
     setActiveBooking(null);
     setBookingDate('');
+    setBookingNotes('');
     setBookingDateError('');
-    setBookingConfirmed(false);
+    setBookingSubmitError('');
+    setSubmittedBooking(null);
   };
 
   const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const handleBookingDateChange = (event) => {
     const value = event.target.value;
     setBookingDate(value);
-    setBookingConfirmed(false);
     if (!value) {
       setBookingDateError('');
       return;
@@ -3917,53 +3934,78 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onAddToCart, onBuyNow, o
     }
   };
 
-  const canConfirmBooking = Boolean(activeBooking) && Boolean(bookingDate) && Boolean(selectedTimeSlot) && !bookingDateError;
+  const canSendBooking = Boolean(activeBooking) && Boolean(bookingDate) && Boolean(selectedTimeSlot) && !bookingDateError && !isSubmittingBooking;
 
-  const buildWishlistItem = () => createWishlistItem({
-    id: providerId,
-    title: activeProvider.name,
-    image: activeProvider.image,
-    price: defaultServiceOption?.price || '0',
-    route: '/home-care',
-    marketName: 'Book @ Home-Care Services',
-    details: `${activeProvider.badge || 'Home-Care Service'} • ${activeProvider.location || ''}`,
-    sellerEmail: activeProvider.sellerEmail || '',
-  });
+  const handleSendBookingRequest = async () => {
+    if (!canSendBooking) return;
 
-  const buildBookingCartItem = () => {
-    const formattedDate = bookingDate
-      ? new Date(bookingDate).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })
+    if (!hasSupabaseEnv || !supabase) {
+      setBookingSubmitError('Booking storage is not configured. Add the Supabase environment values first.');
+      return;
+    }
+
+    setIsSubmittingBooking(true);
+    setBookingSubmitError('');
+
+    const buyerEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
+    const buyerName = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-name') || '');
+    const buyerPhone = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-contact') || '');
+    const trimmedNotes = bookingNotes.trim();
+    const bookingId = `hcb-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+    const { error } = await supabase.from('home_care_bookings').insert({
+      id: bookingId,
+      provider_id: providerId,
+      provider_name: activeProvider.name || 'Provider',
+      provider_image: activeProvider.image || '',
+      provider_category: activeProvider.badge || '',
+      seller_email: providerChatEmail,
+      buyer_email: buyerEmail,
+      buyer_name: buyerName,
+      buyer_phone: buyerPhone,
+      booking_date: bookingDate,
+      service_label: `${activeBooking?.label || 'Service'}${activeBooking?.price ? ` (${activeBooking.price})` : ''} — ${selectedTimeSlot}`,
+      notes: trimmedNotes,
+      status: 'requested',
+    });
+
+    if (error) {
+      setBookingSubmitError(error.message);
+      setIsSubmittingBooking(false);
+      return;
+    }
+
+    const formattedDate = new Date(bookingDate).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    onPushNotificationToUser?.(providerChatEmail, {
+      type: 'info',
+      title: 'New booking request',
+      message: `A buyer would like to book ${activeBooking?.label || 'a service'} on ${formattedDate} (${selectedTimeSlot}).${trimmedNotes ? ` Note: ${trimmedNotes}` : ''} No payment has been made — discuss the details in chat.`,
+      href: '/home-care/sell',
+    });
+
+    setSubmittedBooking({ id: bookingId, formattedDate, notes: trimmedNotes });
+    setIsSubmittingBooking(false);
+  };
+
+  const goToProviderChatAboutBooking = () => {
+    const formattedDate = submittedBooking?.formattedDate;
+    const draftMessage = formattedDate
+      ? `Hi ${providerChatName}, I just sent a booking request for ${activeBooking?.label || 'a service'} on ${formattedDate} (${selectedTimeSlot}).${submittedBooking?.notes ? ` ${submittedBooking.notes}` : ''} No payment has been made yet — let's confirm the details here.`
       : '';
-    const details = [
-      activeBooking?.label,
-      formattedDate ? `Booked for ${formattedDate}` : '',
-      selectedTimeSlot,
-    ].filter(Boolean).join(' • ');
-    return createCartItem({
-      id: providerId,
-      title: activeProvider.name,
-      image: activeProvider.image,
-      price: activeBooking?.price || defaultServiceOption?.price || '0',
-      route: '/home-care',
-      marketName: 'Book @ Home-Care Services',
-      details,
-      sellerEmail: activeProvider.sellerEmail || '',
+    navigate('/support/chat', {
+      state: {
+        recipientEmail: providerChatEmail,
+        recipientName: providerChatName,
+        recipientRole: 'seller',
+        issueType: 'Item Enquiry',
+        itemKey: providerId,
+        itemTitle: activeProvider.name,
+        itemImage: activeProvider.image || '',
+        itemLink: `/home-care/provider/${providerId}`,
+        draftMessage,
+      },
     });
   };
-
-  const handleAddBookingToCart = () => {
-    if (!canConfirmBooking) return;
-    onAddToCart?.(buildBookingCartItem());
-    setBookingConfirmed(true);
-  };
-
-  const handleConfirmBooking = () => {
-    if (!canConfirmBooking) return;
-    onBuyNow?.(buildBookingCartItem());
-  };
-
-  const isProviderWishlisted = wishlistItemIds.includes(getCollectionItemId('/home-care', providerId));
-  const handleToggleWishlist = () => onToggleWishlist?.(buildWishlistItem());
 
   const scrollRelatedListings = (direction) => {
     if (!carouselRef.current) {
@@ -4019,8 +4061,8 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onAddToCart, onBuyNow, o
               <div className="mt-6 flex flex-wrap gap-3">
                 <button type="button" onClick={() => openBookingModal(defaultServiceOption?.label || 'Service', defaultServiceOption?.price)} className="h-12 rounded-lg border border-[#0f9fb2] bg-white px-5 text-sm font-bold text-[#0f9fb2] transition hover:bg-[#f0fdff]">Book Service</button>
                 <button type="button" onClick={goToProviderChat} className="inline-flex h-12 items-center gap-2 rounded-lg border border-[#D1D5DB] bg-white px-5 text-sm font-bold text-[#1F2937] transition hover:bg-[#F8FAFC]"><MessageCircle className="h-4 w-4" /> Chat with Provider</button>
-                <button type="button" onClick={handleToggleWishlist} aria-pressed={isProviderWishlisted} className="inline-flex h-12 items-center gap-2 rounded-lg border border-[#D1D5DB] bg-white px-5 text-sm font-bold text-[#1F2937] transition hover:bg-[#F8FAFC]"><Heart className={`h-4 w-4 ${isProviderWishlisted ? 'fill-[#e11d48] text-[#e11d48]' : ''}`} /> {isProviderWishlisted ? 'Wishlisted' : 'Add to Wishlist'}</button>
               </div>
+              <p className="mt-3 text-xs text-white/70">No payment is taken when you place a booking — {activeProvider.name || 'the provider'} will be notified and you'll finalize details together in chat.</p>
             </div>
           </div>
         </section>
@@ -4054,7 +4096,7 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onAddToCart, onBuyNow, o
           <h2 className="text-[20px] font-bold text-[#0052CC]">Availability Schedule</h2>
           <p className="mt-4 flex items-center gap-2 text-sm font-semibold text-[#0052CC]"><CalendarDays className="h-4 w-4" /> Available Days</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            {HOME_CARE_WEEK_DAYS.map((day) => {
+            {HOME_CARE_AVAILABILITY_OPTIONS.map((day) => {
               const isAvailable = providerAvailableDays.includes(day);
               return (
                 <span key={`day-${day}`} className={`rounded-full px-3 py-1 text-xs font-semibold ${isAvailable ? 'bg-[#E6F3FF] text-[#0052CC]' : 'bg-slate-100 text-slate-400 line-through'}`}>{day}</span>
@@ -4170,65 +4212,102 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onAddToCart, onBuyNow, o
       {activeBooking ? (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/45 p-4" role="dialog" aria-modal="true" aria-label="Booking modal">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
-            <h3 className="text-lg font-bold text-[#0052CC]">Book {activeProvider.name}</h3>
-            <p className="mt-1 text-sm text-[#475569]">{activeBooking.label}{activeBooking.price ? ` — ${activeBooking.price}` : ''}</p>
-
-            <div className="mt-4">
-              <label htmlFor="hc-booking-date" className="mb-1 block text-sm font-semibold text-[#1F2937]">Choose a date</label>
-              <input
-                id="hc-booking-date"
-                type="date"
-                min={new Date().toISOString().slice(0, 10)}
-                value={bookingDate}
-                onChange={handleBookingDateChange}
-                className="w-full rounded-lg border border-[#D1D5DB] px-3 py-2.5 text-sm text-[#1F2937] outline-none focus:border-[#0052CC]"
-              />
-              {bookingDateError ? <p className="mt-1.5 text-xs font-semibold text-rose-600">{bookingDateError}</p> : null}
-            </div>
-
-            <div className="mt-4">
-              <label className="mb-1 block text-sm font-semibold text-[#1F2937]">Choose a time slot</label>
-              <div className="grid grid-cols-1 gap-2">
-                {homeCareAvailabilityTimeSlots.map((slot) => (
+            {submittedBooking ? (
+              <>
+                <div className="flex items-center gap-2 text-emerald-600">
+                  <CheckCircle2 className="h-5 w-5" />
+                  <h3 className="text-lg font-bold text-[#0052CC]">Booking request sent</h3>
+                </div>
+                <p className="mt-2 text-sm text-[#475569]">
+                  {providerChatName} has been notified about your request for <span className="font-semibold text-[#1F2937]">{submittedBooking.formattedDate}</span>. No payment was made.
+                </p>
+                <p className="mt-2 text-xs text-[#475569]">
+                  Booking ID: <span className="font-mono">{submittedBooking.id}</span> — track its status anytime from <span className="font-semibold">My Bookings</span>.
+                </p>
+                <div className="mt-5 flex flex-wrap justify-end gap-2">
+                  <button type="button" onClick={closeBookingModal} className="h-10 rounded-md border border-[#D1D5DB] px-4 text-sm font-semibold text-[#1F2937] transition hover:bg-[#F8FAFC]">Close</button>
                   <button
-                    key={`modal-slot-${slot}`}
                     type="button"
-                    onClick={() => setSelectedTimeSlot(slot)}
-                    aria-pressed={selectedTimeSlot === slot}
-                    className={`rounded-lg border px-3 py-2 text-left text-sm font-semibold transition ${selectedTimeSlot === slot ? 'border-[#0052CC] bg-[#E6F3FF] text-[#0052CC]' : 'border-[#D1D5DB] text-[#1F2937] hover:bg-[#F8FAFC]'}`}
+                    onClick={() => navigate('/home-care/bookings')}
+                    className="h-10 rounded-md border border-[#0052CC] px-4 text-sm font-semibold text-[#0052CC] transition hover:bg-[#F0F9FF]"
                   >
-                    {slot}
+                    View My Bookings
                   </button>
-                ))}
-              </div>
-            </div>
+                  <button
+                    type="button"
+                    onClick={goToProviderChatAboutBooking}
+                    className="h-10 rounded-md bg-[#0f9fb2] px-4 text-sm font-semibold text-white transition hover:bg-[#0d8a9c]"
+                  >
+                    Discuss in Chat
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="text-lg font-bold text-[#0052CC]">Book {activeProvider.name}</h3>
+                <p className="mt-1 text-sm text-[#475569]">{activeBooking.label}{activeBooking.price ? ` — ${activeBooking.price}` : ''}</p>
+                <p className="mt-1 text-xs text-[#475569]">No payment is taken here — this just sends a trackable booking request. You'll agree on the final details in chat separately.</p>
 
-            {bookingConfirmed ? (
-              <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">Added to cart. You can review it before checking out.</p>
-            ) : null}
+                <div className="mt-4">
+                  <label htmlFor="hc-booking-date" className="mb-1 block text-sm font-semibold text-[#1F2937]">Choose a date</label>
+                  <input
+                    id="hc-booking-date"
+                    type="date"
+                    min={new Date().toISOString().slice(0, 10)}
+                    value={bookingDate}
+                    onChange={handleBookingDateChange}
+                    className="w-full rounded-lg border border-[#D1D5DB] px-3 py-2.5 text-sm text-[#1F2937] outline-none focus:border-[#0052CC]"
+                  />
+                  {bookingDateError ? <p className="mt-1.5 text-xs font-semibold text-rose-600">{bookingDateError}</p> : null}
+                </div>
 
-            <div className="mt-5 flex flex-wrap justify-end gap-2">
-              <button type="button" onClick={closeBookingModal} className="h-10 rounded-md border border-[#D1D5DB] px-4 text-sm font-semibold text-[#1F2937] transition hover:bg-[#F8FAFC]">Cancel</button>
-              <button
-                type="button"
-                disabled={!canConfirmBooking}
-                onClick={handleAddBookingToCart}
-                className="h-10 rounded-md border border-[#0052CC] px-4 text-sm font-semibold text-[#0052CC] transition hover:bg-[#F0F9FF] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Add to Cart
-              </button>
-              <button
-                type="button"
-                disabled={!canConfirmBooking}
-                onClick={handleConfirmBooking}
-                className="h-10 rounded-md bg-[#0f9fb2] px-4 text-sm font-semibold text-white transition hover:bg-[#0d8a9c] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Confirm &amp; Checkout
-              </button>
-            </div>
-            {!selectedTimeSlot || !bookingDate ? (
-              <p className="mt-3 text-xs text-[#94A3B8]">Pick a date and a time slot to enable booking.</p>
-            ) : null}
+                <div className="mt-4">
+                  <label className="mb-1 block text-sm font-semibold text-[#1F2937]">Choose a time slot</label>
+                  <div className="grid grid-cols-1 gap-2">
+                    {homeCareAvailabilityTimeSlots.map((slot) => (
+                      <button
+                        key={`modal-slot-${slot}`}
+                        type="button"
+                        onClick={() => setSelectedTimeSlot(slot)}
+                        aria-pressed={selectedTimeSlot === slot}
+                        className={`rounded-lg border px-3 py-2 text-left text-sm font-semibold transition ${selectedTimeSlot === slot ? 'border-[#0052CC] bg-[#E6F3FF] text-[#0052CC]' : 'border-[#D1D5DB] text-[#1F2937] hover:bg-[#F8FAFC]'}`}
+                      >
+                        {slot}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <label htmlFor="hc-booking-notes" className="mb-1 block text-sm font-semibold text-[#1F2937]">Notes (optional)</label>
+                  <textarea
+                    id="hc-booking-notes"
+                    value={bookingNotes}
+                    onChange={(event) => setBookingNotes(event.target.value)}
+                    rows={3}
+                    placeholder="e.g. Wound dressing change needed, ground-floor flat, please bring your own gloves."
+                    className="w-full rounded-lg border border-[#D1D5DB] px-3 py-2.5 text-sm text-[#1F2937] outline-none focus:border-[#0052CC]"
+                  />
+                </div>
+
+                {bookingSubmitError ? <p className="mt-3 text-xs font-semibold text-rose-600">{bookingSubmitError}</p> : null}
+
+                <div className="mt-5 flex flex-wrap justify-end gap-2">
+                  <button type="button" onClick={closeBookingModal} className="h-10 rounded-md border border-[#D1D5DB] px-4 text-sm font-semibold text-[#1F2937] transition hover:bg-[#F8FAFC]">Cancel</button>
+                  <button
+                    type="button"
+                    disabled={!canSendBooking}
+                    onClick={handleSendBookingRequest}
+                    className="h-10 rounded-md bg-[#0f9fb2] px-4 text-sm font-semibold text-white transition hover:bg-[#0d8a9c] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isSubmittingBooking ? 'Sending…' : 'Send Booking Request'}
+                  </button>
+                </div>
+                {!selectedTimeSlot || !bookingDate ? (
+                  <p className="mt-3 text-xs text-[#94A3B8]">Pick a date and a time slot to enable sending.</p>
+                ) : null}
+              </>
+            )}
           </div>
         </div>
       ) : null}
@@ -6893,7 +6972,7 @@ const PROJECT_ROUTE_SEARCH_ENTRIES = [
   { id: 'page-checkout', title: 'Checkout', section: 'Shop', route: '/checkout', keywords: 'checkout payment cart billing shipping address' },
   { id: 'page-wishlist', title: 'Wishlist', section: 'Shop', route: '/wishlist', keywords: 'wishlist saved items favorites watchlist' },
   { id: 'page-search', title: 'Search', section: 'Tools', route: '/search', keywords: 'search finder look up discover all items' },
-  { id: 'page-chat', title: "Let's Talk Business", section: 'Support', route: '/support/chat', keywords: 'chat support buyer seller messages enquiry help offer payment deal negotiate close business' },
+  { id: 'page-chat', title: "Let's Talk", section: 'Support', route: '/support/chat', keywords: 'chat support buyer seller messages enquiry help offer payment deal negotiate close business' },
   { id: 'page-direct-links', title: 'Ecommerce Market Links', section: 'Markets', route: '/retailer-direct-links', keywords: 'retailers brands stores direct links ecommerce market links' },
   { id: 'page-signin', title: 'Sign In', section: 'Account', route: '/signin', keywords: 'signin login account access' },
   { id: 'page-signup', title: 'Sign Up', section: 'Account', route: '/signup', keywords: 'signup register create account' },
@@ -7898,6 +7977,25 @@ const formatDate = (value, locale = 'en-US') =>
     month: 'short',
     day: 'numeric',
   });
+
+// Full date + time (including seconds) for any timestamp that records when a
+// user actually did something — account creation, orders, transactions,
+// admin actions, audit log entries, messages, reviews. Options are spelled
+// out explicitly (rather than relying on toLocaleString() defaults) so
+// seconds are guaranteed to show regardless of browser/locale.
+const formatTimestampWithSeconds = (value) => {
+  if (!value) return '—';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '—';
+  return parsed.toLocaleString(undefined, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+};
 
 const formatListingDateLabel = (value) => {
   const trimmedValue = String(value || '').trim();
@@ -11348,7 +11446,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-semibold text-[var(--svs-text)] sm:text-sm">{notification.title}</p>
                             {notification.message ? <p className="mt-0.5 text-[10px] text-[var(--svs-muted)] sm:text-xs">{notification.message}</p> : null}
-                            <p className="mt-1 text-[10px] text-[var(--svs-muted)] sm:text-[11px]">{formatDate(notification.createdAt)}</p>
+                            <p className="mt-1 text-[10px] text-[var(--svs-muted)] sm:text-[11px]">{formatTimestampWithSeconds(notification.createdAt)}</p>
                           </div>
                         </div>
                       </Link>
@@ -11514,8 +11612,8 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
 
       <Link
         to="/support/chat"
-        aria-label="Open Let's Talk Business chat"
-        title="Let's Talk Business"
+        aria-label="Open Let's Talk chat"
+        title="Let's Talk"
         className="fixed bottom-4 right-4 z-[95] inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#1f4c8f] text-white shadow-[0_12px_24px_rgba(8,32,40,0.35)] transition hover:scale-105 hover:bg-[#173e78] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 sm:bottom-6 sm:right-6"
       >
         <MessageCircle className="h-7 w-7" strokeWidth={2.25} />
@@ -15789,18 +15887,18 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
     { metric: 'Real', label: 'No fake delivery promises' },
   ];
 
-  const buildCartItem = (item) => createCartItem({
+  const buildCartItem = useCallback((item) => createCartItem({
     ...item,
     route: '/informal-market',
     marketName: t('markets.informalMarket'),
     details: `${item.category || 'Informal listing'} • ${item.description || item.sellerName || 'Local informal seller'}`,
-  });
-  const buildWishlistItem = (item) => createWishlistItem({
+  }), [t]);
+  const buildWishlistItem = useCallback((item) => createWishlistItem({
     ...item,
     route: '/informal-market',
     marketName: t('markets.informalMarket'),
     details: `${item.category || 'Informal listing'} • ${item.sellerName || 'Local informal seller'}`,
-  });
+  }), [t]);
 
   const openItemDetails = useCallback((item) => {
     // Build the rich payload the new informal-market detail layout expects:
@@ -15847,7 +15945,7 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
       sellerNote: buildInformalSellerNote(item),
       similarProducts: sameCategory,
     });
-  }, [allItems, onOpenItemDetails, t]);
+  }, [allItems, buildCartItem, buildWishlistItem, onOpenItemDetails, t]);
 
   const jumpToAllListings = useCallback(() => {
     allListingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -18248,6 +18346,11 @@ const HomeCarePage = ({ sellerItems = [] }) => {
       />
       <MarketTrustStrip />
       <div className="mx-auto w-full max-w-[1280px] px-3 py-4 sm:px-6 sm:py-8 lg:py-10">
+        <div className="flex justify-end">
+          <Link to="/home-care/bookings" className="inline-flex items-center gap-1.5 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-2 text-sm font-semibold text-[var(--svs-text)] hover:border-[var(--svs-primary)]">
+            <CalendarDays className="h-4 w-4" /> My Bookings
+          </Link>
+        </div>
         <div className="mt-5 flex items-center justify-between sm:mt-8">
           <h2 className="text-base font-semibold text-[var(--svs-text)] sm:text-xl">Filters</h2>
           <button
@@ -20886,6 +20989,14 @@ const buildWorkerDetailPayload = (item) => {
 };
 
 const GENERAL_LABOUR_WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+// "Public Holiday" is a declarative 8th category, not a calendar weekday — it
+// lets a worker state up front whether they work public holidays at all, so
+// employers don't have to ask. Kept out of GENERAL_LABOUR_WEEK_DAYS itself
+// (which represents "every day of the week" and backs the schedulePreference
+// fallback below) so an unset/default worker never silently reads as
+// "available on public holidays". Only used for the picker UI and the
+// Available Days display.
+const GENERAL_LABOUR_AVAILABILITY_OPTIONS = [...GENERAL_LABOUR_WEEK_DAYS, 'Public Holiday'];
 // "Available Days" pills on the worker profile page — prefers the worker's
 // own explicit day selection (set at listing time) and falls back to a
 // schedulePreference-derived guess for older/catalog workers that never set
@@ -22523,6 +22634,57 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
     [sellerItems, userEmail],
   );
 
+  const [bookingRequests, setBookingRequests] = useState([]);
+  const [isLoadingBookingRequests, setIsLoadingBookingRequests] = useState(true);
+  const [bookingActionId, setBookingActionId] = useState('');
+
+  useEffect(() => {
+    if (!isAuthenticated || !userEmail || !hasSupabaseEnv || !supabase) {
+      setIsLoadingBookingRequests(false);
+      return;
+    }
+    let isCancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('general_labour_bookings')
+        .select('*')
+        .eq('seller_email', userEmail)
+        .order('created_at', { ascending: false });
+      if (isCancelled) return;
+      if (!error) setBookingRequests((data || []).map(mapGeneralLabourBookingRow));
+      setIsLoadingBookingRequests(false);
+    })();
+    return () => { isCancelled = true; };
+  }, [isAuthenticated, userEmail]);
+
+  const handleUpdateBookingRequestStatus = async (bookingId, status) => {
+    if (!hasSupabaseEnv || !supabase) return;
+    setBookingActionId(bookingId);
+    const { error } = await supabase.from('general_labour_bookings').update({ status }).eq('id', bookingId);
+    if (!error) {
+      setBookingRequests((current) => current.map((booking) => (booking.id === bookingId ? { ...booking, status } : booking)));
+    }
+    setBookingActionId('');
+  };
+
+  const goToChatWithBookingBuyer = (booking) => {
+    navigate('/support/chat', {
+      state: {
+        recipientEmail: booking.buyerEmail,
+        recipientName: booking.buyerName || 'Buyer',
+        recipientRole: 'client',
+        issueType: 'Item Enquiry',
+        itemKey: booking.workerId,
+        itemTitle: booking.workerName,
+        itemImage: booking.workerImage,
+        itemLink: `/general-labour-market/worker/${booking.workerId}`,
+        draftMessage: `Hi, following up on the booking request for ${booking.bookingDate}.`,
+      },
+    });
+  };
+
+  const pendingBookingRequestCount = bookingRequests.filter((booking) => booking.status === 'requested').length;
+
   useEffect(() => {
     if (!imageFiles.length) {
       setImagePreviewUrls([]);
@@ -22949,9 +23111,9 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
             </div>
             <div className="mt-4">
               <label className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Days available</label>
-              <p className="mb-2 text-xs text-[var(--svs-muted)]">Select every day you're available to work. Leave blank to use your schedule preference above.</p>
+              <p className="mb-2 text-xs text-[var(--svs-muted)]">Select every day you're available to work. Leave blank to use your schedule preference above. Toggle "Public Holiday" too so employers know upfront whether you work public holidays.</p>
               <div className="flex flex-wrap gap-2">
-                {GENERAL_LABOUR_WEEK_DAYS.map((day) => {
+                {GENERAL_LABOUR_AVAILABILITY_OPTIONS.map((day) => {
                   const isSelected = form.availableDays.includes(day);
                   return (
                     <button
@@ -23085,6 +23247,7 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
             </div>
           </form>
 
+          <div className="flex flex-col gap-6">
           {/* MY WORKER PROFILES */}
           <aside className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-[0_4px_8px_rgba(0,0,0,0.04)]">
             <h2 className="mb-3 text-sm font-bold text-[var(--svs-primary-strong)]">My Worker Profiles ({myListings.length})</h2>
@@ -23116,6 +23279,81 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
               </ul>
             )}
           </aside>
+
+          {/* BOOKING REQUESTS */}
+          <aside className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-[0_4px_8px_rgba(0,0,0,0.04)]">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-[var(--svs-primary-strong)]">Booking Requests ({bookingRequests.length})</h2>
+              {pendingBookingRequestCount > 0 ? (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">{pendingBookingRequestCount} pending</span>
+              ) : null}
+            </div>
+            <p className="mb-3 text-xs text-[var(--svs-muted)]">No payment is attached to these — confirm or decline, then discuss the job in chat.</p>
+            {isLoadingBookingRequests ? (
+              <p className="text-xs text-[var(--svs-muted)]">Loading booking requests…</p>
+            ) : bookingRequests.length === 0 ? (
+              <p className="text-xs text-[var(--svs-muted)]">No booking requests yet — buyers will appear here when they book one of your worker profiles.</p>
+            ) : (
+              <ul className="space-y-3">
+                {bookingRequests.map((booking) => (
+                  <li key={booking.id} className="rounded-lg border border-[var(--svs-border)] p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-semibold text-[var(--svs-text)]">{booking.buyerName || 'Buyer'}</p>
+                        <p className="truncate text-[11px] text-[var(--svs-muted)]">For: {booking.workerName}</p>
+                      </div>
+                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${GENERAL_LABOUR_BOOKING_STATUS_STYLES[booking.status] || 'bg-slate-100 text-slate-700'}`}>
+                        {booking.status}
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-[11px] text-[var(--svs-muted)]">Requested date: {booking.bookingDate || '—'}</p>
+                    {booking.notes ? <p className="mt-1 text-[11px] italic text-[var(--svs-muted)]">"{booking.notes}"</p> : null}
+                    <p className="mt-1 text-[10px] text-[var(--svs-muted)]">Submitted: {formatTimestampWithSeconds(booking.createdAt)}</p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {booking.status !== 'confirmed' && booking.status !== 'completed' ? (
+                        <button
+                          type="button"
+                          disabled={bookingActionId === booking.id}
+                          onClick={() => handleUpdateBookingRequestStatus(booking.id, 'confirmed')}
+                          className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-[10px] font-semibold text-blue-700 hover:border-blue-300 disabled:opacity-50"
+                        >
+                          Confirm
+                        </button>
+                      ) : null}
+                      {booking.status !== 'completed' ? (
+                        <button
+                          type="button"
+                          disabled={bookingActionId === booking.id}
+                          onClick={() => handleUpdateBookingRequestStatus(booking.id, 'completed')}
+                          className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 hover:border-emerald-300 disabled:opacity-50"
+                        >
+                          Complete
+                        </button>
+                      ) : null}
+                      {booking.status !== 'declined' && booking.status !== 'completed' ? (
+                        <button
+                          type="button"
+                          disabled={bookingActionId === booking.id}
+                          onClick={() => handleUpdateBookingRequestStatus(booking.id, 'declined')}
+                          className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-700 hover:border-red-300 disabled:opacity-50"
+                        >
+                          Decline
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => goToChatWithBookingBuyer(booking)}
+                        className="ml-auto inline-flex items-center gap-1 rounded-md border border-[var(--svs-border)] px-2 py-1 text-[10px] font-semibold text-[var(--svs-text)] hover:border-[var(--svs-primary)]"
+                      >
+                        <MessageCircle className="h-3 w-3" /> Chat
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </aside>
+          </div>
         </div>
       )}
     </PageFrame>
@@ -23127,11 +23365,18 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
 // Ratings & Reviews, and You May Also Like. Looks up the worker from the
 // catalog or, just as easily, a seller-submitted profile (both share the
 // same id space and field shape via buildWorkerDetailPayload).
-const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [] }) => {
+const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onPushNotificationToUser }) => {
   const { workerId } = useParams();
   const navigate = useNavigate();
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedTier, setSelectedTier] = useState('Daily');
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [bookingDate, setBookingDate] = useState('');
+  const [bookingDateError, setBookingDateError] = useState('');
+  const [bookingNotes, setBookingNotes] = useState('');
+  const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
+  const [bookingSubmitError, setBookingSubmitError] = useState('');
+  const [submittedBooking, setSubmittedBooking] = useState(null);
 
   const allWorkers = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'generalLabour'), ...generalLabourItems], [sellerItems]);
   const worker = allWorkers.find((candidate) => candidate.id === workerId) || null;
@@ -23161,25 +23406,6 @@ const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onAddToCart, onBuyNow
     count: sampleReviews.filter((r) => Math.round(r.rating) === star).length,
   }));
 
-  const buildCartItem = () => createCartItem({
-    ...worker,
-    title: displayTitle,
-    price: String(pricingTiers[selectedTier]),
-    rateType: selectedTier,
-    route: '/general-labour-market',
-    marketName: 'General Labour Market',
-    details: `${worker.category || 'Worker'} • ${worker.experienceLevel || ''} • ${worker.location || ''}`,
-  });
-  const buildWishlistItem = () => createWishlistItem({
-    ...worker,
-    title: displayTitle,
-    price: String(pricingTiers[selectedTier]),
-    route: '/general-labour-market',
-    marketName: 'General Labour Market',
-    details: `${worker.category || 'Worker'} • ${worker.location || ''}`,
-  });
-  const isWishlisted = wishlistItemIds.includes(getCollectionItemId('/general-labour-market', worker.id));
-
   // Seller-submitted workers carry a real sellerEmail; the static catalog
   // workers don't, so fall back to a deterministic synthetic address — same
   // pattern used for Home-Care, Property Hub, and Mobility & Vehicles
@@ -23205,6 +23431,111 @@ const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onAddToCart, onBuyNow
   };
   const workerPhone = String(worker.phone || '').trim();
   const workerPhoneTel = workerPhone.replace(/[^\d+]/g, '');
+
+  const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const openBookingModal = () => {
+    if (!getAuthState()) {
+      navigate('/signin');
+      return;
+    }
+    setIsBookingModalOpen(true);
+    setBookingDateError('');
+    setBookingSubmitError('');
+    setSubmittedBooking(null);
+  };
+  const closeBookingModal = () => {
+    setIsBookingModalOpen(false);
+    setBookingDate('');
+    setBookingNotes('');
+    setBookingDateError('');
+    setBookingSubmitError('');
+    setSubmittedBooking(null);
+  };
+  const handleBookingDateChange = (event) => {
+    const value = event.target.value;
+    setBookingDate(value);
+    if (!value) {
+      setBookingDateError('');
+      return;
+    }
+    const [year, month, day] = value.split('-').map(Number);
+    const parsedDate = new Date(year, (month || 1) - 1, day || 1);
+    const weekdayName = WEEKDAY_NAMES[parsedDate.getDay()];
+    if (!availableDays.includes(weekdayName)) {
+      setBookingDateError(`${workerChatName} is not available on ${weekdayName}s. Available days: ${availableDays.join(', ')}.`);
+    } else {
+      setBookingDateError('');
+    }
+  };
+  const canSendBooking = Boolean(bookingDate) && !bookingDateError && !isSubmittingBooking;
+  const handleSendBookingRequest = async () => {
+    if (!canSendBooking) return;
+
+    if (!hasSupabaseEnv || !supabase) {
+      setBookingSubmitError('Booking storage is not configured. Add the Supabase environment values first.');
+      return;
+    }
+
+    setIsSubmittingBooking(true);
+    setBookingSubmitError('');
+
+    const buyerEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
+    const buyerName = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-name') || '');
+    const buyerPhone = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-contact') || '');
+    const trimmedNotes = bookingNotes.trim();
+    const bookingId = `glb-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+    const { error } = await supabase.from('general_labour_bookings').insert({
+      id: bookingId,
+      worker_id: worker.id,
+      worker_name: worker.name || worker.title || 'Worker',
+      worker_image: worker.image || '',
+      worker_category: worker.category || '',
+      seller_email: workerChatEmail,
+      buyer_email: buyerEmail,
+      buyer_name: buyerName,
+      buyer_phone: buyerPhone,
+      booking_date: bookingDate,
+      notes: trimmedNotes,
+      status: 'requested',
+    });
+
+    if (error) {
+      setBookingSubmitError(error.message);
+      setIsSubmittingBooking(false);
+      return;
+    }
+
+    const formattedDate = new Date(bookingDate).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    onPushNotificationToUser?.(workerChatEmail, {
+      type: 'info',
+      title: 'New booking request',
+      message: `A buyer would like to book you for ${formattedDate}.${trimmedNotes ? ` Note: ${trimmedNotes}` : ''} No payment has been made — discuss the details in chat.`,
+      href: '/general-labour-market/sell',
+    });
+
+    setSubmittedBooking({ id: bookingId, formattedDate, notes: trimmedNotes });
+    setIsSubmittingBooking(false);
+  };
+  const goToWorkerChatAboutBooking = () => {
+    const formattedDate = submittedBooking?.formattedDate;
+    const draftMessage = formattedDate
+      ? `Hi ${workerChatName}, I just sent a booking request for ${formattedDate}.${submittedBooking?.notes ? ` ${submittedBooking.notes}` : ''} No payment has been made yet — let's confirm the details here.`
+      : '';
+    navigate('/support/chat', {
+      state: {
+        recipientEmail: workerChatEmail,
+        recipientName: workerChatName,
+        recipientRole: 'seller',
+        issueType: 'Item Enquiry',
+        itemKey: worker.id,
+        itemTitle: worker.name,
+        itemImage: worker.image || '',
+        itemLink: `/general-labour-market/worker/${worker.id}`,
+        draftMessage,
+      },
+    });
+  };
 
   const renderStars = (rating, size = 'h-4 w-4') => Array.from({ length: 5 }, (_, i) => (
     <Star key={i} className={`${size} ${i < Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'text-slate-300'}`} />
@@ -23302,18 +23633,14 @@ const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onAddToCart, onBuyNow
               {formatAmountInCurrency(pricingTiers[selectedTier], worker.currency)}
               <span className="ml-1 text-sm font-semibold text-[var(--svs-muted)]">/{selectedTier.toLowerCase()}</span>
             </p>
-            <div className="flex flex-wrap gap-3">
-              <button type="button" onClick={() => onAddToCart?.(buildCartItem())} className={`${cudyBluePrimaryButtonClassName} rounded-lg bg-[var(--svs-primary)] px-6 py-3 text-sm font-semibold text-white shadow hover:bg-[var(--svs-primary-strong)]`}>
-                Add to Basket
-              </button>
-              <button type="button" onClick={() => onBuyNow?.(buildCartItem())} className="rounded-lg border border-[var(--svs-primary)] px-6 py-3 text-sm font-semibold text-[var(--svs-primary)] hover:bg-[var(--svs-primary-faint)]">
-                Hire Now
-              </button>
-              <button type="button" onClick={() => onToggleWishlist?.(buildWishlistItem())} className={`rounded-lg border px-6 py-3 text-sm font-semibold ${isWishlisted ? 'border-rose-400 text-rose-600 bg-rose-50' : 'border-[var(--svs-primary)] text-[var(--svs-primary)] hover:bg-[var(--svs-primary-faint)]'}`}>
-                {isWishlisted ? 'Wishlisted' : 'Add to Wishlist'}
-              </button>
-            </div>
-
+            <button
+              type="button"
+              onClick={openBookingModal}
+              className={`${cudyBluePrimaryButtonClassName} inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--svs-primary)] px-6 py-3 text-sm font-semibold text-white shadow hover:bg-[var(--svs-primary-strong)]`}
+            >
+              <CalendarDays className="h-4 w-4" /> Book Worker
+            </button>
+            <p className="text-xs text-[var(--svs-muted)]">No payment is taken when you place a booking — {worker.name || 'the worker'} will be notified and you'll finalize details together in chat.</p>
             <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3">
               <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">Contact {worker.name || 'this worker'} directly</p>
               <div className="flex flex-wrap gap-2">
@@ -23398,7 +23725,7 @@ const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onAddToCart, onBuyNow
       <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6">
         <h2 className="text-[22px] font-bold text-[var(--svs-text)]">Available Days</h2>
         <div className="mt-4 flex flex-wrap gap-2">
-          {GENERAL_LABOUR_WEEK_DAYS.map((day) => {
+          {GENERAL_LABOUR_AVAILABILITY_OPTIONS.map((day) => {
             const isAvailable = availableDays.includes(day);
             return (
               <span key={day} className={`rounded-full px-4 py-1.5 text-sm font-semibold ${isAvailable ? 'bg-[var(--svs-primary)] text-white' : 'bg-slate-100 text-slate-400 line-through'}`}>
@@ -23495,7 +23822,270 @@ const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onAddToCart, onBuyNow
           </div>
         </section>
       ) : null}
+
+      {isBookingModalOpen ? (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/45 p-4" role="dialog" aria-modal="true" aria-label="Booking modal">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
+            {submittedBooking ? (
+              <>
+                <div className="flex items-center gap-2 text-emerald-600">
+                  <CheckCircle2 className="h-5 w-5" />
+                  <h3 className="text-lg font-bold text-[var(--svs-text)]">Booking request sent</h3>
+                </div>
+                <p className="mt-2 text-sm text-[var(--svs-muted)]">
+                  {workerChatName} has been notified about your request for <span className="font-semibold text-[var(--svs-text)]">{submittedBooking.formattedDate}</span>. No payment was made.
+                </p>
+                <p className="mt-2 text-xs text-[var(--svs-muted)]">
+                  Booking ID: <span className="font-mono">{submittedBooking.id}</span> — you'll get a notification here when {workerChatName} responds.
+                </p>
+                <div className="mt-5 flex flex-wrap justify-end gap-2">
+                  <button type="button" onClick={closeBookingModal} className="h-10 rounded-md border border-[var(--svs-border)] px-4 text-sm font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)]">Close</button>
+                  <button
+                    type="button"
+                    onClick={goToWorkerChatAboutBooking}
+                    className="h-10 rounded-md bg-[var(--svs-primary)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]"
+                  >
+                    Discuss in Chat
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="text-lg font-bold text-[var(--svs-text)]">Book {workerChatName}</h3>
+                <p className="mt-1 text-sm text-[var(--svs-muted)]">No payment is taken here — this just sends a trackable booking request. You'll agree on the final details in chat separately.</p>
+
+                <div className="mt-4">
+                  <label htmlFor="gl-booking-date" className="mb-1 block text-sm font-semibold text-[var(--svs-text)]">Choose a date</label>
+                  <input
+                    id="gl-booking-date"
+                    type="date"
+                    min={new Date().toISOString().slice(0, 10)}
+                    value={bookingDate}
+                    onChange={handleBookingDateChange}
+                    className="w-full rounded-lg border border-[var(--svs-border)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                  />
+                  {bookingDateError ? <p className="mt-1.5 text-xs font-semibold text-rose-600">{bookingDateError}</p> : null}
+                </div>
+
+                <div className="mt-4">
+                  <label htmlFor="gl-booking-notes" className="mb-1 block text-sm font-semibold text-[var(--svs-text)]">Job details (optional)</label>
+                  <textarea
+                    id="gl-booking-notes"
+                    value={bookingNotes}
+                    onChange={(event) => setBookingNotes(event.target.value)}
+                    rows={3}
+                    placeholder="e.g. Loading/unloading at a warehouse in Midrand, 8am start, 2 days needed."
+                    className="w-full rounded-lg border border-[var(--svs-border)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                  />
+                </div>
+
+                {bookingSubmitError ? <p className="mt-3 text-xs font-semibold text-rose-600">{bookingSubmitError}</p> : null}
+
+                <div className="mt-5 flex flex-wrap justify-end gap-2">
+                  <button type="button" onClick={closeBookingModal} className="h-10 rounded-md border border-[var(--svs-border)] px-4 text-sm font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)]">Cancel</button>
+                  <button
+                    type="button"
+                    disabled={!canSendBooking}
+                    onClick={handleSendBookingRequest}
+                    className="h-10 rounded-md bg-[var(--svs-primary)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isSubmittingBooking ? 'Sending…' : 'Send Booking Request'}
+                  </button>
+                </div>
+                {!bookingDate ? (
+                  <p className="mt-3 text-xs text-[var(--svs-muted)]">Pick a date to send the booking request.</p>
+                ) : null}
+              </>
+            )}
+          </div>
+        </div>
+      ) : null}
     </div>
+  );
+};
+
+const GENERAL_LABOUR_BOOKING_STATUS_STYLES = {
+  requested: 'bg-amber-100 text-amber-800',
+  confirmed: 'bg-blue-100 text-blue-800',
+  completed: 'bg-emerald-100 text-emerald-800',
+  declined: 'bg-red-100 text-red-700',
+  cancelled: 'bg-slate-200 text-slate-700',
+};
+
+const mapGeneralLabourBookingRow = (row) => ({
+  id: row.id,
+  workerId: row.worker_id,
+  workerName: row.worker_name || 'Worker',
+  workerImage: row.worker_image || '',
+  workerCategory: row.worker_category || '',
+  sellerEmail: row.seller_email || '',
+  buyerEmail: row.buyer_email || '',
+  buyerName: row.buyer_name || '',
+  buyerPhone: row.buyer_phone || '',
+  bookingDate: row.booking_date || '',
+  notes: row.notes || '',
+  status: row.status || 'requested',
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+
+const mapHomeCareBookingRow = (row) => ({
+  id: row.id,
+  providerId: row.provider_id,
+  providerName: row.provider_name || 'Provider',
+  providerImage: row.provider_image || '',
+  providerCategory: row.provider_category || '',
+  sellerEmail: row.seller_email || '',
+  buyerEmail: row.buyer_email || '',
+  buyerName: row.buyer_name || '',
+  buyerPhone: row.buyer_phone || '',
+  bookingDate: row.booking_date || '',
+  serviceLabel: row.service_label || '',
+  notes: row.notes || '',
+  status: row.status || 'requested',
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+// Buyer-facing "My Bookings" — tracks every booking request the signed-in
+// buyer has placed against Book @ Home-Care Services providers. No payment
+// is involved; this is purely a status tracker. Chatting with the provider
+// is a separate, optional action from here, not something that happens
+// automatically.
+const HomeCareBookingsPage = () => {
+  const navigate = useNavigate();
+  const [bookings, setBookings] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [cancellingId, setCancellingId] = useState('');
+  const isAuthenticated = getAuthState();
+  const buyerEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
+
+  useEffect(() => {
+    if (!isAuthenticated || !buyerEmail || !hasSupabaseEnv || !supabase) {
+      setIsLoading(false);
+      return;
+    }
+    let isCancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('home_care_bookings')
+        .select('*')
+        .eq('buyer_email', buyerEmail)
+        .order('created_at', { ascending: false });
+      if (isCancelled) return;
+      if (error) {
+        setLoadError(error.message);
+      } else {
+        setBookings((data || []).map(mapHomeCareBookingRow));
+      }
+      setIsLoading(false);
+    })();
+    return () => { isCancelled = true; };
+  }, [isAuthenticated, buyerEmail]);
+
+  const handleCancelBooking = async (bookingId) => {
+    if (!hasSupabaseEnv || !supabase) return;
+    setCancellingId(bookingId);
+    const { error } = await supabase.from('home_care_bookings').update({ status: 'cancelled' }).eq('id', bookingId);
+    if (!error) {
+      setBookings((current) => current.map((booking) => (booking.id === bookingId ? { ...booking, status: 'cancelled' } : booking)));
+    }
+    setCancellingId('');
+  };
+
+  const goToChatAboutBooking = (booking) => {
+    navigate('/support/chat', {
+      state: {
+        recipientEmail: booking.sellerEmail,
+        recipientName: booking.providerName,
+        recipientRole: 'seller',
+        issueType: 'Item Enquiry',
+        itemKey: booking.providerId,
+        itemTitle: booking.providerName,
+        itemImage: booking.providerImage,
+        itemLink: `/home-care/provider/${booking.providerId}`,
+        draftMessage: `Hi ${booking.providerName}, following up on my booking request for ${booking.bookingDate}.`,
+      },
+    });
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <PageFrame title="My Bookings" subtitle="Track booking requests you've placed with Book @ Home-Care Services providers.">
+        <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 text-sm text-[var(--svs-text)]">
+          <p>Sign in to see your bookings.</p>
+          <Link to="/signin" className="mt-4 inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white">Sign In</Link>
+        </div>
+      </PageFrame>
+    );
+  }
+
+  return (
+    <PageFrame title="My Bookings" subtitle="Track booking requests you've placed with Book @ Home-Care Services providers. No payment is involved — chat with the provider separately to finalize details.">
+      <div className="mb-5">
+        <Link to="/home-care" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--svs-primary)] hover:underline">
+          <ChevronLeft className="h-4 w-4" /> Back to Home-Care Services
+        </Link>
+      </div>
+      {isLoading ? (
+        <p className="text-sm text-[var(--svs-muted)]">Loading your bookings…</p>
+      ) : loadError ? (
+        <p className="text-sm text-rose-600">{loadError}</p>
+      ) : bookings.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface)] p-8 text-center text-sm text-[var(--svs-muted)]">
+          No bookings yet — book a provider from Book @ Home-Care Services to see it tracked here.
+        </div>
+      ) : (
+        <ul className="space-y-3">
+          {bookings.map((booking) => (
+            <li key={booking.id} className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4">
+              <div className="flex gap-3">
+                {booking.providerImage ? (
+                  <img src={booking.providerImage} alt={booking.providerName} className="h-16 w-16 shrink-0 rounded-lg object-cover" />
+                ) : null}
+                <div className="min-w-0 flex-1">
+                  <Link to={`/home-care/provider/${booking.providerId}`} className="block truncate text-sm font-bold text-[var(--svs-text)] hover:text-[var(--svs-primary)]">
+                    {booking.providerName}
+                  </Link>
+                  <p className="truncate text-xs text-[var(--svs-muted)]">{booking.providerCategory}</p>
+                  <p className="mt-1 text-xs text-[var(--svs-muted)]">Booking ID: <span className="font-mono">{booking.id}</span></p>
+                </div>
+                <span className={`self-start rounded-full px-2.5 py-1 text-xs font-bold uppercase ${GENERAL_LABOUR_BOOKING_STATUS_STYLES[booking.status] || 'bg-slate-100 text-slate-700'}`}>
+                  {booking.status}
+                </span>
+              </div>
+              <div className="mt-3 grid gap-1 text-sm text-[var(--svs-text)] sm:grid-cols-2">
+                <p><span className="font-semibold">Requested date:</span> {booking.bookingDate || '—'}</p>
+                <p><span className="font-semibold">Submitted:</span> {formatTimestampWithSeconds(booking.createdAt)}</p>
+              </div>
+              {booking.serviceLabel ? <p className="mt-2 text-sm text-[var(--svs-text)]"><span className="font-semibold">Service:</span> {booking.serviceLabel}</p> : null}
+              {booking.notes ? <p className="mt-2 text-sm text-[var(--svs-muted)]">"{booking.notes}"</p> : null}
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => goToChatAboutBooking(booking)}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--svs-primary)] px-3 py-1.5 text-xs font-semibold text-white hover:brightness-110"
+                >
+                  <MessageCircle className="h-3.5 w-3.5" /> Discuss in Chat
+                </button>
+                {booking.status === 'requested' ? (
+                  <button
+                    type="button"
+                    disabled={cancellingId === booking.id}
+                    onClick={() => handleCancelBooking(booking.id)}
+                    className="rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                  >
+                    {cancellingId === booking.id ? 'Cancelling…' : 'Cancel Booking'}
+                  </button>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </PageFrame>
   );
 };
 
@@ -23600,6 +24190,21 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
   const [changeRequestFields, setChangeRequestFields] = useState([]);
   const [changeRequestEntireProfile, setChangeRequestEntireProfile] = useState(false);
   const [sellerFilter, setSellerFilter] = useState('submitted');
+
+  // Refs so each review action can jump the admin straight to the input it
+  // needs filled (or to the result banner once it's done) instead of leaving
+  // them to scroll and hunt for it on long seller-detail pages.
+  const rejectionNotesRef = useRef(null);
+  const changeRequestMessageRef = useRef(null);
+  const changeRequestCheckboxesRef = useRef(null);
+  const reviewMessageRef = useRef(null);
+  const scrollToRef = (ref) => {
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    ref.current?.focus?.();
+  };
+  const scrollToRefSoon = (ref) => {
+    requestAnimationFrame(() => scrollToRef(ref));
+  };
 
   const [walletTransactions, setWalletTransactions] = useState([]);
   const [withdrawalRequests, setWithdrawalRequests] = useState([]);
@@ -23757,6 +24362,7 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
     if (decision === 'rejected' && !trimmedNotes) {
       setReviewMessage('Add a reason before rejecting — the seller sees this so they know what to fix.');
       setReviewMessageType('error');
+      scrollToRef(rejectionNotesRef);
       return;
     }
 
@@ -23775,6 +24381,7 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
       setReviewMessage(error.message);
       setReviewMessageType('error');
       setIsReviewing(false);
+      scrollToRefSoon(reviewMessageRef);
       return;
     }
 
@@ -23793,6 +24400,7 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
     setSellers((current) => current.map((entry) => (entry.user_email === sellerDetail.user_email ? { ...entry, compliance_status: decision } : entry)));
     setRejectionNotes('');
     setIsReviewing(false);
+    scrollToRefSoon(reviewMessageRef);
   };
 
   const handleCancelRejection = async () => {
@@ -23810,6 +24418,7 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
       setReviewMessage(error.message);
       setReviewMessageType('error');
       setIsReviewing(false);
+      scrollToRefSoon(reviewMessageRef);
       return;
     }
 
@@ -23826,6 +24435,7 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
     setSellers((current) => current.map((entry) => (entry.user_email === sellerDetail.user_email ? { ...entry, compliance_status: 'submitted' } : entry)));
     setRejectionNotes('');
     setIsReviewing(false);
+    scrollToRefSoon(reviewMessageRef);
   };
 
   const toggleChangeRequestField = (key) => {
@@ -23839,12 +24449,14 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
     if (!trimmedMessage) {
       setReviewMessage('Add a message telling the seller what to fix.');
       setReviewMessageType('error');
+      scrollToRef(changeRequestMessageRef);
       return;
     }
 
     if (!changeRequestEntireProfile && changeRequestFields.length === 0) {
       setReviewMessage('Pick which section(s) need changes, or mark the entire profile.');
       setReviewMessageType('error');
+      scrollToRef(changeRequestCheckboxesRef);
       return;
     }
 
@@ -23865,6 +24477,7 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
       setReviewMessage(error.message);
       setReviewMessageType('error');
       setIsReviewing(false);
+      scrollToRefSoon(reviewMessageRef);
       return;
     }
 
@@ -23883,6 +24496,7 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
     setChangeRequestFields([]);
     setChangeRequestEntireProfile(false);
     setIsReviewing(false);
+    scrollToRefSoon(reviewMessageRef);
   };
 
   const handleWithdrawalDecision = async (request, decision) => {
@@ -24129,7 +24743,7 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                         <td className="px-4 py-3 font-semibold text-[var(--svs-text)]">{buyer.full_name}</td>
                         <td className="px-4 py-3 text-[var(--svs-muted)]">{buyer.email_address}</td>
                         <td className="px-4 py-3 text-[var(--svs-muted)]">{buyer.contact_number || '—'}</td>
-                        <td className="px-4 py-3 text-[var(--svs-muted)]">{new Date(buyer.created_at).toLocaleDateString()}</td>
+                        <td className="px-4 py-3 text-[var(--svs-muted)]">{formatTimestampWithSeconds(buyer.created_at)}</td>
                       </tr>
                     ))}
                     {visibleBuyers.length === 0 ? (
@@ -24146,7 +24760,7 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
               </button>
 
               {reviewMessage ? (
-                <div className={`rounded-xl px-4 py-3 text-sm font-medium ${reviewMessageType === 'success' ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' : 'bg-red-50 text-red-700 ring-1 ring-red-200'}`}>{reviewMessage}</div>
+                <div ref={reviewMessageRef} tabIndex={-1} className={`rounded-xl px-4 py-3 text-sm font-medium ${reviewMessageType === 'success' ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' : 'bg-red-50 text-red-700 ring-1 ring-red-200'}`}>{reviewMessage}</div>
               ) : null}
 
               <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5">
@@ -24233,70 +24847,74 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                   </div>
                 ) : null}
 
-                {sellerDetail.compliance_status !== 'approved' ? (
-                  <div className="mt-5">
-                    <label htmlFor="admin-rejection-notes" className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
-                      Rejection reason <span className="font-normal text-[var(--svs-muted)]">(required to reject — the seller will see this)</span>
-                    </label>
-                    <textarea
-                      id="admin-rejection-notes"
-                      value={rejectionNotes}
-                      onChange={(event) => setRejectionNotes(event.target.value)}
-                      rows={2}
-                      placeholder="e.g. ID photo is blurry — please retake in better lighting."
-                      className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
-                    />
-                  </div>
-                ) : null}
+                <div className="mt-5">
+                  <label htmlFor="admin-rejection-notes" className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                    Rejection reason <span className="font-normal text-[var(--svs-muted)]">(required to reject — the seller will see this)</span>
+                  </label>
+                  {sellerDetail.compliance_status === 'approved' ? (
+                    <p className="mb-1.5 text-xs text-amber-700">This seller is already approved. Rejecting now will revoke their access and ban their identifiers from re-registering.</p>
+                  ) : null}
+                  <textarea
+                    id="admin-rejection-notes"
+                    ref={rejectionNotesRef}
+                    value={rejectionNotes}
+                    onChange={(event) => setRejectionNotes(event.target.value)}
+                    rows={2}
+                    placeholder="e.g. ID photo is blurry — please retake in better lighting."
+                    className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                  />
+                </div>
 
-                {sellerDetail.compliance_status !== 'approved' ? (
-                  <div className="mt-5 rounded-lg border border-[var(--svs-border)] p-3">
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
-                      Request Changes <span className="font-normal text-[var(--svs-muted)]">(send the seller a note instead of rejecting)</span>
-                    </p>
-                    <textarea
-                      value={changeRequestMessage}
-                      onChange={(event) => setChangeRequestMessage(event.target.value)}
-                      rows={2}
-                      placeholder="e.g. Please retake your ID photo in better lighting and double-check your tax number."
-                      className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
-                    />
-                    <div className="mt-2 flex flex-wrap gap-3">
-                      {SELLER_PROFILE_SECTIONS.map((section) => (
-                        <label key={section.key} className="flex items-center gap-1.5 text-xs text-[var(--svs-text)]">
-                          <input
-                            type="checkbox"
-                            checked={changeRequestFields.includes(section.key)}
-                            onChange={() => toggleChangeRequestField(section.key)}
-                            disabled={changeRequestEntireProfile}
-                            className="accent-[var(--svs-primary)] disabled:opacity-50"
-                          />
-                          {section.label}
-                        </label>
-                      ))}
-                      <label className="flex items-center gap-1.5 text-xs font-semibold text-[var(--svs-text)]">
+                <div className="mt-5 rounded-lg border border-[var(--svs-border)] p-3">
+                  <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                    Request Changes <span className="font-normal text-[var(--svs-muted)]">(send the seller a note instead of rejecting)</span>
+                  </p>
+                  {sellerDetail.compliance_status === 'approved' ? (
+                    <p className="mb-2 text-xs text-amber-700">This will move this seller back to "Changes Requested" and pause their seller access until they resubmit.</p>
+                  ) : null}
+                  <textarea
+                    ref={changeRequestMessageRef}
+                    value={changeRequestMessage}
+                    onChange={(event) => setChangeRequestMessage(event.target.value)}
+                    rows={2}
+                    placeholder="e.g. Please retake your ID photo in better lighting and double-check your tax number."
+                    className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                  />
+                  <div ref={changeRequestCheckboxesRef} tabIndex={-1} className="mt-2 flex flex-wrap gap-3">
+                    {SELLER_PROFILE_SECTIONS.map((section) => (
+                      <label key={section.key} className="flex items-center gap-1.5 text-xs text-[var(--svs-text)]">
                         <input
                           type="checkbox"
-                          checked={changeRequestEntireProfile}
-                          onChange={(event) => {
-                            setChangeRequestEntireProfile(event.target.checked);
-                            if (event.target.checked) setChangeRequestFields([]);
-                          }}
-                          className="accent-[var(--svs-primary)]"
+                          checked={changeRequestFields.includes(section.key)}
+                          onChange={() => toggleChangeRequestField(section.key)}
+                          disabled={changeRequestEntireProfile}
+                          className="accent-[var(--svs-primary)] disabled:opacity-50"
                         />
-                        Entire profile
+                        {section.label}
                       </label>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleRequestChanges}
-                      disabled={isReviewing}
-                      className="mt-3 inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50"
-                    >
-                      <Send className="h-4 w-4" /> Request Changes
-                    </button>
+                    ))}
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-[var(--svs-text)]">
+                      <input
+                        type="checkbox"
+                        checked={changeRequestEntireProfile}
+                        onChange={(event) => {
+                          setChangeRequestEntireProfile(event.target.checked);
+                          if (event.target.checked) setChangeRequestFields([]);
+                        }}
+                        className="accent-[var(--svs-primary)]"
+                      />
+                      Entire profile
+                    </label>
                   </div>
-                ) : null}
+                  <button
+                    type="button"
+                    onClick={handleRequestChanges}
+                    disabled={isReviewing}
+                    className="mt-3 inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50"
+                  >
+                    <Send className="h-4 w-4" /> Request Changes
+                  </button>
+                </div>
 
                 <div className="mt-5 flex flex-wrap gap-3">
                   <button
@@ -24338,7 +24956,7 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                       <div key={entry.id} className="rounded-lg border border-[var(--svs-border)] p-3">
                         <p className="font-semibold text-[var(--svs-text)]">{entry.field_name}</p>
                         <p className="text-[var(--svs-muted)]">{entry.old_value || '—'} → {entry.new_value || '—'}</p>
-                        <p className="text-xs text-[var(--svs-muted)]">{new Date(entry.changed_at).toLocaleString()}</p>
+                        <p className="text-xs text-[var(--svs-muted)]">{formatTimestampWithSeconds(entry.changed_at)}</p>
                       </div>
                     ))}
                   </div>
@@ -24407,7 +25025,7 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                             {seller.compliance_status?.replace(/_/g, ' ')}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-[var(--svs-muted)]">{new Date(seller.created_at).toLocaleDateString()}</td>
+                        <td className="px-4 py-3 text-[var(--svs-muted)]">{formatTimestampWithSeconds(seller.created_at)}</td>
                         <td className="px-4 py-3 text-right">
                           <button type="button" onClick={() => setSelectedSellerEmail(seller.user_email)} className="text-sm font-semibold text-[var(--svs-primary)] hover:underline">Review</button>
                         </td>
@@ -24452,7 +25070,7 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                         <td className="px-4 py-3 text-[var(--svs-muted)]">{line.buyerEmail}</td>
                         <td className="px-4 py-3 text-[var(--svs-muted)]">{line.sellerEmail}</td>
                         <td className="px-4 py-3 text-[var(--svs-muted)]">{line.status}</td>
-                        <td className="px-4 py-3 text-[var(--svs-muted)]">{line.createdAt ? new Date(line.createdAt).toLocaleDateString() : '—'}</td>
+                        <td className="px-4 py-3 text-[var(--svs-muted)]">{formatTimestampWithSeconds(line.createdAt)}</td>
                       </tr>
                     ))}
                     {visibleOrderLineItems.length === 0 ? (
@@ -24541,7 +25159,7 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                           <td className="px-4 py-3 text-[var(--svs-muted)] capitalize">{txn.kind}</td>
                           <td className={`px-4 py-3 font-semibold ${txn.direction === 'credit' ? 'text-emerald-600' : 'text-rose-600'}`}>{txn.direction === 'credit' ? '+' : '-'}{formatAmountInCurrency(txn.amount, txn.currency)}</td>
                           <td className="px-4 py-3 text-[var(--svs-muted)] capitalize">{txn.status}</td>
-                          <td className="px-4 py-3 text-[var(--svs-muted)]">{new Date(txn.created_at).toLocaleDateString()}</td>
+                          <td className="px-4 py-3 text-[var(--svs-muted)]">{formatTimestampWithSeconds(txn.created_at)}</td>
                         </tr>
                       ))}
                       {visibleWalletTransactions.length === 0 ? (
@@ -24583,7 +25201,7 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                           <td className="px-4 py-3 text-[var(--svs-muted)] capitalize">{entry.identifier_type.replace(/_/g, ' ')}</td>
                           <td className="px-4 py-3 text-[var(--svs-text)]">{entry.identifier_value}</td>
                           <td className="px-4 py-3 text-[var(--svs-muted)]">{entry.reason}</td>
-                          <td className="px-4 py-3 text-[var(--svs-muted)]">{new Date(entry.created_at).toLocaleDateString()}</td>
+                          <td className="px-4 py-3 text-[var(--svs-muted)]">{formatTimestampWithSeconds(entry.created_at)}</td>
                         </tr>
                       ))}
                       {visibleBannedIdentifiers.length === 0 ? (
@@ -24612,7 +25230,7 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                           <td className="px-4 py-3 text-[var(--svs-muted)]">{entry.admin_email}</td>
                           <td className="px-4 py-3 text-[var(--svs-text)] capitalize">{entry.action.replace(/_/g, ' ')}</td>
                           <td className="px-4 py-3 text-[var(--svs-muted)]">{entry.target_type}: {entry.target_id}</td>
-                          <td className="px-4 py-3 text-[var(--svs-muted)]">{new Date(entry.created_at).toLocaleString()}</td>
+                          <td className="px-4 py-3 text-[var(--svs-muted)]">{formatTimestampWithSeconds(entry.created_at)}</td>
                         </tr>
                       ))}
                       {visibleAdminActionLog.length === 0 ? (
@@ -24641,7 +25259,7 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                           <td className="px-4 py-3 text-[var(--svs-muted)]">{entry.user_email}</td>
                           <td className="px-4 py-3 text-[var(--svs-text)]">{entry.field_name}</td>
                           <td className="px-4 py-3 text-[var(--svs-muted)]">{entry.old_value || '—'} → {entry.new_value || '—'}</td>
-                          <td className="px-4 py-3 text-[var(--svs-muted)]">{new Date(entry.changed_at).toLocaleString()}</td>
+                          <td className="px-4 py-3 text-[var(--svs-muted)]">{formatTimestampWithSeconds(entry.changed_at)}</td>
                         </tr>
                       ))}
                       {visibleGlobalAuditLog.length === 0 ? (
@@ -25749,7 +26367,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                         <div>
                           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Order</p>
                           <p className="text-sm font-bold text-[var(--svs-text)]">{typeof order.reference === 'string' ? order.reference : (order.id || '')}</p>
-                          <p className="text-xs text-[var(--svs-muted)]">{order.createdAt ? new Date(order.createdAt).toLocaleString() : ''}</p>
+                          <p className="text-xs text-[var(--svs-muted)]">{formatTimestampWithSeconds(order.createdAt)}</p>
                         </div>
                         <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getStatusClasses(order.status)}`}>
                           {typeof order.status === 'string' ? order.status : ''}
@@ -27422,7 +28040,7 @@ const SellerPayoutsPage = ({ orders = [] }) => {
                   <li key={req.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                     <div>
                       <p className="text-sm font-bold text-[var(--svs-text)]">{formatSellerAmount(Number(req.amount) || 0, req.currency || sellerCurrency)}</p>
-                      <p className="text-xs text-[var(--svs-muted)]">{new Date(req.requestedAt).toLocaleString()} • {req.method}</p>
+                      <p className="text-xs text-[var(--svs-muted)]">{formatTimestampWithSeconds(req.requestedAt)} • {req.method}</p>
                     </div>
                     <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${statusBadgeClass(req.status)}`}>
                       {req.status}
@@ -28909,6 +29527,57 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
 
   const fieldOptions = (name) => (MARKET_FIELD_SPEC.homeCare.fields.find((field) => field.name === name)?.options || []);
 
+  const [bookingRequests, setBookingRequests] = useState([]);
+  const [isLoadingBookingRequests, setIsLoadingBookingRequests] = useState(true);
+  const [bookingActionId, setBookingActionId] = useState('');
+
+  useEffect(() => {
+    if (!isAuthenticated || !userEmail || !hasSupabaseEnv || !supabase) {
+      setIsLoadingBookingRequests(false);
+      return;
+    }
+    let isCancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('home_care_bookings')
+        .select('*')
+        .eq('seller_email', userEmail)
+        .order('created_at', { ascending: false });
+      if (isCancelled) return;
+      if (!error) setBookingRequests((data || []).map(mapHomeCareBookingRow));
+      setIsLoadingBookingRequests(false);
+    })();
+    return () => { isCancelled = true; };
+  }, [isAuthenticated, userEmail]);
+
+  const handleUpdateBookingRequestStatus = async (bookingId, status) => {
+    if (!hasSupabaseEnv || !supabase) return;
+    setBookingActionId(bookingId);
+    const { error } = await supabase.from('home_care_bookings').update({ status }).eq('id', bookingId);
+    if (!error) {
+      setBookingRequests((current) => current.map((booking) => (booking.id === bookingId ? { ...booking, status } : booking)));
+    }
+    setBookingActionId('');
+  };
+
+  const goToChatWithBookingBuyer = (booking) => {
+    navigate('/support/chat', {
+      state: {
+        recipientEmail: booking.buyerEmail,
+        recipientName: booking.buyerName || 'Buyer',
+        recipientRole: 'client',
+        issueType: 'Item Enquiry',
+        itemKey: booking.providerId,
+        itemTitle: booking.providerName,
+        itemImage: booking.providerImage,
+        itemLink: `/home-care/provider/${booking.providerId}`,
+        draftMessage: `Hi, following up on the booking request for ${booking.bookingDate}.`,
+      },
+    });
+  };
+
+  const pendingBookingRequestCount = bookingRequests.filter((booking) => booking.status === 'requested').length;
+
   useEffect(() => {
     if (!imageFiles.length) {
       setImagePreviewUrls([]);
@@ -29134,9 +29803,9 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
               </div>
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Days available</label>
-                <p className="mb-2 text-xs text-[var(--svs-muted)]">Select every day you're available to take bookings. Buyers can only book you on these days.</p>
+                <p className="mb-2 text-xs text-[var(--svs-muted)]">Select every day you're available to take bookings. Buyers can only book you on these days. Toggle "Public Holiday" too so it's clear whether you work on public holidays.</p>
                 <div className="flex flex-wrap gap-2">
-                  {HOME_CARE_WEEK_DAYS.map((day) => {
+                  {HOME_CARE_AVAILABILITY_OPTIONS.map((day) => {
                     const isSelected = formData.availableDays.includes(day);
                     return (
                       <button
@@ -29241,6 +29910,7 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
             </button>
           </form>
 
+          <div className="flex flex-col gap-6">
           <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
             <h2 className="text-xl font-bold text-[var(--svs-text)]">Listing Tips</h2>
             <div className="mt-4 space-y-3 text-sm text-[var(--svs-muted)]">
@@ -29252,6 +29922,82 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
               <p>After publishing, you can edit or remove the service anytime from My Store.</p>
             </div>
           </section>
+
+          {/* BOOKING REQUESTS */}
+          <aside className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-[0_4px_8px_rgba(0,0,0,0.04)]">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-[var(--svs-primary-strong)]">Booking Requests ({bookingRequests.length})</h2>
+              {pendingBookingRequestCount > 0 ? (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">{pendingBookingRequestCount} pending</span>
+              ) : null}
+            </div>
+            <p className="mb-3 text-xs text-[var(--svs-muted)]">No payment is attached to these — confirm or decline, then discuss the visit in chat.</p>
+            {isLoadingBookingRequests ? (
+              <p className="text-xs text-[var(--svs-muted)]">Loading booking requests…</p>
+            ) : bookingRequests.length === 0 ? (
+              <p className="text-xs text-[var(--svs-muted)]">No booking requests yet — buyers will appear here when they book your service.</p>
+            ) : (
+              <ul className="space-y-3">
+                {bookingRequests.map((booking) => (
+                  <li key={booking.id} className="rounded-lg border border-[var(--svs-border)] p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-semibold text-[var(--svs-text)]">{booking.buyerName || 'Buyer'}</p>
+                        <p className="truncate text-[11px] text-[var(--svs-muted)]">For: {booking.providerName}</p>
+                      </div>
+                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${GENERAL_LABOUR_BOOKING_STATUS_STYLES[booking.status] || 'bg-slate-100 text-slate-700'}`}>
+                        {booking.status}
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-[11px] text-[var(--svs-muted)]">Requested date: {booking.bookingDate || '—'}</p>
+                    {booking.serviceLabel ? <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Service: {booking.serviceLabel}</p> : null}
+                    {booking.notes ? <p className="mt-1 text-[11px] italic text-[var(--svs-muted)]">"{booking.notes}"</p> : null}
+                    <p className="mt-1 text-[10px] text-[var(--svs-muted)]">Submitted: {formatTimestampWithSeconds(booking.createdAt)}</p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {booking.status !== 'confirmed' && booking.status !== 'completed' ? (
+                        <button
+                          type="button"
+                          disabled={bookingActionId === booking.id}
+                          onClick={() => handleUpdateBookingRequestStatus(booking.id, 'confirmed')}
+                          className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-[10px] font-semibold text-blue-700 hover:border-blue-300 disabled:opacity-50"
+                        >
+                          Confirm
+                        </button>
+                      ) : null}
+                      {booking.status !== 'completed' ? (
+                        <button
+                          type="button"
+                          disabled={bookingActionId === booking.id}
+                          onClick={() => handleUpdateBookingRequestStatus(booking.id, 'completed')}
+                          className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 hover:border-emerald-300 disabled:opacity-50"
+                        >
+                          Complete
+                        </button>
+                      ) : null}
+                      {booking.status !== 'declined' && booking.status !== 'completed' ? (
+                        <button
+                          type="button"
+                          disabled={bookingActionId === booking.id}
+                          onClick={() => handleUpdateBookingRequestStatus(booking.id, 'declined')}
+                          className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-700 hover:border-red-300 disabled:opacity-50"
+                        >
+                          Decline
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => goToChatWithBookingBuyer(booking)}
+                        className="ml-auto inline-flex items-center gap-1 rounded-md border border-[var(--svs-border)] px-2 py-1 text-[10px] font-semibold text-[var(--svs-text)] hover:border-[var(--svs-primary)]"
+                      >
+                        <MessageCircle className="h-3 w-3" /> Chat
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </aside>
+          </div>
         </div>
       )}
     </PageFrame>
@@ -32417,17 +33163,19 @@ const WishlistShareModal = ({ open, onClose, wishlistItems = [] }) => {
           ) : null}
         </div>
 
-        <div className="grid grid-cols-2 gap-2 border-t border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-3 sm:grid-cols-5">
+        <div className="border-t border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-3">
           <button
             type="button"
             onClick={handleNativeShare}
             disabled={!shareUrl || wishlistItems.length === 0}
-            className="inline-flex flex-col items-center justify-center gap-1 rounded-md border border-[var(--svs-border)] bg-[var(--svs-bg)] px-2 py-2 text-[11px] font-bold text-[var(--svs-primary)] transition hover:bg-[var(--svs-surface-strong,#f1f5f9)] disabled:opacity-50"
-            title="Share via your device"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-[var(--svs-primary)] px-4 py-2.5 text-sm font-bold text-white transition hover:brightness-110 disabled:opacity-50"
+            title="Share via your device — shows every app you have installed"
           >
             <Share2 className="h-4 w-4" aria-hidden="true" />
-            Share
+            Share to any app
           </button>
+          <p className="mt-2 text-center text-[10px] font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Or share directly via</p>
+          <div className="mt-2 grid grid-cols-4 gap-2">
           <a
             href={whatsappHref}
             target="_blank"
@@ -32472,6 +33220,7 @@ const WishlistShareModal = ({ open, onClose, wishlistItems = [] }) => {
             <Send className="h-4 w-4" aria-hidden="true" />
             Telegram
           </a>
+          </div>
         </div>
       </div>
     </div>
@@ -32480,22 +33229,65 @@ const WishlistShareModal = ({ open, onClose, wishlistItems = [] }) => {
 
 const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onOpenItemDetails }) => {
   const [shareOpen, setShareOpen] = useState(false);
+
+  // Share wishlist: try the device's native share sheet directly first (it
+  // already lists every installed app capable of receiving a share —
+  // WhatsApp, Gmail, Bluetooth, Drive, direct contacts, etc. — no need for
+  // SVS to hand-maintain that list). Only fall back to the in-app modal
+  // (personalize + WhatsApp/Email/SMS/Telegram/copy-link) on browsers that
+  // don't support the Web Share API, e.g. most desktop browsers.
+  const handleQuickShareWishlist = async () => {
+    if (!wishlistItems.length) return;
+    const savedName = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-wishlist-share-name') || '');
+    const shareUrl = buildWishlistShareUrl({ items: wishlistItems, senderName: savedName });
+    if (!shareUrl) {
+      setShareOpen(true);
+      return;
+    }
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({
+          title: savedName ? `${savedName}'s wishlist` : 'My SVS wishlist',
+          text: savedName ? `${savedName} shared a wishlist with you on SVS.` : 'Check out my wishlist on SVS.',
+          url: shareUrl,
+        });
+        return;
+      } catch (_e) {
+        // User cancelled the native share sheet — don't fall back to the modal.
+        return;
+      }
+    }
+    setShareOpen(true);
+  };
+
   return (
   <PageFrame title="Wishlist" subtitle="Save items you want to come back to later.">
     <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
       <p className="text-xs font-semibold text-[var(--svs-muted)]">
         {wishlistItems.length ? `${wishlistItems.length} saved item${wishlistItems.length === 1 ? '' : 's'}` : 'No saved items yet.'}
       </p>
-      <button
-        type="button"
-        onClick={() => setShareOpen(true)}
-        disabled={wishlistItems.length === 0}
-        title={wishlistItems.length === 0 ? 'Add at least one item before sharing' : 'Share this wishlist with friends or family'}
-        className="inline-flex items-center gap-1.5 rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-1.5 text-xs font-bold text-[var(--svs-primary)] transition hover:bg-[var(--svs-surface-strong,#f1f5f9)] disabled:opacity-50"
-      >
-        <Gift className="h-3.5 w-3.5" aria-hidden="true" />
-        Share wishlist
-      </button>
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={handleQuickShareWishlist}
+          disabled={wishlistItems.length === 0}
+          title={wishlistItems.length === 0 ? 'Add at least one item before sharing' : 'Share this wishlist with friends or family'}
+          className="inline-flex items-center gap-1.5 rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-1.5 text-xs font-bold text-[var(--svs-primary)] transition hover:bg-[var(--svs-surface-strong,#f1f5f9)] disabled:opacity-50"
+        >
+          <Gift className="h-3.5 w-3.5" aria-hidden="true" />
+          Share wishlist
+        </button>
+        <button
+          type="button"
+          onClick={() => setShareOpen(true)}
+          disabled={wishlistItems.length === 0}
+          title="Add a personal note or occasion before sharing"
+          aria-label="Customize wishlist share message"
+          className="inline-flex items-center justify-center rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] p-1.5 text-[var(--svs-primary)] transition hover:bg-[var(--svs-surface-strong,#f1f5f9)] disabled:opacity-50"
+        >
+          <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+      </div>
     </div>
     {!wishlistItems.length ? (
       <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 text-sm text-[var(--svs-text)]">
@@ -34430,7 +35222,7 @@ const BettingTicketTrackingPage = ({ orders }) => {
                 <Circle className="h-3.5 w-3.5 animate-pulse fill-current" /> {liveStatusLabel}
               </p>
               <p className="mt-1 text-xs text-cyan-50/90">Order ID: {order.reference}</p>
-              <p className="text-xs text-cyan-50/90">Purchased: {orderPlacedAt.toLocaleString()}</p>
+              <p className="text-xs text-cyan-50/90">Purchased: {formatTimestampWithSeconds(orderPlacedAt)}</p>
             </div>
           </div>
         </div>
@@ -34869,6 +35661,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   const prefillItemTitleFromState = String(location.state?.itemTitle || '').trim();
   const prefillItemImageFromState = String(location.state?.itemImage || '').trim();
   const prefillItemLinkFromState = String(location.state?.itemLink || '').trim();
+  const prefillDraftMessageFromState = String(location.state?.draftMessage || '').trim();
   const currentUserEmail = normalizeEmail(getCurrentUserEmail()) || GUEST_ORDER_EMAIL;
   const onlineEmails = usePresence();
   // The SVS Agent is an always-available bot; everyone else must really be
@@ -34896,7 +35689,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   const [threads, setThreads] = useState(() => getStoredSupportChatThreads(currentUserEmail));
   const [messages, setMessages] = useState(() => getStoredSupportChatMessages(currentUserEmail));
   const [selectedThreadId, setSelectedThreadId] = useState('');
-  const [draftMessage, setDraftMessage] = useState('');
+  const [draftMessage, setDraftMessage] = useState(prefillDraftMessageFromState);
   const [issueType, setIssueType] = useState(prefillIssueTypeFromState || 'General Support');
   const [recipientEmail, setRecipientEmail] = useState(prefillRecipientEmailFromState || SUPPORT_ADMIN_EMAIL);
   const [recipientSearchQuery, setRecipientSearchQuery] = useState(prefillRecipientNameFromState || prefillRecipientEmailFromState || '');
@@ -37299,14 +38092,14 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       }
       return `
         <div style="margin:0 0 14px 0;padding:10px 14px;border-radius:12px;border:1px solid ${mine ? '#0f6674' : '#d6e6f5'};background:${mine ? '#0f6674' : '#ffffff'};color:${mine ? '#ffffff' : '#1f2937'};max-width:680px;${mine ? 'margin-left:auto' : ''}">
-          <div style="font-size:11px;font-weight:600;opacity:.85;margin-bottom:4px">${esc(m.senderName || m.senderEmail || '')} &middot; ${esc(new Date(m.createdAt || Date.now()).toLocaleString())}</div>
+          <div style="font-size:11px;font-weight:600;opacity:.85;margin-bottom:4px">${esc(m.senderName || m.senderEmail || '')} &middot; ${esc(formatTimestampWithSeconds(m.createdAt || Date.now()))}</div>
           ${body}
         </div>`;
     }).join('');
     const header = `
-      <h1 style="color:#0f6674;font-size:22px;margin:0 0 4px 0">Let&rsquo;s Talk Business &mdash; Conversation Export</h1>
+      <h1 style="color:#0f6674;font-size:22px;margin:0 0 4px 0">Let&rsquo;s Talk &mdash; Conversation Export</h1>
       <h2 style="color:#0f6674;font-size:13px;font-weight:600;margin:0 0 6px 0">With ${esc(counterpartName)} &middot; ${esc(activeThread.issueType || 'General Support')}${activeThread.orderReference ? ` &middot; ${esc(activeThread.orderReference)}` : ''}</h2>
-      <p style="color:#475569;font-size:12px;margin:0 0 18px 0">Exported by ${esc(currentUserName || currentUserEmail)} on ${esc(new Date().toLocaleString())} &middot; Current deal status: <strong>${esc(dealStatusMeta[dealStatus]?.label || dealStatus)}</strong></p>
+      <p style="color:#475569;font-size:12px;margin:0 0 18px 0">Exported by ${esc(currentUserName || currentUserEmail)} on ${esc(formatTimestampWithSeconds(new Date()))} &middot; Current deal status: <strong>${esc(dealStatusMeta[dealStatus]?.label || dealStatus)}</strong></p>
     `;
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>SVS Chat &mdash; ${esc(counterpartName)}</title>
       <style>
@@ -37331,7 +38124,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
         <div className="border-b border-[var(--svs-border)] bg-gradient-to-r from-[var(--svs-primary)] via-[var(--svs-primary-strong)] to-[var(--svs-primary)] px-3 py-2.5 text-white sm:px-7 sm:py-4">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <h1 className="truncate text-lg font-black sm:text-3xl">Let&rsquo;s Talk Business</h1>
+              <h1 className="truncate text-lg font-black sm:text-3xl">Let&rsquo;s Talk</h1>
               <p className="mt-0.5 hidden text-[11px] text-cyan-50 sm:block sm:text-xs">
                 Chat, negotiate, share media, send offers &amp; close deals — all in one place.
               </p>
@@ -38275,7 +39068,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                             )
                           )}
                           <p className={`mt-1 flex items-center gap-1 text-[11px] ${mine ? 'flex-row-reverse text-cyan-100' : 'text-slate-400'}`}>
-                            <span>{new Date(message.createdAt || Date.now()).toLocaleString()}</span>
+                            <span>{formatTimestampWithSeconds(message.createdAt || Date.now())}</span>
                             {wasEdited ? <span className="italic opacity-90">· edited</span> : null}
                             {message.metadata?.forwarded ? (
                               <span className="inline-flex items-center gap-0.5 italic opacity-90">
@@ -39076,7 +39869,7 @@ const OrderConfirmationPage = ({ orders }) => {
       </head><body>
       <h1>SVS E-Commerce</h1>
       <p class="muted">Invoice • ${order.reference}</p>
-      <p class="muted">Placed: ${new Date(order.createdAt || Date.now()).toLocaleString()}</p>
+      <p class="muted">Placed: ${formatTimestampWithSeconds(order.createdAt || Date.now())}</p>
       <h2>Bill To</h2>
       <div class="box">
         <strong>${fullName}</strong><br/>
@@ -39320,7 +40113,7 @@ const formatTrackTimestamp = (value) => {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return '';
   return date.toLocaleString('en-US', {
-    year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit',
+    year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit',
   });
 };
 
@@ -39546,7 +40339,7 @@ const TrackOrderPage = ({ orders, onAdminSetOrderStatus }) => {
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
                 <CalendarDays className="h-4 w-4 text-[var(--svs-primary-strong)]" /> Order Date
               </div>
-              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{formatTrackDate(order.createdAt)}</p>
+              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{formatTrackTimestamp(order.createdAt)}</p>
             </div>
             <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4">
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
@@ -40753,7 +41546,7 @@ const TrackReturnPage = ({ orders }) => {
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
                 <CalendarDays className="h-4 w-4 text-[var(--svs-primary-strong)]" /> Requested On
               </div>
-              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{createdAt ? formatTrackDate(createdAt) : '—'}</p>
+              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{createdAt ? formatTrackTimestamp(createdAt) : '—'}</p>
             </div>
             <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4">
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
@@ -41312,7 +42105,7 @@ const TrackExchangePage = ({ orders }) => {
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
                 <CalendarDays className="h-4 w-4 text-[var(--svs-primary-strong)]" /> Requested On
               </div>
-              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{createdAt ? formatTrackDate(createdAt) : '—'}</p>
+              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{createdAt ? formatTrackTimestamp(createdAt) : '—'}</p>
             </div>
             <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4">
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
@@ -41546,7 +42339,7 @@ const CancelOrderPage = ({ orders, onCancelOrder }) => {
             </div>
             <div className="rounded-xl bg-white p-3">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Order Date</p>
-              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{createdAt ? formatTrackDate(createdAt) : meta.dateLabel}</p>
+              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{createdAt ? formatTrackTimestamp(createdAt) : meta.dateLabel}</p>
             </div>
             <div className="rounded-xl bg-white p-3">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Payment Method</p>
@@ -42836,7 +43629,7 @@ const ItemDetailsModal = ({
                     <div className="flex flex-wrap items-center gap-2 text-xs">
                       <span className="font-bold text-slate-800">{review.reviewerName || 'Shopper'}</span>
                       <span className="text-slate-400">
-                        {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : ''}
+                        {formatTimestampWithSeconds(review.createdAt)}
                       </span>
                       <span className="ml-auto inline-flex items-center gap-1 text-amber-500">
                         <Star className="h-3 w-3 fill-amber-400" />
@@ -43461,7 +44254,7 @@ const ItemDetailsModal = ({
                   <li key={idx} className="rounded-lg border border-[#e0e7ef] bg-white p-3">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-semibold text-[var(--svs-primary-strong)]">{review.reviewerName}</span>
-                      <span className="text-xs text-slate-400">{new Date(review.createdAt).toLocaleDateString()}</span>
+                      <span className="text-xs text-slate-400">{formatTimestampWithSeconds(review.createdAt)}</span>
                       <span className="flex items-center gap-1 ml-2 text-amber-500">
                         <Star className="h-4 w-4 fill-amber-400" /> {review.rating}
                       </span>
@@ -45157,8 +45950,8 @@ const InstallAppBanner = () => {
 const FloatingSupportChatButton = () => (
   <Link
     to="/support/chat"
-    aria-label="Open Let's Talk Business chat"
-    title="Let's Talk Business"
+    aria-label="Open Let's Talk chat"
+    title="Let's Talk"
     className="group fixed bottom-5 right-4 z-[130] inline-flex h-14 w-14 items-center justify-center rounded-full border-2 border-white/80 bg-[#1f4c8f] text-white shadow-[0_14px_28px_rgba(8,32,40,0.38)] transition hover:scale-105 hover:bg-[#173e78] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 sm:bottom-6 sm:right-6 sm:h-16 sm:w-16"
   >
     <MessageCircle className="h-7 w-7 shrink-0 sm:h-8 sm:w-8" strokeWidth={2.4} />
@@ -45214,7 +46007,8 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/secondhand-central/product/:itemId" element={<SecondHandProductDetailPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} />} />
     <Route path="/secondhand-central/:categoryKey" element={<SecondHandPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/home-care" element={<HomeCarePage sellerItems={sellerItems} />} />
-    <Route path="/home-care/provider/:providerId" element={<HomeCareProviderDetailPage sellerItems={sellerItems} onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} />} />
+    <Route path="/home-care/provider/:providerId" element={<HomeCareProviderDetailPage sellerItems={sellerItems} onPushNotificationToUser={onPushNotificationToUser} />} />
+    <Route path="/home-care/bookings" element={<HomeCareBookingsPage />} />
     <Route path="/hardware-software" element={<HardwareSoftwarePage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/mobility-vehicles" element={<MobilityVehiclesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/mobility-vehicles/:categorySlug" element={<MobilityVehiclesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
@@ -45222,7 +46016,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/natural-resources-minerals/:categorySlug" element={<NaturalResourcesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/general-labour-market" element={<GeneralLabourPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/general-labour-market/:categorySlug" element={<GeneralLabourPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
-    <Route path="/general-labour-market/worker/:workerId" element={<GeneralLabourWorkerDetailPage sellerItems={sellerItems} onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} />} />
+    <Route path="/general-labour-market/worker/:workerId" element={<GeneralLabourWorkerDetailPage sellerItems={sellerItems} onPushNotificationToUser={onPushNotificationToUser} />} />
     <Route path="/seller/upload" element={<SellerUploadPage onSellerItemCreated={onSellerItemCreated} />} />
     <Route path="/seller/dashboard" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onUpdateOrderStatus={onUpdateOrderStatus} initialView="listings" />} />
     <Route path="/seller/orders" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onUpdateOrderStatus={onUpdateOrderStatus} initialView="orders" />} />

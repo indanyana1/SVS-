@@ -39,6 +39,16 @@ const SellerPendingApprovalPage = () => {
     setRejectionReason(data?.rejection_reason || '');
     setAdminMessage(data?.admin_message || '');
     setFlaggedSections(Array.isArray(data?.fields_to_edit) ? data.fields_to_edit : []);
+
+    // Mirrors SellerSigninPage's grant-on-approval logic so an approved
+    // seller gets dashboard access (and the nav's "Sell" link updates to
+    // "My Store") the moment this page learns about it, not just at next
+    // sign-in.
+    if (data?.compliance_status === 'approved') {
+      window.localStorage.setItem('svs-has-seller-access', 'true');
+      window.localStorage.setItem('svs-seller-home-path', '/seller/dashboard');
+      window.dispatchEvent(new Event('svs-auth-changed'));
+    }
   }, []);
 
   useEffect(() => {
@@ -58,6 +68,7 @@ const SellerPendingApprovalPage = () => {
     setIsRefreshing(false);
   };
 
+  const isApproved = status === 'approved';
   const isRejected = status === 'rejected';
   const isChangesRequested = status === 'changes_requested';
   const isLoading = status === 'loading';
@@ -65,8 +76,10 @@ const SellerPendingApprovalPage = () => {
   return (
     <StandalonePageShell title="Seller Application Status" brandHref="/sell" mainClassName="px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto w-full max-w-lg text-center">
-        <div className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${isRejected ? 'bg-rose-50' : isChangesRequested ? 'bg-sky-50' : 'bg-[var(--svs-cyan-surface)]'}`}>
-          {isRejected ? (
+        <div className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${isApproved ? 'bg-emerald-50' : isRejected ? 'bg-rose-50' : isChangesRequested ? 'bg-sky-50' : 'bg-[var(--svs-cyan-surface)]'}`}>
+          {isApproved ? (
+            <ShieldCheck className="h-7 w-7 text-emerald-600" />
+          ) : isRejected ? (
             <ShieldAlert className="h-7 w-7 text-rose-600" />
           ) : isChangesRequested ? (
             <Pencil className="h-7 w-7 text-sky-600" />
@@ -77,6 +90,19 @@ const SellerPendingApprovalPage = () => {
 
         {isLoading ? (
           <p className="text-sm text-[var(--svs-muted)]">Checking your application status...</p>
+        ) : isApproved ? (
+          <>
+            <h1 className="text-2xl font-black">You&apos;re Approved!</h1>
+            <p className="mt-3 text-sm text-[var(--svs-muted)]">
+              Congratulations — your seller application has been approved. Your seller dashboard is ready.
+            </p>
+            <Link
+              to="/seller/dashboard"
+              className="mt-6 inline-flex items-center justify-center rounded-xl bg-[var(--svs-primary)] px-5 py-2.5 text-sm font-bold text-white transition hover:brightness-110"
+            >
+              Go to Your Seller Dashboard
+            </Link>
+          </>
         ) : isRejected ? (
           <>
             <h1 className="text-2xl font-black">Application Not Approved</h1>
