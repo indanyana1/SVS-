@@ -7,13 +7,25 @@
 
 create extension if not exists pgcrypto;
 
+-- Drops the foreign key from an earlier version of this table for
+-- deployments that already ran it. The constraint only allowed bookings
+-- against seller-submitted listings (the only rows that exist in
+-- property_listings) — booking a visit against any static catalog property
+-- (the majority of the buyer-facing catalog, seeded in properties.js and
+-- never written to property_listings) violated it and silently failed to
+-- persist. Matches the no-FK pattern already used by general_labour_bookings
+-- / home_care_bookings, since the listing catalog isn't a single DB table.
+alter table if exists public.property_bookings drop constraint if exists property_bookings_listing_id_fkey;
+
 create table if not exists public.property_bookings (
   -- Client-generated id (e.g. "booking-xxx-yyy") so optimistic UI updates
   -- don't have to wait for a server round-trip to know the id.
   id text primary key,
 
-  -- Which property is being booked (text PK on property_listings).
-  listing_id text not null references public.property_listings (id) on delete cascade,
+  -- Which property is being booked (matches either a static catalog id like
+  -- "p-sandton-skyline" or a seller-listing id in property_listings — no FK,
+  -- the listing catalog isn't a single DB table).
+  listing_id text not null,
 
   -- Denormalized listing snapshot so the seller dashboard can still render
   -- something meaningful even if the listing changes title / image later.

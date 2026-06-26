@@ -233,7 +233,7 @@ const PropertyDetailPage = () => {
 								<Stat icon={CheckCircle2} label="Availability" value={listing.availability} />
 							</div>
 
-							<div className="mt-5 flex flex-wrap gap-2">
+							<div className="mt-5 flex flex-wrap items-center gap-2">
 								<button
 									type="button"
 									onClick={() => setShowVisitModal(true)}
@@ -241,6 +241,12 @@ const PropertyDetailPage = () => {
 								>
 									Book Visit
 								</button>
+								<Link
+									to="/property-hub/bookings"
+									className="text-xs font-semibold text-[var(--svs-primary-strong)] underline hover:text-[var(--svs-primary)]"
+								>
+									Track my bookings
+								</Link>
 								<button
 									type="button"
 									onClick={() => (liked ? withdrawIntent('reserve') : setIntentModal('reserve'))}

@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { Search, ShoppingCart } from 'lucide-react';
+import { Calendar, Search, ShoppingCart } from 'lucide-react';
 import {
 	PROPERTY_CATEGORIES,
 	getTrending,
@@ -28,7 +28,15 @@ const PropertyMarketPage = () => {
 		<section className="bg-[var(--svs-bg)] px-4 py-8 text-[var(--svs-text)]">
 			{/* HERO */}
 			<div className="mx-auto w-full max-w-7xl">
-				<div className="relative overflow-hidden rounded-2xl">
+				<div className="flex justify-end">
+					<Link
+						to="/property-hub/bookings"
+						className="inline-flex items-center gap-1.5 rounded-full border border-[var(--svs-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--svs-text)] hover:border-[var(--svs-primary)]"
+					>
+						<Calendar className="h-4 w-4" /> My Bookings
+					</Link>
+				</div>
+				<div className="relative mt-3 overflow-hidden rounded-2xl">
 					<div
 						className="h-56 bg-cover bg-center sm:h-64"
 						style={{

@@ -124,6 +124,7 @@ import {
   PropertyCategoryPage,
   PropertyDetailPage,
   PropertyVisitStatusPage,
+  PropertyBookingsPage,
   PropertySellPage,
 } from '../features/property';
 import { getSellerListings as getPropertySellerListings } from '../features/property/data/sellerListings';
@@ -36815,6 +36816,17 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     try { node.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) { /* ignore */ }
   }, [replyingTo]);
 
+  // Auto-grow the composer textarea downward as the draft gets longer
+  // (resetting to 'auto' first lets it shrink back down when text is
+  // deleted). The min-h-[40px]/max-h-32 Tailwind classes on the element
+  // still cap how tall it can get — past that it scrolls internally.
+  useEffect(() => {
+    const node = draftTextareaRef.current;
+    if (!node) return;
+    node.style.height = 'auto';
+    node.style.height = `${node.scrollHeight}px`;
+  }, [draftMessage]);
+
   // True when the active thread is the SVS Agent / Support thread.
   // The deal-closing toolkit (offers, payment requests, location, photos,
   // voice notes, status updates, quick replies) only makes sense between
@@ -46073,6 +46085,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/property-hub/category/:categoryKey" element={<PropertyCategoryPage />} />
     <Route path="/property-hub/listing/:listingId" element={<PropertyDetailPage />} />
     <Route path="/property-hub/visit/:listingId" element={<PropertyVisitStatusPage />} />
+    <Route path="/property-hub/bookings" element={<PropertyBookingsPage />} />
     <Route path="/betting-lottery-games" element={<BettingLotteryGamesPage onBuyNow={onBuyNow} />} />
     <Route path="/betting-lottery-games/confirm" element={<LotteryConfirmPage onBuyNow={onBuyNow} />} />
     <Route path="/international-lottery-games" element={<Navigate to="/betting-lottery-games" replace />} />
