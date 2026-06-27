@@ -91,6 +91,7 @@ import { createAddressLookupSessionToken, lookupAddressDetails, lookupAddressSug
 import { DEFAULT_LANGUAGE_CODE, getLanguageByCode, isRtlLanguage, SUPPORTED_LANGUAGES } from '../lib/languages';
 import { embeddedCardCheckoutEnabled, getStripeInstance, startCardPayment, stripeCurrency } from '../lib/payments';
 import { hasSupabaseEnv, supabase } from '../lib/supabase';
+import { sendNotificationEmail } from '../lib/notificationEmail';
 import {
   getWalletSnapshot,
   topUpWallet,
@@ -892,6 +893,12 @@ const createSellerListingFormState = () => ({
   sizes: [],
   sizeStock: {},
   sizePrices: {},
+  // Not editable from the generic dashboard modal (General Labour / Home-Care
+  // have their own dedicated availability UI), but round-tripped here so
+  // saving other fields through this modal doesn't wipe them out.
+  availableDays: [],
+  availabilityHours: {},
+  unavailableDates: [],
   ...EMPTY_GROCERIES_LISTING_FIELDS,
   ...EMPTY_TICKETS_LISTING_FIELDS,
   ...EMPTY_BEVERAGES_LISTING_FIELDS,
@@ -1366,6 +1373,7 @@ const bookingsPrototypeConcertItems = [
     date: '2025-11-25',
     location: 'Clifton Beach, Cape Town',
     country: 'South Africa',
+    genre: 'EDM',
     price: '1,499.00',
     image: 'https://images.pexels.com/photos/1190298/pexels-photo-1190298.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -1377,6 +1385,7 @@ const bookingsPrototypeConcertItems = [
     date: '2025-11-28',
     location: 'Nairobi Arboretum Grounds',
     country: 'Kenya',
+    genre: 'Rock',
     price: '3,999.00',
     image: 'https://images.pexels.com/photos/167636/pexels-photo-167636.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -1388,6 +1397,7 @@ const bookingsPrototypeConcertItems = [
     date: '2025-12-02',
     location: 'Lugogo Grounds, Kampala',
     country: 'Uganda',
+    genre: 'EDM',
     price: '1,999.00',
     image: 'https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -1402,6 +1412,7 @@ const bookingsPrototypeSportsItems = [
     date: '2025-11-25',
     location: 'St George\'s Park, South Africa',
     country: 'South Africa',
+    genre: 'Football',
     price: '505.99',
     image: 'https://images.pexels.com/photos/3621104/pexels-photo-3621104.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -1413,6 +1424,7 @@ const bookingsPrototypeSportsItems = [
     date: '2025-11-28',
     location: 'FNB Stadium, Johannesburg',
     country: 'South Africa',
+    genre: 'Football',
     price: '1,999.00',
     image: 'https://images.pexels.com/photos/274506/pexels-photo-274506.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -1424,6 +1436,7 @@ const bookingsPrototypeSportsItems = [
     date: '2025-12-02',
     location: 'Loftus Versfeld, Pretoria',
     country: 'South Africa',
+    genre: 'Football',
     price: '1,999.00',
     image: 'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -1441,6 +1454,7 @@ const bookingsPrototypeTravelItems = [
     sortDate: '2025-12-31',
     location: 'Dubai International',
     country: 'United Arab Emirates',
+    genre: 'Flight',
     price: '22,499.00',
     image: 'https://images.pexels.com/photos/912050/pexels-photo-912050.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -1455,6 +1469,7 @@ const bookingsPrototypeTravelItems = [
     sortDate: '2025-12-15',
     location: 'Kenya Coastal Route',
     country: 'Kenya',
+    genre: 'Bus',
     price: '889.99',
     image: 'https://images.pexels.com/photos/210182/pexels-photo-210182.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -1469,6 +1484,7 @@ const bookingsPrototypeTravelItems = [
     sortDate: '2025-12-02',
     location: 'Zanzibar International',
     country: 'Tanzania',
+    genre: 'Flight',
     price: '45,999.00',
     image: 'https://images.pexels.com/photos/46148/aircraft-jet-landing-cloud-46148.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
@@ -3678,12 +3694,6 @@ const HOME_CARE_WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 // the Available Days display.
 const HOME_CARE_AVAILABILITY_OPTIONS = [...HOME_CARE_WEEK_DAYS, 'Public Holiday'];
 
-const homeCareAvailabilityTimeSlots = [
-  'Morning (8AM - 12PM)',
-  'Afternoon (12PM - 5PM)',
-  'Evening (5PM - 9PM)',
-];
-
 const homeCareCertifications = [
   'Registered Nurse (RN) - State of New York',
   'CPR & First Aid Certified',
@@ -3773,13 +3783,15 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
   useBuyerCurrency();
   const carouselRef = useRef(null);
   const [activeBooking, setActiveBooking] = useState(null);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
   const [bookingDate, setBookingDate] = useState('');
   const [bookingDateError, setBookingDateError] = useState('');
+  const [bookingTime, setBookingTime] = useState('');
+  const [bookingDuration, setBookingDuration] = useState(BOOKING_DURATION_OPTIONS[1].minutes);
   const [bookingNotes, setBookingNotes] = useState('');
   const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
   const [bookingSubmitError, setBookingSubmitError] = useState('');
   const [submittedBooking, setSubmittedBooking] = useState(null);
+  const [existingBookings, setExistingBookings] = useState([]);
   const [selectedOptions, setSelectedOptions] = useState(() => {
     const defaults = {};
     homeCarePricingSections.forEach((section) => {
@@ -3834,6 +3846,8 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
         sellerEmail: sellerItem.sellerEmail || '',
         isSellerListing: true,
         phone: sellerItem.phone || '',
+        availabilityHours: sellerItem.availabilityHours || {},
+        unavailableDates: Array.isArray(sellerItem.unavailableDates) ? sellerItem.unavailableDates : [],
       };
     }
 
@@ -3852,6 +3866,8 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
         servicesOffered: [providerFromMainList.category, ...homeCareProviderDetailPrototype.servicesOffered.filter((service) => service !== providerFromMainList.category)],
         availableDays: providerFromMainList.availableDays || HOME_CARE_WEEK_DAYS,
         phone: providerFromMainList.phone || '',
+        availabilityHours: providerFromMainList.availabilityHours || {},
+        unavailableDates: Array.isArray(providerFromMainList.unavailableDates) ? providerFromMainList.unavailableDates : [],
       };
     }
 
@@ -3870,11 +3886,37 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
         servicesOffered: [providerFromRelatedList.category, ...homeCareProviderDetailPrototype.servicesOffered.filter((service) => service !== providerFromRelatedList.category)],
         availableDays: providerFromRelatedList.availableDays || HOME_CARE_WEEK_DAYS,
         phone: providerFromRelatedList.phone || '',
+        availabilityHours: providerFromRelatedList.availabilityHours || {},
+        unavailableDates: Array.isArray(providerFromRelatedList.unavailableDates) ? providerFromRelatedList.unavailableDates : [],
       };
     }
 
     return homeCareProviderDetailPrototype;
   }, [providerId, sellerItems]);
+
+  // Fetches every still-active (not declined/cancelled) booking against this
+  // provider so the booking modal can flag real interval-overlap conflicts
+  // and steer a buyer to a free slot instead of double-booking someone
+  // else's request.
+  useEffect(() => {
+    if (!providerId || !hasSupabaseEnv || !supabase) {
+      setExistingBookings([]);
+      return;
+    }
+    let isCancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('home_care_bookings')
+        .select('booking_date, booking_time, duration_minutes, status')
+        .eq('provider_id', providerId)
+        .not('status', 'in', '(declined,cancelled)');
+      if (isCancelled) return;
+      if (!error) {
+        setExistingBookings((data || []).map((row) => ({ date: row.booking_date, time: row.booking_time, duration: row.duration_minutes || 60 })));
+      }
+    })();
+    return () => { isCancelled = true; };
+  }, [providerId]);
 
   // Seller-submitted providers carry a real sellerEmail; the static
   // catalog/prototype providers don't, so fall back to a deterministic
@@ -3914,6 +3956,7 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
     : homeCarePricingSections;
   const defaultServiceOption = activePricingSections[0]?.options?.[0] || null;
   const providerAvailableDays = activeProvider.availableDays || HOME_CARE_WEEK_DAYS;
+  const providerUnavailableDates = Array.isArray(activeProvider.unavailableDates) ? activeProvider.unavailableDates : [];
 
   const openBookingModal = (label, price) => {
     if (!getAuthState()) {
@@ -3929,6 +3972,8 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
   const closeBookingModal = () => {
     setActiveBooking(null);
     setBookingDate('');
+    setBookingTime('');
+    setBookingDuration(BOOKING_DURATION_OPTIONS[1].minutes);
     setBookingNotes('');
     setBookingDateError('');
     setBookingSubmitError('');
@@ -3936,24 +3981,46 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
   };
 
   const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const getWeekdayNameForDate = (isoDate) => {
+    const [year, month, day] = isoDate.split('-').map(Number);
+    return WEEKDAY_NAMES[new Date(year, (month || 1) - 1, day || 1).getDay()];
+  };
   const handleBookingDateChange = (event) => {
     const value = event.target.value;
     setBookingDate(value);
+    setBookingTime('');
     if (!value) {
       setBookingDateError('');
       return;
     }
-    const [year, month, day] = value.split('-').map(Number);
-    const parsedDate = new Date(year, (month || 1) - 1, day || 1);
-    const weekdayName = WEEKDAY_NAMES[parsedDate.getDay()];
+    if (providerUnavailableDates.includes(value)) {
+      setBookingDateError(`${activeProvider.name} has marked ${value} as unavailable. Please pick another date.`);
+      return;
+    }
+    const weekdayName = getWeekdayNameForDate(value);
     if (!providerAvailableDays.includes(weekdayName)) {
       setBookingDateError(`${activeProvider.name} is not available on ${weekdayName}s. Available days: ${providerAvailableDays.join(', ')}.`);
     } else {
       setBookingDateError('');
     }
   };
+  const bookingWeekdayName = bookingDate ? getWeekdayNameForDate(bookingDate) : '';
+  const bookingDayHours = bookingWeekdayName ? getDayAvailabilityHours(activeProvider, bookingWeekdayName) : null;
+  const bookingStartMinutes = bookingTime ? timeToMinutes(bookingTime) : null;
+  const bookingEndMinutes = bookingStartMinutes != null ? bookingStartMinutes + bookingDuration : null;
+  const bookingsOnDate = bookingDate ? existingBookings.filter((b) => b.date === bookingDate && b.time) : [];
+  const takenRangesForDate = bookingsOnDate.map((b) => {
+    const start = timeToMinutes(b.time);
+    return `${b.time}–${minutesToTime(start + (b.duration || 60))}`;
+  });
+  const isTimeOverlapping = bookingStartMinutes != null && bookingsOnDate.some((b) => {
+    const start = timeToMinutes(b.time);
+    return doRangesOverlap(bookingStartMinutes, bookingEndMinutes, start, start + (b.duration || 60));
+  });
+  const exceedsDayHours = bookingDayHours && bookingEndMinutes != null
+    && (bookingStartMinutes < timeToMinutes(bookingDayHours.start) || bookingEndMinutes > timeToMinutes(bookingDayHours.end));
 
-  const canSendBooking = Boolean(activeBooking) && Boolean(bookingDate) && Boolean(selectedTimeSlot) && !bookingDateError && !isSubmittingBooking;
+  const canSendBooking = Boolean(activeBooking) && Boolean(bookingDate) && Boolean(bookingTime) && !bookingDateError && !isTimeOverlapping && !exceedsDayHours && !isSubmittingBooking;
 
   const handleSendBookingRequest = async () => {
     if (!canSendBooking) return;
@@ -3983,7 +4050,9 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
       buyer_name: buyerName,
       buyer_phone: buyerPhone,
       booking_date: bookingDate,
-      service_label: `${activeBooking?.label || 'Service'}${activeBooking?.price ? ` (${activeBooking.price})` : ''} — ${selectedTimeSlot}`,
+      booking_time: bookingTime,
+      duration_minutes: bookingDuration,
+      service_label: `${activeBooking?.label || 'Service'}${activeBooking?.price ? ` (${activeBooking.price})` : ''}`,
       notes: trimmedNotes,
       status: 'requested',
     });
@@ -3994,22 +4063,24 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
       return;
     }
 
+    const durationLabel = BOOKING_DURATION_OPTIONS.find((option) => option.minutes === bookingDuration)?.label || '1 hour';
     const formattedDate = new Date(bookingDate).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     onPushNotificationToUser?.(providerChatEmail, {
       type: 'info',
       title: 'New booking request',
-      message: `A buyer would like to book ${activeBooking?.label || 'a service'} on ${formattedDate} (${selectedTimeSlot}).${trimmedNotes ? ` Note: ${trimmedNotes}` : ''} No payment has been made — discuss the details in chat.`,
+      message: `A buyer would like to book ${activeBooking?.label || 'a service'} on ${formattedDate} at ${bookingTime} (${durationLabel}).${trimmedNotes ? ` Note: ${trimmedNotes}` : ''} No payment has been made — discuss the details in chat.`,
       href: '/home-care/sell',
     });
 
-    setSubmittedBooking({ id: bookingId, formattedDate, notes: trimmedNotes });
+    setSubmittedBooking({ id: bookingId, formattedDate, time: bookingTime, durationLabel, label: activeBooking?.label, notes: trimmedNotes });
+    setExistingBookings((current) => [...current, { date: bookingDate, time: bookingTime, duration: bookingDuration }]);
     setIsSubmittingBooking(false);
   };
 
   const goToProviderChatAboutBooking = () => {
     const formattedDate = submittedBooking?.formattedDate;
     const draftMessage = formattedDate
-      ? `Hi ${providerChatName}, I just sent a booking request for ${activeBooking?.label || 'a service'} on ${formattedDate} (${selectedTimeSlot}).${submittedBooking?.notes ? ` ${submittedBooking.notes}` : ''} No payment has been made yet — let's confirm the details here.`
+      ? `Hi ${providerChatName}, I just sent a booking request for ${submittedBooking?.label || 'a service'} on ${formattedDate} at ${submittedBooking?.time} (${submittedBooking?.durationLabel}).${submittedBooking?.notes ? ` ${submittedBooking.notes}` : ''} No payment has been made yet — let's confirm the details here.`
       : '';
     navigate('/support/chat', {
       state: {
@@ -4120,30 +4191,20 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
           <div className="mt-3 flex flex-wrap gap-2">
             {HOME_CARE_AVAILABILITY_OPTIONS.map((day) => {
               const isAvailable = providerAvailableDays.includes(day);
+              const hours = isAvailable ? getDayAvailabilityHours(activeProvider, day) : null;
               return (
-                <span key={`day-${day}`} className={`rounded-full px-3 py-1 text-xs font-semibold ${isAvailable ? 'bg-[#E6F3FF] text-[#0052CC]' : 'bg-slate-100 text-slate-400 line-through'}`}>{day}</span>
+                <span key={`day-${day}`} className={`rounded-full px-3 py-1 text-xs font-semibold ${isAvailable ? 'bg-[#E6F3FF] text-[#0052CC]' : 'bg-slate-100 text-slate-400 line-through'}`}>
+                  {day}{hours ? ` · ${hours.start}–${hours.end}` : ''}
+                </span>
               );
             })}
           </div>
-
-          <p className="mt-5 text-sm font-semibold text-[#0052CC]">Pick a time slot</p>
-          <div className="mt-3 grid gap-3 md:grid-cols-3">
-            {homeCareAvailabilityTimeSlots.map((slot) => {
-              const isSelected = selectedTimeSlot === slot;
-              return (
-                <button
-                  key={`slot-${slot}`}
-                  type="button"
-                  onClick={() => setSelectedTimeSlot(slot)}
-                  aria-pressed={isSelected}
-                  className={`h-14 rounded-lg px-4 text-sm font-bold transition ${isSelected ? 'bg-[#003366] text-white' : 'bg-[#0f9fb2] text-white hover:bg-[#0d8a9c]'}`}
-                >
-                  {slot}
-                </button>
-              );
-            })}
-          </div>
-          <p className="mt-3 text-xs text-[#64748B]">Choose a time slot above, then book a service below — your selected slot carries over into the booking confirmation.</p>
+          {providerUnavailableDates.length ? (
+            <p className="mt-3 text-sm text-[#64748B]">
+              <span className="font-semibold text-[#0052CC]">Unavailable on:</span> {providerUnavailableDates.join(', ')}
+            </p>
+          ) : null}
+          <p className="mt-3 text-xs text-[#64748B]">Pick a date and time when you book a service below — available hours and any already-booked times for that day will be shown there.</p>
         </section>
 
         <section className="border-b border-[#E5E7EB] py-8">
@@ -4241,7 +4302,7 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
                   <h3 className="text-lg font-bold text-[#0052CC]">Booking request sent</h3>
                 </div>
                 <p className="mt-2 text-sm text-[#475569]">
-                  {providerChatName} has been notified about your request for <span className="font-semibold text-[#1F2937]">{submittedBooking.formattedDate}</span>. No payment was made.
+                  {providerChatName} has been notified about your request for <span className="font-semibold text-[#1F2937]">{submittedBooking.formattedDate} at {submittedBooking.time} ({submittedBooking.durationLabel})</span>. No payment was made.
                 </p>
                 <p className="mt-2 text-xs text-[#475569]">
                   Booking ID: <span className="font-mono">{submittedBooking.id}</span> — track its status anytime from <span className="font-semibold">My Bookings</span>.
@@ -4284,20 +4345,42 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
                 </div>
 
                 <div className="mt-4">
-                  <label className="mb-1 block text-sm font-semibold text-[#1F2937]">Choose a time slot</label>
-                  <div className="grid grid-cols-1 gap-2">
-                    {homeCareAvailabilityTimeSlots.map((slot) => (
-                      <button
-                        key={`modal-slot-${slot}`}
-                        type="button"
-                        onClick={() => setSelectedTimeSlot(slot)}
-                        aria-pressed={selectedTimeSlot === slot}
-                        className={`rounded-lg border px-3 py-2 text-left text-sm font-semibold transition ${selectedTimeSlot === slot ? 'border-[#0052CC] bg-[#E6F3FF] text-[#0052CC]' : 'border-[#D1D5DB] text-[#1F2937] hover:bg-[#F8FAFC]'}`}
-                      >
-                        {slot}
-                      </button>
+                  <label htmlFor="hc-booking-time" className="mb-1 block text-sm font-semibold text-[#1F2937]">Choose a time</label>
+                  <input
+                    id="hc-booking-time"
+                    type="time"
+                    disabled={!bookingDate || Boolean(bookingDateError)}
+                    min={bookingDayHours?.start}
+                    max={bookingDayHours?.end}
+                    value={bookingTime}
+                    onChange={(event) => setBookingTime(event.target.value)}
+                    className="w-full rounded-lg border border-[#D1D5DB] px-3 py-2.5 text-sm text-[#1F2937] outline-none focus:border-[#0052CC] disabled:cursor-not-allowed disabled:bg-[#F8FAFC]"
+                  />
+                  {bookingDayHours ? (
+                    <p className="mt-1.5 text-xs text-[#64748B]">{providerChatName} works {bookingWeekdayName} {bookingDayHours.start}–{bookingDayHours.end}.</p>
+                  ) : null}
+                  {takenRangesForDate.length ? (
+                    <p className="mt-1 text-xs text-amber-700">Already booked on this date: {takenRangesForDate.join(', ')}. Pick a time outside these.</p>
+                  ) : null}
+                  {isTimeOverlapping ? (
+                    <p className="mt-1 text-xs font-semibold text-rose-600">That overlaps an existing booking — please choose a different time.</p>
+                  ) : exceedsDayHours ? (
+                    <p className="mt-1 text-xs font-semibold text-rose-600">That doesn't fit within {providerChatName}'s working hours for this duration — pick an earlier start or a shorter duration.</p>
+                  ) : null}
+                </div>
+
+                <div className="mt-4">
+                  <label htmlFor="hc-booking-duration" className="mb-1 block text-sm font-semibold text-[#1F2937]">How long do you need this for?</label>
+                  <select
+                    id="hc-booking-duration"
+                    value={bookingDuration}
+                    onChange={(event) => setBookingDuration(Number(event.target.value))}
+                    className="w-full rounded-lg border border-[#D1D5DB] px-3 py-2.5 text-sm text-[#1F2937] outline-none focus:border-[#0052CC]"
+                  >
+                    {BOOKING_DURATION_OPTIONS.map((option) => (
+                      <option key={option.minutes} value={option.minutes}>{option.label}</option>
                     ))}
-                  </div>
+                  </select>
                 </div>
 
                 <div className="mt-4">
@@ -4325,8 +4408,8 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
                     {isSubmittingBooking ? 'Sending…' : 'Send Booking Request'}
                   </button>
                 </div>
-                {!selectedTimeSlot || !bookingDate ? (
-                  <p className="mt-3 text-xs text-[#94A3B8]">Pick a date and a time slot to enable sending.</p>
+                {!bookingTime || !bookingDate ? (
+                  <p className="mt-3 text-xs text-[#94A3B8]">Pick a date and a time to enable sending.</p>
                 ) : null}
               </>
             )}
@@ -8091,9 +8174,10 @@ const getSellerListingValidationMessage = (formState) => {
     if (hasCategory
       && hasCountry
       && hasLocation
+      && hasGenre
       && (!needsDate || hasDate)
       && (!needsProvider || hasProvider)
-      && (!isMoviesCategory || (hasCity && hasGenre && hasLanguage && hasShowtime))) {
+      && (!isMoviesCategory || (hasCity && hasLanguage && hasShowtime))) {
       return '';
     }
     if (!hasCategory) {
@@ -8102,6 +8186,9 @@ const getSellerListingValidationMessage = (formState) => {
     if (!hasCountry || !hasLocation) {
       return 'For bookings and tickets listings, choose a country and add venue/location before publishing.';
     }
+    if (!hasGenre) {
+      return `Add a genre/type for ${category} listings so the sidebar filter can match this listing.`;
+    }
     if (needsDate && !hasDate) {
       return `Add an event date for ${category} listings so date filters can match this listing.`;
     }
@@ -8109,7 +8196,7 @@ const getSellerListingValidationMessage = (formState) => {
       return `Add a provider/organizer for ${category} listings before publishing.`;
     }
     if (isMoviesCategory) {
-      return 'For movie listings, add city, genre, language, and showtime so movie sidebar filters can match this listing.';
+      return 'For movie listings, add city, language, and showtime so movie sidebar filters can match this listing.';
     }
     return '';
   }
@@ -8153,6 +8240,14 @@ const buildSizeDetailFields = (formState = {}) => {
 const buildSellerItemBaseDetailsJson = (formState) => {
   const sharedFields = {
     currency: SUPPORTED_CURRENCIES.some((entry) => entry.code === formState.currency) ? formState.currency : 'USD',
+    // Spread into every branch below (including the no-spec fallback) so
+    // availability data set on General Labour / Home-Care listings survives
+    // a save made through the generic dashboard "Edit" modal, which rebuilds
+    // details_json from formState and would otherwise silently drop any
+    // field that isn't part of that market's MARKET_FIELD_SPEC entry.
+    ...(Array.isArray(formState.availableDays) && formState.availableDays.length ? { availableDays: formState.availableDays } : {}),
+    ...(formState.availabilityHours && typeof formState.availabilityHours === 'object' && Object.keys(formState.availabilityHours).length ? { availabilityHours: formState.availabilityHours } : {}),
+    ...(Array.isArray(formState.unavailableDates) && formState.unavailableDates.length ? { unavailableDates: formState.unavailableDates } : {}),
   };
   if (formState.marketKey === 'groceries') {
     const categoryKey = String(formState.categoryKey || '').trim();
@@ -8198,7 +8293,7 @@ const buildSellerItemBaseDetailsJson = (formState) => {
         location: String(formState.ticketLocation || '').trim(),
         provider: String(formState.ticketProvider || '').trim(),
         meta: String(formState.ticketMeta || '').trim(),
-        genre: isMoviesCategory ? String(formState.ticketGenre || '').trim() : '',
+        genre: String(formState.ticketGenre || '').trim(),
         language: isMoviesCategory ? String(formState.ticketLanguage || '').trim() : '',
         showtime: isMoviesCategory ? String(formState.ticketShowtime || '').trim() : '',
       }).filter(([, value]) => Boolean(String(value || '').trim())),
@@ -12018,6 +12113,21 @@ const TicketsSellerFields = ({ formData, onFieldChange, prefix = 'seller-ticket'
         : isMoviesCategory
           ? 'Use this for screening details.'
           : 'Add a short detail to improve search relevance.';
+  const genreFieldLabel = isTravelCategory
+    ? 'Travel mode'
+    : isSportsCategory
+      ? 'Sport type'
+      : isConcertsCategory
+        ? 'Music genre'
+        : 'Movie genre';
+  const genreFieldPlaceholder = isTravelCategory
+    ? 'e.g. Flight, Bus'
+    : isSportsCategory
+      ? 'e.g. Football, Rugby'
+      : isConcertsCategory
+        ? 'e.g. Pop, Afrobeats'
+        : 'e.g. Action';
+  const genreFieldHelperText = `Powers the ${genreFieldLabel.toLowerCase()} sidebar filter buyers use to narrow down ${formData.ticketCategory || 'bookings'} listings.`;
   const containerClassName = isCompact
     ? 'rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3'
     : 'sm:col-span-2 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4';
@@ -12036,7 +12146,7 @@ const TicketsSellerFields = ({ formData, onFieldChange, prefix = 'seller-ticket'
       <div className="mb-3">
         <h3 className={`${isCompact ? 'text-sm' : 'text-base'} font-bold text-[var(--svs-text)]`}>Bookings &amp; Tickets Details</h3>
         <p className={`${helperClassName} mt-1`}>
-          Fields update by category so your listing can match category, date, country, and movie sidebar filters.
+          Fields update by category so your listing can match category, date, country, and the genre/location/provider sidebar filters buyers use to browse.
         </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -12137,20 +12247,21 @@ const TicketsSellerFields = ({ formData, onFieldChange, prefix = 'seller-ticket'
           />
           <p className={helperClassName}>{taglineHelperText}</p>
         </div>
+        <div>
+          <label htmlFor={`${prefix}-genre`} className={labelClassName}>{genreFieldLabel}</label>
+          <input
+            id={`${prefix}-genre`}
+            name="ticketGenre"
+            value={formData.ticketGenre}
+            onChange={onFieldChange}
+            required
+            placeholder={genreFieldPlaceholder}
+            className={inputClassName}
+          />
+          <p className={helperClassName}>{genreFieldHelperText}</p>
+        </div>
         {isMoviesCategory ? (
           <>
-            <div>
-              <label htmlFor={`${prefix}-genre`} className={labelClassName}>Movie genre</label>
-              <input
-                id={`${prefix}-genre`}
-                name="ticketGenre"
-                value={formData.ticketGenre}
-                onChange={onFieldChange}
-                required
-                placeholder="e.g. Action"
-                className={inputClassName}
-              />
-            </div>
             <div>
               <label htmlFor={`${prefix}-language`} className={labelClassName}>Language</label>
               <input
@@ -12422,6 +12533,7 @@ const ECommercePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
                 image: item.image,
                 images: item.images || (item.image ? [item.image] : []),
                 ...getItemDetailSizeProps(item),
+                availableQuantity: getSellerListingStock(sellerItems, item),
                 marketName: t('markets.ecommerce'),
                 details: item.subtitle || item.description || item.sellerName,
                 priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -12716,7 +12828,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
   const [activeCategory, setActiveCategory] = useState('All');
   const [sortOrder, setSortOrder] = useState('Newest');
   const [sectionVisibleCounts, setSectionVisibleCounts] = useState({});
-  const [movieSidebarOpen, setMovieSidebarOpen] = useState(false);
+  const [categorySidebarOpen, setCategorySidebarOpen] = useState(false);
   const [movieGenreFilters, setMovieGenreFilters] = useState([]);
   const [movieLanguageFilters, setMovieLanguageFilters] = useState([]);
   const [movieShowtimeFilters, setMovieShowtimeFilters] = useState([]);
@@ -12726,17 +12838,31 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
   const [sidebarLanguageOpen, setSidebarLanguageOpen] = useState(false);
   const [sidebarLocationOpen, setSidebarLocationOpen] = useState(false);
   const [sidebarShowtimeOpen, setSidebarShowtimeOpen] = useState(false);
+  const [nonMovieFilters, setNonMovieFilters] = useState({
+    Concerts: { type: [], location: [], provider: [] },
+    Sports: { type: [], location: [], provider: [] },
+    Travel: { type: [], location: [], provider: [] },
+  });
+  const [nonMovieSectionOpen, setNonMovieSectionOpen] = useState({ type: false, location: false, provider: false });
 
   const toggleMovieFilter = (setter, value) => {
     setter((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
   };
 
-  const applyMovieSidebarFilters = () => {
-    setMovieSidebarOpen(false);
+  const toggleNonMovieFilter = (category, facet, value) => {
+    setNonMovieFilters((prev) => {
+      const current = prev[category][facet];
+      const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
+      return { ...prev, [category]: { ...prev[category], [facet]: next } };
+    });
+  };
+
+  const applyCategorySidebarFilters = () => {
+    setCategorySidebarOpen(false);
   };
 
   useEffect(() => {
-    setMovieSidebarOpen(activeCategory === 'Movies');
+    setCategorySidebarOpen(activeCategory !== 'All');
   }, [activeCategory]);
 
   const sellerTicketItems = useMemo(
@@ -12825,6 +12951,23 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
     return [...new Set(movies.map((item) => item.city).filter(Boolean))].sort();
   }, [allMovieItems, movieFilterCountry]);
 
+  const nonMovieFilterOptions = useMemo(() => {
+    const defaultsByCategory = {
+      Concerts: ['Pop', 'Rock', 'Hip-Hop', 'EDM', 'Jazz', 'Afrobeats', 'Gospel', 'Classical'],
+      Sports: ['Football', 'Rugby', 'Cricket', 'Basketball', 'Tennis', 'Boxing', 'Athletics'],
+      Travel: ['Flight', 'Bus', 'Train', 'Cruise', 'Car Rental', 'Package Tour'],
+    };
+    const build = (categoryName) => {
+      const items = allBookingPrototypeItems.filter((item) => item.category === categoryName);
+      return {
+        type: [...new Set([...defaultsByCategory[categoryName], ...items.map((item) => item.genre).filter(Boolean)])],
+        location: [...new Set(items.map((item) => item.location).filter(Boolean))].sort(),
+        provider: [...new Set(items.map((item) => item.provider).filter(Boolean))].sort(),
+      };
+    };
+    return { Concerts: build('Concerts'), Sports: build('Sports'), Travel: build('Travel') };
+  }, [allBookingPrototypeItems]);
+
   const filteredBookingPrototypeItems = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
 
@@ -12856,9 +12999,31 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
     if (movieFilterCity !== 'all') movies = movies.filter((item) => item.city === movieFilterCity);
     return movies;
   }, [filteredBookingPrototypeItems, movieGenreFilters, movieLanguageFilters, movieShowtimeFilters, movieFilterCountry, movieFilterCity]);
-  const filteredConcerts = filteredBookingPrototypeItems.filter((item) => item.category === 'Concerts');
-  const filteredSports = filteredBookingPrototypeItems.filter((item) => item.category === 'Sports');
-  const filteredTravel = filteredBookingPrototypeItems.filter((item) => item.category === 'Travel');
+
+  const filteredConcerts = useMemo(() => {
+    let items = filteredBookingPrototypeItems.filter((item) => item.category === 'Concerts');
+    const f = nonMovieFilters.Concerts;
+    if (f.type.length > 0) items = items.filter((item) => f.type.includes(item.genre));
+    if (f.location.length > 0) items = items.filter((item) => f.location.includes(item.location));
+    if (f.provider.length > 0) items = items.filter((item) => f.provider.includes(item.provider));
+    return items;
+  }, [filteredBookingPrototypeItems, nonMovieFilters.Concerts]);
+  const filteredSports = useMemo(() => {
+    let items = filteredBookingPrototypeItems.filter((item) => item.category === 'Sports');
+    const f = nonMovieFilters.Sports;
+    if (f.type.length > 0) items = items.filter((item) => f.type.includes(item.genre));
+    if (f.location.length > 0) items = items.filter((item) => f.location.includes(item.location));
+    if (f.provider.length > 0) items = items.filter((item) => f.provider.includes(item.provider));
+    return items;
+  }, [filteredBookingPrototypeItems, nonMovieFilters.Sports]);
+  const filteredTravel = useMemo(() => {
+    let items = filteredBookingPrototypeItems.filter((item) => item.category === 'Travel');
+    const f = nonMovieFilters.Travel;
+    if (f.type.length > 0) items = items.filter((item) => f.type.includes(item.genre));
+    if (f.location.length > 0) items = items.filter((item) => f.location.includes(item.location));
+    if (f.provider.length > 0) items = items.filter((item) => f.provider.includes(item.provider));
+    return items;
+  }, [filteredBookingPrototypeItems, nonMovieFilters.Travel]);
 
   const shouldShowMoviesSection = activeCategory === 'Movies' || ((searchQuery.trim() || selectedDate !== 'all' || selectedCountry !== 'all') && filteredMovies.length > 0);
 
@@ -12888,6 +13053,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
       image: item.image,
       images: item.images || (item.image ? [item.image] : []),
       ...getItemDetailSizeProps(item),
+      availableQuantity: getSellerListingStock(sellerItems, item),
       marketName: t('markets.bookings'),
       details,
       priceLabel: item.isSellerListing
@@ -13089,23 +13255,23 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
         </div>
       </div>
 
-      {/* ── Movie Sidebar + Content Sections ── */}
+      {/* ── Category Sidebar + Content Sections ── */}
       {/* Section heading placed above the flex row so sidebar & cards align horizontally */}
-      {movieSidebarOpen && bookingsSections.length > 0 ? (
+      {categorySidebarOpen && bookingsSections.length > 0 ? (
         <div className="mb-5 mt-10 text-center sm:mt-12">
           <h2 className="text-xl font-bold tracking-tight text-[var(--svs-text)] sm:text-2xl">{bookingsSections[0].title}</h2>
           <p className="mt-1.5 text-xs text-[var(--svs-muted)] sm:text-sm">{bookingsSections[0].subtitle}</p>
         </div>
       ) : null}
-      <div className={`${movieSidebarOpen ? 'flex flex-col lg:flex-row lg:items-start lg:gap-6' : ''} ${movieSidebarOpen ? '' : 'mt-10 sm:mt-12'}`}>
+      <div className={`${categorySidebarOpen ? 'flex flex-col lg:flex-row lg:items-start lg:gap-6' : ''} ${categorySidebarOpen ? '' : 'mt-10 sm:mt-12'}`}>
 
-        {/* ── Movie Filter Sidebar (desktop: fixed left, mobile: slide-in drawer) ── */}
-        {movieSidebarOpen ? (
+        {/* ── Category Filter Sidebar (desktop: fixed left, mobile: slide-in drawer) ── */}
+        {categorySidebarOpen ? (
           <>
             {/* Mobile overlay */}
             <div
               className="fixed inset-0 z-40 bg-black/40 lg:hidden"
-              onClick={() => setMovieSidebarOpen(false)}
+              onClick={() => setCategorySidebarOpen(false)}
               onKeyDown={() => {}}
               role="presentation"
             />
@@ -13115,13 +13281,15 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
               {/* Close button (mobile only) */}
               <button
                 type="button"
-                onClick={() => setMovieSidebarOpen(false)}
+                onClick={() => setCategorySidebarOpen(false)}
                 className="mb-4 self-end rounded-full p-1.5 text-[var(--svs-muted)] transition hover:bg-slate-100 hover:text-[var(--svs-text)] lg:hidden"
                 aria-label="Close filters"
               >
                 <X className="h-5 w-5" />
               </button>
 
+              {activeCategory === 'Movies' ? (
+              <>
               {/* Movie Genre */}
               <div className="border-b border-slate-200 pb-4">
                 <button type="button" onClick={() => setSidebarGenreOpen((p) => !p)} className="flex w-full items-center justify-between">
@@ -13220,11 +13388,90 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
                   </div>
                 ) : null}
               </div>
+              </>
+              ) : null}
+
+              {(activeCategory === 'Concerts' || activeCategory === 'Sports' || activeCategory === 'Travel') ? (
+              <>
+              {/* Genre / Type (dynamic) */}
+              <div className="border-b border-slate-200 pb-4">
+                <button type="button" onClick={() => setNonMovieSectionOpen((p) => ({ ...p, type: !p.type }))} className="flex w-full items-center justify-between">
+                  <h3 className="text-[16px] font-bold text-[var(--svs-text)]">{{ Concerts: 'Music Genre', Sports: 'Sport Type', Travel: 'Travel Mode' }[activeCategory]}</h3>
+                  <ChevronDown className={`h-4.5 w-4.5 text-[var(--svs-muted)] transition-transform ${nonMovieSectionOpen.type ? 'rotate-180' : ''}`} />
+                </button>
+                {nonMovieSectionOpen.type ? (
+                  <div className="mt-3 space-y-2.5">
+                    {nonMovieFilterOptions[activeCategory].type.map((value) => (
+                      <label key={value} className="flex cursor-pointer items-center gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={nonMovieFilters[activeCategory].type.includes(value)}
+                          onChange={() => toggleNonMovieFilter(activeCategory, 'type', value)}
+                          className="h-4 w-4 rounded border-slate-300 text-[var(--svs-primary)] accent-[var(--svs-primary)]"
+                        />
+                        <span className="text-[15px] text-[var(--svs-text)]">{value}</span>
+                      </label>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Location (dynamic) */}
+              <div className="mt-5 border-b border-slate-200 pb-4">
+                <button type="button" onClick={() => setNonMovieSectionOpen((p) => ({ ...p, location: !p.location }))} className="flex w-full items-center justify-between">
+                  <h3 className="text-[16px] font-bold text-[var(--svs-text)]">Location</h3>
+                  <ChevronDown className={`h-4.5 w-4.5 text-[var(--svs-muted)] transition-transform ${nonMovieSectionOpen.location ? 'rotate-180' : ''}`} />
+                </button>
+                {nonMovieSectionOpen.location ? (
+                  <div className="mt-3 space-y-2.5">
+                    {nonMovieFilterOptions[activeCategory].location.length > 0 ? nonMovieFilterOptions[activeCategory].location.map((value) => (
+                      <label key={value} className="flex cursor-pointer items-center gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={nonMovieFilters[activeCategory].location.includes(value)}
+                          onChange={() => toggleNonMovieFilter(activeCategory, 'location', value)}
+                          className="h-4 w-4 rounded border-slate-300 text-[var(--svs-primary)] accent-[var(--svs-primary)]"
+                        />
+                        <span className="text-[15px] text-[var(--svs-text)]">{value}</span>
+                      </label>
+                    )) : (
+                      <p className="text-sm text-[var(--svs-muted)]">No locations available</p>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Provider / Organizer (dynamic) */}
+              <div className="mt-5 border-b border-slate-200 pb-4">
+                <button type="button" onClick={() => setNonMovieSectionOpen((p) => ({ ...p, provider: !p.provider }))} className="flex w-full items-center justify-between">
+                  <h3 className="text-[16px] font-bold text-[var(--svs-text)]">{activeCategory === 'Travel' ? 'Transport Provider' : 'Provider / Organizer'}</h3>
+                  <ChevronDown className={`h-4.5 w-4.5 text-[var(--svs-muted)] transition-transform ${nonMovieSectionOpen.provider ? 'rotate-180' : ''}`} />
+                </button>
+                {nonMovieSectionOpen.provider ? (
+                  <div className="mt-3 space-y-2.5">
+                    {nonMovieFilterOptions[activeCategory].provider.length > 0 ? nonMovieFilterOptions[activeCategory].provider.map((value) => (
+                      <label key={value} className="flex cursor-pointer items-center gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={nonMovieFilters[activeCategory].provider.includes(value)}
+                          onChange={() => toggleNonMovieFilter(activeCategory, 'provider', value)}
+                          className="h-4 w-4 rounded border-slate-300 text-[var(--svs-primary)] accent-[var(--svs-primary)]"
+                        />
+                        <span className="text-[15px] text-[var(--svs-text)]">{value}</span>
+                      </label>
+                    )) : (
+                      <p className="text-sm text-[var(--svs-muted)]">No providers available</p>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+              </>
+              ) : null}
 
               {/* Apply Filters button */}
               <button
                 type="button"
-                onClick={applyMovieSidebarFilters}
+                onClick={applyCategorySidebarFilters}
                 className={`${cudyBluePrimaryButtonClassName} mt-8 w-full rounded-lg bg-[#0f9fb2] py-3 text-sm font-semibold text-white transition hover:bg-[#0d8a9c]`}
               >
                 Apply Filters
@@ -13234,16 +13481,16 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
         ) : null}
 
         {/* ── Main content area ── */}
-        <div className={movieSidebarOpen ? 'min-w-0 flex-1' : ''}>
-          {/* Mobile "Open Filters" button (visible when sidebar is closed on mobile & Movies active) */}
-          {activeCategory === 'Movies' && !movieSidebarOpen ? (
+        <div className={categorySidebarOpen ? 'min-w-0 flex-1' : ''}>
+          {/* Mobile "Open Filters" button (visible when sidebar is closed on mobile & a specific category is active) */}
+          {activeCategory !== 'All' && !categorySidebarOpen ? (
             <div className="mb-4 lg:hidden">
               <button
                 type="button"
-                onClick={() => setMovieSidebarOpen(true)}
+                onClick={() => setCategorySidebarOpen(true)}
                 className="rounded-lg border border-[var(--svs-border)] bg-white px-4 py-2 text-xs font-semibold text-[var(--svs-text)] shadow-sm transition hover:border-[var(--svs-primary)]"
               >
-                Open Movie Filters
+                Open {activeCategory} Filters
               </button>
             </div>
           ) : null}
@@ -13251,8 +13498,8 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
           {/* Content Sections */}
           {bookingsSections.length ? (
         bookingsSections.map((section, sectionIndex) => (
-          <div key={section.id} id={section.id} className={sectionIndex === 0 && movieSidebarOpen ? '' : sectionIndex === 0 ? 'mt-10 sm:mt-12' : 'mt-10 sm:mt-14'}>
-            {sectionIndex === 0 && movieSidebarOpen ? null : (
+          <div key={section.id} id={section.id} className={sectionIndex === 0 && categorySidebarOpen ? '' : sectionIndex === 0 ? 'mt-10 sm:mt-12' : 'mt-10 sm:mt-14'}>
+            {sectionIndex === 0 && categorySidebarOpen ? null : (
             <div className="mb-5 text-center">
               <h2 className="text-xl font-bold tracking-tight text-[var(--svs-text)] sm:text-2xl">{section.title}</h2>
               <p className="mt-1.5 text-xs text-[var(--svs-muted)] sm:text-sm">{section.subtitle}</p>
@@ -13410,6 +13657,7 @@ const VotingClientsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIt
             image: item.image,
             images: item.images || (item.image ? [item.image] : []),
             ...getItemDetailSizeProps(item),
+            availableQuantity: getSellerListingStock(sellerItems, item),
             marketName: t('markets.votingClients'),
             details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Beauty, fitness & sports'}`,
             priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -13467,6 +13715,7 @@ const VotingProvidersPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
             image: item.image,
             images: item.images || (item.image ? [item.image] : []),
             ...getItemDetailSizeProps(item),
+            availableQuantity: getSellerListingStock(sellerItems, item),
             marketName: t('markets.votingProviders'),
             details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Jewellery & accessories'}`,
             priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -14494,7 +14743,11 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
           </div>
           {/* Product Cards Grid */}
           <div ref={gridRef} className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-10">
-            {filteredItems.map(item => (
+            {filteredItems.map(item => {
+              const hasStockValue = item.availableQuantity !== null && item.availableQuantity !== undefined;
+              const availableQuantity = hasStockValue ? normalizeListingQuantity(item.availableQuantity, 0) : null;
+              const isOutOfStock = availableQuantity !== null && availableQuantity <= 0;
+              return (
               <div key={item.id} id={`listing-${item.id}`} className="bg-white rounded-3xl shadow-lg flex flex-col overflow-hidden hover:scale-[1.02] transition group border border-[#e0e7ef]">
                 <div className="relative aspect-[4/3] sm:aspect-auto sm:h-48 w-full overflow-hidden cursor-pointer rounded-t-3xl" onClick={() => handleOpenDetails(item)}>
                   <img src={item.image} alt={item.title} className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" />
@@ -14514,25 +14767,34 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
                   <span className="hidden sm:inline-block text-base font-medium text-[#374151] mb-2">{item.prepTime}</span>
                   <span className="sm:hidden text-[#374151] text-xs mb-1 font-medium">{item.prepTime}</span>
                   <div className="mb-2 text-base sm:text-lg font-bold text-[#0f6674]"><SalePrice price={item.price} currency={item.currency} /></div>
+                  {availableQuantity !== null ? (
+                    <p className="mb-2 text-xs text-[#0f6674]/70">
+                      Quantity: {availableQuantity}
+                      {isOutOfStock ? ' (Out of stock)' : ''}
+                    </p>
+                  ) : null}
                   <div className="mt-auto flex flex-col gap-2 sm:flex-row">
                     <button
                       type="button"
+                      disabled={isOutOfStock}
                       onClick={() => handleAddToCart(item)}
-                      className="rounded-full bg-[#0f6674] px-3 py-1.5 text-xs font-semibold text-white shadow transition hover:bg-[#33b9f2] sm:px-5 sm:py-2 sm:text-base"
+                      className="rounded-full bg-[#0f6674] px-3 py-1.5 text-xs font-semibold text-white shadow transition hover:bg-[#33b9f2] disabled:cursor-not-allowed disabled:bg-slate-400 sm:px-5 sm:py-2 sm:text-base"
                     >
-                      Add to Cart
+                      {isOutOfStock ? 'Out of stock' : 'Add to Cart'}
                     </button>
                     <button
                       type="button"
+                      disabled={isOutOfStock}
                       onClick={() => handleBuyNow(item)}
-                      className="rounded-full border border-[#0f6674] bg-white px-3 py-1.5 text-xs font-semibold text-[#0f6674] shadow transition hover:bg-[#e0f7fa] sm:px-5 sm:py-2 sm:text-base"
+                      className="rounded-full border border-[#0f6674] bg-white px-3 py-1.5 text-xs font-semibold text-[#0f6674] shadow transition hover:bg-[#e0f7fa] disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400 sm:px-5 sm:py-2 sm:text-base"
                     >
-                      Buy Now
+                      {isOutOfStock ? 'Out of stock' : 'Buy Now'}
                     </button>
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
           <button className="w-full mt-8 rounded-lg bg-[var(--svs-primary)] text-white font-bold py-2 text-base shadow hover:bg-[var(--svs-primary-strong)] transition" onClick={handleViewAll}>View All</button>
 
@@ -14649,6 +14911,7 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       image: item.image,
       images: item.images || (item.image ? [item.image] : []),
       ...getItemDetailSizeProps(item),
+      availableQuantity: getSellerListingStock(sellerItems, item),
       marketName: 'Beverages & Liquors',
       details,
       priceLabel: getSalePrices(item.price, SALE_DISCOUNT_RATE, item.currency).nowPrice,
@@ -15034,6 +15297,7 @@ const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
               image: item.image,
               images: item.images || (item.image ? [item.image] : []),
               ...getItemDetailSizeProps(item),
+              availableQuantity: getSellerListingStock(sellerItems, item),
               marketName: t('markets.wellness'),
               details: item.description || item.sellerName,
               priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -15160,6 +15424,7 @@ const TraditionalMedicinesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wis
           image: item.image,
           images: item.images || (item.image ? [item.image] : []),
           ...getItemDetailSizeProps(item),
+          availableQuantity: getSellerListingStock(sellerItems, item),
           marketName: t('markets.traditionalMedicines'),
           details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Traditional herbal listing'}`,
           priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -15364,6 +15629,7 @@ const StationeryPage = ({ onToggleWishlist, wishlistItemIds = [], sellerItems = 
       image: item.image,
       images: item.images || (item.image ? [item.image] : []),
       ...getItemDetailSizeProps(item),
+      availableQuantity: getSellerListingStock(sellerItems, item),
       marketName: t('markets.stationery'),
       details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Ready for school and office use'}`,
       priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -17902,6 +18168,7 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
         title: itemTitle,
         image: item.image,
         images: item.images || (item.image ? [item.image] : []),
+        availableQuantity: getSellerListingStock(sellerItems, item),
         marketName: t('markets.constructionTools'),
         details: buildDetailsText(item),
         priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -18551,6 +18818,9 @@ const HardwareSoftwareProductCard = ({ item, isWishlisted, onAddToCart, onToggle
   const { nowPrice } = getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency);
   const rating = reviewSummary?.average || item.rating || 4.8;
   const reviewsCount = reviewSummary?.count || item.reviewsCount || 145;
+  const hasStockValue = item.availableQuantity !== null && item.availableQuantity !== undefined;
+  const availableQuantity = hasStockValue ? normalizeListingQuantity(item.availableQuantity, 0) : null;
+  const isOutOfStock = availableQuantity !== null && availableQuantity <= 0;
   return (
     <article className="flex flex-col overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-sm transition hover:shadow-md">
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
@@ -18594,6 +18864,12 @@ const HardwareSoftwareProductCard = ({ item, isWishlisted, onAddToCart, onToggle
           <span className="font-semibold text-[var(--svs-text)]">{Number(rating).toFixed(1)}</span>
           <span>({reviewsCount})</span>
         </p>
+        {availableQuantity !== null ? (
+          <p className="text-xs text-[var(--svs-muted)] sm:text-sm">
+            Quantity: {availableQuantity}
+            {isOutOfStock ? ' (Out of stock)' : ''}
+          </p>
+        ) : null}
         <div className="mt-auto flex flex-col gap-1.5 pt-1 sm:gap-2 sm:pt-2">
           <button
             type="button"
@@ -18604,10 +18880,11 @@ const HardwareSoftwareProductCard = ({ item, isWishlisted, onAddToCart, onToggle
           </button>
           <button
             type="button"
+            disabled={isOutOfStock}
             onClick={onAddToCart}
-            className="rounded-lg border border-[var(--svs-primary)] px-3 py-1.5 text-xs font-semibold text-[var(--svs-primary-strong)] transition hover:bg-[var(--svs-primary)]/10 sm:px-4 sm:py-2 sm:text-sm"
+            className="rounded-lg border border-[var(--svs-primary)] px-3 py-1.5 text-xs font-semibold text-[var(--svs-primary-strong)] transition hover:bg-[var(--svs-primary)]/10 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400 sm:px-4 sm:py-2 sm:text-sm"
           >
-            Add to Cart
+            {isOutOfStock ? 'Out of stock' : 'Add to Cart'}
           </button>
         </div>
       </div>
@@ -18858,6 +19135,7 @@ const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       image: item.image,
       images: item.images || (item.image ? [item.image] : []),
       ...getItemDetailSizeProps(item),
+      availableQuantity: getSellerListingStock(sellerItems, item),
       marketName: t('markets.hardwareSoftware'),
       details: item.description || item.subtitle || item.sellerName,
       priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency).nowPrice,
@@ -19135,6 +19413,7 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       image: item.image,
       images: item.images || (item.image ? [item.image] : []),
       ...getItemDetailSizeProps(item),
+      availableQuantity: getSellerListingStock(sellerItems, item),
       marketName: t('markets.mobilityVehicles'),
       details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Transport listing'}`,
       priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -21025,12 +21304,131 @@ const GENERAL_LABOUR_AVAILABILITY_OPTIONS = [...GENERAL_LABOUR_WEEK_DAYS, 'Publi
 // availableDays explicitly (e.g. a "Weekends" worker defaults to Sat & Sun).
 const getWorkerAvailableDays = (worker = {}) => {
   if (Array.isArray(worker.availableDays) && worker.availableDays.length) {
-    return GENERAL_LABOUR_WEEK_DAYS.filter((day) => worker.availableDays.includes(day));
+    // Filter against the 8-option list (includes "Public Holiday") rather
+    // than the 7-day week list — filtering against the week list alone
+    // silently dropped "Public Holiday" even when the worker explicitly
+    // opted in, since it isn't one of the 7 real weekdays.
+    return GENERAL_LABOUR_AVAILABILITY_OPTIONS.filter((day) => worker.availableDays.includes(day));
   }
   const schedulePreference = worker.schedulePreference;
   if (schedulePreference === 'Weekdays') return GENERAL_LABOUR_WEEK_DAYS.slice(0, 5);
   if (schedulePreference === 'Weekends') return GENERAL_LABOUR_WEEK_DAYS.slice(5);
   return GENERAL_LABOUR_WEEK_DAYS;
+};
+
+// Working-hours window for a given day — shared by General Labour and
+// Home-Care. Falls back to a generic full-day range for listings that set
+// availableDays but never configured specific hours, so older/catalog
+// workers/providers keep behaving like "available all day".
+const DEFAULT_AVAILABILITY_HOURS_RANGE = { start: '08:00', end: '17:00' };
+const getDayAvailabilityHours = (entity = {}, day) =>
+  (entity.availabilityHours && entity.availabilityHours[day]) || DEFAULT_AVAILABILITY_HOURS_RANGE;
+
+// Booking duration — shared by General Labour and Home-Care booking modals.
+// Stored/queried in minutes so conflict-checking is real interval overlap
+// math, not just an exact-string-match on the start time.
+const BOOKING_DURATION_OPTIONS = [
+  { minutes: 30, label: '30 minutes' },
+  { minutes: 60, label: '1 hour' },
+  { minutes: 120, label: '2 hours' },
+  { minutes: 240, label: '4 hours' },
+  { minutes: 480, label: 'Full day (8 hours)' },
+];
+const timeToMinutes = (time) => {
+  const [hours, minutes] = String(time || '0:0').split(':').map(Number);
+  return (hours || 0) * 60 + (minutes || 0);
+};
+const minutesToTime = (totalMinutes) => {
+  const wrapped = ((totalMinutes % 1440) + 1440) % 1440;
+  const hours = Math.floor(wrapped / 60);
+  const minutes = wrapped % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+};
+const doRangesOverlap = (startA, endA, startB, endB) => startA < endB && startB < endA;
+
+const BOOKING_CALENDAR_STATUS_DOT = {
+  requested: 'bg-amber-500',
+  confirmed: 'bg-blue-500',
+  completed: 'bg-emerald-500',
+  declined: 'bg-red-500',
+  cancelled: 'bg-slate-400',
+  expired: 'bg-slate-300',
+};
+
+// Shared month-grid calendar for the General Labour / Home-Care seller
+// "Booking Requests" panels. Presentational only — the parent owns the
+// booking list and the selected-date filter; this just draws the grid, a
+// dot per booking on each day, and month navigation.
+const BookingCalendarGrid = ({ bookings, dateKey = 'bookingDate', selectedDate, onSelectDate }) => {
+  const [visibleMonth, setVisibleMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+
+  const bookingsByDate = useMemo(() => {
+    const map = {};
+    bookings.forEach((booking) => {
+      const date = booking[dateKey];
+      if (!date) return;
+      if (!map[date]) map[date] = [];
+      map[date].push(booking);
+    });
+    return map;
+  }, [bookings, dateKey]);
+
+  const year = visibleMonth.getFullYear();
+  const month = visibleMonth.getMonth();
+  const startWeekday = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const todayIso = new Date().toISOString().slice(0, 10);
+
+  const cells = [];
+  for (let i = 0; i < startWeekday; i += 1) cells.push(null);
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    cells.push(`${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
+  }
+
+  return (
+    <div>
+      <div className="mb-3 flex items-center justify-between">
+        <button type="button" onClick={() => setVisibleMonth(new Date(year, month - 1, 1))} className="rounded-md p-1.5 text-[var(--svs-muted)] hover:bg-[var(--svs-surface-soft)]" aria-label="Previous month">
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <p className="text-sm font-bold text-[var(--svs-text)]">{visibleMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</p>
+        <button type="button" onClick={() => setVisibleMonth(new Date(year, month + 1, 1))} className="rounded-md p-1.5 text-[var(--svs-muted)] hover:bg-[var(--svs-surface-soft)]" aria-label="Next month">
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold text-[var(--svs-muted)]">
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => <span key={d}>{d}</span>)}
+      </div>
+      <div className="mt-1 grid grid-cols-7 gap-1">
+        {cells.map((iso, index) => {
+          if (!iso) return <div key={`empty-${index}`} />;
+          const dayBookings = bookingsByDate[iso] || [];
+          const isSelected = selectedDate === iso;
+          const isToday = iso === todayIso;
+          return (
+            <button
+              key={iso}
+              type="button"
+              onClick={() => onSelectDate(isSelected ? '' : iso)}
+              className={`flex h-12 flex-col items-center justify-center rounded-lg border text-xs transition ${isSelected ? 'border-[var(--svs-primary)] bg-[var(--svs-primary)]/10' : isToday ? 'border-[var(--svs-primary)]' : 'border-[var(--svs-border)]'} ${dayBookings.length ? 'font-bold text-[var(--svs-text)]' : 'text-[var(--svs-muted)]'}`}
+            >
+              <span>{Number(iso.slice(-2))}</span>
+              {dayBookings.length ? (
+                <span className="mt-0.5 flex gap-0.5">
+                  {dayBookings.slice(0, 3).map((booking) => (
+                    <span key={booking.id} className={`h-1.5 w-1.5 rounded-full ${BOOKING_CALENDAR_STATUS_DOT[booking.status] || 'bg-slate-400'}`} />
+                  ))}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 };
 
 // Pricing-section tiers — prefers the worker's own explicit Daily / Weekly /
@@ -21203,6 +21601,7 @@ const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       image: item.image,
       images: item.images || (item.image ? [item.image] : []),
       ...getItemDetailSizeProps(item),
+      availableQuantity: getSellerListingStock(sellerItems, item),
       marketName: t('markets.naturalResources'),
       details: `${item.category || 'Seller item'} • ${item.brand || item.sellerName || 'Resource listing'}${item.unit ? ` • Sold per ${item.unit}` : ''}`,
       priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -22628,6 +23027,8 @@ const emptyGeneralLabourSellForm = () => ({
   schedulePreference: '',
   availability: '',
   availableDays: [],
+  availabilityHours: {},
+  unavailableDates: [],
   phone: '',
   bio: '',
   keyHighlights: '',
@@ -22636,7 +23037,9 @@ const emptyGeneralLabourSellForm = () => ({
   certifications: '',
 });
 
-const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdateSellerItem, onDeleteSellerItem }) => {
+const DEFAULT_AVAILABILITY_HOURS = { start: '08:00', end: '17:00' };
+
+const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdateSellerItem, onDeleteSellerItem, onPushNotificationToUser }) => {
   const navigate = useNavigate();
   const [form, setForm] = useState(emptyGeneralLabourSellForm);
   const [editingId, setEditingId] = useState(null);
@@ -22659,6 +23062,13 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
   const [bookingRequests, setBookingRequests] = useState([]);
   const [isLoadingBookingRequests, setIsLoadingBookingRequests] = useState(true);
   const [bookingActionId, setBookingActionId] = useState('');
+  const [bookingView, setBookingView] = useState('list');
+  const [calendarSelectedDate, setCalendarSelectedDate] = useState('');
+  const [reschedulingBookingId, setReschedulingBookingId] = useState('');
+  const [rescheduleDate, setRescheduleDate] = useState('');
+  const [rescheduleTime, setRescheduleTime] = useState('');
+  const [rescheduleError, setRescheduleError] = useState('');
+  const [isSavingReschedule, setIsSavingReschedule] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated || !userEmail || !hasSupabaseEnv || !supabase) {
@@ -22705,7 +23115,86 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
     });
   };
 
+  // Seller-driven reschedule: directly moves a booking to a new date/time
+  // (validated against the worker's own hours/blackout dates and their
+  // other bookings) and notifies the buyer. This is intentionally a direct
+  // edit, not a propose/accept exchange — the buyer can always counter in
+  // chat, and the seller can move it again or decline.
+  const handleStartReschedule = (booking) => {
+    setReschedulingBookingId(booking.id);
+    setRescheduleDate(booking.bookingDate || '');
+    setRescheduleTime(booking.bookingTime || '');
+    setRescheduleError('');
+  };
+  const handleCancelReschedule = () => {
+    setReschedulingBookingId('');
+    setRescheduleDate('');
+    setRescheduleTime('');
+    setRescheduleError('');
+  };
+  const handleSaveReschedule = async (booking) => {
+    if (!rescheduleDate || !rescheduleTime) {
+      setRescheduleError('Pick both a date and a time.');
+      return;
+    }
+    const worker = myListings.find((listing) => listing.id === booking.workerId);
+    if (worker) {
+      const [year, month, day] = rescheduleDate.split('-').map(Number);
+      const weekdayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][new Date(year, (month || 1) - 1, day || 1).getDay()];
+      const availableDays = getWorkerAvailableDays(worker);
+      const unavailableDates = Array.isArray(worker.unavailableDates) ? worker.unavailableDates : [];
+      if (unavailableDates.includes(rescheduleDate)) {
+        setRescheduleError(`${booking.workerName} has marked ${rescheduleDate} as unavailable.`);
+        return;
+      }
+      if (!availableDays.includes(weekdayName)) {
+        setRescheduleError(`${booking.workerName} is not available on ${weekdayName}s.`);
+        return;
+      }
+      const dayHours = getDayAvailabilityHours(worker, weekdayName);
+      const startMinutes = timeToMinutes(rescheduleTime);
+      const endMinutes = startMinutes + (booking.durationMinutes || 60);
+      if (startMinutes < timeToMinutes(dayHours.start) || endMinutes > timeToMinutes(dayHours.end)) {
+        setRescheduleError(`That doesn't fit within working hours (${dayHours.start}–${dayHours.end}) for this booking's duration.`);
+        return;
+      }
+      const overlaps = bookingRequests.some((other) => {
+        if (other.id === booking.id || other.workerId !== booking.workerId) return false;
+        if (GENERAL_LABOUR_BOOKING_INACTIVE_STATUSES.includes(other.status)) return false;
+        if (other.bookingDate !== rescheduleDate) return false;
+        const otherStart = timeToMinutes(other.bookingTime);
+        return doRangesOverlap(startMinutes, endMinutes, otherStart, otherStart + (other.durationMinutes || 60));
+      });
+      if (overlaps) {
+        setRescheduleError('That overlaps another booking for this worker on that date.');
+        return;
+      }
+    }
+
+    setIsSavingReschedule(true);
+    const { error } = await supabase
+      .from('general_labour_bookings')
+      .update({ booking_date: rescheduleDate, booking_time: rescheduleTime })
+      .eq('id', booking.id);
+    setIsSavingReschedule(false);
+    if (error) {
+      setRescheduleError(error.message);
+      return;
+    }
+    setBookingRequests((current) => current.map((entry) => (entry.id === booking.id ? { ...entry, bookingDate: rescheduleDate, bookingTime: rescheduleTime } : entry)));
+    onPushNotificationToUser?.(booking.buyerEmail, {
+      type: 'info',
+      title: 'Booking rescheduled',
+      message: `Your booking with ${booking.workerName} has been moved to ${rescheduleDate} at ${rescheduleTime}.`,
+      href: `/general-labour-market/worker/${booking.workerId}`,
+    });
+    handleCancelReschedule();
+  };
+
   const pendingBookingRequestCount = bookingRequests.filter((booking) => booking.status === 'requested').length;
+  const visibleBookingRequests = calendarSelectedDate
+    ? bookingRequests.filter((booking) => booking.bookingDate === calendarSelectedDate)
+    : bookingRequests;
 
   useEffect(() => {
     if (!imageFiles.length) {
@@ -22725,12 +23214,46 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
   };
 
   const handleToggleAvailableDay = (day) => {
+    setForm((current) => {
+      const isCurrentlyOn = current.availableDays.includes(day);
+      const nextHours = { ...current.availabilityHours };
+      if (isCurrentlyOn) {
+        delete nextHours[day];
+      } else {
+        nextHours[day] = { ...DEFAULT_AVAILABILITY_HOURS };
+      }
+      return {
+        ...current,
+        availableDays: isCurrentlyOn
+          ? current.availableDays.filter((entry) => entry !== day)
+          : [...current.availableDays, day],
+        availabilityHours: nextHours,
+      };
+    });
+  };
+
+  const handleAvailabilityHourChange = (day, field, value) => {
     setForm((current) => ({
       ...current,
-      availableDays: current.availableDays.includes(day)
-        ? current.availableDays.filter((entry) => entry !== day)
-        : [...current.availableDays, day],
+      availabilityHours: {
+        ...current.availabilityHours,
+        [day]: { ...(current.availabilityHours[day] || DEFAULT_AVAILABILITY_HOURS), [field]: value },
+      },
     }));
+  };
+
+  const [unavailableDateInput, setUnavailableDateInput] = useState('');
+  const handleAddUnavailableDate = () => {
+    const value = unavailableDateInput;
+    if (!value || form.unavailableDates.includes(value)) {
+      setUnavailableDateInput('');
+      return;
+    }
+    setForm((current) => ({ ...current, unavailableDates: [...current.unavailableDates, value].sort() }));
+    setUnavailableDateInput('');
+  };
+  const handleRemoveUnavailableDate = (date) => {
+    setForm((current) => ({ ...current, unavailableDates: current.unavailableDates.filter((entry) => entry !== date) }));
   };
 
   const handleImagePick = (event) => {
@@ -22754,6 +23277,7 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
     setExistingImageUrls([]);
     setOriginalImageUrls([]);
     setImageFiles([]);
+    setUnavailableDateInput('');
   };
 
   const handleEdit = (listing) => {
@@ -22785,6 +23309,8 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
       schedulePreference: listing.schedulePreference || '',
       availability: listing.availability || '',
       availableDays: Array.isArray(listing.availableDays) ? listing.availableDays : [],
+      availabilityHours: (listing.availabilityHours && typeof listing.availabilityHours === 'object') ? listing.availabilityHours : {},
+      unavailableDates: Array.isArray(listing.unavailableDates) ? listing.unavailableDates : [],
       phone: listing.phone || '',
       bio: listing.productOverview || listing.bio || '',
       keyHighlights: Array.isArray(listing.keyHighlights) ? listing.keyHighlights.join('\n') : (Array.isArray(listing.skills) ? listing.skills.join('\n') : ''),
@@ -22910,6 +23436,8 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
       schedulePreference: form.schedulePreference,
       availability: trimmedAvailability,
       ...(form.availableDays.length ? { availableDays: form.availableDays } : {}),
+      ...(Object.keys(form.availabilityHours).length ? { availabilityHours: form.availabilityHours } : {}),
+      ...(form.unavailableDates.length ? { unavailableDates: form.unavailableDates } : {}),
       phone: trimmedPhone,
       ...(form.bio.trim() ? { productOverview: form.bio.trim() } : {}),
       ...(keyHighlights.length ? { keyHighlights } : {}),
@@ -23133,7 +23661,7 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
             </div>
             <div className="mt-4">
               <label className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Days available</label>
-              <p className="mb-2 text-xs text-[var(--svs-muted)]">Select every day you're available to work. Leave blank to use your schedule preference above. Toggle "Public Holiday" too so employers know upfront whether you work public holidays.</p>
+              <p className="mb-2 text-xs text-[var(--svs-muted)]">Select every day you're available to work, then set the hours you work that day. Toggle "Public Holiday" too so employers know upfront whether you work public holidays, and at what time.</p>
               <div className="flex flex-wrap gap-2">
                 {GENERAL_LABOUR_AVAILABILITY_OPTIONS.map((day) => {
                   const isSelected = form.availableDays.includes(day);
@@ -23150,6 +23678,65 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
                   );
                 })}
               </div>
+              {form.availableDays.length ? (
+                <div className="mt-3 space-y-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3">
+                  {GENERAL_LABOUR_AVAILABILITY_OPTIONS.filter((day) => form.availableDays.includes(day)).map((day) => {
+                    const hours = form.availabilityHours[day] || DEFAULT_AVAILABILITY_HOURS;
+                    return (
+                      <div key={`hours-${day}`} className="flex flex-wrap items-center gap-2 text-xs">
+                        <span className="w-28 shrink-0 font-semibold text-[var(--svs-text)]">{day}</span>
+                        <input
+                          type="time"
+                          value={hours.start}
+                          onChange={(event) => handleAvailabilityHourChange(day, 'start', event.target.value)}
+                          className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2 py-1 text-xs text-[var(--svs-text)] outline-none"
+                        />
+                        <span className="text-[var(--svs-muted)]">to</span>
+                        <input
+                          type="time"
+                          value={hours.end}
+                          onChange={(event) => handleAvailabilityHourChange(day, 'end', event.target.value)}
+                          className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2 py-1 text-xs text-[var(--svs-text)] outline-none"
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="mt-4">
+              <label className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Unavailable dates</label>
+              <p className="mb-2 text-xs text-[var(--svs-muted)]">Mark specific dates you're off even on a normally-available day (leave, fully booked elsewhere, etc.). Buyers won't be able to book you on these dates.</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="date"
+                  value={unavailableDateInput}
+                  onChange={(event) => setUnavailableDateInput(event.target.value)}
+                  min={new Date().toISOString().slice(0, 10)}
+                  className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddUnavailableDate}
+                  disabled={!unavailableDateInput}
+                  className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-xs font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Add date
+                </button>
+              </div>
+              {form.unavailableDates.length ? (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {form.unavailableDates.map((date) => (
+                    <span key={date} className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
+                      {date}
+                      <button type="button" onClick={() => handleRemoveUnavailableDate(date)} aria-label={`Remove ${date}`} className="text-rose-500 hover:text-rose-700">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : null}
             </div>
 
             {/* Contact — how employers reach this worker */}
@@ -23316,13 +23903,28 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
               ) : null}
             </div>
             <p className="mb-3 text-xs text-[var(--svs-muted)]">No payment is attached to these — confirm or decline, then discuss the job in chat.</p>
+            <div className="mb-3 inline-flex rounded-lg border border-[var(--svs-border)] p-0.5">
+              <button type="button" onClick={() => setBookingView('list')} className={`rounded-md px-3 py-1 text-xs font-semibold transition ${bookingView === 'list' ? 'bg-[var(--svs-primary)] text-white' : 'text-[var(--svs-text)]'}`}>List</button>
+              <button type="button" onClick={() => setBookingView('calendar')} className={`rounded-md px-3 py-1 text-xs font-semibold transition ${bookingView === 'calendar' ? 'bg-[var(--svs-primary)] text-white' : 'text-[var(--svs-text)]'}`}>Calendar</button>
+            </div>
+            {bookingView === 'calendar' ? (
+              <div className="mb-4 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3">
+                <BookingCalendarGrid bookings={bookingRequests} dateKey="bookingDate" selectedDate={calendarSelectedDate} onSelectDate={setCalendarSelectedDate} />
+              </div>
+            ) : null}
+            {calendarSelectedDate ? (
+              <div className="mb-3 flex items-center justify-between rounded-md bg-[var(--svs-cyan-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--svs-primary-strong)]">
+                <span>Showing bookings for {calendarSelectedDate}</span>
+                <button type="button" onClick={() => setCalendarSelectedDate('')} className="text-[var(--svs-primary)] hover:underline">Clear</button>
+              </div>
+            ) : null}
             {isLoadingBookingRequests ? (
               <p className="text-xs text-[var(--svs-muted)]">Loading booking requests…</p>
-            ) : bookingRequests.length === 0 ? (
-              <p className="text-xs text-[var(--svs-muted)]">No booking requests yet — buyers will appear here when they book one of your worker profiles.</p>
+            ) : visibleBookingRequests.length === 0 ? (
+              <p className="text-xs text-[var(--svs-muted)]">{calendarSelectedDate ? 'No bookings on this date.' : 'No booking requests yet — buyers will appear here when they book one of your worker profiles.'}</p>
             ) : (
               <ul className="space-y-3">
-                {bookingRequests.map((booking) => (
+                {visibleBookingRequests.map((booking) => (
                   <li key={booking.id} className="rounded-lg border border-[var(--svs-border)] p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
@@ -23333,48 +23935,73 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
                         {booking.status}
                       </span>
                     </div>
-                    <p className="mt-1.5 text-[11px] text-[var(--svs-muted)]">Requested date: {booking.bookingDate || '—'}</p>
+                    <p className="mt-1.5 text-[11px] text-[var(--svs-muted)]">Requested date: {booking.bookingDate || '—'}{booking.bookingTime ? ` at ${booking.bookingTime}` : ''}{booking.bookingTime ? ` (${formatDurationMinutes(booking.durationMinutes)})` : ''}</p>
                     {booking.notes ? <p className="mt-1 text-[11px] italic text-[var(--svs-muted)]">"{booking.notes}"</p> : null}
                     <p className="mt-1 text-[10px] text-[var(--svs-muted)]">Submitted: {formatTimestampWithSeconds(booking.createdAt)}</p>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {booking.status !== 'confirmed' && booking.status !== 'completed' ? (
+                    {reschedulingBookingId === booking.id ? (
+                      <div className="mt-2 space-y-2 rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-2">
+                        <div className="flex flex-wrap gap-2">
+                          <input type="date" value={rescheduleDate} min={new Date().toISOString().slice(0, 10)} onChange={(event) => setRescheduleDate(event.target.value)} className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2 py-1 text-xs text-[var(--svs-text)] outline-none" />
+                          <input type="time" value={rescheduleTime} onChange={(event) => setRescheduleTime(event.target.value)} className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2 py-1 text-xs text-[var(--svs-text)] outline-none" />
+                        </div>
+                        {rescheduleError ? <p className="text-[11px] font-semibold text-rose-600">{rescheduleError}</p> : null}
+                        <div className="flex gap-1.5">
+                          <button type="button" disabled={isSavingReschedule} onClick={() => handleSaveReschedule(booking)} className="rounded-md bg-[var(--svs-primary)] px-2 py-1 text-[10px] font-semibold text-white disabled:opacity-50">
+                            {isSavingReschedule ? 'Saving…' : 'Save new time'}
+                          </button>
+                          <button type="button" onClick={handleCancelReschedule} className="rounded-md border border-[var(--svs-border)] px-2 py-1 text-[10px] font-semibold text-[var(--svs-text)]">Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {booking.status !== 'confirmed' && booking.status !== 'completed' ? (
+                          <button
+                            type="button"
+                            disabled={bookingActionId === booking.id}
+                            onClick={() => handleUpdateBookingRequestStatus(booking.id, 'confirmed')}
+                            className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-[10px] font-semibold text-blue-700 hover:border-blue-300 disabled:opacity-50"
+                          >
+                            Confirm
+                          </button>
+                        ) : null}
+                        {booking.status !== 'completed' ? (
+                          <button
+                            type="button"
+                            disabled={bookingActionId === booking.id}
+                            onClick={() => handleUpdateBookingRequestStatus(booking.id, 'completed')}
+                            className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 hover:border-emerald-300 disabled:opacity-50"
+                          >
+                            Complete
+                          </button>
+                        ) : null}
+                        {booking.status !== 'declined' && booking.status !== 'completed' ? (
+                          <button
+                            type="button"
+                            disabled={bookingActionId === booking.id}
+                            onClick={() => handleUpdateBookingRequestStatus(booking.id, 'declined')}
+                            className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-700 hover:border-red-300 disabled:opacity-50"
+                          >
+                            Decline
+                          </button>
+                        ) : null}
+                        {!GENERAL_LABOUR_BOOKING_INACTIVE_STATUSES.includes(booking.status) ? (
+                          <button
+                            type="button"
+                            onClick={() => handleStartReschedule(booking)}
+                            className="rounded-md border border-[var(--svs-border)] px-2 py-1 text-[10px] font-semibold text-[var(--svs-text)] hover:border-[var(--svs-primary)]"
+                          >
+                            Reschedule
+                          </button>
+                        ) : null}
                         <button
                           type="button"
-                          disabled={bookingActionId === booking.id}
-                          onClick={() => handleUpdateBookingRequestStatus(booking.id, 'confirmed')}
-                          className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-[10px] font-semibold text-blue-700 hover:border-blue-300 disabled:opacity-50"
+                          onClick={() => goToChatWithBookingBuyer(booking)}
+                          className="ml-auto inline-flex items-center gap-1 rounded-md border border-[var(--svs-border)] px-2 py-1 text-[10px] font-semibold text-[var(--svs-text)] hover:border-[var(--svs-primary)]"
                         >
-                          Confirm
+                          <MessageCircle className="h-3 w-3" /> Chat
                         </button>
-                      ) : null}
-                      {booking.status !== 'completed' ? (
-                        <button
-                          type="button"
-                          disabled={bookingActionId === booking.id}
-                          onClick={() => handleUpdateBookingRequestStatus(booking.id, 'completed')}
-                          className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 hover:border-emerald-300 disabled:opacity-50"
-                        >
-                          Complete
-                        </button>
-                      ) : null}
-                      {booking.status !== 'declined' && booking.status !== 'completed' ? (
-                        <button
-                          type="button"
-                          disabled={bookingActionId === booking.id}
-                          onClick={() => handleUpdateBookingRequestStatus(booking.id, 'declined')}
-                          className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-700 hover:border-red-300 disabled:opacity-50"
-                        >
-                          Decline
-                        </button>
-                      ) : null}
-                      <button
-                        type="button"
-                        onClick={() => goToChatWithBookingBuyer(booking)}
-                        className="ml-auto inline-flex items-center gap-1 rounded-md border border-[var(--svs-border)] px-2 py-1 text-[10px] font-semibold text-[var(--svs-text)] hover:border-[var(--svs-primary)]"
-                      >
-                        <MessageCircle className="h-3 w-3" /> Chat
-                      </button>
-                    </div>
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -23400,13 +24027,40 @@ const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onPushNotificationToU
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [bookingDate, setBookingDate] = useState('');
   const [bookingDateError, setBookingDateError] = useState('');
+  const [bookingTime, setBookingTime] = useState('');
+  const [bookingDuration, setBookingDuration] = useState(BOOKING_DURATION_OPTIONS[1].minutes);
   const [bookingNotes, setBookingNotes] = useState('');
   const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
   const [bookingSubmitError, setBookingSubmitError] = useState('');
   const [submittedBooking, setSubmittedBooking] = useState(null);
+  const [existingBookings, setExistingBookings] = useState([]);
 
   const allWorkers = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'generalLabour'), ...generalLabourItems], [sellerItems]);
   const worker = allWorkers.find((candidate) => candidate.id === workerId) || null;
+
+  // Fetches every still-active (not declined/cancelled) booking against this
+  // worker so the booking modal can flag real interval-overlap conflicts and
+  // steer a buyer to a free slot instead of double-booking someone else's
+  // request.
+  useEffect(() => {
+    if (!worker?.id || !hasSupabaseEnv || !supabase) {
+      setExistingBookings([]);
+      return;
+    }
+    let isCancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('general_labour_bookings')
+        .select('booking_date, booking_time, duration_minutes, status')
+        .eq('worker_id', worker.id)
+        .not('status', 'in', '(declined,cancelled)');
+      if (isCancelled) return;
+      if (!error) {
+        setExistingBookings((data || []).map((row) => ({ date: row.booking_date, time: row.booking_time, duration: row.duration_minutes || 60 })));
+      }
+    })();
+    return () => { isCancelled = true; };
+  }, [worker?.id]);
 
   if (!worker) {
     return (
@@ -23473,28 +24127,53 @@ const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onPushNotificationToU
   const closeBookingModal = () => {
     setIsBookingModalOpen(false);
     setBookingDate('');
+    setBookingTime('');
+    setBookingDuration(BOOKING_DURATION_OPTIONS[1].minutes);
     setBookingNotes('');
     setBookingDateError('');
     setBookingSubmitError('');
     setSubmittedBooking(null);
   };
+  const unavailableDates = Array.isArray(worker.unavailableDates) ? worker.unavailableDates : [];
+  const getWeekdayNameForDate = (isoDate) => {
+    const [year, month, day] = isoDate.split('-').map(Number);
+    return WEEKDAY_NAMES[new Date(year, (month || 1) - 1, day || 1).getDay()];
+  };
   const handleBookingDateChange = (event) => {
     const value = event.target.value;
     setBookingDate(value);
+    setBookingTime('');
     if (!value) {
       setBookingDateError('');
       return;
     }
-    const [year, month, day] = value.split('-').map(Number);
-    const parsedDate = new Date(year, (month || 1) - 1, day || 1);
-    const weekdayName = WEEKDAY_NAMES[parsedDate.getDay()];
+    if (unavailableDates.includes(value)) {
+      setBookingDateError(`${workerChatName} has marked ${value} as unavailable. Please pick another date.`);
+      return;
+    }
+    const weekdayName = getWeekdayNameForDate(value);
     if (!availableDays.includes(weekdayName)) {
       setBookingDateError(`${workerChatName} is not available on ${weekdayName}s. Available days: ${availableDays.join(', ')}.`);
     } else {
       setBookingDateError('');
     }
   };
-  const canSendBooking = Boolean(bookingDate) && !bookingDateError && !isSubmittingBooking;
+  const bookingWeekdayName = bookingDate ? getWeekdayNameForDate(bookingDate) : '';
+  const bookingDayHours = bookingWeekdayName ? getDayAvailabilityHours(worker, bookingWeekdayName) : null;
+  const bookingStartMinutes = bookingTime ? timeToMinutes(bookingTime) : null;
+  const bookingEndMinutes = bookingStartMinutes != null ? bookingStartMinutes + bookingDuration : null;
+  const bookingsOnDate = bookingDate ? existingBookings.filter((b) => b.date === bookingDate && b.time) : [];
+  const takenRangesForDate = bookingsOnDate.map((b) => {
+    const start = timeToMinutes(b.time);
+    return `${b.time}–${minutesToTime(start + (b.duration || 60))}`;
+  });
+  const isTimeOverlapping = bookingStartMinutes != null && bookingsOnDate.some((b) => {
+    const start = timeToMinutes(b.time);
+    return doRangesOverlap(bookingStartMinutes, bookingEndMinutes, start, start + (b.duration || 60));
+  });
+  const exceedsDayHours = bookingDayHours && bookingEndMinutes != null
+    && (bookingStartMinutes < timeToMinutes(bookingDayHours.start) || bookingEndMinutes > timeToMinutes(bookingDayHours.end));
+  const canSendBooking = Boolean(bookingDate) && Boolean(bookingTime) && !bookingDateError && !isTimeOverlapping && !exceedsDayHours && !isSubmittingBooking;
   const handleSendBookingRequest = async () => {
     if (!canSendBooking) return;
 
@@ -23523,6 +24202,8 @@ const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onPushNotificationToU
       buyer_name: buyerName,
       buyer_phone: buyerPhone,
       booking_date: bookingDate,
+      booking_time: bookingTime,
+      duration_minutes: bookingDuration,
       notes: trimmedNotes,
       status: 'requested',
     });
@@ -23533,21 +24214,23 @@ const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onPushNotificationToU
       return;
     }
 
+    const durationLabel = BOOKING_DURATION_OPTIONS.find((option) => option.minutes === bookingDuration)?.label || '1 hour';
     const formattedDate = new Date(bookingDate).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     onPushNotificationToUser?.(workerChatEmail, {
       type: 'info',
       title: 'New booking request',
-      message: `A buyer would like to book you for ${formattedDate}.${trimmedNotes ? ` Note: ${trimmedNotes}` : ''} No payment has been made — discuss the details in chat.`,
+      message: `A buyer would like to book you for ${formattedDate} at ${bookingTime} (${durationLabel}).${trimmedNotes ? ` Note: ${trimmedNotes}` : ''} No payment has been made — discuss the details in chat.`,
       href: '/general-labour-market/sell',
     });
 
-    setSubmittedBooking({ id: bookingId, formattedDate, notes: trimmedNotes });
+    setSubmittedBooking({ id: bookingId, formattedDate, time: bookingTime, durationLabel, notes: trimmedNotes });
+    setExistingBookings((current) => [...current, { date: bookingDate, time: bookingTime, duration: bookingDuration }]);
     setIsSubmittingBooking(false);
   };
   const goToWorkerChatAboutBooking = () => {
     const formattedDate = submittedBooking?.formattedDate;
     const draftMessage = formattedDate
-      ? `Hi ${workerChatName}, I just sent a booking request for ${formattedDate}.${submittedBooking?.notes ? ` ${submittedBooking.notes}` : ''} No payment has been made yet — let's confirm the details here.`
+      ? `Hi ${workerChatName}, I just sent a booking request for ${formattedDate} at ${submittedBooking?.time} (${submittedBooking?.durationLabel}).${submittedBooking?.notes ? ` ${submittedBooking.notes}` : ''} No payment has been made yet — let's confirm the details here.`
       : '';
     navigate('/support/chat', {
       state: {
@@ -23657,7 +24340,7 @@ const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onPushNotificationToU
               ))}
             </div>
             <p className="text-2xl font-bold text-[var(--svs-primary-strong)]">
-              {formatAmountInCurrency(pricingTiers[selectedTier], worker.currency)}
+              {formatAmountInCurrency(convertAmount(pricingTiers[selectedTier], worker.currency))}
               <span className="ml-1 text-sm font-semibold text-[var(--svs-muted)]">/{selectedTier.toLowerCase()}</span>
             </p>
             <button
@@ -23754,13 +24437,19 @@ const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onPushNotificationToU
         <div className="mt-4 flex flex-wrap gap-2">
           {GENERAL_LABOUR_AVAILABILITY_OPTIONS.map((day) => {
             const isAvailable = availableDays.includes(day);
+            const hours = isAvailable ? getDayAvailabilityHours(worker, day) : null;
             return (
               <span key={day} className={`rounded-full px-4 py-1.5 text-sm font-semibold ${isAvailable ? 'bg-[var(--svs-primary)] text-white' : 'bg-slate-100 text-slate-400 line-through'}`}>
-                {day}
+                {day}{hours ? ` · ${hours.start}–${hours.end}` : ''}
               </span>
             );
           })}
         </div>
+        {unavailableDates.length ? (
+          <p className="mt-3 text-sm text-[var(--svs-muted)]">
+            <span className="font-semibold text-[var(--svs-text)]">Unavailable on:</span> {unavailableDates.join(', ')}
+          </p>
+        ) : null}
       </section>
 
       {/* ── Pricing ── */}
@@ -23770,7 +24459,7 @@ const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onPushNotificationToU
           {Object.entries(pricingTiers).map(([tier, amount]) => (
             <div key={tier} className={`rounded-xl border-2 p-5 text-center transition ${selectedTier === tier ? 'border-[var(--svs-primary)] bg-[var(--svs-primary)]/5' : 'border-[var(--svs-border)]'}`}>
               <p className="text-sm font-semibold text-[var(--svs-muted)]">{tier}</p>
-              <p className="mt-1 text-xl font-bold text-[var(--svs-text)]">{formatAmountInCurrency(amount, worker.currency)}</p>
+              <p className="mt-1 text-xl font-bold text-[var(--svs-text)]">{formatAmountInCurrency(convertAmount(amount, worker.currency))}</p>
               <p className="text-xs text-[var(--svs-muted)]">per {tier === 'Daily' ? 'day' : tier === 'Weekly' ? 'week' : 'month'}</p>
               <button
                 type="button"
@@ -23834,7 +24523,7 @@ const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onPushNotificationToU
                 <div className="flex flex-1 flex-col p-4">
                   <h3 className="text-[15px] font-bold text-[var(--svs-text)]">{sim.name}</h3>
                   <p className="text-xs text-[var(--svs-muted)]">{sim.title}</p>
-                  <p className="mt-1 text-base font-bold text-[var(--svs-primary-strong)]">{formatAmountInCurrency(Number(sim.rate) || 0, sim.currency)}<span className="text-xs font-semibold text-[var(--svs-muted)]">/{(sim.rateType || 'Daily').toLowerCase()}</span></p>
+                  <p className="mt-1 text-base font-bold text-[var(--svs-primary-strong)]">{formatAmountInCurrency(convertAmount(Number(sim.rate) || 0, sim.currency))}<span className="text-xs font-semibold text-[var(--svs-muted)]">/{(sim.rateType || 'Daily').toLowerCase()}</span></p>
                   {sim.location ? (
                     <p className="mt-1 flex items-center gap-1.5 text-xs text-[var(--svs-muted)]"><MapPin className="h-3.5 w-3.5 shrink-0 text-[var(--svs-primary)]" />{sim.location}</p>
                   ) : null}
@@ -23860,7 +24549,7 @@ const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onPushNotificationToU
                   <h3 className="text-lg font-bold text-[var(--svs-text)]">Booking request sent</h3>
                 </div>
                 <p className="mt-2 text-sm text-[var(--svs-muted)]">
-                  {workerChatName} has been notified about your request for <span className="font-semibold text-[var(--svs-text)]">{submittedBooking.formattedDate}</span>. No payment was made.
+                  {workerChatName} has been notified about your request for <span className="font-semibold text-[var(--svs-text)]">{submittedBooking.formattedDate} at {submittedBooking.time} ({submittedBooking.durationLabel})</span>. No payment was made.
                 </p>
                 <p className="mt-2 text-xs text-[var(--svs-muted)]">
                   Booking ID: <span className="font-mono">{submittedBooking.id}</span> — you'll get a notification here when {workerChatName} responds.
@@ -23895,6 +24584,45 @@ const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onPushNotificationToU
                 </div>
 
                 <div className="mt-4">
+                  <label htmlFor="gl-booking-time" className="mb-1 block text-sm font-semibold text-[var(--svs-text)]">Choose a time</label>
+                  <input
+                    id="gl-booking-time"
+                    type="time"
+                    disabled={!bookingDate || Boolean(bookingDateError)}
+                    min={bookingDayHours?.start}
+                    max={bookingDayHours?.end}
+                    value={bookingTime}
+                    onChange={(event) => setBookingTime(event.target.value)}
+                    className="w-full rounded-lg border border-[var(--svs-border)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)] disabled:cursor-not-allowed disabled:bg-[var(--svs-surface-soft)]"
+                  />
+                  {bookingDayHours ? (
+                    <p className="mt-1.5 text-xs text-[var(--svs-muted)]">{workerChatName} works {bookingWeekdayName} {bookingDayHours.start}–{bookingDayHours.end}.</p>
+                  ) : null}
+                  {takenRangesForDate.length ? (
+                    <p className="mt-1 text-xs text-amber-700">Already booked on this date: {takenRangesForDate.join(', ')}. Pick a time outside these.</p>
+                  ) : null}
+                  {isTimeOverlapping ? (
+                    <p className="mt-1 text-xs font-semibold text-rose-600">That overlaps an existing booking — please choose a different time.</p>
+                  ) : exceedsDayHours ? (
+                    <p className="mt-1 text-xs font-semibold text-rose-600">That doesn't fit within {workerChatName}'s working hours for this duration — pick an earlier start or a shorter duration.</p>
+                  ) : null}
+                </div>
+
+                <div className="mt-4">
+                  <label htmlFor="gl-booking-duration" className="mb-1 block text-sm font-semibold text-[var(--svs-text)]">How long do you need them for?</label>
+                  <select
+                    id="gl-booking-duration"
+                    value={bookingDuration}
+                    onChange={(event) => setBookingDuration(Number(event.target.value))}
+                    className="w-full rounded-lg border border-[var(--svs-border)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                  >
+                    {BOOKING_DURATION_OPTIONS.map((option) => (
+                      <option key={option.minutes} value={option.minutes}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="mt-4">
                   <label htmlFor="gl-booking-notes" className="mb-1 block text-sm font-semibold text-[var(--svs-text)]">Job details (optional)</label>
                   <textarea
                     id="gl-booking-notes"
@@ -23919,8 +24647,8 @@ const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onPushNotificationToU
                     {isSubmittingBooking ? 'Sending…' : 'Send Booking Request'}
                   </button>
                 </div>
-                {!bookingDate ? (
-                  <p className="mt-3 text-xs text-[var(--svs-muted)]">Pick a date to send the booking request.</p>
+                {!bookingDate || !bookingTime ? (
+                  <p className="mt-3 text-xs text-[var(--svs-muted)]">Pick a date and a time to send the booking request.</p>
                 ) : null}
               </>
             )}
@@ -23937,7 +24665,11 @@ const GENERAL_LABOUR_BOOKING_STATUS_STYLES = {
   completed: 'bg-emerald-100 text-emerald-800',
   declined: 'bg-red-100 text-red-700',
   cancelled: 'bg-slate-200 text-slate-700',
+  expired: 'bg-slate-100 text-slate-500',
 };
+// Statuses where a booking is settled/inactive — no Confirm/Complete/
+// Decline/Reschedule actions make sense on these.
+const GENERAL_LABOUR_BOOKING_INACTIVE_STATUSES = ['completed', 'declined', 'cancelled', 'expired'];
 
 const mapGeneralLabourBookingRow = (row) => ({
   id: row.id,
@@ -23950,6 +24682,8 @@ const mapGeneralLabourBookingRow = (row) => ({
   buyerName: row.buyer_name || '',
   buyerPhone: row.buyer_phone || '',
   bookingDate: row.booking_date || '',
+  bookingTime: row.booking_time || '',
+  durationMinutes: row.duration_minutes || 60,
   notes: row.notes || '',
   status: row.status || 'requested',
   createdAt: row.created_at,
@@ -23968,12 +24702,24 @@ const mapHomeCareBookingRow = (row) => ({
   buyerName: row.buyer_name || '',
   buyerPhone: row.buyer_phone || '',
   bookingDate: row.booking_date || '',
+  bookingTime: row.booking_time || '',
+  durationMinutes: row.duration_minutes || 60,
   serviceLabel: row.service_label || '',
   notes: row.notes || '',
   status: row.status || 'requested',
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
+
+// Formats a duration in minutes as a short label, e.g. 90 -> "1h 30m".
+const formatDurationMinutes = (totalMinutes) => {
+  const minutes = Number(totalMinutes) || 60;
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  if (hours && remainder) return `${hours}h ${remainder}m`;
+  if (hours) return `${hours}h`;
+  return `${remainder}m`;
+};
 
 // Buyer-facing "My Bookings" — tracks every booking request the signed-in
 // buyer has placed against Book @ Home-Care Services providers. No payment
@@ -24084,7 +24830,7 @@ const HomeCareBookingsPage = () => {
                 </span>
               </div>
               <div className="mt-3 grid gap-1 text-sm text-[var(--svs-text)] sm:grid-cols-2">
-                <p><span className="font-semibold">Requested date:</span> {booking.bookingDate || '—'}</p>
+                <p><span className="font-semibold">Requested date:</span> {booking.bookingDate || '—'}{booking.bookingTime ? ` at ${booking.bookingTime}` : ''}{booking.bookingTime ? ` (${formatDurationMinutes(booking.durationMinutes)})` : ''}</p>
                 <p><span className="font-semibold">Submitted:</span> {formatTimestampWithSeconds(booking.createdAt)}</p>
               </div>
               {booking.serviceLabel ? <p className="mt-2 text-sm text-[var(--svs-text)]"><span className="font-semibold">Service:</span> {booking.serviceLabel}</p> : null}
@@ -25551,6 +26297,9 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
       ticketGenre: item.genre || '',
       ticketLanguage: item.language || '',
       ticketShowtime: item.showtime || '',
+      availableDays: Array.isArray(item.availableDays) ? item.availableDays : [],
+      availabilityHours: (item.availabilityHours && typeof item.availabilityHours === 'object') ? item.availabilityHours : {},
+      unavailableDates: Array.isArray(item.unavailableDates) ? item.unavailableDates : [],
       // Generic per-market spec fields populated last so they take precedence
       // for spec-driven markets where the field name overlaps (e.g. brand).
       ...specSeed,
@@ -26269,6 +27018,13 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                         </div>
                         <div className="flex flex-1 flex-col p-4">
                           <h3 className="line-clamp-2 text-sm font-bold leading-snug text-[var(--svs-text)]">{item.title}</h3>
+                          {item.marketKey === 'tickets' && item.category ? (
+                            <p className="mt-1 truncate text-[11px] text-[var(--svs-muted)]">
+                              <span className="font-semibold text-[var(--svs-text)]">{item.category}</span>
+                              {item.genre ? ` • ${item.genre}` : ''}
+                              {item.location ? ` • ${item.location}` : ''}
+                            </p>
+                          ) : null}
                           <p className="mt-1 text-sm font-semibold text-[var(--svs-primary-strong)]"><SalePrice price={item.price} currency={item.currency} /></p>
                           <span className={`mt-2 inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-semibold ${stockClass}`}>{stockLabel}</span>
                           {item.phone ? (
@@ -29533,7 +30289,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
 // cycle, professional preference, availability, service area) and persist to the
 // same marketplace_items storage with market_key 'homeCare' so they surface on
 // the Home-Care market exactly like other seller listings.
-const HomeCareSellPage = ({ onSellerItemCreated }) => {
+const HomeCareSellPage = ({ sellerItems = [], onSellerItemCreated, onPushNotificationToUser }) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState(() => ({
     title: '',
@@ -29546,6 +30302,8 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
     experience: '',
     availability: '',
     availableDays: [],
+    availabilityHours: {},
+    unavailableDates: [],
     serviceArea: '',
     bookings: '',
     phone: '',
@@ -29554,6 +30312,7 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
     certifications: '',
     description: '',
   }));
+  const [unavailableDateInput, setUnavailableDateInput] = useState('');
   const [imageFiles, setImageFiles] = useState([]);
   const [imagePreviewUrls, setImagePreviewUrls] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -29568,6 +30327,18 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
   const [bookingRequests, setBookingRequests] = useState([]);
   const [isLoadingBookingRequests, setIsLoadingBookingRequests] = useState(true);
   const [bookingActionId, setBookingActionId] = useState('');
+  const [bookingView, setBookingView] = useState('list');
+  const [calendarSelectedDate, setCalendarSelectedDate] = useState('');
+  const [reschedulingBookingId, setReschedulingBookingId] = useState('');
+  const [rescheduleDate, setRescheduleDate] = useState('');
+  const [rescheduleTime, setRescheduleTime] = useState('');
+  const [rescheduleError, setRescheduleError] = useState('');
+  const [isSavingReschedule, setIsSavingReschedule] = useState(false);
+
+  const myListings = useMemo(
+    () => getSellerItemsForMarket(sellerItems, 'homeCare').filter((item) => normalizeEmail(item.sellerEmail) === userEmail),
+    [sellerItems, userEmail],
+  );
 
   useEffect(() => {
     if (!isAuthenticated || !userEmail || !hasSupabaseEnv || !supabase) {
@@ -29614,7 +30385,85 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
     });
   };
 
+  // Seller-driven reschedule: directly moves a booking to a new date/time
+  // (validated against the provider's own hours/blackout dates and their
+  // other bookings) and notifies the buyer. Mirrors General Labour's
+  // GeneralLabourSellPage exactly.
+  const handleStartReschedule = (booking) => {
+    setReschedulingBookingId(booking.id);
+    setRescheduleDate(booking.bookingDate || '');
+    setRescheduleTime(booking.bookingTime || '');
+    setRescheduleError('');
+  };
+  const handleCancelReschedule = () => {
+    setReschedulingBookingId('');
+    setRescheduleDate('');
+    setRescheduleTime('');
+    setRescheduleError('');
+  };
+  const handleSaveReschedule = async (booking) => {
+    if (!rescheduleDate || !rescheduleTime) {
+      setRescheduleError('Pick both a date and a time.');
+      return;
+    }
+    const provider = myListings.find((listing) => `seller-home-care-${listing.id}` === booking.providerId);
+    if (provider) {
+      const [year, month, day] = rescheduleDate.split('-').map(Number);
+      const weekdayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][new Date(year, (month || 1) - 1, day || 1).getDay()];
+      const availableDays = Array.isArray(provider.availableDays) ? provider.availableDays : HOME_CARE_WEEK_DAYS;
+      const unavailableDates = Array.isArray(provider.unavailableDates) ? provider.unavailableDates : [];
+      if (unavailableDates.includes(rescheduleDate)) {
+        setRescheduleError(`${booking.providerName} has marked ${rescheduleDate} as unavailable.`);
+        return;
+      }
+      if (!availableDays.includes(weekdayName)) {
+        setRescheduleError(`${booking.providerName} is not available on ${weekdayName}s.`);
+        return;
+      }
+      const dayHours = getDayAvailabilityHours(provider, weekdayName);
+      const startMinutes = timeToMinutes(rescheduleTime);
+      const endMinutes = startMinutes + (booking.durationMinutes || 60);
+      if (startMinutes < timeToMinutes(dayHours.start) || endMinutes > timeToMinutes(dayHours.end)) {
+        setRescheduleError(`That doesn't fit within working hours (${dayHours.start}–${dayHours.end}) for this booking's duration.`);
+        return;
+      }
+      const overlaps = bookingRequests.some((other) => {
+        if (other.id === booking.id || other.providerId !== booking.providerId) return false;
+        if (GENERAL_LABOUR_BOOKING_INACTIVE_STATUSES.includes(other.status)) return false;
+        if (other.bookingDate !== rescheduleDate) return false;
+        const otherStart = timeToMinutes(other.bookingTime);
+        return doRangesOverlap(startMinutes, endMinutes, otherStart, otherStart + (other.durationMinutes || 60));
+      });
+      if (overlaps) {
+        setRescheduleError('That overlaps another booking for this provider on that date.');
+        return;
+      }
+    }
+
+    setIsSavingReschedule(true);
+    const { error } = await supabase
+      .from('home_care_bookings')
+      .update({ booking_date: rescheduleDate, booking_time: rescheduleTime })
+      .eq('id', booking.id);
+    setIsSavingReschedule(false);
+    if (error) {
+      setRescheduleError(error.message);
+      return;
+    }
+    setBookingRequests((current) => current.map((entry) => (entry.id === booking.id ? { ...entry, bookingDate: rescheduleDate, bookingTime: rescheduleTime } : entry)));
+    onPushNotificationToUser?.(booking.buyerEmail, {
+      type: 'info',
+      title: 'Booking rescheduled',
+      message: `Your booking with ${booking.providerName} has been moved to ${rescheduleDate} at ${rescheduleTime}.`,
+      href: `/home-care/provider/${booking.providerId}`,
+    });
+    handleCancelReschedule();
+  };
+
   const pendingBookingRequestCount = bookingRequests.filter((booking) => booking.status === 'requested').length;
+  const visibleBookingRequests = calendarSelectedDate
+    ? bookingRequests.filter((booking) => booking.bookingDate === calendarSelectedDate)
+    : bookingRequests;
 
   useEffect(() => {
     if (!imageFiles.length) {
@@ -29634,12 +30483,45 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
   };
 
   const handleToggleAvailableDay = (day) => {
+    setFormData((current) => {
+      const isCurrentlyOn = current.availableDays.includes(day);
+      const nextHours = { ...current.availabilityHours };
+      if (isCurrentlyOn) {
+        delete nextHours[day];
+      } else {
+        nextHours[day] = { ...DEFAULT_AVAILABILITY_HOURS };
+      }
+      return {
+        ...current,
+        availableDays: isCurrentlyOn
+          ? current.availableDays.filter((entry) => entry !== day)
+          : [...current.availableDays, day],
+        availabilityHours: nextHours,
+      };
+    });
+  };
+
+  const handleAvailabilityHourChange = (day, field, value) => {
     setFormData((current) => ({
       ...current,
-      availableDays: current.availableDays.includes(day)
-        ? current.availableDays.filter((entry) => entry !== day)
-        : [...current.availableDays, day],
+      availabilityHours: {
+        ...current.availabilityHours,
+        [day]: { ...(current.availabilityHours[day] || DEFAULT_AVAILABILITY_HOURS), [field]: value },
+      },
     }));
+  };
+
+  const handleAddUnavailableDate = () => {
+    const value = unavailableDateInput;
+    if (!value || formData.unavailableDates.includes(value)) {
+      setUnavailableDateInput('');
+      return;
+    }
+    setFormData((current) => ({ ...current, unavailableDates: [...current.unavailableDates, value].sort() }));
+    setUnavailableDateInput('');
+  };
+  const handleRemoveUnavailableDate = (date) => {
+    setFormData((current) => ({ ...current, unavailableDates: current.unavailableDates.filter((entry) => entry !== date) }));
   };
 
   const handleImagePick = (event) => {
@@ -29719,10 +30601,11 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
       uploadedImageUrls.push(publicUrlData.publicUrl);
     }
 
-    const detailsJson = {
-      ...buildSellerItemDetailsJson({ ...formData, marketKey: 'homeCare' }),
-      ...(formData.availableDays.length ? { availableDays: formData.availableDays } : {}),
-    };
+    // availableDays / availabilityHours / unavailableDates aren't in
+    // MARKET_FIELD_SPEC.homeCare (they're objects/arrays, not simple text
+    // fields) but buildSellerItemDetailsJson's sharedFields picks them up
+    // directly off formData regardless of market spec.
+    const detailsJson = buildSellerItemDetailsJson({ ...formData, marketKey: 'homeCare' });
     const normalizedBookings = normalizeListingQuantity(formData.bookings, 99);
 
     const { data, error } = await supabase
@@ -29754,9 +30637,10 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
     setMessageType('success');
     setFormData({
       title: '', category: '', brand: '', currency: '', price: '', serviceType: '',
-      professionalPreference: '', experience: '', availability: '', availableDays: [], serviceArea: '', bookings: '',
+      professionalPreference: '', experience: '', availability: '', availableDays: [], availabilityHours: {}, unavailableDates: [], serviceArea: '', bookings: '',
       phone: '', languages: '', servicesOffered: '', certifications: '', description: '',
     });
+    setUnavailableDateInput('');
     setImageFiles([]);
     setIsSubmitting(false);
 
@@ -29846,7 +30730,7 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
               </div>
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Days available</label>
-                <p className="mb-2 text-xs text-[var(--svs-muted)]">Select every day you're available to take bookings. Buyers can only book you on these days. Toggle "Public Holiday" too so it's clear whether you work on public holidays.</p>
+                <p className="mb-2 text-xs text-[var(--svs-muted)]">Select every day you're available to take bookings, then set the hours you work that day. Toggle "Public Holiday" too so it's clear whether you work on public holidays, and at what time.</p>
                 <div className="flex flex-wrap gap-2">
                   {HOME_CARE_AVAILABILITY_OPTIONS.map((day) => {
                     const isSelected = formData.availableDays.includes(day);
@@ -29863,6 +30747,64 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
                     );
                   })}
                 </div>
+                {formData.availableDays.length ? (
+                  <div className="mt-3 space-y-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3">
+                    {HOME_CARE_AVAILABILITY_OPTIONS.filter((day) => formData.availableDays.includes(day)).map((day) => {
+                      const hours = formData.availabilityHours[day] || DEFAULT_AVAILABILITY_HOURS;
+                      return (
+                        <div key={`hours-${day}`} className="flex flex-wrap items-center gap-2 text-xs">
+                          <span className="w-28 shrink-0 font-semibold text-[var(--svs-text)]">{day}</span>
+                          <input
+                            type="time"
+                            value={hours.start}
+                            onChange={(event) => handleAvailabilityHourChange(day, 'start', event.target.value)}
+                            className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2 py-1 text-xs text-[var(--svs-text)] outline-none"
+                          />
+                          <span className="text-[var(--svs-muted)]">to</span>
+                          <input
+                            type="time"
+                            value={hours.end}
+                            onChange={(event) => handleAvailabilityHourChange(day, 'end', event.target.value)}
+                            className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2 py-1 text-xs text-[var(--svs-text)] outline-none"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Unavailable dates</label>
+                <p className="mb-2 text-xs text-[var(--svs-muted)]">Mark specific dates you're off even on a normally-available day (leave, fully booked elsewhere, etc.). Buyers won't be able to book you on these dates.</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="date"
+                    value={unavailableDateInput}
+                    onChange={(event) => setUnavailableDateInput(event.target.value)}
+                    min={new Date().toISOString().slice(0, 10)}
+                    className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddUnavailableDate}
+                    disabled={!unavailableDateInput}
+                    className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-xs font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Add date
+                  </button>
+                </div>
+                {formData.unavailableDates.length ? (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {formData.unavailableDates.map((date) => (
+                      <span key={date} className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
+                        {date}
+                        <button type="button" onClick={() => handleRemoveUnavailableDate(date)} aria-label={`Remove ${date}`} className="text-rose-500 hover:text-rose-700">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -29975,13 +30917,28 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
               ) : null}
             </div>
             <p className="mb-3 text-xs text-[var(--svs-muted)]">No payment is attached to these — confirm or decline, then discuss the visit in chat.</p>
+            <div className="mb-3 inline-flex rounded-lg border border-[var(--svs-border)] p-0.5">
+              <button type="button" onClick={() => setBookingView('list')} className={`rounded-md px-3 py-1 text-xs font-semibold transition ${bookingView === 'list' ? 'bg-[var(--svs-primary)] text-white' : 'text-[var(--svs-text)]'}`}>List</button>
+              <button type="button" onClick={() => setBookingView('calendar')} className={`rounded-md px-3 py-1 text-xs font-semibold transition ${bookingView === 'calendar' ? 'bg-[var(--svs-primary)] text-white' : 'text-[var(--svs-text)]'}`}>Calendar</button>
+            </div>
+            {bookingView === 'calendar' ? (
+              <div className="mb-4 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3">
+                <BookingCalendarGrid bookings={bookingRequests} dateKey="bookingDate" selectedDate={calendarSelectedDate} onSelectDate={setCalendarSelectedDate} />
+              </div>
+            ) : null}
+            {calendarSelectedDate ? (
+              <div className="mb-3 flex items-center justify-between rounded-md bg-[var(--svs-cyan-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--svs-primary-strong)]">
+                <span>Showing bookings for {calendarSelectedDate}</span>
+                <button type="button" onClick={() => setCalendarSelectedDate('')} className="text-[var(--svs-primary)] hover:underline">Clear</button>
+              </div>
+            ) : null}
             {isLoadingBookingRequests ? (
               <p className="text-xs text-[var(--svs-muted)]">Loading booking requests…</p>
-            ) : bookingRequests.length === 0 ? (
-              <p className="text-xs text-[var(--svs-muted)]">No booking requests yet — buyers will appear here when they book your service.</p>
+            ) : visibleBookingRequests.length === 0 ? (
+              <p className="text-xs text-[var(--svs-muted)]">{calendarSelectedDate ? 'No bookings on this date.' : 'No booking requests yet — buyers will appear here when they book your service.'}</p>
             ) : (
               <ul className="space-y-3">
-                {bookingRequests.map((booking) => (
+                {visibleBookingRequests.map((booking) => (
                   <li key={booking.id} className="rounded-lg border border-[var(--svs-border)] p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
@@ -29992,49 +30949,74 @@ const HomeCareSellPage = ({ onSellerItemCreated }) => {
                         {booking.status}
                       </span>
                     </div>
-                    <p className="mt-1.5 text-[11px] text-[var(--svs-muted)]">Requested date: {booking.bookingDate || '—'}</p>
+                    <p className="mt-1.5 text-[11px] text-[var(--svs-muted)]">Requested date: {booking.bookingDate || '—'}{booking.bookingTime ? ` at ${booking.bookingTime}` : ''}{booking.bookingTime ? ` (${formatDurationMinutes(booking.durationMinutes)})` : ''}</p>
                     {booking.serviceLabel ? <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Service: {booking.serviceLabel}</p> : null}
                     {booking.notes ? <p className="mt-1 text-[11px] italic text-[var(--svs-muted)]">"{booking.notes}"</p> : null}
                     <p className="mt-1 text-[10px] text-[var(--svs-muted)]">Submitted: {formatTimestampWithSeconds(booking.createdAt)}</p>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {booking.status !== 'confirmed' && booking.status !== 'completed' ? (
+                    {reschedulingBookingId === booking.id ? (
+                      <div className="mt-2 space-y-2 rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-2">
+                        <div className="flex flex-wrap gap-2">
+                          <input type="date" value={rescheduleDate} min={new Date().toISOString().slice(0, 10)} onChange={(event) => setRescheduleDate(event.target.value)} className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2 py-1 text-xs text-[var(--svs-text)] outline-none" />
+                          <input type="time" value={rescheduleTime} onChange={(event) => setRescheduleTime(event.target.value)} className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2 py-1 text-xs text-[var(--svs-text)] outline-none" />
+                        </div>
+                        {rescheduleError ? <p className="text-[11px] font-semibold text-rose-600">{rescheduleError}</p> : null}
+                        <div className="flex gap-1.5">
+                          <button type="button" disabled={isSavingReschedule} onClick={() => handleSaveReschedule(booking)} className="rounded-md bg-[var(--svs-primary)] px-2 py-1 text-[10px] font-semibold text-white disabled:opacity-50">
+                            {isSavingReschedule ? 'Saving…' : 'Save new time'}
+                          </button>
+                          <button type="button" onClick={handleCancelReschedule} className="rounded-md border border-[var(--svs-border)] px-2 py-1 text-[10px] font-semibold text-[var(--svs-text)]">Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {booking.status !== 'confirmed' && booking.status !== 'completed' ? (
+                          <button
+                            type="button"
+                            disabled={bookingActionId === booking.id}
+                            onClick={() => handleUpdateBookingRequestStatus(booking.id, 'confirmed')}
+                            className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-[10px] font-semibold text-blue-700 hover:border-blue-300 disabled:opacity-50"
+                          >
+                            Confirm
+                          </button>
+                        ) : null}
+                        {booking.status !== 'completed' ? (
+                          <button
+                            type="button"
+                            disabled={bookingActionId === booking.id}
+                            onClick={() => handleUpdateBookingRequestStatus(booking.id, 'completed')}
+                            className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 hover:border-emerald-300 disabled:opacity-50"
+                          >
+                            Complete
+                          </button>
+                        ) : null}
+                        {booking.status !== 'declined' && booking.status !== 'completed' ? (
+                          <button
+                            type="button"
+                            disabled={bookingActionId === booking.id}
+                            onClick={() => handleUpdateBookingRequestStatus(booking.id, 'declined')}
+                            className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-700 hover:border-red-300 disabled:opacity-50"
+                          >
+                            Decline
+                          </button>
+                        ) : null}
+                        {!GENERAL_LABOUR_BOOKING_INACTIVE_STATUSES.includes(booking.status) ? (
+                          <button
+                            type="button"
+                            onClick={() => handleStartReschedule(booking)}
+                            className="rounded-md border border-[var(--svs-border)] px-2 py-1 text-[10px] font-semibold text-[var(--svs-text)] hover:border-[var(--svs-primary)]"
+                          >
+                            Reschedule
+                          </button>
+                        ) : null}
                         <button
                           type="button"
-                          disabled={bookingActionId === booking.id}
-                          onClick={() => handleUpdateBookingRequestStatus(booking.id, 'confirmed')}
-                          className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-[10px] font-semibold text-blue-700 hover:border-blue-300 disabled:opacity-50"
+                          onClick={() => goToChatWithBookingBuyer(booking)}
+                          className="ml-auto inline-flex items-center gap-1 rounded-md border border-[var(--svs-border)] px-2 py-1 text-[10px] font-semibold text-[var(--svs-text)] hover:border-[var(--svs-primary)]"
                         >
-                          Confirm
+                          <MessageCircle className="h-3 w-3" /> Chat
                         </button>
-                      ) : null}
-                      {booking.status !== 'completed' ? (
-                        <button
-                          type="button"
-                          disabled={bookingActionId === booking.id}
-                          onClick={() => handleUpdateBookingRequestStatus(booking.id, 'completed')}
-                          className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 hover:border-emerald-300 disabled:opacity-50"
-                        >
-                          Complete
-                        </button>
-                      ) : null}
-                      {booking.status !== 'declined' && booking.status !== 'completed' ? (
-                        <button
-                          type="button"
-                          disabled={bookingActionId === booking.id}
-                          onClick={() => handleUpdateBookingRequestStatus(booking.id, 'declined')}
-                          className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-700 hover:border-red-300 disabled:opacity-50"
-                        >
-                          Decline
-                        </button>
-                      ) : null}
-                      <button
-                        type="button"
-                        onClick={() => goToChatWithBookingBuyer(booking)}
-                        className="ml-auto inline-flex items-center gap-1 rounded-md border border-[var(--svs-border)] px-2 py-1 text-[10px] font-semibold text-[var(--svs-text)] hover:border-[var(--svs-primary)]"
-                      >
-                        <MessageCircle className="h-3 w-3" /> Chat
-                      </button>
-                    </div>
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -32216,6 +33198,7 @@ const SafetyPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds =
                 image: item.image,
                 images: item.images || (item.image ? [item.image] : []),
                 ...getItemDetailSizeProps(item),
+                availableQuantity: getSellerListingStock(sellerItems, item),
                 marketName: t('markets.safety'),
                 details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Toys & kids'}`,
                 priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -33270,7 +34253,7 @@ const WishlistShareModal = ({ open, onClose, wishlistItems = [] }) => {
   );
 };
 
-const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onOpenItemDetails }) => {
+const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onOpenItemDetails, sellerItems = [] }) => {
   const [shareOpen, setShareOpen] = useState(false);
 
   // Share wishlist: try the device's native share sheet directly first (it
@@ -33352,6 +34335,7 @@ const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onOpen
               image: item.image,
               images: item.images || (item.image ? [item.image] : []),
               ...getItemDetailSizeProps(item),
+              availableQuantity: getSellerListingStock(sellerItems, item),
               marketName: item.marketName,
               details: item.details,
               priceLabel: item.unitPriceLabel,
@@ -43197,7 +44181,9 @@ const ItemDetailsModal = ({
   // once it sells out (and block everything when every size is gone).
   const selectedSizeSoldOut = itemHasSizeStock && Boolean(selectedSize) && isItemSizeSoldOut(item, selectedSize);
   const allSizesSoldOut = itemHasSizeStock && sizeOptions.length > 0 && getItemInStockSizes(item).length === 0;
-  const isModalOutOfStock = selectedSizeSoldOut || allSizesSoldOut;
+  const hasPlainStockValue = item.availableQuantity !== null && item.availableQuantity !== undefined;
+  const isPlainOutOfStock = hasPlainStockValue && normalizeListingQuantity(item.availableQuantity, 0) <= 0;
+  const isModalOutOfStock = isPlainOutOfStock || selectedSizeSoldOut || allSizesSoldOut;
   const isInformalMarketItem = item.marketKey === 'informalMarket' || String(item.marketName || '').toLowerCase().includes('informal market');
   const rawSellerName = String(
     actionCartItem?.sellerName
@@ -46032,7 +47018,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/order-confirmation" element={<OrderConfirmationPage orders={orders} />} />
     <Route path="/betting-order-confirmation" element={<Navigate to="/betting-ticket-tracking" replace />} />
     <Route path="/betting-ticket-tracking" element={<BettingTicketTrackingPage orders={orders} />} />
-    <Route path="/wishlist" element={<WishlistPage wishlistItems={wishlistItems} onAddToCart={onAddToCart} onRemoveWishlistItem={onRemoveWishlistItem} onOpenItemDetails={onOpenItemDetails} />} />
+    <Route path="/wishlist" element={<WishlistPage wishlistItems={wishlistItems} onAddToCart={onAddToCart} onRemoveWishlistItem={onRemoveWishlistItem} onOpenItemDetails={onOpenItemDetails} sellerItems={sellerItems} />} />
     <Route path="/wishlist/share" element={<WishlistSharePage />} />
     <Route path="/checkout" element={<CheckoutPage cartItems={cartItems} buyNowCheckout={buyNowCheckout} onUpdateCartQuantity={onUpdateCartQuantity} onRemoveCartItem={onRemoveCartItem} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />
     <Route path="/checkout/payfast" element={<PayfastCheckoutPage buyNowCheckout={buyNowCheckout} onPlaceOrder={onPlaceOrder} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />
@@ -46078,10 +47064,10 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/wallet" element={<WalletPage />} />
     <Route path="/property-hub" element={<PropertyHubPage />} />
     <Route path="/property-hub/sell" element={<PropertySellPage />} />
-    <Route path="/home-care/sell" element={<HomeCareSellPage onSellerItemCreated={onSellerItemCreated} />} />
+    <Route path="/home-care/sell" element={<HomeCareSellPage sellerItems={sellerItems} onSellerItemCreated={onSellerItemCreated} onPushNotificationToUser={onPushNotificationToUser} />} />
     <Route path="/mobility-vehicles/sell" element={<MobilityVehicleSellPage sellerItems={sellerItems} onSellerItemCreated={onSellerItemCreated} onUpdateSellerItem={onUpdateSellerItem} onDeleteSellerItem={onDeleteSellerItem} />} />
     <Route path="/natural-resources-minerals/sell" element={<NaturalResourcesSellPage sellerItems={sellerItems} onSellerItemCreated={onSellerItemCreated} onUpdateSellerItem={onUpdateSellerItem} onDeleteSellerItem={onDeleteSellerItem} />} />
-    <Route path="/general-labour-market/sell" element={<GeneralLabourSellPage sellerItems={sellerItems} onSellerItemCreated={onSellerItemCreated} onUpdateSellerItem={onUpdateSellerItem} onDeleteSellerItem={onDeleteSellerItem} />} />
+    <Route path="/general-labour-market/sell" element={<GeneralLabourSellPage sellerItems={sellerItems} onSellerItemCreated={onSellerItemCreated} onUpdateSellerItem={onUpdateSellerItem} onDeleteSellerItem={onDeleteSellerItem} onPushNotificationToUser={onPushNotificationToUser} />} />
     <Route path="/property-hub/category/:categoryKey" element={<PropertyCategoryPage />} />
     <Route path="/property-hub/listing/:listingId" element={<PropertyDetailPage />} />
     <Route path="/property-hub/visit/:listingId" element={<PropertyVisitStatusPage />} />
@@ -46381,6 +47367,21 @@ const App = () => {
     if (normalizedTargetEmail === normalizeEmail(activeUserEmail)) {
       setNotifications((currentNotifications) => [notification, ...currentNotifications].slice(0, 80));
     }
+
+    // Best-effort email copy of every notification (bookings, orders, seller
+    // review, chat) so a recipient who isn't actively in the app still
+    // finds out — this one function is the single place all 27+ call sites
+    // across the app funnel through. Fire-and-forget: never throws, and
+    // doesn't block the in-app notification or the Supabase write below.
+    const absoluteLink = (typeof window !== 'undefined' && notification.href)
+      ? `${window.location.origin}${notification.href}`
+      : notification.href;
+    sendNotificationEmail({
+      email: normalizedTargetEmail,
+      title: notification.title,
+      message: notification.message,
+      link: absoluteLink,
+    });
 
     if (hasSupabaseEnv && supabase) {
       supabase
@@ -46885,6 +47886,12 @@ const App = () => {
       return;
     }
 
+    const availableStock = getSellerListingStock(sellerItems, cartItem);
+    if (availableStock !== null && availableStock <= 0) {
+      setActionNotice(`${cartItem.title} is out of stock.`);
+      return;
+    }
+
     const singleItem = {
       ...cartItem,
       quantity: 1,
@@ -46897,7 +47904,7 @@ const App = () => {
     setSelectedItemDetails(null);
     setActionNotice(`Ready to checkout: ${cartItem.title}`);
     navigate('/checkout', { state: { checkoutMode: 'buy-now' } });
-  }, [navigate]);
+  }, [navigate, sellerItems]);
 
   const handleUpdateCartQuantity = useCallback((itemId, delta) => {
     let removedItemId = null;

@@ -9,6 +9,17 @@
 
 create extension if not exists pgcrypto;
 
+-- Adds the requested time-of-day for deployments that already ran this file
+-- before booking_time existed. Lets buyers request a specific time (not just
+-- a date), and lets the booking modal flag exact date+time conflicts so
+-- other buyers get steered to a free slot.
+alter table if exists public.general_labour_bookings add column if not exists booking_time text;
+
+-- How long the job is expected to take, in minutes. Lets the booking modal
+-- check real interval overlap against other bookings on the same date
+-- instead of only catching an exact duplicate start time.
+alter table if exists public.general_labour_bookings add column if not exists duration_minutes integer not null default 60;
+
 create table if not exists public.general_labour_bookings (
   -- Client-generated id (e.g. "glb-xxx-yyy") so optimistic UI updates don't
   -- have to wait for a server round-trip to know the id.
@@ -34,12 +45,14 @@ create table if not exists public.general_labour_bookings (
   buyer_name text,
   buyer_phone text,
 
-  -- Requested date + free-form job notes.
+  -- Requested date/time + free-form job notes.
   booking_date text,
+  booking_time text,
+  duration_minutes integer not null default 60,
   notes text,
 
   status text not null default 'requested',
-  -- statuses: 'requested' | 'confirmed' | 'completed' | 'declined' | 'cancelled'
+  -- statuses: 'requested' | 'confirmed' | 'completed' | 'declined' | 'cancelled' | 'expired'
 
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -50,6 +63,11 @@ create index if not exists general_labour_bookings_seller_email_idx
 
 create index if not exists general_labour_bookings_worker_id_idx
   on public.general_labour_bookings (worker_id);
+
+-- Speeds up "what's already booked for this worker on this date" lookups
+-- used by the booking modal's exact-time conflict check.
+create index if not exists general_labour_bookings_worker_date_idx
+  on public.general_labour_bookings (worker_id, booking_date);
 
 create index if not exists general_labour_bookings_buyer_email_idx
   on public.general_labour_bookings (buyer_email);
