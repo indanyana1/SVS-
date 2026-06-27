@@ -153,6 +153,12 @@ const PropertyBookingsPage = () => {
 								{b.message ? <p className="mt-2 text-sm italic text-slate-500">&quot;{b.message}&quot;</p> : null}
 
 								<div className="mt-3 flex flex-wrap gap-2">
+									<Link
+										to={`/bookings/property/${b.id}/track`}
+										className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--svs-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--svs-text)] hover:border-[var(--svs-primary)]"
+									>
+										Track Booking
+									</Link>
 									<button
 										type="button"
 										onClick={() => goToSellerChat(b)}

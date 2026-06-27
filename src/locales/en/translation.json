@@ -3,7 +3,8 @@
     "home": "Home",
     "markets": "Markets",
     "offers": "Offers",
-    "orders": "Orders"
+    "orders": "Orders",
+    "bookings": "Bookings"
   },
   "common": {
     "noResults": "No results",

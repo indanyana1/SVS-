@@ -125,7 +125,7 @@ begin
     'info',
     'Booking reminder',
     concat('Reminder: your booking with ', coalesce(b.worker_name, 'the worker'), ' is scheduled for ', b.booking_date, case when coalesce(b.booking_time, '') <> '' then concat(' at ', b.booking_time) else '' end, '.'),
-    concat('/general-labour-market/worker/', b.worker_id)
+    concat('/bookings/generalLabour/', b.id, '/track')
   from public.general_labour_bookings b
   where b.status = 'confirmed' and b.booking_date = v_tomorrow and coalesce(b.buyer_email, '') <> ''
   on conflict (user_email, notification_key) do nothing;
@@ -149,7 +149,7 @@ begin
     'info',
     'Booking reminder',
     concat('Reminder: your booking with ', coalesce(b.provider_name, 'the provider'), ' is scheduled for ', b.booking_date, case when coalesce(b.booking_time, '') <> '' then concat(' at ', b.booking_time) else '' end, '.'),
-    concat('/home-care/provider/', b.provider_id)
+    concat('/bookings/homeCare/', b.id, '/track')
   from public.home_care_bookings b
   where b.status = 'confirmed' and b.booking_date = v_tomorrow and coalesce(b.buyer_email, '') <> ''
   on conflict (user_email, notification_key) do nothing;
@@ -177,7 +177,7 @@ begin
       p_emailjs_service_id, p_emailjs_template_id, p_emailjs_public_key,
       r.buyer_email, r.buyer_name, 'Booking reminder',
       concat('Reminder: your booking with ', coalesce(r.worker_name, 'the worker'), ' is scheduled for ', r.booking_date, case when coalesce(r.booking_time, '') <> '' then concat(' at ', r.booking_time) else '' end, '.'),
-      concat(coalesce(p_app_origin, ''), '/general-labour-market/worker/', r.worker_id)
+      concat(coalesce(p_app_origin, ''), '/bookings/generalLabour/', r.id, '/track')
     );
   end loop;
 
@@ -201,7 +201,7 @@ begin
       p_emailjs_service_id, p_emailjs_template_id, p_emailjs_public_key,
       r.buyer_email, r.buyer_name, 'Booking reminder',
       concat('Reminder: your booking with ', coalesce(r.provider_name, 'the provider'), ' is scheduled for ', r.booking_date, case when coalesce(r.booking_time, '') <> '' then concat(' at ', r.booking_time) else '' end, '.'),
-      concat(coalesce(p_app_origin, ''), '/home-care/provider/', r.provider_id)
+      concat(coalesce(p_app_origin, ''), '/bookings/homeCare/', r.id, '/track')
     );
   end loop;
 

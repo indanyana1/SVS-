@@ -130,6 +130,11 @@ import {
 } from '../features/property';
 import { getSellerListings as getPropertySellerListings } from '../features/property/data/sellerListings';
 import {
+  getBookingsForBuyer as getPropertyBookingsForBuyer,
+  useBookingsVersion as usePropertyBookingsVersion,
+  updateBookingStatus as updatePropertyBookingStatus,
+} from '../features/property/data/bookings';
+import {
   getListings as getLivestockListings,
   hydrateListings as hydrateLivestockListings,
   remoteSearchListings as remoteSearchLivestockListings,
@@ -762,6 +767,7 @@ const navItems = [
   { labelKey: 'nav.markets', href: '/markets' },
   { labelKey: 'nav.offers', href: '/offers' },
   { labelKey: 'nav.orders', href: '/orders' },
+  { labelKey: 'nav.bookings', href: '/bookings' },
 ];
 
 const sellerConsoleNavItems = [
@@ -23186,7 +23192,7 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
       type: 'info',
       title: 'Booking rescheduled',
       message: `Your booking with ${booking.workerName} has been moved to ${rescheduleDate} at ${rescheduleTime}.`,
-      href: `/general-labour-market/worker/${booking.workerId}`,
+      href: `/bookings/generalLabour/${booking.id}/track`,
     });
     handleCancelReschedule();
   };
@@ -24836,6 +24842,12 @@ const HomeCareBookingsPage = () => {
               {booking.serviceLabel ? <p className="mt-2 text-sm text-[var(--svs-text)]"><span className="font-semibold">Service:</span> {booking.serviceLabel}</p> : null}
               {booking.notes ? <p className="mt-2 text-sm text-[var(--svs-muted)]">"{booking.notes}"</p> : null}
               <div className="mt-3 flex flex-wrap gap-2">
+                <Link
+                  to={`/bookings/homeCare/${booking.id}/track`}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--svs-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--svs-text)] hover:border-[var(--svs-primary)]"
+                >
+                  Track Booking
+                </Link>
                 <button
                   type="button"
                   onClick={() => goToChatAboutBooking(booking)}
@@ -24859,6 +24871,525 @@ const HomeCareBookingsPage = () => {
         </ul>
       )}
     </PageFrame>
+  );
+};
+
+// ============================================================================
+// CONSOLIDATED BOOKING TRACKER — "My Bookings" mirrors the Orders list+track
+// pattern (OrdersPage/OrderCard + TrackOrderPage/buildTrackTimeline) for the
+// three booking-based markets (General Labour, Home Care, Property Hub).
+// Each market keeps its own table/mapper; these helpers just normalize the
+// three shapes into one card/timeline-friendly shape so they can render
+// side by side and share one timeline component.
+// ============================================================================
+
+// Property uses 'agent-confirmed' instead of 'confirmed' and has no
+// 'expired' state; normalizing here lets one timeline serve every type.
+const normalizeBookingStatus = (status) => {
+  const value = String(status || '').toLowerCase();
+  return value === 'agent-confirmed' ? 'confirmed' : value;
+};
+
+const BOOKING_TERMINAL_STATUSES = ['declined', 'cancelled', 'expired'];
+
+const BOOKING_STATUS_FLOW = ['requested', 'confirmed', 'completed'];
+
+const BOOKING_TIMELINE_STEPS = [
+  { key: 'requested', title: 'Booking Requested', description: 'Your booking request was sent to the provider.' },
+  { key: 'confirmed', title: 'Booking Confirmed', description: 'The provider confirmed your booking.' },
+  { key: 'completed', title: 'Booking Completed', description: 'The service was completed.' },
+];
+
+// Mirrors buildTrackTimeline's shape (reached/isCurrent per step) but for the
+// simpler requested->confirmed->completed booking flow, plus a short terminal
+// branch (declined/cancelled/expired) analogous to Orders' cancellationTimeline.
+const buildBookingTimeline = (booking) => {
+  if (!booking) return { steps: [], isTerminal: false };
+
+  const normalizedStatus = normalizeBookingStatus(booking.status);
+  const isTerminal = BOOKING_TERMINAL_STATUSES.includes(normalizedStatus);
+
+  if (isTerminal) {
+    const terminalCopy = {
+      declined: { title: 'Booking Declined', description: 'The provider declined this booking request.' },
+      cancelled: { title: 'Booking Cancelled', description: 'This booking was cancelled.' },
+      expired: { title: 'Booking Expired', description: 'This booking request expired without a response.' },
+    }[normalizedStatus];
+
+    return {
+      isTerminal: true,
+      steps: [
+        { key: 'requested', title: 'Booking Requested', description: 'Your booking request was sent to the provider.', reached: true, isCurrent: false },
+        { key: normalizedStatus, title: terminalCopy.title, description: terminalCopy.description, reached: true, isCurrent: true },
+      ],
+    };
+  }
+
+  const currentIndex = Math.max(BOOKING_STATUS_FLOW.indexOf(normalizedStatus), 0);
+  return {
+    isTerminal: false,
+    steps: BOOKING_TIMELINE_STEPS.map((step, index) => ({
+      ...step,
+      title: (booking.bookingType === 'property' && step.key === 'confirmed') ? 'Confirmed by Agent' : step.title,
+      reached: index <= currentIndex,
+      isCurrent: index === currentIndex,
+    })),
+  };
+};
+
+const BOOKING_TYPE_ROUTE_SEGMENT = { generalLabour: 'generalLabour', homeCare: 'homeCare', property: 'property' };
+
+const normalizeGeneralLabourBookingForTracker = (booking) => ({
+  id: booking.id,
+  bookingType: 'generalLabour',
+  title: booking.workerName,
+  subtitle: booking.workerCategory,
+  image: booking.workerImage,
+  status: booking.status,
+  date: booking.bookingDate,
+  time: booking.bookingTime,
+  durationMinutes: booking.durationMinutes,
+  detailLink: `/general-labour-market/worker/${booking.workerId}`,
+  sellerEmail: booking.sellerEmail,
+  notes: booking.notes,
+  createdAt: booking.createdAt,
+});
+
+const normalizeHomeCareBookingForTracker = (booking) => ({
+  id: booking.id,
+  bookingType: 'homeCare',
+  title: booking.providerName,
+  subtitle: booking.providerCategory,
+  image: booking.providerImage,
+  status: booking.status,
+  date: booking.bookingDate,
+  time: booking.bookingTime,
+  durationMinutes: booking.durationMinutes,
+  detailLink: `/home-care/provider/${booking.providerId}`,
+  sellerEmail: booking.sellerEmail,
+  notes: booking.notes,
+  createdAt: booking.createdAt,
+});
+
+const normalizePropertyBookingForTracker = (booking) => ({
+  id: booking.id,
+  bookingType: 'property',
+  title: booking.listingTitle || 'Listing',
+  subtitle: booking.listingLocation,
+  image: booking.listingImage,
+  status: booking.status,
+  date: booking.date,
+  time: booking.time,
+  durationMinutes: null,
+  detailLink: `/property-hub/listing/${booking.listingId}`,
+  sellerEmail: booking.sellerEmail,
+  notes: booking.message,
+  createdAt: booking.createdAt,
+});
+
+const BOOKING_TYPE_LABELS = { generalLabour: 'General Labour', homeCare: 'Home-Care', property: 'Property Hub' };
+
+const BookingListCard = ({ booking, onChat, onCancel, cancellingId }) => {
+  const isCancellable = normalizeBookingStatus(booking.status) === 'requested';
+  return (
+    <li className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4">
+      <div className="flex gap-3">
+        {booking.image ? (
+          <img src={booking.image} alt={booking.title} className="h-16 w-16 shrink-0 rounded-lg object-cover" />
+        ) : null}
+        <div className="min-w-0 flex-1">
+          <Link to={booking.detailLink} className="block truncate text-sm font-bold text-[var(--svs-text)] hover:text-[var(--svs-primary)]">
+            {booking.title}
+          </Link>
+          <p className="truncate text-xs text-[var(--svs-muted)]">{BOOKING_TYPE_LABELS[booking.bookingType]}{booking.subtitle ? ` • ${booking.subtitle}` : ''}</p>
+          <p className="mt-1 text-xs text-[var(--svs-muted)]">Booking ID: <span className="font-mono">{booking.id}</span></p>
+        </div>
+        <span className={`self-start rounded-full px-2.5 py-1 text-xs font-bold uppercase ${GENERAL_LABOUR_BOOKING_STATUS_STYLES[normalizeBookingStatus(booking.status)] || 'bg-slate-100 text-slate-700'}`}>
+          {booking.status}
+        </span>
+      </div>
+      <div className="mt-3 grid gap-1 text-sm text-[var(--svs-text)] sm:grid-cols-2">
+        <p>
+          <span className="font-semibold">Requested date:</span> {booking.date || '—'}{booking.time ? ` at ${booking.time}` : ''}{booking.durationMinutes ? ` (${formatDurationMinutes(booking.durationMinutes)})` : ''}
+        </p>
+        <p><span className="font-semibold">Submitted:</span> {formatTimestampWithSeconds(booking.createdAt)}</p>
+      </div>
+      {booking.notes ? <p className="mt-2 text-sm text-[var(--svs-muted)]">"{booking.notes}"</p> : null}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Link
+          to={`/bookings/${BOOKING_TYPE_ROUTE_SEGMENT[booking.bookingType]}/${booking.id}/track`}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--svs-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--svs-text)] hover:border-[var(--svs-primary)]"
+        >
+          Track Booking
+        </Link>
+        <button
+          type="button"
+          onClick={() => onChat(booking)}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--svs-primary)] px-3 py-1.5 text-xs font-semibold text-white hover:brightness-110"
+        >
+          <MessageCircle className="h-3.5 w-3.5" /> Discuss in Chat
+        </button>
+        {isCancellable ? (
+          <button
+            type="button"
+            disabled={cancellingId === booking.id}
+            onClick={() => onCancel(booking)}
+            className="rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+          >
+            {cancellingId === booking.id ? 'Cancelling…' : 'Cancel Booking'}
+          </button>
+        ) : null}
+      </div>
+    </li>
+  );
+};
+
+// Buyer-facing "My Bookings" hub — aggregates General Labour, Home Care, and
+// Property Hub bookings into one list, mirroring how "Orders" aggregates
+// every market's purchases into one place. Each market keeps its own table;
+// this just merges and sorts the three for display.
+const MyBookingsPage = () => {
+  const navigate = useNavigate();
+  const [bookings, setBookings] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [cancellingId, setCancellingId] = useState('');
+  const isAuthenticated = getAuthState();
+  const buyerEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
+  const propertyBookingsVersion = usePropertyBookingsVersion();
+
+  useEffect(() => {
+    if (!isAuthenticated || !buyerEmail) {
+      setIsLoading(false);
+      return;
+    }
+    let isCancelled = false;
+    (async () => {
+      setIsLoading(true);
+      setLoadError('');
+
+      const propertyBookings = getPropertyBookingsForBuyer(buyerEmail).map(normalizePropertyBookingForTracker);
+
+      if (!hasSupabaseEnv || !supabase) {
+        if (!isCancelled) {
+          setBookings(propertyBookings.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || ''))));
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      const [generalLabourResult, homeCareResult] = await Promise.all([
+        supabase.from('general_labour_bookings').select('*').eq('buyer_email', buyerEmail).order('created_at', { ascending: false }),
+        supabase.from('home_care_bookings').select('*').eq('buyer_email', buyerEmail).order('created_at', { ascending: false }),
+      ]);
+
+      if (isCancelled) return;
+
+      if (generalLabourResult.error || homeCareResult.error) {
+        setLoadError(generalLabourResult.error?.message || homeCareResult.error?.message || 'Could not load your bookings.');
+        setIsLoading(false);
+        return;
+      }
+
+      const generalLabourBookings = (generalLabourResult.data || []).map(mapGeneralLabourBookingRow).map(normalizeGeneralLabourBookingForTracker);
+      const homeCareBookings = (homeCareResult.data || []).map(mapHomeCareBookingRow).map(normalizeHomeCareBookingForTracker);
+
+      const merged = [...generalLabourBookings, ...homeCareBookings, ...propertyBookings]
+        .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+
+      setBookings(merged);
+      setIsLoading(false);
+    })();
+    return () => { isCancelled = true; };
+  }, [isAuthenticated, buyerEmail, propertyBookingsVersion]);
+
+  const goToChatAboutBooking = (booking) => {
+    navigate('/support/chat', {
+      state: {
+        recipientEmail: booking.sellerEmail,
+        recipientName: booking.title,
+        recipientRole: 'seller',
+        issueType: 'Item Enquiry',
+        itemKey: booking.id,
+        itemTitle: booking.title,
+        itemImage: booking.image,
+        itemLink: booking.detailLink,
+        draftMessage: `Hi, following up on my booking request for ${booking.date || 'this booking'}.`,
+      },
+    });
+  };
+
+  const handleCancelBooking = async (booking) => {
+    setCancellingId(booking.id);
+    if (booking.bookingType === 'property') {
+      await updatePropertyBookingStatus(booking.id, 'cancelled');
+    } else if (hasSupabaseEnv && supabase) {
+      const table = booking.bookingType === 'generalLabour' ? 'general_labour_bookings' : 'home_care_bookings';
+      await supabase.from(table).update({ status: 'cancelled' }).eq('id', booking.id);
+    }
+    setBookings((current) => current.map((entry) => (entry.id === booking.id ? { ...entry, status: 'cancelled' } : entry)));
+    setCancellingId('');
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <PageFrame title="My Bookings" subtitle="Track booking requests you've placed across General Labour, Home-Care, and Property Hub.">
+        <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 text-sm text-[var(--svs-text)]">
+          <p>Sign in to see your bookings.</p>
+          <Link to="/signin" className="mt-4 inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white">Sign In</Link>
+        </div>
+      </PageFrame>
+    );
+  }
+
+  return (
+    <PageFrame title="My Bookings" subtitle="Track booking requests you've placed across General Labour, Home-Care, and Property Hub. No payment is involved — chat with the provider/seller separately to finalize details.">
+      {isLoading ? (
+        <p className="text-sm text-[var(--svs-muted)]">Loading your bookings…</p>
+      ) : loadError ? (
+        <p className="text-sm text-rose-600">{loadError}</p>
+      ) : bookings.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface)] p-8 text-center text-sm text-[var(--svs-muted)]">
+          No bookings yet — book a worker, provider, or property visit to see it tracked here.
+        </div>
+      ) : (
+        <ul className="space-y-3">
+          {bookings.map((booking) => (
+            <BookingListCard
+              key={`${booking.bookingType}-${booking.id}`}
+              booking={booking}
+              onChat={goToChatAboutBooking}
+              onCancel={handleCancelBooking}
+              cancellingId={cancellingId}
+            />
+          ))}
+        </ul>
+      )}
+    </PageFrame>
+  );
+};
+
+// Buyer-facing booking status/timeline detail page — the booking equivalent
+// of TrackOrderPage. :bookingType picks which table/source to look the
+// booking up in, so a direct link/refresh is self-sufficient (no reliance on
+// location.state, same as Orders' params.orderId lookup).
+const BookingTrackPage = () => {
+  const params = useParams();
+  const navigate = useNavigate();
+  const [booking, setBooking] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [cancellingId, setCancellingId] = useState('');
+
+  const { bookingType, bookingId } = params;
+
+  useEffect(() => {
+    let isCancelled = false;
+    (async () => {
+      setIsLoading(true);
+      setLoadError('');
+
+      if (bookingType === 'property') {
+        const found = getPropertyBookingsForBuyer(normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || '')))
+          .find((entry) => String(entry.id) === String(bookingId));
+        if (!isCancelled) {
+          setBooking(found ? normalizePropertyBookingForTracker(found) : null);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      if (!hasSupabaseEnv || !supabase) {
+        if (!isCancelled) { setBooking(null); setIsLoading(false); }
+        return;
+      }
+
+      const table = bookingType === 'generalLabour' ? 'general_labour_bookings' : 'home_care_bookings';
+      const { data, error } = await supabase.from(table).select('*').eq('id', bookingId).maybeSingle();
+      if (isCancelled) return;
+      if (error) {
+        setLoadError(error.message);
+      } else if (data) {
+        setBooking(bookingType === 'generalLabour'
+          ? normalizeGeneralLabourBookingForTracker(mapGeneralLabourBookingRow(data))
+          : normalizeHomeCareBookingForTracker(mapHomeCareBookingRow(data)));
+      } else {
+        setBooking(null);
+      }
+      setIsLoading(false);
+    })();
+    return () => { isCancelled = true; };
+  }, [bookingType, bookingId]);
+
+  const timeline = useMemo(() => buildBookingTimeline(booking), [booking]);
+
+  const goToChatAboutBooking = () => {
+    if (!booking) return;
+    navigate('/support/chat', {
+      state: {
+        recipientEmail: booking.sellerEmail,
+        recipientName: booking.title,
+        recipientRole: 'seller',
+        issueType: 'Item Enquiry',
+        itemKey: booking.id,
+        itemTitle: booking.title,
+        itemImage: booking.image,
+        itemLink: booking.detailLink,
+        draftMessage: `Hi, following up on my booking request for ${booking.date || 'this booking'}.`,
+      },
+    });
+  };
+
+  const handleCancelBooking = async () => {
+    if (!booking) return;
+    setCancellingId(booking.id);
+    if (booking.bookingType === 'property') {
+      await updatePropertyBookingStatus(booking.id, 'cancelled');
+    } else if (hasSupabaseEnv && supabase) {
+      const table = booking.bookingType === 'generalLabour' ? 'general_labour_bookings' : 'home_care_bookings';
+      await supabase.from(table).update({ status: 'cancelled' }).eq('id', booking.id);
+    }
+    setBooking((current) => (current ? { ...current, status: 'cancelled' } : current));
+    setCancellingId('');
+  };
+
+  if (isLoading) {
+    return (
+      <main className="mx-auto w-full max-w-3xl px-4 py-10">
+        <p className="text-sm text-[var(--svs-muted)]">Loading booking…</p>
+      </main>
+    );
+  }
+
+  if (loadError || !booking) {
+    return (
+      <main className="mx-auto w-full max-w-3xl px-4 py-10">
+        <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-8 text-center shadow-sm">
+          <h1 className="text-xl font-bold text-[var(--svs-text)]">Booking not found</h1>
+          <p className="mt-2 text-sm text-[var(--svs-muted)]">{loadError || 'We couldn’t find this booking. It may have been removed or you may need to sign in.'}</p>
+          <Link to="/bookings" className={`${cudyBluePrimaryButtonClassName} mt-6 inline-flex rounded-xl bg-[var(--svs-primary-strong)] px-5 py-2.5 text-sm font-bold text-white`}>View All Bookings</Link>
+        </div>
+      </main>
+    );
+  }
+
+  const isCancellable = normalizeBookingStatus(booking.status) === 'requested';
+
+  return (
+    <main className="bg-[var(--svs-bg)] py-6 sm:py-10">
+      <div className="mx-auto w-full max-w-3xl px-4 sm:px-6">
+        <div className="mb-6 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            aria-label="Go back"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--svs-primary-strong)] transition hover:bg-[var(--svs-cyan-surface)]"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="mb-6 text-center">
+          <h1 className="text-2xl font-black text-[var(--svs-primary-strong)] sm:text-3xl">Track Your Booking</h1>
+          <p className="mt-1 text-sm text-[var(--svs-muted)]">Monitor the status of your booking request.</p>
+        </div>
+
+        <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-sm sm:p-6">
+          <div className="flex items-start gap-3">
+            {booking.image ? (
+              <img src={booking.image} alt={booking.title} className="h-16 w-16 shrink-0 rounded-lg object-cover" />
+            ) : null}
+            <div className="min-w-0 flex-1">
+              <Link to={booking.detailLink} className="block truncate text-base font-bold text-[var(--svs-text)] hover:text-[var(--svs-primary)]">{booking.title}</Link>
+              <p className="truncate text-xs text-[var(--svs-muted)]">{BOOKING_TYPE_LABELS[booking.bookingType]}{booking.subtitle ? ` • ${booking.subtitle}` : ''}</p>
+              <p className="mt-1 text-xs text-[var(--svs-muted)]">Booking ID: <span className="font-mono">{booking.id}</span></p>
+            </div>
+            <span className={`self-start rounded-full px-2.5 py-1 text-xs font-bold uppercase ${GENERAL_LABOUR_BOOKING_STATUS_STYLES[normalizeBookingStatus(booking.status)] || 'bg-slate-100 text-slate-700'}`}>
+              {booking.status}
+            </span>
+          </div>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
+                <CalendarDays className="h-4 w-4 text-[var(--svs-primary-strong)]" /> Scheduled Date
+              </div>
+              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{booking.date || '—'}{booking.time ? ` at ${booking.time}` : ''}{booking.durationMinutes ? ` (${formatDurationMinutes(booking.durationMinutes)})` : ''}</p>
+            </div>
+            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
+                <Clock className="h-4 w-4 text-[var(--svs-primary-strong)]" /> Submitted
+              </div>
+              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{formatTimestampWithSeconds(booking.createdAt)}</p>
+            </div>
+          </div>
+          {booking.notes ? <p className="mt-4 text-sm text-[var(--svs-muted)]">"{booking.notes}"</p> : null}
+        </section>
+
+        <section className="mt-6 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-sm sm:p-6">
+          <h2 className="text-base font-bold text-[var(--svs-primary-strong)]">Booking Status</h2>
+          <ol className="mt-5 relative space-y-3 pl-2">
+            {timeline.steps.map((step, index, arr) => {
+              const isLast = index === arr.length - 1;
+              const reached = step.reached;
+              return (
+                <li key={step.key} className="relative pl-10">
+                  {!isLast ? (
+                    <span
+                      aria-hidden="true"
+                      className={`absolute left-[14px] top-7 h-[calc(100%-12px)] w-0.5 ${reached ? 'bg-[var(--svs-primary-strong)]' : 'bg-[var(--svs-border)]'}`}
+                    />
+                  ) : null}
+                  <span
+                    aria-hidden="true"
+                    className={`absolute left-0 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full border-2 ${reached ? 'border-[var(--svs-primary-strong)] bg-[var(--svs-primary-strong)] text-white' : 'border-[var(--svs-border)] bg-[var(--svs-surface)] text-[var(--svs-muted)]'}`}
+                  >
+                    {reached ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-3.5 w-3.5" />}
+                  </span>
+                  <div className={`rounded-xl border p-3 ${step.isCurrent ? 'border-[var(--svs-primary-strong)] bg-[var(--svs-cyan-surface)]' : reached ? 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)]' : 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)] opacity-70'}`}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className={`text-sm font-bold ${reached ? 'text-[var(--svs-primary-strong)]' : 'text-[var(--svs-muted)]'}`}>{step.title}</p>
+                        <p className="mt-0.5 text-xs text-[var(--svs-muted)]">{step.description}</p>
+                      </div>
+                      {step.isCurrent ? (
+                        <span className="shrink-0 rounded-full bg-[var(--svs-primary-strong)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">Current</span>
+                      ) : null}
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+          <div className="mt-5 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-4 py-3 text-xs text-[var(--svs-text)]">
+            {timeline.isTerminal
+              ? 'This booking is no longer active.'
+              : 'We’ll notify you when your booking status changes.'}
+          </div>
+        </section>
+
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <button
+            type="button"
+            onClick={goToChatAboutBooking}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--svs-primary)] px-5 py-2.5 text-sm font-bold text-white hover:brightness-110"
+          >
+            <MessageCircle className="h-4 w-4" /> Discuss in Chat
+          </button>
+          {isCancellable ? (
+            <button
+              type="button"
+              disabled={cancellingId === booking.id}
+              onClick={handleCancelBooking}
+              className="rounded-xl border border-rose-300 bg-white px-5 py-2.5 text-sm font-bold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+            >
+              {cancellingId === booking.id ? 'Cancelling…' : 'Cancel Booking'}
+            </button>
+          ) : null}
+          <Link to="/bookings" className="rounded-xl border border-[var(--svs-border)] bg-white px-5 py-2.5 text-sm font-bold text-[var(--svs-text)] hover:border-[var(--svs-primary)]">
+            View All Bookings
+          </Link>
+        </div>
+      </div>
+    </main>
   );
 };
 
@@ -30455,7 +30986,7 @@ const HomeCareSellPage = ({ sellerItems = [], onSellerItemCreated, onPushNotific
       type: 'info',
       title: 'Booking rescheduled',
       message: `Your booking with ${booking.providerName} has been moved to ${rescheduleDate} at ${rescheduleTime}.`,
-      href: `/home-care/provider/${booking.providerId}`,
+      href: `/bookings/homeCare/${booking.id}/track`,
     });
     handleCancelReschedule();
   };
@@ -47009,6 +47540,8 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/offers" element={<OffersPage />} />
     <Route path="/orders" element={<OrdersPage orders={orders} cartItems={cartItems} onCancelOrder={onCancelOrder} />} />
     <Route path="/orders/:orderId/track" element={<TrackOrderPage orders={orders} onAdminSetOrderStatus={onAdminSetOrderStatus} />} />
+    <Route path="/bookings" element={<MyBookingsPage />} />
+    <Route path="/bookings/:bookingType/:bookingId/track" element={<BookingTrackPage />} />
     <Route path="/orders/track" element={<TrackOrderPage orders={orders} onAdminSetOrderStatus={onAdminSetOrderStatus} />} />
     <Route path="/orders/:orderId/return" element={<ReturnOrderPage orders={orders} />} />
     <Route path="/orders/:orderId/return/track" element={<TrackReturnPage orders={orders} />} />
