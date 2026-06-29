@@ -11826,15 +11826,6 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
 
       <main id="main-content" className="pt-20">{children}</main>
       <SiteFooter />
-
-      <Link
-        to="/support/chat"
-        aria-label="Open Let's Talk chat"
-        title="Let's Talk"
-        className="fixed bottom-4 right-4 z-[95] inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#1f4c8f] text-white shadow-[0_12px_24px_rgba(8,32,40,0.35)] transition hover:scale-105 hover:bg-[#173e78] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 sm:bottom-6 sm:right-6"
-      >
-        <MessageCircle className="h-7 w-7" strokeWidth={2.25} />
-      </Link>
     </div>
   );
 };
@@ -26773,7 +26764,15 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
       if (error) {
         setLoadError('Could not load your listings. Check your connection and try again.');
       } else {
-        setMyListings((data || []).map(mapSellerItemRecord));
+        // Markets with their own dedicated sidebar page (Property, Home-Care,
+        // Vehicle, Resource, Worker Profiles — identified by externalSellRoute
+        // on their sellerMarketConfig entry) manage their listings there, not
+        // in this general My Listings grid.
+        setMyListings(
+          (data || [])
+            .map(mapSellerItemRecord)
+            .filter((listing) => !sellerMarketConfig[listing.marketKey]?.externalSellRoute),
+        );
       }
 
       setIsLoading(false);
@@ -48477,7 +48476,7 @@ const FloatingSupportChatButton = () => (
     to="/support/chat"
     aria-label="Open Let's Talk chat"
     title="Let's Talk"
-    className="group fixed bottom-8 right-4 z-[130] inline-flex h-14 w-14 items-center justify-center rounded-full border-2 border-white/80 bg-[#1f4c8f] text-white shadow-[0_14px_28px_rgba(8,32,40,0.38)] transition hover:scale-105 hover:bg-[#173e78] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 sm:bottom-9 sm:right-6 sm:h-16 sm:w-16"
+    className="group fixed bottom-20 right-4 z-[130] inline-flex h-14 w-14 items-center justify-center rounded-full border-2 border-white/80 bg-[#1f4c8f] text-white shadow-[0_14px_28px_rgba(8,32,40,0.38)] transition hover:scale-105 hover:bg-[#173e78] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 sm:bottom-24 sm:right-6 sm:h-16 sm:w-16"
   >
     <MessageCircle className="h-7 w-7 shrink-0 sm:h-8 sm:w-8" strokeWidth={2.4} />
   </Link>
