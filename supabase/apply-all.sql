@@ -3166,3 +3166,59 @@ create policy "Public delete home care bookings"
 on public.home_care_bookings
 for delete
 using (true);
+
+-- ------------------------------------------------------------
+-- >>> seller-buyer-innovations.sql
+-- ------------------------------------------------------------
+alter table public.marketplace_items
+add column if not exists is_paused boolean not null default false;
+
+alter table public.account_users
+add column if not exists notification_prefs jsonb not null default '{}'::jsonb;
+
+create table if not exists public.buyer_addresses (
+  id uuid primary key default gen_random_uuid(),
+  user_email text not null,
+  label text,
+  full_name text,
+  phone text,
+  country text,
+  address1 text,
+  address2 text,
+  city text,
+  province text,
+  postal_code text,
+  is_default boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists buyer_addresses_user_email_idx
+  on public.buyer_addresses (user_email);
+
+alter table public.buyer_addresses enable row level security;
+
+drop policy if exists "Public read buyer addresses" on public.buyer_addresses;
+create policy "Public read buyer addresses"
+on public.buyer_addresses
+for select
+using (true);
+
+drop policy if exists "Public insert buyer addresses" on public.buyer_addresses;
+create policy "Public insert buyer addresses"
+on public.buyer_addresses
+for insert
+with check (true);
+
+drop policy if exists "Public update buyer addresses" on public.buyer_addresses;
+create policy "Public update buyer addresses"
+on public.buyer_addresses
+for update
+using (true)
+with check (true);
+
+drop policy if exists "Public delete buyer addresses" on public.buyer_addresses;
+create policy "Public delete buyer addresses"
+on public.buyer_addresses
+for delete
+using (true);

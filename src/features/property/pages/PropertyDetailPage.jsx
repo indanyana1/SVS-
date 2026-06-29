@@ -535,7 +535,7 @@ const PropertyDetailPage = () => {
 								className="inline-flex flex-1 items-center justify-center gap-2 rounded-md border border-[var(--svs-primary)] bg-white px-4 py-2.5 text-sm font-semibold text-[var(--svs-primary-strong)] hover:bg-[var(--svs-cyan-surface,#eaf6f8)]"
 							>
 								<MessageCircle className="h-4 w-4" />
-								Chat with Seller
+								Let&rsquo;s Talk For More Info
 							</button>
 						</div>
 					</section>

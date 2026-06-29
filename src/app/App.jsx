@@ -82,6 +82,8 @@ import {
   Lock,
   Car,
   Users,
+  BarChart3,
+  Settings,
 } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -773,6 +775,7 @@ const navItems = [
 const sellerConsoleNavItems = [
   { label: 'Dashboard', href: '/seller/dashboard' },
   { label: 'Orders', href: '/seller/orders' },
+  { label: 'Analytics', href: '/seller/analytics' },
   { label: 'Upload Products', href: '/seller/upload' },
   { label: 'Payouts', href: '/seller/payouts' },
 ];
@@ -3900,6 +3903,13 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
     return homeCareProviderDetailPrototype;
   }, [providerId, sellerItems]);
 
+  // Real seller listings already carry currency-converted, formatted prices
+  // (via getSalePrices in the activeProvider useMemo above); only the static
+  // catalogue's pricingSections fall back to the raw, unconverted "From 500 /
+  // hour" rate-card strings that still need converting at render time.
+  const usesCatalogPricing = !(Array.isArray(activeProvider.pricingSections) && activeProvider.pricingSections.length);
+  const visiblePricingSections = usesCatalogPricing ? homeCarePricingSections : activeProvider.pricingSections;
+
   // Fetches every still-active (not declined/cancelled) booking against this
   // provider so the booking modal can flag real interval-overlap conflicts
   // and steer a buyer to a free slot instead of double-booking someone
@@ -4156,7 +4166,7 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
               </div>
               <div className="mt-6 flex flex-wrap gap-3">
                 <button type="button" onClick={() => openBookingModal(defaultServiceOption?.label || 'Service', defaultServiceOption?.price)} className="h-12 rounded-lg border border-[#0f9fb2] bg-white px-5 text-sm font-bold text-[#0f9fb2] transition hover:bg-[#f0fdff]">Book Service</button>
-                <button type="button" onClick={goToProviderChat} className="inline-flex h-12 items-center gap-2 rounded-lg border border-[#D1D5DB] bg-white px-5 text-sm font-bold text-[#1F2937] transition hover:bg-[#F8FAFC]"><MessageCircle className="h-4 w-4" /> Chat with Provider</button>
+                <button type="button" onClick={goToProviderChat} className="inline-flex h-12 items-center gap-2 rounded-lg border border-[#D1D5DB] bg-white px-5 text-sm font-bold text-[#1F2937] transition hover:bg-[#F8FAFC]"><MessageCircle className="h-4 w-4" /> Let&rsquo;s Talk For More Info</button>
                 {providerPhoneTel ? (
                   <a href={`tel:${providerPhoneTel}`} className="inline-flex h-12 items-center gap-2 rounded-lg border border-[#D1D5DB] bg-white px-5 text-sm font-bold text-[#1F2937] transition hover:bg-[#F8FAFC]"><Phone className="h-4 w-4" /> Call</a>
                 ) : null}
@@ -4228,11 +4238,13 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
         <section className="border-b border-[#E5E7EB] py-8">
           <h2 className="text-[20px] font-bold text-[#0052CC]">Services &amp; Pricing</h2>
           <div className="mt-5 space-y-4">
-            {(Array.isArray(activeProvider.pricingSections) && activeProvider.pricingSections.length ? activeProvider.pricingSections : homeCarePricingSections).map((section) => (
+            {visiblePricingSections.map((section) => (
               <article key={section.id} className="rounded-xl border border-[#E5E7EB] bg-[#F0F9FF] p-4">
                 <h3 className="text-lg font-bold text-[#0f172a]">{typeof section.title === 'object' ? JSON.stringify(section.title) : section.title}</h3>
                 <div className="mt-4 space-y-3">
-                  {Array.isArray(section.options) && section.options.map((option) => (
+                  {Array.isArray(section.options) && section.options.map((option) => {
+                    const displayPrice = usesCatalogPricing ? formatRateCardPrice(option.price) : option.price;
+                    return (
                     <div key={option.id} className="flex flex-col gap-3 rounded-lg bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
                       <label className="flex items-center gap-2 text-sm font-medium text-[#1F2937]">
                         <input
@@ -4241,17 +4253,18 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
                           onChange={() => toggleOption(option.id)}
                           className="h-4 w-4 rounded border-[#D1D5DB] text-[#0052CC] focus:ring-[#0052CC]"
                         />
-                        <span>{typeof option.label === 'object' ? JSON.stringify(option.label) : option.label}: {typeof option.price === 'object' ? JSON.stringify(option.price) : option.price}</span>
+                        <span>{typeof option.label === 'object' ? JSON.stringify(option.label) : option.label}: {typeof displayPrice === 'object' ? JSON.stringify(displayPrice) : displayPrice}</span>
                       </label>
                       <button
                         type="button"
-                        onClick={() => openBookingModal(option.label, option.price)}
+                        onClick={() => openBookingModal(option.label, displayPrice)}
                         className="h-10 rounded-md bg-[#0f9fb2] px-5 text-sm font-semibold text-white transition hover:bg-[#0d8a9c]"
                       >
                         Book Now
                       </button>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </article>
             ))}
@@ -7091,6 +7104,7 @@ const PROJECT_ROUTE_SEARCH_ENTRIES = [
   { id: 'page-seller-orders', title: 'Seller Orders', section: 'Seller Console', route: '/seller/orders', keywords: 'seller orders fulfillment status updates' },
   { id: 'page-seller-payouts', title: 'Seller Payouts', section: 'Seller Console', route: '/seller/payouts', keywords: 'seller payouts withdraw balance bank earnings' },
   { id: 'page-wallet', title: 'My Wallet', section: 'Account', route: '/wallet', keywords: 'wallet ewallet balance add funds top up send money transfer withdraw pay credit' },
+  { id: 'page-account-settings', title: 'Account Settings', section: 'Account', route: '/account', keywords: 'account settings profile saved addresses notification preferences' },
   { id: 'page-seller-upload', title: 'Seller Upload', section: 'Seller Console', route: '/seller/upload', keywords: 'seller upload create listing product service add item' },
   { id: 'page-property-hub', title: 'Property Hub', section: 'Markets', route: '/property-hub', keywords: 'property real estate homes rentals land commercial' },
   { id: 'page-livestock-hub', title: 'Livestock Hub', section: 'Markets', route: '/livestock-hub', keywords: 'livestock cattle goats sheep poultry farm animals' },
@@ -8891,6 +8905,25 @@ const getCartItemSourceCurrency = (item) => (
 
 const formatCartItemAmount = (item, amount) => formatCheckoutAmount(amount, getCartItemSourceCurrency(item));
 
+// Converts/formats a "rate card" style price string — e.g. "From 500 / hour"
+// — which getSalePrices/SalePrice can't handle cleanly because their
+// "preserve original formatting" path assumes any pre-existing prefix is
+// itself a currency symbol, not free text like "From ". Splits out the
+// leading text, the bare amount, and the trailing "/ unit" text, converts
+// just the amount from sourceCurrency into the buyer's selected currency,
+// and reassembles the surrounding text untouched.
+const formatRateCardPrice = (text, sourceCurrency = 'ZAR') => {
+  const raw = String(text ?? '');
+  const match = raw.match(/^([^\d-]*)(\d[\d,]*(?:\.\d+)?)(.*)$/);
+  if (!match) return raw;
+  const [, prefix, amountText, suffix] = match;
+  const amount = Number(amountText.replace(/,/g, ''));
+  if (Number.isNaN(amount)) return raw;
+  const buyerCurrency = _fxState.buyerCurrency;
+  const converted = convertAmount(amount, sourceCurrency, buyerCurrency);
+  return `${prefix}${formatAmountInCurrency(converted, buyerCurrency, buyerCurrency === 'JPY' ? 0 : 2)}${suffix}`;
+};
+
 const formatSellerAmount = (amount, sellerCurrency = 'USD', decimals) => formatAmountInCurrency(amount, sellerCurrency, decimals);
 
 
@@ -9641,10 +9674,62 @@ const getSellerListingStock = (sellerItems, candidateItem) => {
   return normalizeListingQuantity(listing.availableQuantity, 0);
 };
 
+// Live price for a saved/cart item that originated from a seller listing —
+// used to flag price changes on the Wishlist (a wishlist item only stores a
+// price snapshot from when it was saved). Returns null for catalog/demo
+// items, which have no live source to compare against.
+const getSellerListingLivePrice = (sellerItems, candidateItem) => {
+  const listingDbId = getSellerListingIdFromItemKey(candidateItem?.sku || candidateItem?.id);
+
+  if (!listingDbId) {
+    return null;
+  }
+
+  const listing = sellerItems.find((item) => item.dbId === listingDbId || item.id === `seller-${listingDbId}`);
+
+  if (!listing) {
+    return null;
+  }
+
+  const price = Number(listing.price);
+  if (!Number.isFinite(price)) {
+    return null;
+  }
+
+  return { price, currency: listing.currency || null };
+};
+
+// Builds a CSV string client-side (no new dependency) and triggers a
+// browser download. Used by the seller dashboard's listings/orders/payouts
+// "Export CSV" buttons.
+const downloadCsv = (filename, headers, rows) => {
+  const escapeCell = (value) => {
+    const str = String(value ?? '');
+    return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+  };
+  const csvContent = [headers, ...rows].map((row) => row.map(escapeCell).join(',')).join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
 const createSavedItem = ({ id, title, image, price, currency = null, route, marketName, details = '', sellerName = '', sellerEmail = '', availableQuantity = null }) => {
+  // Falls back to USD (matching getSalePrices/SalePrice's own fallback) rather
+  // than the buyer's current currency — the static demo catalogue's bare,
+  // symbol-less price strings (e.g. "129.99") are authored in USD. Falling
+  // back to the buyer's currency here made every catalog item's actual cart
+  // price silently skip conversion while its on-page display price (via
+  // SalePrice) correctly converted from USD, so the two amounts diverged by
+  // the full FX rate for every buyer not already on USD.
   const sourceCurrency = currency
     || detectCurrencyFromPriceString(String(price ?? ''))
-    || _fxState.buyerCurrency;
+    || 'USD';
   // Seller listings are charged at exactly the price the seller set (currency
   // converted only); the artificial sale markdown applies only to the static
   // demo catalogue, so the buyer pays what the seller actually listed.
@@ -9927,6 +10012,7 @@ const mapSellerItemRecord = (record) => {
     showtime: String(rawDetailsJson.showtime || ''),
     attributes: rawDetailsJson,
     createdAt: record.created_at,
+    isPaused: Boolean(record.is_paused),
     // Beverages
     beverageCategory,
     beverageType,
@@ -9952,7 +10038,7 @@ const doesLineItemBelongToSeller = (lineItem, sellerEmail, ownedListingIds) => {
   return ownedListingIds.has(rawId) || ownedListingIds.has(`seller-${rawId}`);
 };
 
-const getSellerItemsForMarket = (items, marketKey) => items.filter((item) => item.marketKey === marketKey);
+const getSellerItemsForMarket = (items, marketKey) => items.filter((item) => item.marketKey === marketKey && !item.isPaused);
 
 const getSalePrices = (price, discountRate = SALE_DISCOUNT_RATE, sourceCurrency = null) => {
   const text = String(price ?? '').trim();
@@ -11609,6 +11695,14 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                     <Wallet className="h-4 w-4 text-[var(--svs-primary)]" />
                     My Wallet
                   </Link>
+                  <Link
+                    to="/account"
+                    onClick={() => setProfileOpen(false)}
+                    className="mt-2 flex w-full items-center gap-2 rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)]"
+                  >
+                    <Settings className="h-4 w-4 text-[var(--svs-primary)]" />
+                    Account Settings
+                  </Link>
                   <button
                     type="button"
                     onClick={handleLogout}
@@ -12575,6 +12669,7 @@ const ECommercePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
 };
 
 const MovieDetailsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [] }) => {
+  const { t } = useTranslation();
   const { movieId } = useParams();
   const navigate = useNavigate();
   const movie = bookingsPrototypeMovieItems.find((m) => m.id === movieId);
@@ -12666,10 +12761,19 @@ const MovieDetailsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
               </button>
               <button
                 type="button"
-                onClick={() => onToggleWishlist?.({ id: movie.id, title: movie.title, image: movie.image, price: movie.price, route: '/bookings-tickets' })}
+                onClick={() => onToggleWishlist?.(createWishlistItem({
+                  id: movie.id,
+                  title: movie.title,
+                  image: movie.image,
+                  price: movie.price,
+                  currency: 'ZAR',
+                  route: '/bookings-tickets',
+                  marketName: t('markets.bookings'),
+                  details: buildBookingsPrototypeDetails(movie),
+                }))}
                 className="flex items-center gap-2 rounded-full border border-white/30 px-6 py-3.5 text-[15px] font-semibold text-white transition hover:bg-white/10 sm:px-8 sm:py-4 sm:text-base"
               >
-                <Heart className={`h-5 w-5 ${wishlistItemIds.includes(movie.id) ? 'fill-red-400 text-red-400' : ''}`} />
+                <Heart className={`h-5 w-5 ${wishlistItemIds.includes(getCollectionItemId('/bookings-tickets', movie.id)) ? 'fill-red-400 text-red-400' : ''}`} />
                 Add to Wishlist
               </button>
             </div>
@@ -12743,7 +12847,7 @@ const MovieDetailsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
                     {cinema.location}
                   </p>
                 </div>
-                <p className="text-lg font-bold text-[var(--svs-text)] sm:text-xl">R {cinema.price}</p>
+                <p className="text-lg font-bold text-[var(--svs-text)] sm:text-xl"><SalePrice price={cinema.price} currency="ZAR" /></p>
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 {cinema.showtimes.map((time) => (
@@ -12889,6 +12993,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
       showtime: item.showtime || '',
       availableQuantity: normalizeListingQuantity(item.availableQuantity, 0),
       price: item.price || '0.00',
+      currency: item.currency || '',
       image: item.image || 'https://images.pexels.com/photos/1190297/pexels-photo-1190297.jpeg?auto=compress&cs=tinysrgb&w=1200',
       images: item.images || (item.image ? [item.image] : []),
       isSellerListing: true,
@@ -13041,14 +13146,22 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
     }
 
     const details = buildBookingsPrototypeDetails(item, currentLocale);
+    // Catalog (non-seller) bookings/tickets are priced in ZAR — seller
+    // listings already carry their own real currency. Without this, items
+    // with no explicit currency fell back to being charged at face value in
+    // whatever currency the buyer happened to have selected (no conversion
+    // at all), badly over/undercharging anyone not on ZAR.
+    const sourceCurrency = item.currency || 'ZAR';
     const cartItem = createCartItem({
       ...item,
+      currency: sourceCurrency,
       route: '/bookings-tickets',
       marketName: t('markets.bookings'),
       details,
     });
     const wishlistItem = createWishlistItem({
       ...item,
+      currency: sourceCurrency,
       route: '/bookings-tickets',
       marketName: t('markets.bookings'),
       details,
@@ -13062,9 +13175,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
       availableQuantity: getSellerListingStock(sellerItems, item),
       marketName: t('markets.bookings'),
       details,
-      priceLabel: item.isSellerListing
-        ? getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice
-        : item.price,
+      priceLabel: getSalePrices(item.price, 0, sourceCurrency).nowPrice,
       cartItem,
       wishlistItem,
     });
@@ -13572,7 +13683,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
                         </p>
                       ) : null}
                     </div>
-                    <p className="mt-2 text-sm font-bold text-[var(--svs-text)] sm:mt-3 sm:text-base">{item.isSellerListing ? <SalePrice price={item.price} currency={item.currency} /> : item.price}</p>
+                    <p className="mt-2 text-sm font-bold text-[var(--svs-text)] sm:mt-3 sm:text-base"><SalePrice price={item.price} currency={item.currency || 'ZAR'} /></p>
                     <div className="mt-2 sm:mt-3">
                       <button
                         type="button"
@@ -16210,7 +16321,7 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
         id: candidate.id,
         title: getTranslatedValue(t, candidate.titleKey, candidate.title),
         image: candidate.image,
-        priceLabel: getSalePrices(candidate.price, getItemSaleDiscountRate(candidate), candidate.currency || null).nowPrice,
+        price: getSalePrices(candidate.price, getItemSaleDiscountRate(candidate), candidate.currency || null).nowPrice,
         sellerName: candidate.normalizedVendor || candidate.sellerName || '',
         location: candidate.location || '',
         category: candidate.category || '',
@@ -24365,7 +24476,7 @@ const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onPushNotificationToU
                   onClick={goToWorkerChat}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white hover:brightness-110"
                 >
-                  <MessageCircle className="h-4 w-4" /> Chat
+                  <MessageCircle className="h-4 w-4" /> Let&rsquo;s Talk For More Info
                 </button>
                 {workerPhoneTel ? (
                   <a
@@ -25971,7 +26082,7 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
   return (
     <PageFrame title="Admin Dashboard" subtitle="Manage buyers, sellers, orders, transactions, and platform reports.">
       <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] lg:block lg:sticky lg:top-24 lg:self-start">
+        <aside className="hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] lg:block lg:sticky lg:top-24 lg:self-start transform-gpu">
           {sidebarNav}
         </aside>
 
@@ -26581,7 +26692,7 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
   );
 };
 
-const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerItem, onUpdateOrderStatus, initialView = 'listings' }) => {
+const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerItem, onToggleListingPaused, onUpdateOrderStatus, initialView = 'listings' }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -26607,6 +26718,10 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
   const [isSaving, setIsSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [selectedListingIds, setSelectedListingIds] = useState(() => new Set());
+  const [togglingPausedId, setTogglingPausedId] = useState(null);
+  const [isBulkActionRunning, setIsBulkActionRunning] = useState(false);
+  const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
   const [sellerOrders, setSellerOrders] = useState([]);
   const [hasLoadedSellerOrders, setHasLoadedSellerOrders] = useState(false);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
@@ -26953,6 +27068,69 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
     setDeletingId(null);
   };
 
+  const handleTogglePaused = async (item) => {
+    setListActionMessage('');
+    setListActionMessageType('idle');
+    setTogglingPausedId(item.dbId);
+    const nextPaused = !item.isPaused;
+    const result = await onToggleListingPaused(item.dbId, nextPaused);
+
+    if (result?.error) {
+      setListActionMessage(`Failed to update listing: ${result.error}`);
+      setListActionMessageType('error');
+      setTogglingPausedId(null);
+      return;
+    }
+
+    setMyListings((current) => current.map((listing) => (listing.dbId === item.dbId ? { ...listing, isPaused: nextPaused } : listing)));
+    setListActionMessage(nextPaused ? 'Listing paused — hidden from buyers until you resume it.' : 'Listing resumed — visible to buyers again.');
+    setListActionMessageType('success');
+    setTogglingPausedId(null);
+  };
+
+  const toggleListingSelected = (dbId) => {
+    setSelectedListingIds((current) => {
+      const next = new Set(current);
+      if (next.has(dbId)) next.delete(dbId); else next.add(dbId);
+      return next;
+    });
+  };
+
+  const clearListingSelection = () => setSelectedListingIds(new Set());
+
+  const handleBulkPause = async (nextPaused) => {
+    setIsBulkActionRunning(true);
+    const ids = Array.from(selectedListingIds);
+    const results = await Promise.all(ids.map((dbId) => onToggleListingPaused(dbId, nextPaused)));
+    const failedCount = results.filter((result) => result?.error).length;
+
+    setMyListings((current) => current.map((listing) => (
+      selectedListingIds.has(listing.dbId) ? { ...listing, isPaused: nextPaused } : listing
+    )));
+    setListActionMessage(failedCount
+      ? `${ids.length - failedCount} of ${ids.length} listings updated; ${failedCount} failed.`
+      : `${ids.length} listing${ids.length === 1 ? '' : 's'} ${nextPaused ? 'paused' : 'resumed'}.`);
+    setListActionMessageType(failedCount ? 'error' : 'success');
+    clearListingSelection();
+    setIsBulkActionRunning(false);
+  };
+
+  const handleBulkDelete = async () => {
+    setIsBulkActionRunning(true);
+    const targets = myListings.filter((listing) => selectedListingIds.has(listing.dbId));
+    const results = await Promise.all(targets.map((listing) => onDeleteSellerItem(listing.dbId, listing.images || [], listing.image)));
+    const failedIds = new Set(targets.filter((_, index) => results[index]?.error).map((listing) => listing.dbId));
+
+    setMyListings((current) => current.filter((listing) => !selectedListingIds.has(listing.dbId) || failedIds.has(listing.dbId)));
+    setListActionMessage(failedIds.size
+      ? `${targets.length - failedIds.size} of ${targets.length} listings removed; ${failedIds.size} failed.`
+      : `${targets.length} listing${targets.length === 1 ? '' : 's'} removed from your store.`);
+    setListActionMessageType(failedIds.size ? 'error' : 'success');
+    clearListingSelection();
+    setIsBulkDeleteConfirmOpen(false);
+    setIsBulkActionRunning(false);
+  };
+
   const myListingIds = useMemo(() => new Set(myListings.map((listing) => listing.id)), [myListings]);
 
   const visibleOrders = useMemo(() => {
@@ -27199,6 +27377,13 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
           ) : null}
         </Link>
         <Link
+          to="/seller/analytics"
+          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)]"
+        >
+          <BarChart3 className="h-4 w-4" />
+          <span>Analytics</span>
+        </Link>
+        <Link
           to="/seller/upload"
           className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)]"
         >
@@ -27276,7 +27461,11 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
     >
       <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
         {/* Desktop sidebar */}
-        <aside className="hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] lg:block lg:sticky lg:top-24 lg:self-start">
+        {/* transform-gpu forces this sticky panel onto its own compositing
+            layer — without it, Chrome/Safari occasionally skip repainting
+            its icon SVGs while scrolling, leaving an icon blank until
+            something else forces a redraw. */}
+        <aside className="hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] lg:block lg:sticky lg:top-24 lg:self-start transform-gpu">
           {sidebarNav}
         </aside>
 
@@ -27484,9 +27673,65 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                       Clear
                     </button>
                   ) : null}
+                  <button
+                    type="button"
+                    onClick={() => downloadCsv(
+                      'my-listings.csv',
+                      ['Title', 'Market', 'Price', 'Currency', 'Stock', 'Status', 'Created'],
+                      filteredListings.map((listing) => [
+                        listing.title,
+                        t(sellerMarketConfig[listing.marketKey]?.labelKey || '') || listing.marketKey,
+                        listing.price,
+                        listing.currency || '',
+                        normalizeListingQuantity(listing.availableQuantity, 0),
+                        listing.isPaused ? 'Paused' : 'Active',
+                        listing.createdAt ? formatTimestampWithSeconds(listing.createdAt) : '',
+                      ]),
+                    )}
+                    className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-xs font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)]"
+                  >
+                    Export CSV
+                  </button>
                   <span className="ml-auto text-xs font-semibold text-[var(--svs-muted)]">
                     {filteredListings.length} of {myListings.length}
                   </span>
+                </div>
+              ) : null}
+
+              {selectedListingIds.size > 0 ? (
+                <div className="mb-5 flex flex-wrap items-center gap-2.5 rounded-xl border border-[var(--svs-primary)] bg-[var(--svs-cyan-surface)] p-3">
+                  <span className="text-sm font-semibold text-[var(--svs-text)]">{selectedListingIds.size} selected</span>
+                  <button
+                    type="button"
+                    disabled={isBulkActionRunning}
+                    onClick={() => handleBulkPause(true)}
+                    className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] disabled:opacity-60"
+                  >
+                    Pause selected
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isBulkActionRunning}
+                    onClick={() => handleBulkPause(false)}
+                    className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] disabled:opacity-60"
+                  >
+                    Resume selected
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isBulkActionRunning}
+                    onClick={() => setIsBulkDeleteConfirmOpen(true)}
+                    className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-60"
+                  >
+                    Delete selected
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearListingSelection}
+                    className="ml-auto rounded-lg px-3 py-1.5 text-xs font-semibold text-[var(--svs-muted)] transition hover:text-[var(--svs-text)]"
+                  >
+                    Clear selection
+                  </button>
                 </div>
               ) : null}
 
@@ -27540,12 +27785,26 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                         : `In stock: ${stockQty}`;
 
                     return (
-                      <article key={item.dbId} className="group flex flex-col overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition hover:shadow-[0_6px_16px_rgba(0,0,0,0.08)]">
+                      <article key={item.dbId} className={`group flex flex-col overflow-hidden rounded-2xl border bg-[var(--svs-surface)] shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition hover:shadow-[0_6px_16px_rgba(0,0,0,0.08)] ${item.isPaused ? 'border-amber-300' : 'border-[var(--svs-border)]'}`}>
                         <div className="relative h-40 overflow-hidden bg-[var(--svs-surface-soft)]">
-                          <img src={item.image} alt={item.title} className="h-full w-full object-cover transition group-hover:scale-[1.02]" loading="lazy" />
-                          <span className={`absolute left-3 top-3 rounded-full px-2.5 py-0.5 text-xs font-semibold ${MARKET_BADGE_COLORS[item.marketKey] || 'bg-slate-100 text-slate-700'}`}>
+                          <img src={item.image} alt={item.title} className={`h-full w-full object-cover transition group-hover:scale-[1.02] ${item.isPaused ? 'opacity-60' : ''}`} loading="lazy" />
+                          <label className="absolute left-3 top-3 inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/70 bg-white/90 shadow-sm">
+                            <input
+                              type="checkbox"
+                              checked={selectedListingIds.has(item.dbId)}
+                              onChange={() => toggleListingSelected(item.dbId)}
+                              className="h-4 w-4 accent-[var(--svs-primary)]"
+                              aria-label={`Select ${item.title}`}
+                            />
+                          </label>
+                          <span className={`absolute right-3 top-3 rounded-full px-2.5 py-0.5 text-xs font-semibold ${MARKET_BADGE_COLORS[item.marketKey] || 'bg-slate-100 text-slate-700'}`}>
                             {t(sellerMarketConfig[item.marketKey]?.labelKey || '')}
                           </span>
+                          {item.isPaused ? (
+                            <span className="absolute bottom-3 left-3 rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                              Paused
+                            </span>
+                          ) : null}
                         </div>
                         <div className="flex flex-1 flex-col p-4">
                           <h3 className="line-clamp-2 text-sm font-bold leading-snug text-[var(--svs-text)]">{item.title}</h3>
@@ -27568,13 +27827,21 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                               <CalendarDays className="h-3 w-3 flex-shrink-0" /> Public Holidays
                             </span>
                           ) : null}
-                          <div className="mt-auto flex gap-2 pt-4">
+                          <div className="mt-auto flex flex-wrap gap-2 pt-4">
                             <button
                               type="button"
                               onClick={() => openEdit(item)}
                               className="flex-1 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
                             >
                               Edit
+                            </button>
+                            <button
+                              type="button"
+                              disabled={togglingPausedId === item.dbId}
+                              onClick={() => handleTogglePaused(item)}
+                              className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700 transition hover:bg-amber-100 disabled:opacity-60"
+                            >
+                              {togglingPausedId === item.dbId ? '...' : (item.isPaused ? 'Resume' : 'Pause')}
                             </button>
                             <button
                               type="button"
@@ -27660,6 +27927,28 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                       </button>
                     );
                   })}
+                </div>
+              ) : null}
+
+              {filteredOrders.length > 0 ? (
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => downloadCsv(
+                      'seller-orders.csv',
+                      ['Reference', 'Date', 'Customer', 'Status', 'Seller Subtotal'],
+                      filteredOrders.map((order) => [
+                        order.reference || order.id,
+                        order.createdAt ? formatTimestampWithSeconds(order.createdAt) : '',
+                        order.customer?.fullName || order.customer?.email || 'Guest',
+                        order.status,
+                        (Number(order.sellerSubtotal) || 0).toFixed(2),
+                      ]),
+                    )}
+                    className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)]"
+                  >
+                    Export CSV
+                  </button>
                 </div>
               ) : null}
 
@@ -27974,6 +28263,247 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
           </div>
         </div>
       ) : null}
+
+      {/* Bulk delete confirm dialog */}
+      {isBulkDeleteConfirmOpen ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-4" role="dialog" aria-modal="true" aria-label="Confirm bulk deletion">
+          <div className="w-full max-w-sm rounded-2xl bg-[var(--svs-surface)] p-6 shadow-2xl">
+            <h4 className="text-lg font-bold text-[var(--svs-text)]">Remove {selectedListingIds.size} listing{selectedListingIds.size === 1 ? '' : 's'}?</h4>
+            <p className="mt-2 text-sm text-[var(--svs-muted)]">This will permanently remove the selected listings from your store, including their images.</p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsBulkDeleteConfirmOpen(false)}
+                disabled={isBulkActionRunning}
+                className="rounded-lg border border-[var(--svs-border)] px-4 py-2 text-sm font-semibold text-[var(--svs-text)]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkDelete}
+                disabled={isBulkActionRunning}
+                className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:opacity-60"
+              >
+                {isBulkActionRunning ? 'Removing…' : 'Yes, Remove'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </PageFrame>
+  );
+};
+
+// ────────────────────────────────────────────────────────────────────
+//  SellerAnalyticsPage
+//  Self-contained: fetches the seller's own listings + every order
+//  containing one of them (same filter pattern as SellerPayoutsPage's
+//  visibleOrders), then aggregates client-side — no new SQL/RPC needed.
+// ────────────────────────────────────────────────────────────────────
+const SellerAnalyticsPage = () => {
+  const isAuthenticated = getAuthState();
+  const userEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
+  const [myListings, setMyListings] = useState([]);
+  const [sellerOrders, setSellerOrders] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
+
+  useEffect(() => {
+    if (!isAuthenticated || !hasSupabaseEnv || !supabase) return;
+    let isCancelled = false;
+    const load = async () => {
+      setIsLoading(true);
+      setLoadError('');
+      const [listingsRes, ordersRes] = await Promise.all([
+        supabase.from(SELLER_ITEMS_TABLE).select('*').eq('seller_email', userEmail),
+        supabase.from(ORDERS_TABLE).select('user_email, order_key, reference, order_created_at, customer, items, currency, total, status').order('order_created_at', { ascending: false }),
+      ]);
+      if (isCancelled) return;
+      if (listingsRes.error || ordersRes.error) {
+        setLoadError(listingsRes.error?.message || ordersRes.error?.message || 'Could not load analytics.');
+        setIsLoading(false);
+        return;
+      }
+      setMyListings((listingsRes.data || []).map(mapSellerItemRecord));
+      setSellerOrders((ordersRes.data || []).map(mapOrderRecord));
+      setIsLoading(false);
+    };
+    load();
+    return () => { isCancelled = true; };
+  }, [isAuthenticated, userEmail]);
+
+  // Every order containing at least one of this seller's items, with
+  // sellerLineItems/sellerSubtotal scoped to just this seller's items —
+  // same shape SellerDashboardPage/SellerPayoutsPage already compute.
+  const visibleOrders = useMemo(() => {
+    const myListingIds = new Set(myListings.map((listing) => String(listing.id)));
+    const myEmail = (userEmail || '').toLowerCase();
+    return sellerOrders.filter((order) => {
+      const items = Array.isArray(order.items) ? order.items : [];
+      return items.some((item) => myListingIds.has(String(item.id)) || (item.sellerEmail || '').toLowerCase() === myEmail);
+    }).map((order) => {
+      const myItems = (order.items || []).filter((item) => myListingIds.has(String(item.id)) || (item.sellerEmail || '').toLowerCase() === myEmail);
+      const sellerSubtotal = myItems.reduce((sum, item) => sum + (Number(item.price ?? item.unitPrice) || 0) * (Number(item.quantity) || 1), 0);
+      return { ...order, sellerLineItems: myItems, sellerSubtotal };
+    });
+  }, [myListings, sellerOrders, userEmail]);
+
+  const sellerCurrency = useMemo(() => {
+    const tally = new Map();
+    myListings.forEach((listing) => {
+      const code = String(listing.currency || 'USD').toUpperCase();
+      tally.set(code, (tally.get(code) || 0) + 1);
+    });
+    let best = 'USD';
+    let bestCount = -1;
+    tally.forEach((count, code) => { if (count > bestCount) { best = code; bestCount = count; } });
+    return best;
+  }, [myListings]);
+
+  // Revenue trend, last 14 days (delivered orders only).
+  const revenueTrend = useMemo(() => {
+    const days = Array.from({ length: 14 }, (_, index) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (13 - index));
+      return { key: date.toISOString().slice(0, 10), label: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }), total: 0 };
+    });
+    const byKey = new Map(days.map((day) => [day.key, day]));
+    visibleOrders
+      .filter((order) => order.status === 'Delivered' && order.createdAt)
+      .forEach((order) => {
+        const key = String(order.createdAt).slice(0, 10);
+        const day = byKey.get(key);
+        if (day) day.total += Number(order.sellerSubtotal) || 0;
+      });
+    const max = Math.max(1, ...days.map((day) => day.total));
+    return { days, max };
+  }, [visibleOrders]);
+
+  // Top 5 selling listings by quantity, across every non-cancelled order.
+  const topListings = useMemo(() => {
+    const tally = new Map();
+    visibleOrders
+      .filter((order) => !['Cancelled by Buyer', 'Cancelled by Seller', 'Cancelled'].includes(order.status))
+      .forEach((order) => {
+        (order.sellerLineItems || []).forEach((item) => {
+          const title = item.title || 'Untitled listing';
+          tally.set(title, (tally.get(title) || 0) + (Number(item.quantity) || 1));
+        });
+      });
+    const sorted = Array.from(tally.entries()).map(([title, quantity]) => ({ title, quantity })).sort((a, b) => b.quantity - a.quantity).slice(0, 5);
+    const max = Math.max(1, ...sorted.map((entry) => entry.quantity));
+    return { sorted, max };
+  }, [visibleOrders]);
+
+  // Revenue by market, delivered orders only.
+  const revenueByMarket = useMemo(() => {
+    const tally = new Map();
+    visibleOrders
+      .filter((order) => order.status === 'Delivered')
+      .forEach((order) => {
+        (order.sellerLineItems || []).forEach((item) => {
+          const marketName = item.marketName || 'Other';
+          const amount = (Number(item.price ?? item.unitPrice) || 0) * (Number(item.quantity) || 1);
+          tally.set(marketName, (tally.get(marketName) || 0) + amount);
+        });
+      });
+    const total = Array.from(tally.values()).reduce((sum, value) => sum + value, 0);
+    const sorted = Array.from(tally.entries()).map(([marketName, amount]) => ({ marketName, amount })).sort((a, b) => b.amount - a.amount);
+    return { sorted, total: Math.max(total, 0.01) };
+  }, [visibleOrders]);
+
+  if (!isAuthenticated) {
+    return (
+      <PageFrame title="Analytics" subtitle="Sign in to view your store's analytics.">
+        <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-6 text-sm text-[var(--svs-text)]">
+          <p className="mb-4">You need to be signed in to view analytics.</p>
+          <Link to="/signin" className={`${cudyBluePrimaryButtonClassName} inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>Sign In</Link>
+        </div>
+      </PageFrame>
+    );
+  }
+
+  return (
+    <PageFrame title="Analytics" subtitle="Revenue trends, top sellers, and market breakdown for your store.">
+      {loadError ? (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{loadError}</div>
+      ) : isLoading ? (
+        <div className="grid gap-5 lg:grid-cols-2">
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="h-64 animate-pulse rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)]" />
+          ))}
+        </div>
+      ) : myListings.length === 0 ? (
+        <div className="rounded-2xl border-2 border-dashed border-[var(--svs-border)] bg-[var(--svs-surface-soft)] py-16 text-center">
+          <BarChart3 className="mx-auto h-10 w-10 text-[var(--svs-muted)]" />
+          <p className="mt-3 text-base font-semibold text-[var(--svs-text)]">No data yet</p>
+          <p className="mt-1 text-sm text-[var(--svs-muted)]">Once you have listings and orders, your analytics will show up here.</p>
+        </div>
+      ) : (
+        <div className="grid gap-5 lg:grid-cols-2">
+          {/* Revenue trend */}
+          <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] lg:col-span-2">
+            <h2 className="text-base font-bold text-[var(--svs-text)]">Revenue trend — last 14 days</h2>
+            <p className="text-xs text-[var(--svs-muted)]">Delivered orders only.</p>
+            <div className="mt-5 flex items-end gap-1.5" style={{ height: '140px' }}>
+              {revenueTrend.days.map((day) => (
+                <div key={day.key} className="flex flex-1 flex-col items-center justify-end gap-1.5" title={`${day.label}: ${formatSellerAmount(day.total, sellerCurrency)}`}>
+                  <div
+                    className="w-full min-h-[2px] rounded-t-sm bg-[var(--svs-primary)] transition-all"
+                    style={{ height: `${Math.max(2, (day.total / revenueTrend.max) * 100)}%` }}
+                  />
+                  <span className="text-[9px] text-[var(--svs-muted)]">{day.label}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Top selling listings */}
+          <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+            <h2 className="text-base font-bold text-[var(--svs-text)]">Top selling listings</h2>
+            {topListings.sorted.length === 0 ? (
+              <p className="mt-4 text-sm text-[var(--svs-muted)]">No sales yet.</p>
+            ) : (
+              <ul className="mt-4 space-y-3">
+                {topListings.sorted.map((entry) => (
+                  <li key={entry.title}>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="truncate font-semibold text-[var(--svs-text)]">{entry.title}</span>
+                      <span className="ml-2 shrink-0 text-[var(--svs-muted)]">{entry.quantity} sold</span>
+                    </div>
+                    <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-[var(--svs-surface-soft)]">
+                      <div className="h-full rounded-full bg-[var(--svs-primary)]" style={{ width: `${(entry.quantity / topListings.max) * 100}%` }} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {/* Revenue by market */}
+          <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+            <h2 className="text-base font-bold text-[var(--svs-text)]">Revenue by market</h2>
+            {revenueByMarket.sorted.length === 0 ? (
+              <p className="mt-4 text-sm text-[var(--svs-muted)]">No delivered orders yet.</p>
+            ) : (
+              <ul className="mt-4 space-y-3">
+                {revenueByMarket.sorted.map((entry) => (
+                  <li key={entry.marketName}>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="truncate font-semibold text-[var(--svs-text)]">{entry.marketName}</span>
+                      <span className="ml-2 shrink-0 text-[var(--svs-muted)]">{formatSellerAmount(entry.amount, sellerCurrency)} ({Math.round((entry.amount / revenueByMarket.total) * 100)}%)</span>
+                    </div>
+                    <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-[var(--svs-surface-soft)]">
+                      <div className="h-full rounded-full bg-emerald-500" style={{ width: `${(entry.amount / revenueByMarket.total) * 100}%` }} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+      )}
     </PageFrame>
   );
 };
@@ -29346,9 +29876,30 @@ const SellerPayoutsPage = ({ orders = [] }) => {
 
           {/* History */}
           <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <h2 className="text-base font-bold text-[var(--svs-text)]">Payout history</h2>
-              <span className="text-xs text-[var(--svs-muted)]">{payoutRequests.length} request{payoutRequests.length === 1 ? '' : 's'}</span>
+              <div className="flex items-center gap-2">
+                {payoutRequests.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => downloadCsv(
+                      'payout-history.csv',
+                      ['Date', 'Amount', 'Currency', 'Method', 'Status'],
+                      payoutRequests.map((req) => [
+                        formatTimestampWithSeconds(req.requestedAt),
+                        Number(req.amount) || 0,
+                        req.currency || sellerCurrency,
+                        req.method,
+                        req.status,
+                      ]),
+                    )}
+                    className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)]"
+                  >
+                    Export CSV
+                  </button>
+                ) : null}
+                <span className="text-xs text-[var(--svs-muted)]">{payoutRequests.length} request{payoutRequests.length === 1 ? '' : 's'}</span>
+              </div>
             </div>
             {isLoading ? (
               <p className="mt-4 text-sm text-[var(--svs-muted)]">Loading…</p>
@@ -34855,7 +35406,15 @@ const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onOpen
       </div>
     ) : (
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {wishlistItems.map((item) => (
+        {wishlistItems.map((item) => {
+          const availableQuantity = getSellerListingStock(sellerItems, item);
+          const isOutOfStock = availableQuantity !== null && availableQuantity <= 0;
+          const livePrice = getSellerListingLivePrice(sellerItems, item);
+          const priceChange = livePrice && Number.isFinite(item.unitPrice) && item.unitPrice > 0 && Math.abs(livePrice.price - item.unitPrice) > 0.01
+            ? (livePrice.price > item.unitPrice ? 'up' : 'down')
+            : null;
+
+          return (
           <article
             key={item.id}
             className="overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-[0_4px_8px_rgba(0,0,0,0.08)]"
@@ -34866,7 +35425,7 @@ const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onOpen
               image: item.image,
               images: item.images || (item.image ? [item.image] : []),
               ...getItemDetailSizeProps(item),
-              availableQuantity: getSellerListingStock(sellerItems, item),
+              availableQuantity,
               marketName: item.marketName,
               details: item.details,
               priceLabel: item.unitPriceLabel,
@@ -34880,7 +35439,14 @@ const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onOpen
               }
             }}
           >
-            {item.image ? <img src={item.image} alt={item.title} className="h-44 w-full object-cover" loading="lazy" /> : null}
+            <div className="relative">
+              {item.image ? <img src={item.image} alt={item.title} className={`h-44 w-full object-cover ${isOutOfStock ? 'opacity-60' : ''}`} loading="lazy" /> : null}
+              {isOutOfStock ? (
+                <span className="absolute left-3 top-3 rounded-full bg-rose-600 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white shadow">
+                  Out of stock
+                </span>
+              ) : null}
+            </div>
             <div className="p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -34890,16 +35456,22 @@ const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onOpen
                 <Heart className="h-5 w-5 fill-current text-rose-500" />
               </div>
               <p className="mt-3 text-sm font-semibold text-[var(--svs-primary-strong)]">{item.unitPriceLabel}</p>
+              {priceChange ? (
+                <p className={`mt-1 text-xs font-semibold ${priceChange === 'down' ? 'text-emerald-700' : 'text-amber-700'}`}>
+                  Price {priceChange === 'down' ? 'dropped' : 'increased'} to {formatAmountInCurrency(livePrice.price, livePrice.currency || item.unitPriceCurrency)}
+                </p>
+              ) : null}
               <div className="mt-4 flex flex-wrap gap-2">
                 <button
                   type="button"
+                  disabled={isOutOfStock}
                   onClick={(event) => {
                     event.stopPropagation();
                     onAddToCart({ ...item, quantity: 1 });
                   }}
-                  className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white`}
+                  className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-400`}
                 >
-                  Add to cart
+                  {isOutOfStock ? 'Out of stock' : 'Add to cart'}
                 </button>
                 <button
                   type="button"
@@ -34914,11 +35486,302 @@ const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onOpen
               </div>
             </div>
           </article>
-        ))}
+          );
+        })}
       </div>
     )}
     <WishlistShareModal open={shareOpen} onClose={() => setShareOpen(false)} wishlistItems={wishlistItems} />
   </PageFrame>
+  );
+};
+
+const NOTIFICATION_PREF_OPTIONS = [
+  { key: 'orderUpdates', label: 'Order updates', description: 'Order confirmations, status changes, delivery updates.' },
+  { key: 'bookingUpdates', label: 'Booking updates', description: 'Booking confirmed/declined/rescheduled, reminders.' },
+  { key: 'chatMessages', label: 'Chat messages', description: 'New messages from sellers, providers, and buyers.' },
+  { key: 'promotions', label: 'Promotions', description: 'Offers, deals, and marketing updates.' },
+];
+
+const getNotificationPrefValue = (prefs, key) => {
+  if (prefs && typeof prefs === 'object' && key in prefs) return Boolean(prefs[key]);
+  return key !== 'promotions';
+};
+
+const emptyAddressForm = { label: '', fullName: '', phone: '', country: 'South Africa', address1: '', address2: '', city: '', province: 'KwaZulu-Natal', postalCode: '' };
+
+const mapBuyerAddressRecord = (record) => ({
+  id: record.id,
+  label: record.label || '',
+  fullName: record.full_name || '',
+  phone: record.phone || '',
+  country: record.country || '',
+  address1: record.address1 || '',
+  address2: record.address2 || '',
+  city: record.city || '',
+  province: record.province || '',
+  postalCode: record.postal_code || '',
+  isDefault: Boolean(record.is_default),
+});
+
+// Buyer-facing Account Settings — profile, saved addresses (completes the
+// "Save this address for future orders" checkout checkbox, which previously
+// captured a flag that nothing ever read), and notification preferences
+// (read by pushNotificationToUser before it emails a copy of a notification).
+const AccountSettingsPage = () => {
+  const isAuthenticated = getAuthState();
+  const userEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
+  const [isLoading, setIsLoading] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [contactNumber, setContactNumber] = useState('');
+  const [notificationPrefs, setNotificationPrefs] = useState({});
+  const [addresses, setAddresses] = useState([]);
+  const [addressForm, setAddressForm] = useState(emptyAddressForm);
+  const [isAddingAddress, setIsAddingAddress] = useState(false);
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState('idle');
+
+  useEffect(() => {
+    if (!isAuthenticated || !userEmail || !hasSupabaseEnv || !supabase) return;
+    let isCancelled = false;
+    (async () => {
+      setIsLoading(true);
+      const [userRes, addressesRes] = await Promise.all([
+        supabase.from('account_users').select('full_name, contact_number, notification_prefs').eq('email_address', userEmail).maybeSingle(),
+        supabase.from('buyer_addresses').select('*').eq('user_email', userEmail).order('created_at', { ascending: false }),
+      ]);
+      if (isCancelled) return;
+      if (userRes.data) {
+        setFullName(userRes.data.full_name || '');
+        setContactNumber(userRes.data.contact_number || '');
+        setNotificationPrefs(userRes.data.notification_prefs || {});
+      }
+      setAddresses((addressesRes.data || []).map(mapBuyerAddressRecord));
+      setIsLoading(false);
+    })();
+    return () => { isCancelled = true; };
+  }, [isAuthenticated, userEmail]);
+
+  const handleSaveProfile = async (event) => {
+    event.preventDefault();
+    setMessage('');
+    setMessageType('idle');
+    const { error } = await supabase
+      .from('account_users')
+      .update({ full_name: fullName.trim(), contact_number: contactNumber.trim() })
+      .eq('email_address', userEmail);
+    if (error) {
+      setMessage(error.message);
+      setMessageType('error');
+      return;
+    }
+    if (typeof window !== 'undefined' && fullName.trim()) window.localStorage.setItem('svs-user-name', fullName.trim());
+    setMessage('Profile updated.');
+    setMessageType('success');
+  };
+
+  const handleToggleNotificationPref = async (key) => {
+    const nextValue = !getNotificationPrefValue(notificationPrefs, key);
+    const nextPrefs = { ...notificationPrefs, [key]: nextValue };
+    setNotificationPrefs(nextPrefs);
+    const { error } = await supabase.from('account_users').update({ notification_prefs: nextPrefs }).eq('email_address', userEmail);
+    if (error) {
+      setMessage(`Could not save preference: ${error.message}`);
+      setMessageType('error');
+    }
+  };
+
+  const handleAddAddress = async (event) => {
+    event.preventDefault();
+    setMessage('');
+    setMessageType('idle');
+    if (!addressForm.fullName.trim() || !addressForm.address1.trim() || !addressForm.city.trim()) {
+      setMessage('Add at least a name, address, and city before saving.');
+      setMessageType('error');
+      return;
+    }
+    setIsAddingAddress(true);
+    const { data, error } = await supabase
+      .from('buyer_addresses')
+      .insert({
+        user_email: userEmail,
+        label: addressForm.label.trim() || null,
+        full_name: addressForm.fullName.trim(),
+        phone: addressForm.phone.trim() || null,
+        country: addressForm.country.trim() || null,
+        address1: addressForm.address1.trim(),
+        address2: addressForm.address2.trim() || null,
+        city: addressForm.city.trim(),
+        province: addressForm.province.trim() || null,
+        postal_code: addressForm.postalCode.trim() || null,
+        is_default: addresses.length === 0,
+      })
+      .select('*')
+      .single();
+    setIsAddingAddress(false);
+    if (error) {
+      setMessage(error.message);
+      setMessageType('error');
+      return;
+    }
+    setAddresses((current) => [mapBuyerAddressRecord(data), ...current]);
+    setAddressForm(emptyAddressForm);
+    setMessage('Address saved.');
+    setMessageType('success');
+  };
+
+  const handleDeleteAddress = async (id) => {
+    const { error } = await supabase.from('buyer_addresses').delete().eq('id', id);
+    if (error) {
+      setMessage(error.message);
+      setMessageType('error');
+      return;
+    }
+    setAddresses((current) => current.filter((address) => address.id !== id));
+  };
+
+  const handleSetDefaultAddress = async (id) => {
+    await supabase.from('buyer_addresses').update({ is_default: false }).eq('user_email', userEmail);
+    const { error } = await supabase.from('buyer_addresses').update({ is_default: true }).eq('id', id);
+    if (error) {
+      setMessage(error.message);
+      setMessageType('error');
+      return;
+    }
+    setAddresses((current) => current.map((address) => ({ ...address, isDefault: address.id === id })));
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <PageFrame title="Account Settings" subtitle="Sign in to manage your profile, addresses, and notification preferences.">
+        <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-6 text-sm text-[var(--svs-text)]">
+          <p className="mb-4">You need to be signed in to view account settings.</p>
+          <Link to="/signin" className={`${cudyBluePrimaryButtonClassName} inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>Sign In</Link>
+        </div>
+      </PageFrame>
+    );
+  }
+
+  return (
+    <PageFrame title="Account Settings" subtitle="Manage your profile, saved addresses, and notification preferences.">
+      {message ? (
+        <div className={`mb-5 rounded-xl px-4 py-3 text-sm ${messageType === 'error' ? 'border border-rose-200 bg-rose-50 text-rose-700' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+          {message}
+        </div>
+      ) : null}
+
+      {isLoading ? (
+        <p className="text-sm text-[var(--svs-muted)]">Loading…</p>
+      ) : (
+        <div className="space-y-6">
+          {/* Profile */}
+          <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+            <h2 className="text-base font-bold text-[var(--svs-text)]">Profile</h2>
+            <form onSubmit={handleSaveProfile} className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="block text-sm">
+                <span className="mb-1 block font-semibold text-[var(--svs-text)]">Full name</span>
+                <input
+                  value={fullName}
+                  onChange={(event) => setFullName(event.target.value)}
+                  className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="mb-1 block font-semibold text-[var(--svs-text)]">Contact number</span>
+                <input
+                  value={contactNumber}
+                  onChange={(event) => setContactNumber(event.target.value)}
+                  className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                />
+              </label>
+              <div className="sm:col-span-2">
+                <button type="submit" className={`${cudyBluePrimaryButtonClassName} rounded-lg bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
+                  Save Profile
+                </button>
+              </div>
+            </form>
+          </section>
+
+          {/* Saved Addresses */}
+          <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+            <h2 className="text-base font-bold text-[var(--svs-text)]">Saved Addresses</h2>
+            {addresses.length === 0 ? (
+              <p className="mt-3 text-sm text-[var(--svs-muted)]">No saved addresses yet. Add one below, or check "Save this address for future orders" at checkout.</p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {addresses.map((address) => (
+                  <li key={address.id} className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-[var(--svs-text)]">
+                        {address.label || address.fullName}
+                        {address.isDefault ? <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-700">Default</span> : null}
+                      </p>
+                      <p className="text-xs text-[var(--svs-muted)]">{address.fullName} • {address.phone}</p>
+                      <p className="text-xs text-[var(--svs-muted)]">{[address.address1, address.address2, address.city, address.province, address.postalCode, address.country].filter(Boolean).join(', ')}</p>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      {!address.isDefault ? (
+                        <button type="button" onClick={() => handleSetDefaultAddress(address.id)} className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--svs-text)] hover:border-[var(--svs-primary)]">
+                          Set default
+                        </button>
+                      ) : null}
+                      <button type="button" onClick={() => handleDeleteAddress(address.id)} className="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100">
+                        Delete
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <form onSubmit={handleAddAddress} className="mt-4 grid gap-3 rounded-xl border border-dashed border-[var(--svs-border)] p-4 sm:grid-cols-2">
+              <p className="text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)] sm:col-span-2">Add a new address</p>
+              <input placeholder="Label (e.g. Home, Office)" value={addressForm.label} onChange={(event) => setAddressForm((f) => ({ ...f, label: event.target.value }))} className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]" />
+              <input placeholder="Full name" value={addressForm.fullName} onChange={(event) => setAddressForm((f) => ({ ...f, fullName: event.target.value }))} className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]" />
+              <input placeholder="Phone" value={addressForm.phone} onChange={(event) => setAddressForm((f) => ({ ...f, phone: event.target.value }))} className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]" />
+              <input placeholder="Country" value={addressForm.country} onChange={(event) => setAddressForm((f) => ({ ...f, country: event.target.value }))} className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]" />
+              <input placeholder="Address line 1" value={addressForm.address1} onChange={(event) => setAddressForm((f) => ({ ...f, address1: event.target.value }))} className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)] sm:col-span-2" />
+              <input placeholder="Address line 2 (optional)" value={addressForm.address2} onChange={(event) => setAddressForm((f) => ({ ...f, address2: event.target.value }))} className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)] sm:col-span-2" />
+              <input placeholder="City" value={addressForm.city} onChange={(event) => setAddressForm((f) => ({ ...f, city: event.target.value }))} className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]" />
+              <input placeholder="Province" value={addressForm.province} onChange={(event) => setAddressForm((f) => ({ ...f, province: event.target.value }))} className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]" />
+              <input placeholder="Postal code" value={addressForm.postalCode} onChange={(event) => setAddressForm((f) => ({ ...f, postalCode: event.target.value }))} className="rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]" />
+              <div className="sm:col-span-2">
+                <button type="submit" disabled={isAddingAddress} className={`${cudyBluePrimaryButtonClassName} rounded-lg bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60`}>
+                  {isAddingAddress ? 'Saving…' : 'Save Address'}
+                </button>
+              </div>
+            </form>
+          </section>
+
+          {/* Notification Preferences */}
+          <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+            <h2 className="text-base font-bold text-[var(--svs-text)]">Notification Preferences</h2>
+            <p className="text-xs text-[var(--svs-muted)]">Choose which notifications also get emailed to you. In-app notifications always show regardless.</p>
+            <ul className="mt-4 space-y-3">
+              {NOTIFICATION_PREF_OPTIONS.map((option) => {
+                const checked = getNotificationPrefValue(notificationPrefs, option.key);
+                return (
+                  <li key={option.key} className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--svs-text)]">{option.label}</p>
+                      <p className="text-xs text-[var(--svs-muted)]">{option.description}</p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={checked}
+                      onClick={() => handleToggleNotificationPref(option.key)}
+                      className={`relative h-6 w-11 shrink-0 rounded-full transition ${checked ? 'bg-[var(--svs-primary)]' : 'bg-slate-300'}`}
+                    >
+                      <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        </div>
+      )}
+    </PageFrame>
   );
 };
 
@@ -35200,6 +36063,37 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
     billingProvince: 'KwaZulu-Natal',
     billingPostalCode: '',
   });
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState('');
+  useEffect(() => {
+    const buyerEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
+    if (!getAuthState() || !buyerEmail || !hasSupabaseEnv || !supabase) return;
+    let isCancelled = false;
+    (async () => {
+      const { data } = await supabase.from('buyer_addresses').select('*').eq('user_email', buyerEmail).order('is_default', { ascending: false });
+      if (isCancelled) return;
+      setSavedAddresses(data || []);
+    })();
+    return () => { isCancelled = true; };
+  }, []);
+  const applySavedAddress = (addressId) => {
+    setSelectedSavedAddressId(addressId);
+    const address = savedAddresses.find((entry) => String(entry.id) === String(addressId));
+    if (!address) return;
+    const [firstName = '', ...lastNameParts] = String(address.full_name || '').trim().split(' ');
+    setFormState((current) => ({
+      ...current,
+      firstName,
+      lastName: lastNameParts.join(' '),
+      phone: address.phone || current.phone,
+      country: address.country || current.country,
+      address1: address.address1 || '',
+      address2: address.address2 || '',
+      city: address.city || '',
+      province: address.province || current.province,
+      postalCode: address.postal_code || '',
+    }));
+  };
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
@@ -35283,24 +36177,32 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
   const isPhoneMissing = !formState.phone.trim();
   const contactEmail = String(formState.contact || '').trim();
   const hasInvalidContactEmail = Boolean(contactEmail) && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail);
+  // Tickets/bookings (movies, concerts, sports, travel) are delivered
+  // electronically — confirmation by email/phone — same as real ticket
+  // marketplaces, so a checkout made up entirely of those items skips the
+  // physical delivery address step and its R150 standard shipping fee.
+  // A mixed cart (tickets + a physical good) still collects an address.
+  const isTicketOnlyCheckout = checkoutItems.length > 0 && checkoutItems.every((item) => item.route === '/bookings-tickets');
   const isDeliveryComplete = useMemo(() => {
     if (!checkoutItems.length) return false;
-    const requiredFields = [
-      formState.contact,
-      formState.firstName,
-      formState.address1,
-      formState.city,
-      formState.province,
-      formState.postalCode,
-      formState.phone,
-    ];
+    const requiredFields = isTicketOnlyCheckout
+      ? [formState.contact, formState.firstName, formState.phone]
+      : [
+        formState.contact,
+        formState.firstName,
+        formState.address1,
+        formState.city,
+        formState.province,
+        formState.postalCode,
+        formState.phone,
+      ];
     if (requiredFields.some((value) => !String(value || '').trim())) return false;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) return false;
     return true;
-  }, [checkoutItems.length, formState, contactEmail]);
-  const shippingFee = checkoutItems.length && isDeliveryComplete ? STANDARD_SHIPPING_FEE : 0;
+  }, [checkoutItems.length, formState, contactEmail, isTicketOnlyCheckout]);
+  const shippingFee = (checkoutItems.length && isDeliveryComplete && !isTicketOnlyCheckout) ? STANDARD_SHIPPING_FEE : 0;
   const totals = useMemo(() => getCheckoutTotals(checkoutItems, shippingFee), [checkoutItems, shippingFee]);
-  const shippingMethodLabel = `Standard – ${formatCheckoutAmount(shippingFee)}`;
+  const shippingMethodLabel = isTicketOnlyCheckout ? 'Electronic delivery (e-ticket)' : `Standard – ${formatCheckoutAmount(shippingFee)}`;
   const sectionClassName = 'rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 shadow-sm md:p-8';
   const fieldLabelClassName = 'mb-2 block text-sm font-medium text-[var(--svs-text)]';
   const inputClassName = 'w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/20';
@@ -35365,15 +36267,21 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
       return 'Your checkout is empty. Choose an item before continuing.';
     }
 
-    const requiredFields = [
-      { value: formState.contact, label: 'Email Address' },
-      { value: formState.firstName, label: 'Full Name' },
-      { value: formState.address1, label: 'Street / Area' },
-      { value: formState.city, label: 'City' },
-      { value: formState.province, label: 'Province' },
-      { value: formState.postalCode, label: 'Postal Code' },
-      { value: formState.phone, label: 'Phone Number' },
-    ];
+    const requiredFields = isTicketOnlyCheckout
+      ? [
+        { value: formState.contact, label: 'Email Address' },
+        { value: formState.firstName, label: 'Full Name' },
+        { value: formState.phone, label: 'Phone Number' },
+      ]
+      : [
+        { value: formState.contact, label: 'Email Address' },
+        { value: formState.firstName, label: 'Full Name' },
+        { value: formState.address1, label: 'Street / Area' },
+        { value: formState.city, label: 'City' },
+        { value: formState.province, label: 'Province' },
+        { value: formState.postalCode, label: 'Postal Code' },
+        { value: formState.phone, label: 'Phone Number' },
+      ];
 
     const missing = requiredFields.find((field) => !String(field.value || '').trim());
     if (missing) {
@@ -35639,7 +36547,9 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
           </div>
           <div className="flex items-center justify-between">
             <dt className="text-[var(--svs-primary-strong)]">Delivery</dt>
-            <dd className="text-xs italic text-[var(--svs-muted)]">Calculated at next step</dd>
+            <dd className="text-xs italic text-[var(--svs-muted)]">
+              {isTicketOnlyCheckout ? 'Not required (e-ticket)' : 'Calculated at next step'}
+            </dd>
           </div>
         </dl>
 
@@ -35647,7 +36557,9 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
           <span>Estimated total</span>
           <span>{formatCheckoutAmount(estimatedTotal)}</span>
         </div>
-        <p className="mt-1 text-right text-xs text-[var(--svs-muted)]">Excludes delivery</p>
+        {!isTicketOnlyCheckout ? (
+          <p className="mt-1 text-right text-xs text-[var(--svs-muted)]">Excludes delivery</p>
+        ) : null}
 
         <div className="mt-8 flex flex-col items-center gap-3">
           <button
@@ -35782,9 +36694,37 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
           </div>
         </section>
 
-        {/* Delivery Address */}
+        {/* Delivery Address — skipped for ticket/booking-only checkouts, which are
+            delivered electronically (confirmation already goes to the email/phone
+            collected above), same as other ticket marketplaces. */}
+        {isTicketOnlyCheckout ? (
+          <section className={sectionClassName}>
+            <h2 className="text-xl font-black text-[var(--svs-primary-strong)]">Delivery</h2>
+            <p className="mt-3 text-sm text-[var(--svs-muted)]">
+              No shipping address needed — your booking confirmation and e-ticket will be sent to the email and phone number above.
+            </p>
+          </section>
+        ) : (
         <section className={sectionClassName}>
           <h2 className="text-xl font-black text-[var(--svs-primary-strong)]">Delivery Address</h2>
+          {savedAddresses.length > 0 ? (
+            <div className="mt-4">
+              <label htmlFor="checkout-saved-address" className={fieldLabelClassName}>Use a saved address</label>
+              <select
+                id="checkout-saved-address"
+                value={selectedSavedAddressId}
+                onChange={(event) => applySavedAddress(event.target.value)}
+                className={inputClassName}
+              >
+                <option value="">Select a saved address…</option>
+                {savedAddresses.map((address) => (
+                  <option key={address.id} value={address.id}>
+                    {address.label || address.full_name} — {address.address1}, {address.city}{address.is_default ? ' (Default)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
           <div className="mt-5 space-y-4">
             <div>
               <label htmlFor="checkout-apt" className={fieldLabelClassName}>House / Apartment Number</label>
@@ -35936,6 +36876,7 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
             </label>
           </div>
         </section>
+        )}
 
         {/* Payment Method */}
         <section className={sectionClassName}>
@@ -36072,6 +37013,7 @@ const StripeCardPaymentPanel = ({
   const elements = useElements();
   const [submitError, setSubmitError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const totalCurrency = payfastSession?.totals?.currency || _fxState.buyerCurrency || 'ZAR';
 
   const handleStripeSubmit = async () => {
     setSubmitError('');
@@ -36126,7 +37068,7 @@ const StripeCardPaymentPanel = ({
           Cancel Payment
         </button>
         <button type="button" disabled={isSubmitting || !stripe || !elements} onClick={handleStripeSubmit} className={`${cudyBluePrimaryButtonClassName} rounded-2xl bg-[#1a73e8] px-6 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70`}>
-          {isSubmitting ? 'Processing payment...' : `Pay ${formatCheckoutAmount(payfastSession.totals.total)}`}
+          {isSubmitting ? 'Processing payment...' : `Pay ${formatCheckoutAmount(payfastSession.totals.total, totalCurrency)}`}
         </button>
       </div>
     </>
@@ -36360,8 +37302,8 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
     const otpVerificationId = await confirmWalletOtp(
       'spend',
       walletNeedsConversion
-        ? `Pay ${formatCheckoutAmount(payfastSession.totals.total)} (≈ ${formatAmountInCurrency(walletChargeAmount, walletCurrency)} from your wallet) from your SVS Wallet.`
-        : `Pay ${formatCheckoutAmount(payfastSession.totals.total)} from your SVS Wallet.`,
+        ? `Pay ${formatCheckoutAmount(payfastSession.totals.total, totalCurrency)} (≈ ${formatAmountInCurrency(walletChargeAmount, walletCurrency)} from your wallet) from your SVS Wallet.`
+        : `Pay ${formatCheckoutAmount(payfastSession.totals.total, totalCurrency)} from your SVS Wallet.`,
     );
     if (!otpVerificationId) return;
 
@@ -36482,7 +37424,7 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-[24px] border border-[#e2dbd0] bg-[#fbfaf7] p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8a7967]">Payment total:</p>
-              <p className="mt-2 text-2xl font-bold text-[#1f1f1f]">ZAR {formatCheckoutAmount(payfastSession.totals.total)}</p>
+              <p className="mt-2 text-2xl font-bold text-[#1f1f1f]">{formatCheckoutAmount(payfastSession.totals.total, totalCurrency)}</p>
             </div>
             <div className="rounded-[24px] border border-[#e2dbd0] bg-[#fbfaf7] p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8a7967]">Transacting as:</p>
@@ -36604,7 +37546,7 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
                 className={`${cudyBluePrimaryButtonClassName} inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--svs-primary)] px-6 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70`}
               >
                 <Wallet className="h-4 w-4" />
-                {isWalletPaying ? 'Processing payment...' : `Pay ${formatCheckoutAmount(payfastSession.totals.total)} from wallet`}
+                {isWalletPaying ? 'Processing payment...' : `Pay ${formatCheckoutAmount(payfastSession.totals.total, totalCurrency)} from wallet`}
               </button>
             </div>
           ) : isCardPaymentMethod ? (
@@ -36628,7 +37570,7 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
                 Cancel Payment
               </button>
               <button type="button" disabled={isSubmitting || walletGroupNeedsExplicitChoice} onClick={handleCompletePayment} className={`${cudyBluePrimaryButtonClassName} rounded-2xl bg-[#1a73e8] px-6 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70`}>
-                {isSubmitting ? 'Processing payment...' : `Pay ${formatCheckoutAmount(payfastSession.totals.total)}`}
+                {isSubmitting ? 'Processing payment...' : `Pay ${formatCheckoutAmount(payfastSession.totals.total, totalCurrency)}`}
               </button>
             </div>
           )}
@@ -37062,10 +38004,11 @@ const buildReplySnippetFromBody = (rawBody) => {
     try {
       const card = JSON.parse(innerBody.slice(SVS_CARD_PREFIX_FALLBACK.length));
       if (card && typeof card === 'object' && card.type) {
+        const cardCurrencySymbol = getCurrencyDefinition(card.currency || 'ZAR').symbol;
         const map = {
-          offer: `\uD83E\uDD1D Offer R${card.amount || '?'}`,
+          offer: `\uD83E\uDD1D Offer ${cardCurrencySymbol}${card.amount || '?'}`,
           'offer-response': card.accepted ? '\uD83D\uDC4D Offer accepted' : '\uD83D\uDC4E Offer declined',
-          'payment-request': `\uD83D\uDCB3 Payment request R${card.amount || '?'}`,
+          'payment-request': `\uD83D\uDCB3 Payment request ${cardCurrencySymbol}${card.amount || '?'}`,
           location: `\uD83D\uDCCD ${card.label || 'Shared location'}`,
           image: '\uD83D\uDDBC\uFE0F Photo',
           voice: `\uD83C\uDFA4 Voice note (${card.durationSec || 0}s)`,
@@ -38594,9 +39537,10 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
       metadata: disappearMs > 0 ? { expiresAt: new Date(Date.now() + disappearMs).toISOString() } : {},
       createdAt: nowIso,
     };
+    const cardCurrencySymbol = getCurrencyDefinition(card.currency || 'ZAR').symbol;
     const previewByType = {
-      offer: `\uD83E\uDD1D Offer: R${card.amount}`,
-      'payment-request': `\uD83D\uDCB3 Payment request: R${card.amount}`,
+      offer: `\uD83E\uDD1D Offer: ${cardCurrencySymbol}${card.amount}`,
+      'payment-request': `\uD83D\uDCB3 Payment request: ${cardCurrencySymbol}${card.amount}`,
       location: '\uD83D\uDCCD Shared a location',
       image: '\uD83D\uDDBC\uFE0F Sent a photo',
       voice: `\uD83C\uDFA4 Voice note (${card.durationSec || 0}s)`,
@@ -39644,11 +40588,14 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
         } else if (card.type === 'voice') {
           body = `<div>&#127908; Voice note (${card.durationSec || 0}s)${card.transcript ? ` &mdash; &ldquo;${esc(card.transcript)}&rdquo;` : ''}</div>`;
         } else if (card.type === 'offer') {
-          body = `<div>&#129309; <strong>Offer:</strong> R${esc(Number(card.amount).toLocaleString())}${card.note ? ` &mdash; ${esc(card.note)}` : ''}</div>`;
+          const symbol = getCurrencyDefinition(card.currency || 'ZAR').symbol;
+          body = `<div>&#129309; <strong>Offer:</strong> ${symbol}${esc(Number(card.amount).toLocaleString())}${card.note ? ` &mdash; ${esc(card.note)}` : ''}</div>`;
         } else if (card.type === 'offer-response') {
-          body = `<div>${card.accepted ? '&#128077; Offer accepted' : '&#128078; Offer declined'}${card.amount ? ` &middot; R${esc(Number(card.amount).toLocaleString())}` : ''}</div>`;
+          const symbol = getCurrencyDefinition(card.currency || 'ZAR').symbol;
+          body = `<div>${card.accepted ? '&#128077; Offer accepted' : '&#128078; Offer declined'}${card.amount ? ` &middot; ${symbol}${esc(Number(card.amount).toLocaleString())}` : ''}</div>`;
         } else if (card.type === 'payment-request') {
-          body = `<div>&#128179; <strong>Payment request:</strong> R${esc(Number(card.amount).toLocaleString())}${card.note ? ` &mdash; ${esc(card.note)}` : ''}</div>`;
+          const symbol = getCurrencyDefinition(card.currency || 'ZAR').symbol;
+          body = `<div>&#128179; <strong>Payment request:</strong> ${symbol}${esc(Number(card.amount).toLocaleString())}${card.note ? ` &mdash; ${esc(card.note)}` : ''}</div>`;
         } else if (card.type === 'location') {
           body = `<div>&#128205; ${esc(card.label || 'Shared location')} &mdash; ${esc(card.lat)}, ${esc(card.lng)}</div>`;
         } else if (card.type === 'deal-status') {
@@ -39693,7 +40640,10 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
         <div className="border-b border-[var(--svs-border)] bg-gradient-to-r from-[var(--svs-primary)] via-[var(--svs-primary-strong)] to-[var(--svs-primary)] px-3 py-2.5 text-white sm:px-7 sm:py-4">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <h1 className="truncate text-lg font-black sm:text-3xl">Let&rsquo;s Talk</h1>
+              <h1 className="flex items-center gap-2 truncate text-xl font-black tracking-wide text-white sm:text-4xl">
+                <MessageCircle className="h-5 w-5 shrink-0 sm:h-8 sm:w-8" strokeWidth={2.4} aria-hidden="true" />
+                LET&rsquo;S TALK
+              </h1>
               <p className="mt-0.5 hidden text-[11px] text-cyan-50 sm:block sm:text-xs">
                 Chat, negotiate, share media, send offers &amp; close deals — all in one place.
               </p>
@@ -40445,7 +41395,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                                     🤝 Offer
                                   </p>
                                   <p className={`mt-1 text-lg font-black ${mine ? 'text-white' : 'text-amber-900'}`}>
-                                    R{Number(card.amount).toLocaleString()}
+                                    {getCurrencyDefinition(card.currency || 'ZAR').symbol}{Number(card.amount).toLocaleString()}
                                   </p>
                                   {card.note ? (
                                     <p className={`mt-1 text-xs ${mine ? 'text-cyan-50' : 'text-amber-800'}`}>{card.note}</p>
@@ -40473,7 +41423,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                               {card.type === 'offer-response' ? (
                                 <p className={`rounded-lg px-2.5 py-1.5 text-sm font-bold ${card.accepted ? (mine ? 'bg-white/15 text-emerald-100' : 'bg-emerald-50 text-emerald-800') : (mine ? 'bg-white/15 text-rose-100' : 'bg-rose-50 text-rose-700')}`}>
                                   {card.accepted ? '👍 Offer accepted' : '👎 Offer declined'}
-                                  {card.amount ? ` • R${Number(card.amount).toLocaleString()}` : ''}
+                                  {card.amount ? ` • ${getCurrencyDefinition(card.currency || 'ZAR').symbol}${Number(card.amount).toLocaleString()}` : ''}
                                 </p>
                               ) : null}
                               {card.type === 'payment-request' ? (
@@ -40482,7 +41432,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                                     💳 Payment request
                                   </p>
                                   <p className={`mt-1 text-lg font-black ${mine ? 'text-white' : 'text-cyan-900'}`}>
-                                    R{Number(card.amount).toLocaleString()}
+                                    {getCurrencyDefinition(card.currency || 'ZAR').symbol}{Number(card.amount).toLocaleString()}
                                   </p>
                                   {card.note ? (
                                     <p className={`mt-1 text-xs ${mine ? 'text-cyan-50' : 'text-cyan-800'}`}>{card.note}</p>
@@ -42185,7 +43135,7 @@ const getOrderDisplayMeta = (order) => {
   };
 };
 
-const OrderCard = ({ order, onCancelOrder, cancellingOrderId, onSetCancelError }) => {
+const OrderCard = ({ order, onCancelOrder, cancellingOrderId, onSetCancelError, onAddToCart }) => {
   const navigate = useNavigate();
   const meta = getOrderDisplayMeta(order);
   const item = order.items?.[0];
@@ -42268,7 +43218,10 @@ const OrderCard = ({ order, onCancelOrder, cancellingOrderId, onSetCancelError }
             {isDelivered ? (
               <button
                 type="button"
-                onClick={() => navigate('/markets')}
+                onClick={() => {
+                  (order.items || []).forEach((lineItem) => onAddToCart?.({ ...lineItem }));
+                  navigate('/checkout');
+                }}
                 className={`${cudyBluePrimaryButtonClassName} inline-flex items-center justify-center rounded-lg bg-[var(--svs-primary-strong)] px-4 py-2 text-sm font-semibold text-white`}
               >
                 Buy it again
@@ -44118,7 +45071,7 @@ const CancelOrderPage = ({ orders, onCancelOrder }) => {
   );
 };
 
-const OrdersPage = ({ orders, cartItems, onCancelOrder }) => {
+const OrdersPage = ({ orders, cartItems, onCancelOrder, onAddToCart }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -44195,6 +45148,7 @@ const OrdersPage = ({ orders, cartItems, onCancelOrder }) => {
               onCancelOrder={handleCancelOrder}
               cancellingOrderId={cancellingOrderId}
               onSetCancelError={setCancelError}
+              onAddToCart={onAddToCart}
             />
           ))}
 
@@ -44916,16 +45870,16 @@ const ItemDetailsModal = ({
           className="my-2 w-full max-w-5xl overflow-hidden rounded-2xl border border-[#d6e6f5] bg-white shadow-2xl sm:my-6"
           onClick={(event) => event.stopPropagation()}
         >
-          {/* Close button */}
-          <div className="flex items-center justify-between border-b border-[#e5eef8] bg-gradient-to-r from-[#0f6674] via-[#0f889a] to-[#0f6674] px-4 py-3 text-white">
+          {/* Close button — sticky so it stays reachable while scrolling the (potentially long) content below. */}
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#e5eef8] bg-gradient-to-r from-[#0f6674] via-[#0f889a] to-[#0f6674] px-4 py-3 text-white">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-100">{t('markets.informalMarket')}</p>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md border border-white/30 bg-white/10 p-1.5 text-white transition hover:bg-white/20"
+              className="shrink-0 rounded-full border border-white/50 bg-white/20 p-2 text-white shadow-sm transition hover:bg-white/30"
               aria-label="Close item details"
             >
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5" strokeWidth={2.75} />
             </button>
           </div>
 
@@ -45153,9 +46107,9 @@ const ItemDetailsModal = ({
                 type="button"
                 onClick={goToSellerChat}
                 disabled={!canChatSeller}
-                className="mt-3 w-full rounded-lg bg-[#0f6674] px-4 py-2.5 text-sm font-bold text-white shadow transition hover:bg-[#0d5762] disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#0f6674] px-4 py-2.5 text-sm font-bold text-white shadow transition hover:bg-[#0d5762] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Contact Seller
+                <MessageCircle className="h-4 w-4" aria-hidden="true" /> Let&rsquo;s Talk For More Info
               </button>
             </div>
           </section>
@@ -45399,16 +46353,16 @@ const ItemDetailsModal = ({
         className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
-        {/* Top Bar */}
-        <div className="flex items-center justify-between border-b border-[var(--svs-border)] px-5 py-4">
-          <h2 className="text-xl font-bold text-[var(--svs-text)]">{item.title}</h2>
+        {/* Top Bar — sticky so the close button stays reachable while scrolling the (potentially long) content below. */}
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 py-4">
+          <h2 className="truncate text-xl font-bold text-[var(--svs-text)]">{item.title}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-2 text-[var(--svs-text)]"
+            className="shrink-0 rounded-full border border-slate-300 bg-white p-2 text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-900"
             aria-label="Close item details"
           >
-            <X className="h-5 w-5" />
+            <X className="h-6 w-6" strokeWidth={2.75} />
           </button>
         </div>
         {/* Main Content Grid */}
@@ -45641,9 +46595,9 @@ const ItemDetailsModal = ({
                     },
                   });
                 }}
-                className="mt-3 w-full rounded-lg border border-[#0f6674] bg-[#e8f7fb] px-4 py-2.5 text-sm font-semibold text-[#0f6674] transition hover:bg-[#d7f0f8]"
+                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#0f6674] bg-[#e8f7fb] px-4 py-2.5 text-sm font-semibold text-[#0f6674] transition hover:bg-[#d7f0f8]"
               >
-                Chat Seller About This Item
+                <MessageCircle className="h-4 w-4" aria-hidden="true" /> Let&rsquo;s Talk For More Info
               </button>
             ) : null}
           </div>
@@ -45767,9 +46721,9 @@ const ItemDetailsModal = ({
                           },
                         });
                       }}
-                      className="w-full shrink-0 rounded-lg bg-[var(--svs-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-[var(--svs-primary-strong)] sm:w-auto"
+                      className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-[var(--svs-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-[var(--svs-primary-strong)] sm:w-auto"
                     >
-                      Contact Dealer
+                      <MessageCircle className="h-4 w-4" aria-hidden="true" /> Let&rsquo;s Talk For More Info
                     </button>
                   ) : null}
                 </div>
@@ -46794,7 +47748,7 @@ const SecondHandProductDetailPage = ({ onAddToCart, onBuyNow, onToggleWishlist, 
             </div>
 
             {/* Price — bold large */}
-            <p className="mt-5 text-[28px] font-bold text-white sm:text-[34px]">{product.price}</p>
+            <p className="mt-5 text-[28px] font-bold text-white sm:text-[34px]"><SalePrice price={product.price} currency={product.currency || null} /></p>
 
             {/* Badge pills (like language pills in MovieDetailsPage) */}
             <div className="mt-4 flex flex-wrap gap-1.5">
@@ -47065,7 +48019,7 @@ const SecondHandProductDetailPage = ({ onAddToCart, onBuyNow, onToggleWishlist, 
                 <img src={sim.image} alt={sim.title} className="h-[180px] w-full object-cover sm:h-[200px]" loading="lazy" />
                 <div className="flex flex-1 flex-col p-4 sm:p-5">
                   <h3 className="text-[16px] font-bold text-[var(--svs-text)]">{sim.title}</h3>
-                  <p className="mt-1 text-base font-bold text-[#0f766e]">{sim.price}</p>
+                  <p className="mt-1 text-base font-bold text-[#0f766e]"><SalePrice price={sim.price} currency={sim.currency || null} /></p>
                   {sim.location ? (
                     <p className="mt-1 flex items-center gap-1.5 text-xs text-[var(--svs-muted)]">
                       <MapPin className="h-3.5 w-3.5 shrink-0 text-[var(--svs-primary)]" />
@@ -47523,13 +48477,13 @@ const FloatingSupportChatButton = () => (
     to="/support/chat"
     aria-label="Open Let's Talk chat"
     title="Let's Talk"
-    className="group fixed bottom-5 right-4 z-[130] inline-flex h-14 w-14 items-center justify-center rounded-full border-2 border-white/80 bg-[#1f4c8f] text-white shadow-[0_14px_28px_rgba(8,32,40,0.38)] transition hover:scale-105 hover:bg-[#173e78] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 sm:bottom-6 sm:right-6 sm:h-16 sm:w-16"
+    className="group fixed bottom-8 right-4 z-[130] inline-flex h-14 w-14 items-center justify-center rounded-full border-2 border-white/80 bg-[#1f4c8f] text-white shadow-[0_14px_28px_rgba(8,32,40,0.38)] transition hover:scale-105 hover:bg-[#173e78] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 sm:bottom-9 sm:right-6 sm:h-16 sm:w-16"
   >
     <MessageCircle className="h-7 w-7 shrink-0 sm:h-8 sm:w-8" strokeWidth={2.4} />
   </Link>
 );
 
-const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerItems, buyNowCheckout, productReviewSummaryMap, onAddToCart, onBuyNow, onToggleWishlist, onRemoveWishlistItem, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder, onClearBuyNowCheckout, onCancelOrder, onSellerItemCreated, onDeleteSellerItem, onUpdateSellerItem, onUpdateOrderStatus, onAdminSetOrderStatus, onOpenItemDetails, onPushNotificationToUser }) => {
+const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerItems, buyNowCheckout, productReviewSummaryMap, onAddToCart, onBuyNow, onToggleWishlist, onRemoveWishlistItem, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder, onClearBuyNowCheckout, onCancelOrder, onSellerItemCreated, onDeleteSellerItem, onUpdateSellerItem, onToggleListingPaused, onUpdateOrderStatus, onAdminSetOrderStatus, onOpenItemDetails, onPushNotificationToUser }) => {
   const { t } = useTranslation();
 
   return (
@@ -47538,7 +48492,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/logo" element={<LogoFullscreenPage />} />
     <Route path="/markets" element={<MarketsPage sellerItems={sellerItems} />} />
     <Route path="/offers" element={<OffersPage />} />
-    <Route path="/orders" element={<OrdersPage orders={orders} cartItems={cartItems} onCancelOrder={onCancelOrder} />} />
+    <Route path="/orders" element={<OrdersPage orders={orders} cartItems={cartItems} onCancelOrder={onCancelOrder} onAddToCart={onAddToCart} />} />
     <Route path="/orders/:orderId/track" element={<TrackOrderPage orders={orders} onAdminSetOrderStatus={onAdminSetOrderStatus} />} />
     <Route path="/bookings" element={<MyBookingsPage />} />
     <Route path="/bookings/:bookingType/:bookingId/track" element={<BookingTrackPage />} />
@@ -47591,10 +48545,12 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/general-labour-market/:categorySlug" element={<GeneralLabourPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/general-labour-market/worker/:workerId" element={<GeneralLabourWorkerDetailPage sellerItems={sellerItems} onPushNotificationToUser={onPushNotificationToUser} />} />
     <Route path="/seller/upload" element={<SellerUploadPage onSellerItemCreated={onSellerItemCreated} />} />
-    <Route path="/seller/dashboard" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onUpdateOrderStatus={onUpdateOrderStatus} initialView="listings" />} />
-    <Route path="/seller/orders" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onUpdateOrderStatus={onUpdateOrderStatus} initialView="orders" />} />
+    <Route path="/seller/dashboard" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onToggleListingPaused={onToggleListingPaused} onUpdateOrderStatus={onUpdateOrderStatus} initialView="listings" />} />
+    <Route path="/seller/orders" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onToggleListingPaused={onToggleListingPaused} onUpdateOrderStatus={onUpdateOrderStatus} initialView="orders" />} />
+    <Route path="/seller/analytics" element={<SellerAnalyticsPage />} />
     <Route path="/seller/payouts" element={<SellerPayoutsPage orders={orders} />} />
     <Route path="/wallet" element={<WalletPage />} />
+    <Route path="/account" element={<AccountSettingsPage />} />
     <Route path="/property-hub" element={<PropertyHubPage />} />
     <Route path="/property-hub/sell" element={<PropertySellPage />} />
     <Route path="/home-care/sell" element={<HomeCareSellPage sellerItems={sellerItems} onSellerItemCreated={onSellerItemCreated} onPushNotificationToUser={onPushNotificationToUser} />} />
@@ -47906,15 +48862,33 @@ const App = () => {
     // finds out — this one function is the single place all 27+ call sites
     // across the app funnel through. Fire-and-forget: never throws, and
     // doesn't block the in-app notification or the Supabase write below.
+    // Gated on the recipient's notification_prefs (Account Settings) — only
+    // for the categories we have a toggle for; anything else still emails.
     const absoluteLink = (typeof window !== 'undefined' && notification.href)
       ? `${window.location.origin}${notification.href}`
       : notification.href;
-    sendNotificationEmail({
+    const prefCategory = notification.type === 'chat' ? 'chatMessages' : notification.type === 'order' ? 'orderUpdates' : notification.type === 'info' ? 'bookingUpdates' : null;
+    const sendEmailCopy = () => sendNotificationEmail({
       email: normalizedTargetEmail,
       title: notification.title,
       message: notification.message,
       link: absoluteLink,
     });
+
+    if (!prefCategory || !hasSupabaseEnv || !supabase) {
+      sendEmailCopy();
+    } else {
+      supabase
+        .from('account_users')
+        .select('notification_prefs')
+        .eq('email_address', normalizedTargetEmail)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (getNotificationPrefValue(data?.notification_prefs, prefCategory)) {
+            sendEmailCopy();
+          }
+        });
+    }
 
     if (hasSupabaseEnv && supabase) {
       supabase
@@ -48768,6 +49742,30 @@ const App = () => {
       clearCartFromRemote();
     }
 
+    // Completes the "Save this address for future orders" checkbox — fire
+    // and forget, a failure here must never block an order that already
+    // succeeded. shippingAddress carries the raw form fields (see the
+    // payfastSession.customer shape built in CheckoutPage).
+    if (customer.saveInformation && orderOwnerEmail && orderOwnerEmail !== GUEST_ORDER_EMAIL && hasSupabaseEnv && supabase) {
+      const shippingAddress = customer.shippingAddress || {};
+      if (shippingAddress.address1 && shippingAddress.city) {
+        supabase.from('buyer_addresses').insert({
+          user_email: orderOwnerEmail,
+          full_name: customer.fullName || [customer.firstName, customer.lastName].filter(Boolean).join(' ').trim() || null,
+          phone: customer.phone || shippingAddress.phone || null,
+          country: shippingAddress.country || customer.country || null,
+          address1: shippingAddress.address1,
+          address2: shippingAddress.address2 || null,
+          city: shippingAddress.city,
+          province: shippingAddress.province || customer.province || null,
+          postal_code: shippingAddress.postalCode || customer.postalCode || null,
+          is_default: false,
+        }).then(({ error }) => {
+          if (error) console.warn('[handlePlaceOrder] could not save address:', error.message);
+        });
+      }
+    }
+
     return order;
   }, [activeUserEmail, cartItems, clearCartFromRemote, pushNotificationToUser, sellerItems]);
 
@@ -48850,6 +49848,25 @@ const App = () => {
       window.localStorage.setItem(PRODUCT_REVIEWS_STORAGE_KEY, JSON.stringify(nextStoredReviews));
     }
 
+    return { success: true };
+  }, []);
+
+  // Pauses/resumes a listing without deleting it — paused listings are
+  // filtered out of every buyer-facing browse page by getSellerItemsForMarket,
+  // but still show (badged "Paused") in the seller's own dashboard.
+  const handleToggleListingPaused = useCallback(async (dbId, nextPaused) => {
+    if (!hasSupabaseEnv || !supabase) return { error: 'Supabase is not configured.' };
+
+    const { error } = await supabase
+      .from(SELLER_ITEMS_TABLE)
+      .update({ is_paused: nextPaused })
+      .eq('id', dbId);
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    setSellerItems((currentItems) => currentItems.map((item) => (item.dbId === dbId ? { ...item, isPaused: nextPaused } : item)));
     return { success: true };
   }, []);
 
@@ -49414,6 +50431,7 @@ const App = () => {
         onSellerItemCreated={handleSellerItemCreated}
         onDeleteSellerItem={handleDeleteSellerItem}
         onUpdateSellerItem={handleUpdateSellerItem}
+        onToggleListingPaused={handleToggleListingPaused}
         onUpdateOrderStatus={handleUpdateOrderStatus}
         onAdminSetOrderStatus={handleAdminSetOrderStatus}
         onOpenItemDetails={handleOpenItemDetails}
