@@ -107,7 +107,18 @@ const SignupPage = () => {
 	return (
 		<StandalonePageShell title="Create Your Account" mainClassName="px-4 py-8 sm:px-6 sm:py-10">
 			<section className="px-0 text-slate-100">
-				<div className="mx-auto w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900/80 p-6 shadow-2xl shadow-black/30 md:p-8">
+				<div className="relative mx-auto w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900/80 p-6 shadow-2xl shadow-black/30 md:p-8">
+				<button
+					type="button"
+					onClick={() => navigate(-1)}
+					aria-label="Cancel"
+					className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-700 hover:text-white"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+						<line x1="18" y1="6" x2="6" y2="18" />
+						<line x1="6" y1="6" x2="18" y2="18" />
+					</svg>
+				</button>
 				<h1 className="text-2xl font-bold text-white">Create Your Account</h1>
 				<p className="mt-2 text-sm text-slate-300">
 					Enter your details to sign up on SVS E-COMMERCE.

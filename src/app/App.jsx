@@ -88,7 +88,7 @@ import {
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import logo from '../assets/icons/logo.jpeg';
+import logo from '../assets/icons/svs-logo.jpeg';
 import { createAddressLookupSessionToken, lookupAddressDetails, lookupAddressSuggestions } from '../lib/addressLookup';
 import { DEFAULT_LANGUAGE_CODE, getLanguageByCode, isRtlLanguage, SUPPORTED_LANGUAGES } from '../lib/languages';
 import { embeddedCardCheckoutEnabled, getStripeInstance, startCardPayment, stripeCurrency } from '../lib/payments';
@@ -12610,6 +12610,7 @@ const ECommercePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
         <div>
           <CardGrid
             items={visibleItems}
+            focusItems={marketItems}
             buttonLabel={t('common.addToCart')}
             secondaryButtonLabel={t('common.viewMore')}
             reviewSummaryMap={productReviewSummaryMap}
@@ -13159,6 +13160,9 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
     });
 
     onOpenItemDetails?.({
+      id: item.id,
+      route: '/bookings-tickets',
+      marketKey: 'tickets',
       title: item.title,
       image: item.image,
       images: item.images || (item.image ? [item.image] : []),
@@ -15390,6 +15394,7 @@ const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
       <div>
         <CardGrid
           items={visibleItems}
+          focusItems={marketItems}
           buttonLabel={t('common.add')}
           secondaryButtonLabel={t('common.viewDetails')}
           reviewSummaryMap={productReviewSummaryMap}
@@ -19259,6 +19264,8 @@ const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
     });
   };
   const isWishlistedItem = (item) => wishlistItemIds.includes(getCollectionItemId('/hardware-software', item.id));
+
+  useListingFocusFromQuery(filteredItems, handleOpen);
 
   const trendingItems = useMemo(() => marketItems.slice(0, 6), [marketItems]);
   const filtersPanel = (
@@ -34254,6 +34261,7 @@ const SafetyPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds =
         <div>
           <CardGrid
             items={visibleItems}
+            focusItems={marketItems}
             buttonLabel={t('common.addToCart')}
             secondaryButtonLabel={t('common.viewDetails')}
             reviewSummaryMap={productReviewSummaryMap}
@@ -45371,7 +45379,11 @@ const RecentlyViewedStrip = () => {
       try {
         const raw = window.localStorage.getItem('svs-recently-viewed');
         const parsed = raw ? JSON.parse(raw) : [];
-        setItems(Array.isArray(parsed) ? parsed.slice(0, 12) : []);
+        // Only show items that have a valid openUrl or route so old items
+        // stored before the routing fix don't appear with broken navigation.
+        const valid = (Array.isArray(parsed) ? parsed : [])
+          .filter((item) => item.openUrl || item.route);
+        setItems(valid.slice(0, 12));
       } catch (_e) {
         setItems([]);
       }
@@ -45390,10 +45402,15 @@ const RecentlyViewedStrip = () => {
   if (!items.length) return null;
 
   const handleOpen = (item) => {
-    if (item.route) {
-      navigate(`${item.route}?focus=${encodeURIComponent(item.id)}`);
+    if (item.openUrl) {
+      navigate(item.openUrl);
+      return;
+    }
+    const route = item.route || sellerMarketConfig[item.marketKey || '']?.route || '';
+    if (route && item.id) {
+      navigate(`${route}?focus=${encodeURIComponent(item.id)}`);
     } else {
-      navigate(`/search?q=${encodeURIComponent(item.title)}`);
+      navigate(`/search?q=${encodeURIComponent(item.title || '')}`);
     }
   };
 
@@ -45442,6 +45459,15 @@ const RecentlyViewedStrip = () => {
                 {Number(item.price) > 0 ? (
                   <p className="mt-1 text-sm font-bold text-[var(--svs-primary-strong)]">
                     {formatAmountInCurrency(Number(item.price) || 0, item.currency || 'USD')}
+                  </p>
+                ) : null}
+                {item.viewedAt ? (
+                  <p className="mt-1.5 text-[9px] leading-tight text-[var(--svs-muted)]">
+                    {(() => {
+                      const d = new Date(item.viewedAt);
+                      const pad = (n) => String(n).padStart(2, '0');
+                      return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+                    })()}
                   </p>
                 ) : null}
               </div>
@@ -45767,8 +45793,8 @@ const ItemDetailsModal = ({
       return;
     }
 
-    if (normalizedComment.length < 6) {
-      setReviewError('Write a slightly longer review so other shoppers can use it.');
+    if (!normalizedComment) {
+      setReviewError('Add a comment or emoji before posting.');
       return;
     }
 
@@ -46209,10 +46235,9 @@ const ItemDetailsModal = ({
               ) : null}
               <textarea
                 className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
-                placeholder="Share your experience (min 6 characters)"
+                placeholder="Share your experience (even a single emoji works!)"
                 value={comment}
                 onChange={(event) => setComment(event.target.value)}
-                minLength={6}
                 rows={2}
               />
               {reviewError ? <p className="text-xs text-rose-600">{reviewError}</p> : null}
@@ -46819,10 +46844,9 @@ const ItemDetailsModal = ({
             )}
             <textarea
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              placeholder="Write your review (min 6 chars)"
+              placeholder="Write your review (even a single emoji works!)"
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              minLength={6}
               required
             />
             {reviewError && <div className="text-sm text-rose-600">{reviewError}</div>}
@@ -48044,11 +48068,11 @@ const SecondHandProductDetailPage = ({ onAddToCart, onBuyNow, onToggleWishlist, 
   );
 };
 
-const CardGrid = ({ items, boundsItems, buttonLabel, secondaryButtonLabel, metaRenderer, onPrimaryAction, onBuyNowAction, onToggleWishlist, isItemWishlisted, onOpenItemDetails, reviewSummaryMap = {}, getItemReviewKey }) => {
+const CardGrid = ({ items, focusItems, boundsItems, buttonLabel, secondaryButtonLabel, metaRenderer, onPrimaryAction, onBuyNowAction, onToggleWishlist, isItemWishlisted, onOpenItemDetails, reviewSummaryMap = {}, getItemReviewKey }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [selectedSizesByItem, setSelectedSizesByItem] = useState({});
-  useListingFocusFromQuery(items, onOpenItemDetails);
+  useListingFocusFromQuery(focusItems || items, onOpenItemDetails);
   const {
     filteredItems,
     hasActivePriceFilter,
@@ -48315,6 +48339,11 @@ const SiteFooter = () => {
             <ul className="mt-1.5 space-y-1 text-[9px] leading-snug text-slate-200 sm:mt-3 sm:space-y-2 sm:text-base">
               <li>{t('site.tagline', { defaultValue: 'Your one-stop marketplace for everything you need – from groceries to tickets!' })}</li>
             </ul>
+            <img
+              src={logo}
+              alt="SVS E-Commerce logo"
+              className="mt-3 h-10 w-10 rounded-lg object-cover sm:mt-6 sm:h-16 sm:w-16"
+            />
           </div>
 
           {/* Column 3 – Subscribe to Offers */}
@@ -48347,11 +48376,6 @@ const SiteFooter = () => {
                 </li>
               ))}
             </ul>
-            <img
-              src={logo}
-              alt="SVS E-Commerce logo"
-              className="ml-4 mt-3 h-10 w-10 rounded-lg object-cover sm:ml-8 sm:mt-6 sm:h-16 sm:w-16"
-            />
           </div>
         </div>
         <p className="mt-4 flex items-center justify-center gap-2 text-center text-xs font-medium text-slate-300 sm:mt-8 sm:text-base">
@@ -50280,8 +50304,15 @@ const App = () => {
     // to the most recent 12 items so the strip stays snappy.
     try {
       if (typeof window !== 'undefined' && itemDetails && (itemDetails.id || itemDetails.title)) {
+        const _rvCartItem = itemDetails.cartItem;
+        const _rvMarketKey = itemDetails.marketKey || _rvCartItem?.marketKey || '';
+        const _rvId = itemDetails.id || _rvCartItem?.sku || `${itemDetails.title || 'item'}-${_rvMarketKey}`;
+        const _rvRoute = itemDetails.route || itemDetails.marketRoute
+          || _rvCartItem?.route
+          || sellerMarketConfig[_rvMarketKey]?.route
+          || '';
         const summary = {
-          id: itemDetails.id || `${itemDetails.title || 'item'}-${itemDetails.marketKey || ''}`,
+          id: _rvId,
           title: itemDetails.title || itemDetails.name || 'Item',
           image: itemDetails.image
             || (Array.isArray(itemDetails.images) && itemDetails.images[0])
@@ -50289,8 +50320,9 @@ const App = () => {
             || '',
           price: Number(itemDetails.price) || 0,
           currency: itemDetails.currency || 'USD',
-          marketKey: itemDetails.marketKey || '',
-          route: itemDetails.route || itemDetails.marketRoute || '',
+          marketKey: _rvMarketKey,
+          route: _rvRoute,
+          openUrl: (_rvRoute && _rvId) ? `${_rvRoute}?focus=${encodeURIComponent(_rvId)}` : '',
           viewedAt: Date.now(),
         };
         const raw = window.localStorage.getItem('svs-recently-viewed');
