@@ -2,7 +2,7 @@ import { Moon, Sun } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import logo from '../../assets/icons/logo.jpeg';
+import logo from '../../assets/icons/svs-logo.jpeg';
 import { DEFAULT_LANGUAGE_CODE, getLanguageByCode, isRtlLanguage, SUPPORTED_LANGUAGES } from '../../lib/languages';
 
 const getThemePreference = () => {
@@ -18,7 +18,7 @@ const getThemePreference = () => {
 	return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 };
 
-const StandalonePageShell = ({ title, brandHref = '/', children, mainClassName = 'px-4 py-8 sm:px-6 sm:py-10' }) => {
+const StandalonePageShell = ({ title, brandHref = '/markets', children, mainClassName = 'px-4 py-8 sm:px-6 sm:py-10' }) => {
 	const { t, i18n } = useTranslation();
 	const [theme, setTheme] = useState(getThemePreference);
 	const isDarkMode = theme === 'dark';

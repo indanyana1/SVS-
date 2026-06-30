@@ -4,7 +4,7 @@ create table if not exists public.product_reviews (
   id uuid primary key default gen_random_uuid(),
   item_key text not null,
   rating integer not null check (rating between 1 and 5),
-  comment text not null check (char_length(trim(comment)) >= 3),
+  comment text not null check (char_length(trim(comment)) >= 1),
   reviewer_name text not null,
   reviewer_email text,
   moderation_status text not null default 'approved' check (moderation_status in ('approved', 'rejected', 'pending')),

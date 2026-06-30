@@ -304,7 +304,6 @@ const MARKET_FIELD_SPEC = {
         'Jewellery', 'Scarves',
       ] },
       { name: 'brand', label: 'Brand', type: 'text', required: true, placeholder: 'e.g. Nike, Zara, Adidas' },
-      { name: 'size', label: 'Size', type: 'text', required: true, placeholder: 'e.g. M, XL, UK 9, 32' },
       { name: 'color', label: 'Colour', type: 'select', required: true, options: ['Black', 'White', 'Grey', 'Beige', 'Brown', 'Red', 'Pink', 'Orange', 'Yellow', 'Green', 'Blue', 'Navy', 'Purple', 'Multi'] },
       { name: 'material', label: 'Material', type: 'select', options: ['Cotton', 'Linen', 'Denim', 'Leather', 'Wool', 'Polyester', 'Silk', 'Synthetic'] },
       { name: 'occasion', label: 'Occasion', type: 'select', options: ['Casual', 'Formal', 'Sport', 'Streetwear', 'Evening', 'Business', 'Beach'] },
@@ -781,83 +780,81 @@ const sellerConsoleNavItems = [
 ];
 
 const marketLinks = [
-  { labelKey: 'markets.beverages', href: '/beverages-liquors' },
-  { labelKey: 'markets.constructionTools', href: '/building-construction-tools' },
-  { labelKey: 'markets.fashionStyle', href: '/fashion-style' },
-  { labelKey: 'markets.votingClients', href: '/voting-clients' },
-  { labelKey: 'markets.safety', href: '/safety' },
-  { labelKey: 'markets.hardwareSoftware', href: '/hardware-software' },
-  { labelKey: 'markets.mobilityVehicles', href: '/mobility-vehicles' },
-  { labelKey: 'markets.naturalResources', href: '/natural-resources-minerals' },
-  { labelKey: 'markets.generalLabour', href: '/general-labour-market' },
-  { labelKey: 'markets.tickets', href: '/tickets' },
-  { labelKey: 'markets.votingProviders', href: '/voting-providers' },
-  { labelKey: 'markets.fastFood', href: '/fast-food' },
-  { labelKey: 'markets.groceries', href: '/groceries' },
-  { labelKey: 'markets.homeCare', href: '/home-care' },
   { labelKey: 'markets.ecommerce', href: '/e-commerce' },
-  { labelKey: 'markets.traditionalMedicines', href: '/traditional-medicines-herbs' },
-  { labelKey: 'markets.livestockHub', href: '/livestock-hub' },
+  { labelKey: 'markets.groceries', href: '/groceries' },
+  { labelKey: 'markets.fastFood', href: '/fast-food' },
+  { labelKey: 'markets.fashionStyle', href: '/fashion-style' },
+  { labelKey: 'markets.mobilityVehicles', href: '/mobility-vehicles' },
+  { labelKey: 'markets.votingClients', href: '/voting-clients' },
   { labelKey: 'markets.bettingLotteryGames', href: '/betting-lottery-games' },
+  { labelKey: 'markets.beverages', href: '/beverages-liquors' },
+  { labelKey: 'markets.homeCare', href: '/home-care' },
+  { labelKey: 'markets.tickets', href: '/tickets' },
+  { labelKey: 'markets.constructionTools', href: '/building-construction-tools' },
+  { labelKey: 'markets.directLinks', href: '/retailer-direct-links' },
+  { labelKey: 'markets.generalLabour', href: '/general-labour-market' },
+  { labelKey: 'markets.informalMarket', href: '/informal-market' },
+  { labelKey: 'markets.votingProviders', href: '/voting-providers' },
+  { labelKey: 'markets.livestockHub', href: '/livestock-hub' },
+  { labelKey: 'markets.naturalResources', href: '/natural-resources-minerals' },
   { labelKey: 'markets.wellness', href: '/wellness' },
   { labelKey: 'markets.propertyHub', href: '/property-hub' },
   { labelKey: 'markets.secondhand', href: '/secondhand-central' },
   { labelKey: 'markets.stationery', href: '/stationery-office' },
-  { labelKey: 'markets.directLinks', href: '/retailer-direct-links' },
-  { labelKey: 'markets.informalMarket', href: '/informal-market' },
+  { labelKey: 'markets.safety', href: '/safety' },
+  { labelKey: 'markets.traditionalMedicines', href: '/traditional-medicines-herbs' },
 ];
 
 // Short marketing taglines shown beneath the market name on the Markets page cards.
 const marketShortDescriptions = {
-  '/beverages-liquors': 'Wines, spirits & refreshing drinks',
-  '/building-construction-tools': 'Tools & materials for every build',
-  '/fashion-style': 'Trending clothing, shoes & accessories',
-  '/voting-clients': 'Beauty, fitness & sports essentials',
-  '/safety': 'Toys, games & kids essentials',
-  '/hardware-software': 'Latest tech, gadgets & software',
-  '/mobility-vehicles': 'Cars, bikes & mobility solutions',
-  '/natural-resources-minerals': 'Quality raw materials & minerals',
-  '/general-labour-market': 'Skilled & unskilled workers for hire',
-  '/tickets': 'Events, travel & experience bookings',
-  '/voting-providers': 'Jewellery & accessories from trusted sellers',
-  '/fast-food': 'Hot meals delivered fast & fresh',
+  '/e-commerce': 'Lifestyle picks, tech & gadgets all in one place',
   '/groceries': 'Fresh produce & everyday essentials',
-  '/home-care': 'Cleaning, laundry & home essentials',
-  '/e-commerce': 'Lifestyle picks & tech essentials',
-  '/traditional-medicines-herbs': 'Authentic herbs & natural remedies',
-  '/livestock-hub': 'Buy & sell livestock with confidence',
+  '/fast-food': 'Hot meals delivered fast & fresh',
+  '/fashion-style': 'Trending clothing, shoes & accessories',
+  '/mobility-vehicles': 'Cars, bikes & mobility solutions',
+  '/voting-clients': 'Beauty, fitness & sports essentials',
   '/betting-lottery-games': 'Play, predict & win big',
-  '/wellness': 'Health, beauty & wellbeing products',
+  '/beverages-liquors': 'Wines, spirits & refreshing drinks',
+  '/home-care': 'Cleaning, laundry & home essentials',
+  '/tickets': 'Events, travel & experience bookings',
+  '/building-construction-tools': 'Tools & materials for every build',
+  '/retailer-direct-links': 'Quick links to top global retailers & brands',
+  '/general-labour-market': 'Skilled & unskilled workers for hire',
+  '/informal-market': 'Street traders, spazas & informal seller listings',
+  '/voting-providers': 'Jewellery & accessories from trusted sellers',
+  '/livestock-hub': 'Buy & sell livestock with confidence',
+  '/natural-resources-minerals': 'Quality raw materials & minerals',
+  '/wellness': 'Pharmacy, health & wellness products',
   '/property-hub': 'Homes, rentals & commercial space',
   '/secondhand-central': 'Quality pre-loved goods at great prices',
   '/stationery-office': 'Office, school & creative supplies',
-  '/retailer-direct-links': 'Quick links to top global retailers & brands',
-  '/informal-market': 'Street traders, spazas & informal seller listings',
+  '/safety': 'Toys, games & kids essentials',
+  '/traditional-medicines-herbs': 'Authentic herbs & natural remedies',
 };
 
 const sellerMarketOptions = [
+  { key: 'ecommerce', labelKey: 'markets.ecommerce', route: '/e-commerce' },
+  { key: 'groceries', labelKey: 'markets.groceries', route: '/groceries' },
+  { key: 'fastFood', labelKey: 'markets.fastFood', route: '/fast-food' },
+  { key: 'fashionStyle', labelKey: 'markets.fashionStyle', route: '/fashion-style' },
+  { key: 'mobilityVehicles', labelKey: 'markets.mobilityVehicles', route: '/mobility-vehicles', externalSellRoute: '/mobility-vehicles/sell' },
+  { key: 'beautyFitnessSports', labelKey: 'markets.votingClients', route: '/voting-clients' },
   { key: 'beverages', labelKey: 'markets.beverages', route: '/beverages-liquors' },
   { key: 'homeCare', labelKey: 'markets.homeCare', route: '/home-care', externalSellRoute: '/home-care/sell' },
   { key: 'tickets', labelKey: 'markets.tickets', route: '/tickets' },
   { key: 'constructionTools', labelKey: 'markets.constructionTools', route: '/building-construction-tools' },
-  { key: 'hardwareSoftware', labelKey: 'markets.hardwareSoftware', route: '/hardware-software' },
-  { key: 'fashionStyle', labelKey: 'markets.fashionStyle', route: '/fashion-style' },
-  { key: 'fastFood', labelKey: 'markets.fastFood', route: '/fast-food' },
-  { key: 'groceries', labelKey: 'markets.groceries', route: '/groceries' },
-  { key: 'ecommerce', labelKey: 'markets.ecommerce', route: '/e-commerce' },
-  { key: 'mobilityVehicles', labelKey: 'markets.mobilityVehicles', route: '/mobility-vehicles', externalSellRoute: '/mobility-vehicles/sell' },
-  { key: 'naturalResources', labelKey: 'markets.naturalResources', route: '/natural-resources-minerals', externalSellRoute: '/natural-resources-minerals/sell' },
+  { key: 'informalMarket', labelKey: 'markets.informalMarket', route: '/informal-market' },
   { key: 'generalLabour', labelKey: 'markets.generalLabour', route: '/general-labour-market', externalSellRoute: '/general-labour-market/sell' },
+  { key: 'jewelleryAccessories', labelKey: 'markets.votingProviders', route: '/voting-providers' },
+  { key: 'livestock', labelKey: 'markets.livestockHub', route: '/livestock-hub' },
+  { key: 'naturalResources', labelKey: 'markets.naturalResources', route: '/natural-resources-minerals', externalSellRoute: '/natural-resources-minerals/sell' },
   { key: 'wellness', labelKey: 'markets.wellness', route: '/wellness' },
   { key: 'property', labelKey: 'markets.propertyHub', route: '/property-hub', externalSellRoute: '/property-hub/sell' },
   { key: 'secondhand', labelKey: 'markets.secondhand', route: '/secondhand-central' },
   { key: 'stationery', labelKey: 'markets.stationery', route: '/stationery-office' },
-  { key: 'traditionalMedicines', labelKey: 'markets.traditionalMedicines', route: '/traditional-medicines-herbs' },
-  { key: 'beautyFitnessSports', labelKey: 'markets.votingClients', route: '/voting-clients' },
   { key: 'toysKids', labelKey: 'markets.safety', route: '/safety' },
-  { key: 'jewelleryAccessories', labelKey: 'markets.votingProviders', route: '/voting-providers' },
-  { key: 'livestock', labelKey: 'markets.livestockHub', route: '/livestock-hub' },
-  { key: 'informalMarket', labelKey: 'markets.informalMarket', route: '/informal-market' },
+  { key: 'traditionalMedicines', labelKey: 'markets.traditionalMedicines', route: '/traditional-medicines-herbs' },
+  { key: 'hardwareSoftware', labelKey: 'markets.hardwareSoftware', route: '/hardware-software', hidden: true },
 ];
 
 const sellerMarketConfig = sellerMarketOptions.reduce((accumulator, option) => {
@@ -927,8 +924,25 @@ const TRENDING_MARKET_HREFS = [
   '/groceries',
   '/fast-food',
   '/fashion-style',
-  '/hardware-software',
   '/mobility-vehicles',
+  '/voting-clients',
+  '/betting-lottery-games',
+  '/beverages-liquors',
+  '/home-care',
+  '/tickets',
+  '/building-construction-tools',
+  '/retailer-direct-links',
+  '/general-labour-market',
+  '/informal-market',
+  '/voting-providers',
+  '/livestock-hub',
+  '/natural-resources-minerals',
+  '/wellness',
+  '/property-hub',
+  '/secondhand-central',
+  '/stationery-office',
+  '/safety',
+  '/traditional-medicines-herbs',
 ];
 
 const productCards = [
@@ -10806,7 +10820,7 @@ const MarketSelectorField = ({
           aria-label={ariaLabel}
         >
           <div className="max-h-72 overflow-y-auto p-2">
-            {sellerMarketOptions.map((option) => {
+            {sellerMarketOptions.filter((option) => !option.hidden).map((option) => {
               const isSelected = option.key === value;
 
               return (
@@ -29947,128 +29961,338 @@ const SellerPayoutsPage = ({ orders = [] }) => {
 // controlled values — `sizes` (array), `sizeStock` (map) and `sizePrices`
 // (map) — and reports every change through a single `onChange` callback so
 // the parent form can keep them on its formData.
+const SIZE_VARIANT_PRESETS = {
+  fashionStyle: {
+    required: true,
+    placeholder: 'e.g. S, M, L, XL or 30, 32, 34',
+    contextNote: 'Buyers choose their size at checkout. Each size tracks its own stock independently.',
+    groups: [
+      { label: 'Standard', options: ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'] },
+      { label: 'EU numeric', options: ['34', '36', '38', '40', '42', '44', '46', '48'] },
+      { label: 'Waist (in)', options: ['28"', '30"', '32"', '34"', '36"', '38"', '40"'] },
+      { label: 'Shoes (UK)', options: ['UK 3', 'UK 4', 'UK 5', 'UK 6', 'UK 7', 'UK 8', 'UK 9', 'UK 10', 'UK 11', 'UK 12'] },
+    ],
+  },
+  ecommerce: {
+    required: false,
+    placeholder: 'e.g. S, M, L, XL or 256GB or 500ml',
+    contextNote: 'Add variants if your product comes in different sizes, colours, or capacities.',
+    groups: [
+      { label: 'Clothing', options: ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'] },
+    ],
+  },
+  secondhand: {
+    required: false,
+    placeholder: 'e.g. S, M, L or UK 7 or 256GB',
+    contextNote: 'Add a size if the item is clothing, footwear, or comes in a specific capacity.',
+    groups: [
+      { label: 'Clothing', options: ['XS', 'S', 'M', 'L', 'XL', 'XXL'] },
+    ],
+  },
+  beautyFitnessSports: {
+    required: false,
+    placeholder: 'e.g. 100ml, M, One size',
+    contextNote: 'Add clothing size for apparel or pack size for beauty/health products.',
+    groups: [
+      { label: 'Clothing', options: ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'] },
+    ],
+  },
+  jewelleryAccessories: {
+    required: false,
+    placeholder: 'e.g. Ring M, 18", One size',
+    contextNote: 'Add ring, chain, or bracelet sizes so buyers can pick the right fit.',
+    groups: [
+      { label: 'Ring (UK)', options: ['UK H', 'UK J', 'UK L', 'UK M', 'UK N', 'UK O', 'UK P', 'UK Q', 'UK R', 'UK S', 'UK T'] },
+      { label: 'Chain / bracelet', options: ['16"', '18"', '20"', '22"', '7"', '8"', 'One size'] },
+    ],
+  },
+  toysKids: {
+    required: false,
+    placeholder: 'e.g. 3-5y, 0-12m, 7-10y',
+    contextNote: 'Add age ranges or clothing sizes for kids\' products.',
+    groups: [
+      { label: 'Age group', options: ['0-6m', '6-12m', '1-2y', '2-3y', '3-5y', '5-7y', '7-10y', '10+y'] },
+    ],
+  },
+  fastFood: {
+    required: false,
+    placeholder: 'e.g. Small, Medium, Large',
+    contextNote: 'Add meal sizes or combo variants with their own price if applicable.',
+    groups: [
+      { label: 'Meal size', options: ['Small', 'Regular', 'Medium', 'Large', 'XL', 'Family'] },
+    ],
+  },
+  groceries: { required: true, placeholder: 'e.g. 500g, 1L, 2kg, 6-pack', contextNote: 'Pack size is required for groceries — buyers compare on size.' },
+  beverages: { required: true, placeholder: 'e.g. 330ml, 500ml, 1L, 2L', contextNote: 'Container size is required — buyers filter by volume.' },
+  wellness: { required: false, placeholder: 'e.g. 60 tablets, 100ml, 500mg', contextNote: 'Add pack or dosage sizes if the same product comes in multiple options.' },
+  traditionalMedicines: { required: false, placeholder: 'e.g. 50g, 100ml, 250ml', contextNote: 'Add pack sizes if the same product comes in different quantities.' },
+  homeCare: { required: false, placeholder: 'e.g. 750ml, 1kg, 5L', contextNote: 'Add sizes for cleaning or care products that come in different volumes.' },
+  stationery: { required: false, placeholder: 'e.g. A4, A5, 0.5mm, 100 sheets', contextNote: 'Add format or quantity variants (e.g. A4 vs A5, or 50-sheet vs 100-sheet).' },
+  constructionTools: { required: false, placeholder: 'e.g. 18V, 125mm, 2.5kg', contextNote: 'Add size or spec variants if the same tool comes in different configurations.' },
+  mobilityVehicles: { required: false, placeholder: 'e.g. 195/65 R15, S, M, L', contextNote: 'Add sizes for parts or accessories (e.g. tyre sizes).' },
+  informalMarket: { required: false, placeholder: 'e.g. S, M, L or 500g or 1L', contextNote: 'Add sizes or variants relevant to what you\'re selling.' },
+};
+
 const SizeVariantEditor = ({
   sizes = [],
   sizeStock = {},
   sizePrices = {},
   basePrice = '',
   idPrefix = 'size',
+  marketKey = '',
   onChange,
 }) => {
-  const [sizeInput, setSizeInput] = useState('');
+  const preset = SIZE_VARIANT_PRESETS[marketKey] || null;
+
+  // Derive initial mode from existing data so the editor pre-fills correctly
+  // when a seller edits an existing listing.
+  const deriveInitialMode = () => {
+    if (sizes.length > 1) return 'multi';
+    if (sizes.length === 1 && Object.keys(sizeStock).length === 0) return 'single';
+    if (sizes.length === 1) return 'multi';
+    return '';
+  };
+  const [mode, setMode] = useState(deriveInitialMode);
+  const [singleValue, setSingleValue] = useState(
+    sizes.length === 1 && Object.keys(sizeStock).length === 0 ? sizes[0] : '',
+  );
+  const [multiInput, setMultiInput] = useState('');
 
   const emit = (nextSizes, nextStock, nextPrices) => {
     onChange?.({ sizes: nextSizes, sizeStock: nextStock, sizePrices: nextPrices });
   };
 
-  const addSizes = (raw) => {
-    const parts = String(raw || '')
-      .split(/[,/|]+/)
-      .map((part) => part.trim())
-      .filter(Boolean);
-    if (!parts.length) return;
+  const selectMode = (next) => {
+    setMode(next);
+    emit([], {}, {});
+    setSingleValue('');
+    setMultiInput('');
+  };
 
-    const existingLower = sizes.map((value) => value.toLowerCase());
+  const handleSingleChange = (val) => {
+    setSingleValue(val);
+    emit(val.trim() ? [val.trim()] : [], {}, {});
+  };
+
+  const addMultiSizes = (raw) => {
+    const parts = String(raw || '').split(/[,/|]+/).map((p) => p.trim()).filter(Boolean);
+    if (!parts.length) return;
+    const existingLower = sizes.map((v) => v.toLowerCase());
     const nextSizes = [...sizes];
     const nextStock = { ...sizeStock };
     parts.forEach((part) => {
       if (existingLower.includes(part.toLowerCase())) return;
       existingLower.push(part.toLowerCase());
       nextSizes.push(part);
-      // Each new size starts with a stock of 1 the seller can adjust.
       if (nextStock[part] == null || nextStock[part] === '') nextStock[part] = '1';
     });
     emit(nextSizes, nextStock, sizePrices);
-    setSizeInput('');
+    setMultiInput('');
   };
 
-  const removeSize = (sizeValue) => {
-    const nextSizes = sizes.filter((value) => value !== sizeValue);
+  const toggleQuickSize = (option) => {
+    const already = sizes.some((v) => v.toLowerCase() === option.toLowerCase());
+    if (already) {
+      const nextSizes = sizes.filter((v) => v.toLowerCase() !== option.toLowerCase());
+      const nextStock = { ...sizeStock };
+      const nextPrices = { ...sizePrices };
+      const key = sizes.find((v) => v.toLowerCase() === option.toLowerCase());
+      if (key) { delete nextStock[key]; delete nextPrices[key]; }
+      emit(nextSizes, nextStock, nextPrices);
+    } else {
+      addMultiSizes(option);
+    }
+  };
+
+  const removeSize = (sv) => {
+    const nextSizes = sizes.filter((v) => v !== sv);
     const nextStock = { ...sizeStock };
     const nextPrices = { ...sizePrices };
-    delete nextStock[sizeValue];
-    delete nextPrices[sizeValue];
+    delete nextStock[sv]; delete nextPrices[sv];
     emit(nextSizes, nextStock, nextPrices);
   };
 
-  const setSizeStockValue = (sizeValue, rawQty) => {
-    const sanitized = String(rawQty).replace(/[^\d]/g, '');
-    emit(sizes, { ...sizeStock, [sizeValue]: sanitized }, sizePrices);
+  const setSizeStockValue = (sv, raw) => {
+    emit(sizes, { ...sizeStock, [sv]: String(raw).replace(/[^\d]/g, '') }, sizePrices);
   };
 
-  const setSizePriceValue = (sizeValue, rawPrice) => {
-    // Keep digits and a single decimal point only.
-    const sanitized = String(rawPrice).replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1');
-    emit(sizes, sizeStock, { ...sizePrices, [sizeValue]: sanitized });
+  const setSizePriceValue = (sv, raw) => {
+    emit(sizes, sizeStock, { ...sizePrices, [sv]: String(raw).replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1') });
   };
+
+  const sectionLabel = marketKey === 'fashionStyle' ? 'Clothing sizes'
+    : marketKey === 'jewelleryAccessories' ? 'Sizes / fit'
+    : marketKey === 'toysKids' ? 'Age groups / sizes'
+    : 'Sizes / variants';
+
+  const singlePlaceholder = preset?.placeholder
+    ? preset.placeholder.replace(/^e\.g\.\s*/, '').split(',')[0].trim()
+    : 'e.g. M';
 
   return (
     <div className="sm:col-span-2">
-      <label htmlFor={`${idPrefix}-input`} className="mb-1 block text-sm font-medium text-[var(--svs-text)]">
-        Sizes / packing sizes <span className="font-normal text-[var(--svs-muted)]">(optional)</span>
-      </label>
-      <div className="flex gap-2">
-        <input
-          id={`${idPrefix}-input`}
-          value={sizeInput}
-          onChange={(event) => setSizeInput(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault();
-              addSizes(sizeInput);
-            }
-          }}
-          placeholder="e.g. 25kg, 50kg or S, M, L"
-          className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none"
-        />
+      <p className="mb-2 text-sm font-medium text-[var(--svs-text)]">{sectionLabel}</p>
+
+      {/* Step 1 — ask single vs multi (only shown when nothing is set yet) */}
+      {mode === '' ? (
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => selectMode('single')}
+            className="flex flex-col items-center gap-1.5 rounded-xl border-2 border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-4 text-center transition hover:border-[var(--svs-primary)] hover:bg-[var(--svs-cyan-surface)]"
+          >
+            <span className="text-2xl">1️⃣</span>
+            <span className="text-sm font-bold text-[var(--svs-text)]">One size</span>
+            <span className="text-[11px] text-[var(--svs-muted)]">This item comes in a single size or one fixed variant (e.g. "XL" or "500ml")</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => selectMode('multi')}
+            className="flex flex-col items-center gap-1.5 rounded-xl border-2 border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-4 text-center transition hover:border-[var(--svs-primary)] hover:bg-[var(--svs-cyan-surface)]"
+          >
+            <span className="text-2xl">🗂️</span>
+            <span className="text-sm font-bold text-[var(--svs-text)]">Multiple sizes</span>
+            <span className="text-[11px] text-[var(--svs-muted)]">Each size has its own stock count — buyers choose their size at checkout</span>
+          </button>
+          {preset?.required ? null : (
+            <button
+              type="button"
+              onClick={() => selectMode('none')}
+              className="col-span-2 rounded-xl border border-dashed border-[var(--svs-border)] bg-transparent px-4 py-2.5 text-sm text-[var(--svs-muted)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
+            >
+              No size — this item doesn't have a size
+            </button>
+          )}
+        </div>
+      ) : (
         <button
           type="button"
-          onClick={() => addSizes(sizeInput)}
-          className="shrink-0 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm font-semibold text-[var(--svs-text)]"
+          onClick={() => selectMode('')}
+          className="mb-3 inline-flex items-center gap-1 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2.5 py-1 text-[11px] font-semibold text-[var(--svs-muted)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
         >
-          Add
+          <X className="h-3 w-3" /> Change
         </button>
-      </div>
-      {sizes.length ? (
-        <div className="mt-3 space-y-2">
-          {sizes.map((sizeValue) => (
-            <div key={sizeValue} className="flex items-center gap-2">
-              <span className="inline-flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)]">
-                <span className="truncate font-semibold">{sizeValue}</span>
-                <button
-                  type="button"
-                  onClick={() => removeSize(sizeValue)}
-                  aria-label={`Remove ${sizeValue}`}
-                  className="ml-auto text-[var(--svs-muted)] hover:text-rose-500"
-                >
-                  ×
-                </button>
-              </span>
-              <label className="sr-only" htmlFor={`${idPrefix}-qty-${sizeValue}`}>Quantity for {sizeValue}</label>
-              <input
-                id={`${idPrefix}-qty-${sizeValue}`}
-                inputMode="numeric"
-                value={sizeStock[sizeValue] ?? ''}
-                onChange={(event) => setSizeStockValue(sizeValue, event.target.value)}
-                placeholder="Qty"
-                className="w-16 shrink-0 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-2 text-center text-sm text-[var(--svs-text)] outline-none"
-              />
-              <label className="sr-only" htmlFor={`${idPrefix}-price-${sizeValue}`}>Price for {sizeValue}</label>
-              <input
-                id={`${idPrefix}-price-${sizeValue}`}
-                inputMode="decimal"
-                value={sizePrices[sizeValue] ?? ''}
-                onChange={(event) => setSizePriceValue(sizeValue, event.target.value)}
-                placeholder={basePrice || 'Base'}
-                className="w-20 shrink-0 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2 py-2 text-center text-sm text-[var(--svs-text)] outline-none"
-              />
-            </div>
-          ))}
+      )}
+
+      {/* Step 2a — single size */}
+      {mode === 'single' ? (
+        <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3">
+          <label htmlFor={`${idPrefix}-single`} className="mb-1 block text-xs font-semibold text-[var(--svs-text)]">
+            What size is this item?
+          </label>
+          <input
+            id={`${idPrefix}-single`}
+            value={singleValue}
+            onChange={(event) => handleSingleChange(event.target.value)}
+            placeholder={singlePlaceholder}
+            className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+          />
+          <p className="mt-1 text-[10px] text-[var(--svs-muted)]">Buyers see this as the size of the item. Your main Quantity field above controls how many units you have.</p>
         </div>
       ) : null}
-      <p className="mt-1 text-[11px] text-[var(--svs-muted)]">
-        Add a size to sell the same item in several sizes. Set a quantity and an optional price per size — leave the price blank to use your base price.
-      </p>
+
+      {/* Step 2b — multiple sizes */}
+      {mode === 'multi' ? (
+        <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3">
+          {/* Quick-pick groups */}
+          {preset?.groups?.map((group) => (
+            <div key={group.label} className="mb-2.5">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-[var(--svs-muted)]">{group.label}</p>
+              <div className="flex flex-wrap gap-1">
+                {group.options.map((option) => {
+                  const isSelected = sizes.some((v) => v.toLowerCase() === option.toLowerCase());
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => toggleQuickSize(option)}
+                      className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition ${
+                        isSelected
+                          ? 'border-[var(--svs-primary)] bg-[var(--svs-primary)] text-white'
+                          : 'border-[var(--svs-border)] bg-[var(--svs-surface)] text-[var(--svs-text)] hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]'
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          {/* Manual input */}
+          <div className="flex gap-2">
+            <input
+              id={`${idPrefix}-input`}
+              value={multiInput}
+              onChange={(event) => setMultiInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') { event.preventDefault(); addMultiSizes(multiInput); }
+              }}
+              placeholder={preset?.placeholder || 'Type a size and press Enter or Add'}
+              className={`w-full rounded-lg border bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)] ${
+                preset?.required && !sizes.length ? 'border-amber-400 ring-2 ring-amber-200' : 'border-[var(--svs-border)]'
+              }`}
+            />
+            <button
+              type="button"
+              onClick={() => addMultiSizes(multiInput)}
+              className="shrink-0 rounded-lg border border-[var(--svs-primary)] bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+            >
+              Add
+            </button>
+          </div>
+
+          {/* Size table */}
+          {sizes.length ? (
+            <div className="mt-3 overflow-hidden rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)]">
+              <div className="grid grid-cols-[1fr_72px_100px_28px] border-b border-[var(--svs-border)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                <span>Size</span>
+                <span className="text-center">Qty</span>
+                <span className="text-center">Price (opt.)</span>
+                <span />
+              </div>
+              {sizes.map((sv) => (
+                <div key={sv} className="grid grid-cols-[1fr_72px_100px_28px] items-center border-b border-[var(--svs-border)] px-3 py-1.5 last:border-b-0">
+                  <span className="truncate text-sm font-semibold text-[var(--svs-text)]">{sv}</span>
+                  <div className="px-1">
+                    <input
+                      inputMode="numeric"
+                      value={sizeStock[sv] ?? ''}
+                      onChange={(event) => setSizeStockValue(sv, event.target.value)}
+                      placeholder="0"
+                      aria-label={`Quantity for ${sv}`}
+                      className="w-full rounded border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-1.5 py-1 text-center text-sm outline-none focus:border-[var(--svs-primary)]"
+                    />
+                  </div>
+                  <div className="px-1">
+                    <input
+                      inputMode="decimal"
+                      value={sizePrices[sv] ?? ''}
+                      onChange={(event) => setSizePriceValue(sv, event.target.value)}
+                      placeholder={basePrice || 'Base price'}
+                      aria-label={`Price for ${sv}`}
+                      className="w-full rounded border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-1.5 py-1 text-center text-sm outline-none focus:border-[var(--svs-primary)]"
+                    />
+                  </div>
+                  <button type="button" onClick={() => removeSize(sv)} aria-label={`Remove ${sv}`}
+                    className="flex h-6 w-6 items-center justify-center rounded-full text-[var(--svs-muted)] hover:bg-rose-50 hover:text-rose-500">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+              <div className="px-3 py-1.5 text-[11px] text-[var(--svs-muted)]">
+                Total stock: <strong className="text-[var(--svs-text)]">{sizes.reduce((s, sv) => s + (Number(sizeStock[sv]) || 0), 0)}</strong>
+                <span className="ml-2">· Price column is optional — leave blank to use your base price</span>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-2 text-[11px] text-[var(--svs-muted)]">
+              {preset?.required ? '⚠ At least one size is required for this market.' : 'Tap a size above or type one in the box to add it.'}
+            </p>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 };
@@ -30350,21 +30574,23 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
   // (clothing size, packaging size, etc.). Used both for input
   // placeholders and the "Needs your input" banner below.
   const BULK_MARKET_FIELD_HINTS = useMemo(() => ({
-    fashionStyle:           { sizePlaceholder: 'e.g. S, M, L, XL or 30, 32, 34',  sizeRequired: true,  sizeOptions: ['XS', 'S', 'M', 'L', 'XL', 'XXL'] },
-    beautyFitnessSports:    { sizePlaceholder: 'e.g. 100ml, M, One size',          sizeRequired: false },
-    groceries:              { sizePlaceholder: 'e.g. 500g, 1L, 6-pack',            sizeRequired: true },
-    beverages:              { sizePlaceholder: 'e.g. 330ml, 500ml, 2L',            sizeRequired: true },
-    fastFood:               { sizePlaceholder: 'e.g. Small, Medium, Large',         sizeRequired: false },
-    homeCare:               { sizePlaceholder: 'e.g. 750ml, 1kg, 5L',              sizeRequired: false },
-    toysKids:               { sizePlaceholder: 'e.g. Ages 3-5, 0-12 months',        sizeRequired: false },
-    jewelleryAccessories:   { sizePlaceholder: 'e.g. 18", 7, One size',             sizeRequired: false },
-    hardwareSoftware:       { sizePlaceholder: 'e.g. 256GB, 15.6", M4 mount',       sizeRequired: false },
-    constructionTools:      { sizePlaceholder: 'e.g. 18V, 125mm, 2.5kg',            sizeRequired: false },
-    mobilityVehicles:       { sizePlaceholder: 'e.g. 195/65 R15, M, L',             sizeRequired: false },
-    stationery:             { sizePlaceholder: 'e.g. A4, 0.5mm, 100 sheets',        sizeRequired: false },
-    wellness:               { sizePlaceholder: 'e.g. 60 tablets, 100ml',            sizeRequired: false },
-    traditionalMedicines:   { sizePlaceholder: 'e.g. 50g, 100ml',                   sizeRequired: false },
-    ecommerce:              { sizePlaceholder: 'e.g. M, 42, 500ml',                 sizeRequired: false },
+    fashionStyle:           { sizePlaceholder: 'e.g. S, M, L, XL or 30, 32, 34',   sizeRequired: true,  sizeOptions: ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'] },
+    beautyFitnessSports:    { sizePlaceholder: 'e.g. 100ml, M, One size',           sizeRequired: false, sizeOptions: ['XS', 'S', 'M', 'L', 'XL', 'XXL'] },
+    groceries:              { sizePlaceholder: 'e.g. 500g, 1L, 6-pack',             sizeRequired: true },
+    beverages:              { sizePlaceholder: 'e.g. 330ml, 500ml, 2L',             sizeRequired: true },
+    fastFood:               { sizePlaceholder: 'e.g. Small, Medium, Large',          sizeRequired: false, sizeOptions: ['Small', 'Regular', 'Medium', 'Large', 'XL', 'Family'] },
+    homeCare:               { sizePlaceholder: 'e.g. 750ml, 1kg, 5L',               sizeRequired: false },
+    toysKids:               { sizePlaceholder: 'e.g. Ages 3-5, 0-12 months',         sizeRequired: false, sizeOptions: ['0-6m', '6-12m', '1-2y', '2-3y', '3-5y', '5-7y', '7-10y', '10+y'] },
+    jewelleryAccessories:   { sizePlaceholder: 'e.g. Ring M, 18", One size',         sizeRequired: false, sizeOptions: ['One size', 'UK J', 'UK L', 'UK M', 'UK N', 'UK O', 'UK P', 'UK Q', '16"', '18"', '20"', '7"', '8"'] },
+    hardwareSoftware:       { sizePlaceholder: 'e.g. 256GB, 15.6", M4 mount',        sizeRequired: false },
+    constructionTools:      { sizePlaceholder: 'e.g. 18V, 125mm, 2.5kg',             sizeRequired: false },
+    mobilityVehicles:       { sizePlaceholder: 'e.g. 195/65 R15, M, L',              sizeRequired: false },
+    stationery:             { sizePlaceholder: 'e.g. A4, A5, 0.5mm, 100 sheets',     sizeRequired: false },
+    wellness:               { sizePlaceholder: 'e.g. 60 tablets, 100ml, 500mg',      sizeRequired: false },
+    traditionalMedicines:   { sizePlaceholder: 'e.g. 50g, 100ml, 250ml',             sizeRequired: false },
+    secondhand:             { sizePlaceholder: 'e.g. S, M, L or UK 7 or 256GB',      sizeRequired: false, sizeOptions: ['XS', 'S', 'M', 'L', 'XL', 'XXL'] },
+    ecommerce:              { sizePlaceholder: 'e.g. S, M, L, XL or 256GB or 500ml', sizeRequired: false, sizeOptions: ['XS', 'S', 'M', 'L', 'XL', 'XXL'] },
+    informalMarket:         { sizePlaceholder: 'e.g. S, M, L or 500g or 1L',         sizeRequired: false },
   }), []);
 
   const getBulkMissingFields = useCallback((draft) => {
@@ -30721,18 +30947,39 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
     const trimmedPrice = cleanedPrice || rawPrice;
     const normalizedQuantity = normalizeListingQuantity(formData.quantity, NaN);
 
+    const hasMultipleSizes = formData.sizes.length > 0;
+    const allSizesHavePrice =
+      hasMultipleSizes &&
+      formData.sizes.every((s) => {
+        const v = formData.sizePrices[s];
+        return v !== undefined && String(v).trim() !== '';
+      });
+    const effectivePrice = allSizesHavePrice
+      ? String(Math.min(...formData.sizes.map((s) => Number(String(formData.sizePrices[s]).replace(/[^\d.]/g, '')))))
+      : trimmedPrice;
+    const totalSizeStock = hasMultipleSizes
+      ? Object.values(formData.sizeStock).reduce((sum, n) => sum + (Number(n) || 0), 0)
+      : null;
+    const effectiveQuantity = hasMultipleSizes ? totalSizeStock : normalizedQuantity;
+
     if (!isAuthenticated) {
       navigate('/signin');
       return;
     }
 
-    if (!trimmedTitle || !trimmedDescription || !trimmedPrice || !formData.marketKey || !formData.quantity) {
+    if (!trimmedTitle || !trimmedDescription || !formData.marketKey) {
       setMessage('Fill in all required fields and select a market before publishing your listing.');
       setMessageType('error');
       return;
     }
 
-    if (!Number.isFinite(normalizedQuantity)) {
+    if (!effectivePrice) {
+      setMessage(allSizesHavePrice ? 'Enter a price for at least one size before publishing.' : 'Enter a price before publishing your listing.');
+      setMessageType('error');
+      return;
+    }
+
+    if (!hasMultipleSizes && (!formData.quantity || !Number.isFinite(normalizedQuantity))) {
       setMessage('Enter a valid quantity in whole numbers (0 or more).');
       setMessageType('error');
       return;
@@ -30805,8 +31052,8 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
         seller_name: userName,
         title: trimmedTitle,
         description: trimmedDescription,
-        quantity: normalizedQuantity,
-        price: trimmedPrice,
+        quantity: effectiveQuantity,
+        price: effectivePrice,
         market_key: formData.marketKey,
         details_json: buildSellerItemDetailsJson(formData),
         image_url: uploadedImageUrls[0],
@@ -31026,7 +31273,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                         disabled={bulkDraft.status === 'publishing'}
                       >
                         <option value="">Select market</option>
-                        {sellerMarketOptions.map((option) => (
+                        {sellerMarketOptions.filter((option) => !option.hidden).map((option) => (
                           <option key={option.key} value={option.key}>
                             {option.label || t(option.labelKey)}
                           </option>
@@ -31224,36 +31471,66 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                 <label htmlFor="seller-title" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Item title</label>
                 <input id="seller-title" name="title" value={formData.title} onChange={handleChange} required className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
               </div>
-              <div>
-                <label htmlFor="seller-price" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Price</label>
-                <div className="flex gap-2">
-                  <CurrencyPickerField
-                    id="seller-currency"
-                    name="currency"
-                    value={formData.currency}
-                    onChange={handleChange}
-                    ariaLabel="Listing currency"
-                  />
-                  <input id="seller-price" name="price" value={formData.price} onChange={handleChange} required placeholder="129.99" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+              {(() => {
+                const _hasMultipleSizes = formData.sizes && formData.sizes.length > 0;
+                const _allSizesHavePrice =
+                  _hasMultipleSizes &&
+                  formData.sizes.every((s) => {
+                    const v = formData.sizePrices && formData.sizePrices[s];
+                    return v !== undefined && String(v).trim() !== '';
+                  });
+                if (_allSizesHavePrice) {
+                  return (
+                    <div className="flex items-center gap-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5">
+                      <span className="text-sm text-[var(--svs-muted)]">Price set per size — lowest used on listing card</span>
+                    </div>
+                  );
+                }
+                return (
+                  <div>
+                    <label htmlFor="seller-price" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">
+                      {_hasMultipleSizes ? 'Base Price' : 'Price'}
+                    </label>
+                    <div className="flex gap-2">
+                      <CurrencyPickerField
+                        id="seller-currency"
+                        name="currency"
+                        value={formData.currency}
+                        onChange={handleChange}
+                        ariaLabel="Listing currency"
+                      />
+                      <input id="seller-price" name="price" value={formData.price} onChange={handleChange} required={!_hasMultipleSizes} placeholder="129.99" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+                    </div>
+                    <p className="mt-1 text-[11px] text-[var(--svs-muted)]">
+                      {_hasMultipleSizes
+                        ? 'Used for sizes without their own price. You are paid in this currency.'
+                        : 'You will always be paid in your listing currency. Buyers see prices auto-converted to their selected currency.'}
+                    </p>
+                  </div>
+                );
+              })()}
+              {formData.sizes && formData.sizes.length > 0 ? (
+                <div className="flex items-center gap-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5">
+                  <span className="text-sm text-[var(--svs-muted)]">Stock tracked per size below</span>
                 </div>
-                <p className="mt-1 text-[11px] text-[var(--svs-muted)]">You will always be paid in your listing currency. Buyers see prices auto-converted to their selected currency.</p>
-              </div>
-              <div>
-                <label htmlFor="seller-quantity" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Quantity</label>
-                <input
-                  id="seller-quantity"
-                  name="quantity"
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={formData.quantity}
-                  onChange={handleChange}
-                  required
-                  placeholder="20"
-                  className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none"
-                />
-                <p className="mt-1 text-xs text-[var(--svs-muted)]">Quantity means how many units buyers can still checkout. When it reaches 0, Add to Cart is disabled and buyers can wishlist only.</p>
-              </div>
+              ) : (
+                <div>
+                  <label htmlFor="seller-quantity" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Quantity</label>
+                  <input
+                    id="seller-quantity"
+                    name="quantity"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={formData.quantity}
+                    onChange={handleChange}
+                    required
+                    placeholder="20"
+                    className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none"
+                  />
+                  <p className="mt-1 text-xs text-[var(--svs-muted)]">How many units are available. Drops to 0 = sold out.</p>
+                </div>
+              )}
               <div className="sm:col-span-2">
                 <label htmlFor="seller-market" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Market</label>
                 <MarketSelectorField
@@ -31278,6 +31555,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
               ) : null}
               <SizeVariantEditor
                 idPrefix="seller-size"
+                marketKey={formData.marketKey}
                 sizes={formData.sizes}
                 sizeStock={formData.sizeStock}
                 sizePrices={formData.sizePrices}
@@ -34674,12 +34952,11 @@ const MarketsPage = ({ sellerItems = [] }) => {
         {gridMarketLinks.map((market) => {
           const isFastFood = market.href === '/fast-food';
           const isFashion = market.href === '/fashion-style';
-          const isBookings = market.href === '/tickets' || market.href === '/home-care';
+          const isBookings = market.href === '/tickets';
           const isBeverages = market.href === '/beverages-liquors';
           const isGroceries = market.href === '/groceries';
           const isMobility = market.href === '/mobility-vehicles';
           const isEcommerce = market.href === '/e-commerce';
-          const isElectronics = market.href === '/hardware-software';
           const isBetting = market.href === '/betting-lottery-games';
           const isConstruction = market.href === '/building-construction-tools';
           const isLivestock = market.href === '/livestock-hub';
@@ -34701,7 +34978,7 @@ const MarketsPage = ({ sellerItems = [] }) => {
             ? 'absolute inset-0 bg-gradient-to-t from-[#041a26]/70 via-[#0f6f84]/35 to-[#14b8a6]/15'
             : 'absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent';
           const marketTitleClassName = 'text-base font-bold leading-tight text-white drop-shadow line-clamp-3 sm:text-lg sm:line-clamp-none';
-          const hasHeroImage = isFastFood || isFashion || isBookings || isBeverages || isGroceries || isMobility || isEcommerce || isElectronics || isBetting || isConstruction || isLivestock || isHomeCare || isNaturalResources || isGeneralLabour || isWellness || isStationery || isProperty || isHerbs || isSecondhand || isBeautyFitnessSports || isToysKids || isJewelleryAccessories || isDirectLinks || isInformalMarket;
+          const hasHeroImage = isFastFood || isFashion || isBookings || isBeverages || isGroceries || isMobility || isEcommerce || isBetting || isConstruction || isLivestock || isHomeCare || isNaturalResources || isGeneralLabour || isWellness || isStationery || isProperty || isHerbs || isSecondhand || isBeautyFitnessSports || isToysKids || isJewelleryAccessories || isDirectLinks || isInformalMarket;
           const heroImageUrl = isFastFood
             ? 'https://images.pexels.com/photos/2983101/pexels-photo-2983101.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isFashion
@@ -34716,8 +34993,6 @@ const MarketsPage = ({ sellerItems = [] }) => {
             ? 'https://images.pexels.com/photos/120049/pexels-photo-120049.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isEcommerce
             ? 'https://images.pexels.com/photos/1444416/pexels-photo-1444416.jpeg?auto=compress&cs=tinysrgb&w=1200'
-            : isElectronics
-            ? 'https://images.pexels.com/photos/393047/pexels-photo-393047.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isBetting
             ? 'https://images.pexels.com/photos/6664248/pexels-photo-6664248.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isConstruction
@@ -34729,11 +35004,11 @@ const MarketsPage = ({ sellerItems = [] }) => {
             : isNaturalResources
             ? 'https://images.pexels.com/photos/2101137/pexels-photo-2101137.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isGeneralLabour
-            ? 'https://images.pexels.com/photos/36574302/pexels-photo-36574302.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            ? 'https://images.pexels.com/photos/1216589/pexels-photo-1216589.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isWellness
-            ? 'https://images.pexels.com/photos/159211/headache-pain-pills-medication-159211.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            ? 'https://images.pexels.com/photos/3822622/pexels-photo-3822622.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isStationery
-            ? 'https://images.pexels.com/photos/6444/pencil-typography-black-design.jpg?auto=compress&cs=tinysrgb&w=1200'
+            ? 'https://images.pexels.com/photos/256370/pexels-photo-256370.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isProperty
             ? 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isHerbs
@@ -34747,7 +35022,7 @@ const MarketsPage = ({ sellerItems = [] }) => {
             : isJewelleryAccessories
             ? 'https://images.pexels.com/photos/691046/pexels-photo-691046.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isDirectLinks
-            ? 'https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            ? 'https://images.pexels.com/photos/1884581/pexels-photo-1884581.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isInformalMarket
             ? 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : ''
@@ -48339,11 +48614,13 @@ const SiteFooter = () => {
             <ul className="mt-1.5 space-y-1 text-[9px] leading-snug text-slate-200 sm:mt-3 sm:space-y-2 sm:text-base">
               <li>{t('site.tagline', { defaultValue: 'Your one-stop marketplace for everything you need – from groceries to tickets!' })}</li>
             </ul>
-            <img
-              src={logo}
-              alt="SVS E-Commerce logo"
-              className="mt-3 h-10 w-10 rounded-lg object-cover sm:mt-6 sm:h-16 sm:w-16"
-            />
+            <Link to="/markets" aria-label="Go to Markets">
+              <img
+                src={logo}
+                alt="SVS E-Commerce logo"
+                className="mt-3 h-10 w-10 rounded-lg object-cover transition hover:opacity-80 sm:mt-6 sm:h-16 sm:w-16"
+              />
+            </Link>
           </div>
 
           {/* Column 3 – Subscribe to Offers */}
