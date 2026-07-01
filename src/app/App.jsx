@@ -76,6 +76,7 @@ import {
   Cog,
   Gauge,
   Eye,
+  EyeOff,
   PiggyBank,
   ArrowDownToLine,
   ArrowUpToLine,
@@ -686,6 +687,10 @@ const MarketSpecificFields = ({ formData, onFieldChange, prefix = 'seller-spec',
           const value = formData?.[field.name] ?? '';
 
           if (field.type === 'select') {
+            const hasOtherBuiltIn = field.options.includes('Other');
+            const isOtherMode = value === 'Other' || (value !== '' && !field.options.includes(value));
+            const selectDisplayValue = isOtherMode ? 'Other' : value;
+            const otherTextValue = isOtherMode && value !== 'Other' ? value : '';
             return (
               <div key={field.name} className={wrapperClassName}>
                 <label htmlFor={fieldId} className={labelClassName}>
@@ -694,16 +699,32 @@ const MarketSpecificFields = ({ formData, onFieldChange, prefix = 'seller-spec',
                 <select
                   id={fieldId}
                   name={field.name}
-                  value={value}
-                  onChange={onFieldChange}
-                  required={field.required}
+                  value={selectDisplayValue}
+                  onChange={(e) => {
+                    onFieldChange({ target: { name: field.name, value: e.target.value } });
+                  }}
+                  required={field.required && !isOtherMode}
                   className={inputClassName}
                 >
                   <option value="">Select {field.label.toLowerCase()}</option>
                   {field.options.map((option) => (
                     <option key={option} value={option}>{option}</option>
                   ))}
+                  {!hasOtherBuiltIn && <option value="Other">Other…</option>}
                 </select>
+                {isOtherMode && (
+                  <input
+                    type="text"
+                    value={otherTextValue}
+                    placeholder={`Type your ${field.label.toLowerCase()}`}
+                    required={field.required}
+                    onChange={(e) => {
+                      onFieldChange({ target: { name: field.name, value: e.target.value || 'Other' } });
+                    }}
+                    className={`mt-2 ${inputClassName} border-[var(--svs-primary)] ring-1 ring-[var(--svs-primary)]/30`}
+                    aria-label={`Custom ${field.label.toLowerCase()}`}
+                  />
+                )}
                 {field.helper ? <p className={helperClassName}>{field.helper}</p> : null}
               </div>
             );
@@ -899,6 +920,7 @@ const createSellerListingFormState = () => ({
   sizes: [],
   sizeStock: {},
   sizePrices: {},
+  sizingMode: '',
   // Not editable from the generic dashboard modal (General Labour / Home-Care
   // have their own dedicated availability UI), but round-tripped here so
   // saving other fields through this modal doesn't wipe them out.
@@ -1221,20 +1243,30 @@ const ticketEvents = [
 
 const bookingsPrototypeCategoryTabs = ['All', 'Movies', 'Concerts', 'Sports', 'Travel'];
 
-const bookingsPrototypeCountryOptions = [
-  { value: 'all', label: 'Select Country' },
-  { value: 'South Africa', label: 'South Africa' },
-  { value: 'Kenya', label: 'Kenya' },
-  { value: 'Uganda', label: 'Uganda' },
-  { value: 'Nigeria', label: 'Nigeria' },
-  { value: 'Tanzania', label: 'Tanzania' },
-  { value: 'United Arab Emirates', label: 'United Arab Emirates' },
+const WORLD_COUNTRIES = [
+  // Africa
+  'South Africa', 'Nigeria', 'Kenya', 'Ghana', 'Ethiopia', 'Tanzania', 'Uganda', 'Rwanda',
+  'Zimbabwe', 'Zambia', 'Botswana', 'Namibia', 'Mozambique', 'Angola', 'Malawi', 'Cameroon',
+  'Senegal', "Côte d'Ivoire", 'Morocco', 'Egypt', 'Algeria', 'Tunisia', 'Libya', 'Sudan',
+  'Madagascar', 'Lesotho', 'Eswatini', 'Mauritius',
+  // Middle East
+  'United Arab Emirates', 'Saudi Arabia', 'Qatar', 'Kuwait', 'Bahrain', 'Oman',
+  'Jordan', 'Lebanon', 'Turkey', 'Israel',
+  // Asia
+  'India', 'Pakistan', 'Bangladesh', 'Sri Lanka', 'China', 'Japan', 'South Korea',
+  'Singapore', 'Malaysia', 'Indonesia', 'Philippines', 'Thailand', 'Vietnam',
+  // Europe
+  'United Kingdom', 'Germany', 'France', 'Netherlands', 'Belgium', 'Spain', 'Portugal',
+  'Italy', 'Switzerland', 'Sweden', 'Norway', 'Denmark', 'Finland', 'Ireland', 'Poland',
+  'Greece', 'Czech Republic', 'Austria',
+  // Americas
+  'United States', 'Canada', 'Brazil', 'Argentina', 'Mexico', 'Colombia', 'Chile',
+  // Oceania
+  'Australia', 'New Zealand',
 ];
 
 const bookingsSellerCategoryOptions = bookingsPrototypeCategoryTabs.filter((category) => category !== 'All');
-const bookingsSellerCountryOptions = bookingsPrototypeCountryOptions
-  .filter((option) => option.value !== 'all')
-  .map((option) => option.value);
+const bookingsSellerCountryOptions = WORLD_COUNTRIES;
 
 const bookingsPrototypeCategoryCards = [
   {
@@ -3415,14 +3447,35 @@ const homeCareProfessionalPreferences = ['Any', 'Male', 'Female'];
 const homeCareExperienceLevels = ['0-1 Year', '1-3 Years', '4-5 Years', '5+ Years'];
 const homeCareAvailabilityOptions = ['Any', 'Morning', 'Afternoon', 'Evening', 'Full Day'];
 
-const homeCareCountries = ['South Africa', 'Kenya', 'Uganda', 'Nigeria', 'Tanzania', 'United Arab Emirates'];
+const homeCareCountries = WORLD_COUNTRIES;
 const homeCareCitiesByCountry = {
-  'South Africa': ['Cape Town', 'Durban', 'Johannesburg', 'Pretoria', 'Pietermaritzburg', 'Port Elizabeth', 'Bloemfontein', 'East London'],
-  Kenya: ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru'],
-  Uganda: ['Kampala', 'Entebbe', 'Jinja'],
-  Nigeria: ['Lagos', 'Abuja', 'Port Harcourt', 'Ibadan', 'Kano'],
-  Tanzania: ['Dar es Salaam', 'Dodoma', 'Arusha', 'Mwanza'],
-  'United Arab Emirates': ['Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman'],
+  'South Africa': ['Cape Town', 'Durban', 'Johannesburg', 'Pretoria', 'Pietermaritzburg', 'Port Elizabeth', 'Bloemfontein', 'East London', 'Polokwane', 'Nelspruit', 'Kimberley', 'George'],
+  Kenya: ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret', 'Thika'],
+  Uganda: ['Kampala', 'Entebbe', 'Jinja', 'Gulu', 'Mbarara'],
+  Nigeria: ['Lagos', 'Abuja', 'Port Harcourt', 'Ibadan', 'Kano', 'Kaduna', 'Benin City', 'Enugu', 'Aba'],
+  Tanzania: ['Dar es Salaam', 'Dodoma', 'Arusha', 'Mwanza', 'Zanzibar', 'Moshi'],
+  Ghana: ['Accra', 'Kumasi', 'Tamale', 'Tema', 'Cape Coast'],
+  Ethiopia: ['Addis Ababa', 'Dire Dawa', 'Mekelle', 'Gondar', 'Hawassa'],
+  Rwanda: ['Kigali', 'Butare', 'Gisenyi', 'Ruhengeri'],
+  Zimbabwe: ['Harare', 'Bulawayo', 'Mutare', 'Gweru', 'Masvingo'],
+  Zambia: ['Lusaka', 'Ndola', 'Kitwe', 'Livingstone', 'Kabwe'],
+  Botswana: ['Gaborone', 'Francistown', 'Maun', 'Kasane'],
+  Namibia: ['Windhoek', 'Swakopmund', 'Walvis Bay', 'Oshakati', 'Rundu'],
+  Morocco: ['Casablanca', 'Rabat', 'Marrakech', 'Fes', 'Tangier', 'Agadir'],
+  Egypt: ['Cairo', 'Alexandria', 'Giza', 'Sharm El-Sheikh', 'Luxor', 'Hurghada'],
+  'United Arab Emirates': ['Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman', 'Ras Al Khaimah', 'Fujairah'],
+  'Saudi Arabia': ['Riyadh', 'Jeddah', 'Mecca', 'Medina', 'Dammam', 'Khobar'],
+  Qatar: ['Doha', 'Al Wakrah', 'Al Khor'],
+  India: ['Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Kolkata', 'Hyderabad', 'Pune', 'Ahmedabad'],
+  'United Kingdom': ['London', 'Birmingham', 'Manchester', 'Leeds', 'Glasgow', 'Liverpool', 'Edinburgh', 'Bristol'],
+  'United States': ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Philadelphia', 'San Antonio', 'Dallas', 'San Jose', 'Austin'],
+  Canada: ['Toronto', 'Vancouver', 'Montreal', 'Calgary', 'Ottawa', 'Edmonton', 'Winnipeg', 'Quebec City'],
+  Australia: ['Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide', 'Gold Coast', 'Canberra'],
+  Germany: ['Berlin', 'Hamburg', 'Munich', 'Cologne', 'Frankfurt', 'Stuttgart', 'Düsseldorf'],
+  France: ['Paris', 'Lyon', 'Marseille', 'Toulouse', 'Nice', 'Nantes', 'Bordeaux'],
+  Brazil: ['São Paulo', 'Rio de Janeiro', 'Brasília', 'Salvador', 'Fortaleza', 'Manaus'],
+  Singapore: ['Singapore'],
+  Malaysia: ['Kuala Lumpur', 'George Town', 'Ipoh', 'Johor Bahru', 'Kota Kinabalu'],
 };
 
 const fashionGenderOptions = ['All', 'Men', 'Women', 'Unisex', 'Kids'];
@@ -12273,19 +12326,22 @@ const TicketsSellerFields = ({ formData, onFieldChange, prefix = 'seller-ticket'
         </div>
         <div>
           <label htmlFor={`${prefix}-country`} className={labelClassName}>Country</label>
-          <select
+          <input
             id={`${prefix}-country`}
+            type="text"
+            list={`${prefix}-country-list`}
             name="ticketCountry"
             value={formData.ticketCountry}
             onChange={onFieldChange}
             required
+            placeholder="Search country…"
             className={inputClassName}
-          >
-            <option value="">Select country</option>
+          />
+          <datalist id={`${prefix}-country-list`}>
             {bookingsSellerCountryOptions.map((country) => (
-              <option key={country} value={country}>{country}</option>
+              <option key={country} value={country} />
             ))}
-          </select>
+          </datalist>
         </div>
         {isMoviesCategory ? (
           <div>
@@ -12940,7 +12996,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
   const currentLocale = i18n.resolvedLanguage || i18n.language || 'en-US';
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDate, setSelectedDate] = useState('all');
-  const [selectedCountry, setSelectedCountry] = useState('all');
+  const [selectedCountry, setSelectedCountry] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [sortOrder, setSortOrder] = useState('Newest');
   const [sectionVisibleCounts, setSectionVisibleCounts] = useState({});
@@ -12948,8 +13004,8 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
   const [movieGenreFilters, setMovieGenreFilters] = useState([]);
   const [movieLanguageFilters, setMovieLanguageFilters] = useState([]);
   const [movieShowtimeFilters, setMovieShowtimeFilters] = useState([]);
-  const [movieFilterCountry, setMovieFilterCountry] = useState('all');
-  const [movieFilterCity, setMovieFilterCity] = useState('all');
+  const [movieFilterCountry, setMovieFilterCountry] = useState('');
+  const [movieFilterCity, setMovieFilterCity] = useState('');
   const [sidebarGenreOpen, setSidebarGenreOpen] = useState(false);
   const [sidebarLanguageOpen, setSidebarLanguageOpen] = useState(false);
   const [sidebarLocationOpen, setSidebarLocationOpen] = useState(false);
@@ -13027,11 +13083,10 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
   }, [allBookingPrototypeItems, currentLocale]);
 
   const bookingCountryOptions = useMemo(() => {
-    const dynamicCountries = [...new Set(allBookingPrototypeItems.map((item) => item.country).filter(Boolean))]
-      .sort()
-      .map((countryValue) => ({ value: countryValue, label: countryValue }));
-
-    return [{ value: 'all', label: 'Select Country' }, ...dynamicCountries];
+    const fromItems = [...new Set(allBookingPrototypeItems.map((item) => item.country).filter(Boolean))].sort();
+    const seen = new Set(fromItems);
+    WORLD_COUNTRIES.forEach((c) => seen.add(c));
+    return Array.from(seen);
   }, [allBookingPrototypeItems]);
 
   const allMovieItems = useMemo(
@@ -13062,7 +13117,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
   );
 
   const movieCityOptions = useMemo(() => {
-    const movies = movieFilterCountry === 'all'
+    const movies = !movieFilterCountry
       ? allMovieItems
       : allMovieItems.filter((item) => item.country === movieFilterCountry);
     return [...new Set(movies.map((item) => item.city).filter(Boolean))].sort();
@@ -13091,7 +13146,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
     const nextItems = allBookingPrototypeItems.filter((item) => {
       const matchesCategory = activeCategory === 'All' || item.category === activeCategory;
       const matchesDate = selectedDate === 'all' || item.date === selectedDate;
-      const matchesCountry = selectedCountry === 'all' || item.country === selectedCountry;
+      const matchesCountry = !selectedCountry || item.country === selectedCountry;
       const matchesQuery = !normalizedQuery || [item.title, item.subtitle, item.meta, item.provider, item.location, item.category]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(normalizedQuery));
@@ -13112,8 +13167,8 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
     if (movieGenreFilters.length > 0) movies = movies.filter((item) => movieGenreFilters.includes(item.genre));
     if (movieLanguageFilters.length > 0) movies = movies.filter((item) => movieLanguageFilters.includes(item.language));
     if (movieShowtimeFilters.length > 0) movies = movies.filter((item) => movieShowtimeFilters.includes(item.showtime));
-    if (movieFilterCountry !== 'all') movies = movies.filter((item) => item.country === movieFilterCountry);
-    if (movieFilterCity !== 'all') movies = movies.filter((item) => item.city === movieFilterCity);
+    if (movieFilterCountry) movies = movies.filter((item) => item.country === movieFilterCountry);
+    if (movieFilterCity) movies = movies.filter((item) => item.city === movieFilterCity);
     return movies;
   }, [filteredBookingPrototypeItems, movieGenreFilters, movieLanguageFilters, movieShowtimeFilters, movieFilterCountry, movieFilterCity]);
 
@@ -13142,7 +13197,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
     return items;
   }, [filteredBookingPrototypeItems, nonMovieFilters.Travel]);
 
-  const shouldShowMoviesSection = activeCategory === 'Movies' || ((searchQuery.trim() || selectedDate !== 'all' || selectedCountry !== 'all') && filteredMovies.length > 0);
+  const shouldShowMoviesSection = activeCategory === 'Movies' || ((searchQuery.trim() || selectedDate !== 'all' || !!selectedCountry) && filteredMovies.length > 0);
 
   const openBookingItemDetails = (item) => {
     const isSellerOutOfStock = item.isSellerListing && normalizeListingQuantity(item.availableQuantity, 0) === 0;
@@ -13280,19 +13335,20 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
                 <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
               </div>
 
-              {/* Country dropdown */}
+              {/* Country search */}
               <div className="relative">
                 <Flag className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
-                <select
+                <input
+                  type="text"
+                  list="bookings-country-list"
                   value={selectedCountry}
                   onChange={(event) => setSelectedCountry(event.target.value)}
-                  className="h-9 w-full appearance-none rounded-full border border-[var(--svs-border)] bg-white pl-9 pr-8 text-xs font-semibold text-[var(--svs-text)] outline-none transition hover:border-[var(--svs-primary)] focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30 sm:w-[190px]"
-                >
-                  {bookingCountryOptions.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
+                  placeholder="Filter by country…"
+                  className="h-9 w-full rounded-full border border-[var(--svs-border)] bg-white pl-9 pr-4 text-xs font-semibold text-[var(--svs-text)] outline-none transition hover:border-[var(--svs-primary)] focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30 sm:w-[190px]"
+                />
+                <datalist id="bookings-country-list">
+                  {bookingCountryOptions.map((c) => <option key={c} value={c} />)}
+                </datalist>
               </div>
 
               {/* Category pill tabs */}
@@ -13472,22 +13528,32 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
                 </button>
                 {sidebarLocationOpen ? (
                   <div className="mt-3 space-y-3">
-                    <select
-                      value={movieFilterCountry}
-                      onChange={(event) => { setMovieFilterCountry(event.target.value); setMovieFilterCity('all'); }}
-                      className="h-10 w-full appearance-none rounded-lg border border-[var(--svs-border)] bg-white px-3 text-sm text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30"
-                    >
-                      <option value="all">Select Country</option>
-                      {movieCountryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                    <select
-                      value={movieFilterCity}
-                      onChange={(event) => setMovieFilterCity(event.target.value)}
-                      className="h-10 w-full appearance-none rounded-lg border border-[var(--svs-border)] bg-white px-3 text-sm text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30"
-                    >
-                      <option value="all">Select City</option>
-                      {movieCityOptions.map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
+                    <div>
+                      <input
+                        type="text"
+                        list="movie-country-list"
+                        value={movieFilterCountry}
+                        onChange={(event) => { setMovieFilterCountry(event.target.value); setMovieFilterCity(''); }}
+                        placeholder="Search country…"
+                        className="h-10 w-full rounded-lg border border-[var(--svs-border)] bg-white px-3 text-sm text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30"
+                      />
+                      <datalist id="movie-country-list">
+                        {movieCountryOptions.map((c) => <option key={c} value={c} />)}
+                      </datalist>
+                    </div>
+                    <div>
+                      <input
+                        type="text"
+                        list="movie-city-list"
+                        value={movieFilterCity}
+                        onChange={(event) => setMovieFilterCity(event.target.value)}
+                        placeholder="Search city…"
+                        className="h-10 w-full rounded-lg border border-[var(--svs-border)] bg-white px-3 text-sm text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30"
+                      />
+                      <datalist id="movie-city-list">
+                        {movieCityOptions.map((c) => <option key={c} value={c} />)}
+                      </datalist>
+                    </div>
                   </div>
                 ) : null}
               </div>
@@ -14140,8 +14206,6 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
   const [sidebarMinPrice, setSidebarMinPrice] = useState('');
   const [sidebarMaxPrice, setSidebarMaxPrice] = useState('');
 
-  const conditionOptions = ['Like New', 'Excellent', 'Good', 'Lightly Worn'];
-
   const activeCategoryCard = secondhandCategoryCards.find((c) => c.key === categoryKey) || null;
 
   /* ── derived filtered items (all-categories mode) ── */
@@ -14151,6 +14215,15 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
     () => [...getSellerItemsForMarket(sellerItems, 'secondhand'), ...secondhandItems],
     [sellerItems],
   );
+
+  const conditionOptions = useMemo(() => {
+    const seen = new Set(['Like New', 'Excellent', 'Good', 'Lightly Worn']);
+    allItems.forEach((item) => {
+      const v = String(item.condition || '').trim();
+      if (v && v.toLowerCase() !== 'other') seen.add(v);
+    });
+    return Array.from(seen);
+  }, [allItems]);
 
   const filteredAllItems = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -17941,6 +18014,53 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
 
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'constructionTools'), ...constructionToolsItems], [sellerItems]);
 
+  // Filter option lists = static defaults merged with any custom values sellers
+  // entered via the "Other" option, so custom entries appear in buyer filters.
+  const subcategoryOptions = useMemo(() => {
+    const seen = new Set(constructionSubcategories);
+    marketItems.forEach((item) => {
+      const v = String(item.subcategory || '').trim();
+      if (v && v.toLowerCase() !== 'other') seen.add(v);
+    });
+    return Array.from(seen);
+  }, [marketItems]);
+
+  const brandFilterOptions = useMemo(() => {
+    const seen = new Set(constructionBrandOptions);
+    marketItems.forEach((item) => {
+      const v = String(item.brand || '').trim();
+      if (v && v.toLowerCase() !== 'other') seen.add(v);
+    });
+    return Array.from(seen);
+  }, [marketItems]);
+
+  const powerSourceFilterOptions = useMemo(() => {
+    const seen = new Set(constructionPowerSourceOptions);
+    marketItems.forEach((item) => {
+      const v = String(item.powerSource || '').trim();
+      if (v && v.toLowerCase() !== 'other') seen.add(v);
+    });
+    return Array.from(seen);
+  }, [marketItems]);
+
+  const materialFilterOptions = useMemo(() => {
+    const seen = new Set(constructionMaterialOptions);
+    marketItems.forEach((item) => {
+      const v = String(item.material || item.specification || '').trim();
+      if (v && v.toLowerCase() !== 'other') seen.add(v);
+    });
+    return Array.from(seen);
+  }, [marketItems]);
+
+  const projectTypeFilterOptions = useMemo(() => {
+    const seen = new Set(constructionProjectTypes);
+    marketItems.forEach((item) => {
+      const v = String(item.projectType || '').trim();
+      if (v && v.toLowerCase() !== 'other') seen.add(v);
+    });
+    return Array.from(seen);
+  }, [marketItems]);
+
   // Packaging-size filter options = the standard sizes plus any custom sizes
   // sellers actually entered on their listings (e.g. "2kg", "5 g", "2L"), so
   // the buyer can filter by real seller-provided packaging.
@@ -18110,7 +18230,7 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
         <div>
           <h4 className="text-sm font-medium text-[#1A1A1A]">Subcategory</h4>
           <div className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
-            {constructionSubcategories.map((option) => (
+            {subcategoryOptions.map((option) => (
               <label key={option} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
                 <input
                   type="checkbox"
@@ -18127,7 +18247,7 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
         <div>
           <h4 className="text-sm font-medium text-[#1A1A1A]">Brand</h4>
           <div className="mt-3 space-y-2">
-            {constructionBrandOptions.map((option) => (
+            {brandFilterOptions.map((option) => (
               <label key={option} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
                 <input
                   type="radio"
@@ -18145,7 +18265,7 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
         <div>
           <h4 className="text-sm font-medium text-[#1A1A1A]">Power Source</h4>
           <div className="mt-3 space-y-2">
-            {constructionPowerSourceOptions.map((option) => (
+            {powerSourceFilterOptions.map((option) => (
               <label key={option} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
                 <input
                   type="radio"
@@ -18163,7 +18283,7 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
         <div>
           <h4 className="text-sm font-medium text-[#1A1A1A]">Material</h4>
           <div className="mt-3 space-y-2">
-            {constructionMaterialOptions.map((option) => (
+            {materialFilterOptions.map((option) => (
               <label key={option} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
                 <input
                   type="radio"
@@ -18181,7 +18301,7 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
         <div>
           <h4 className="text-sm font-medium text-[#1A1A1A]">Project Type</h4>
           <div className="mt-3 space-y-2">
-            {constructionProjectTypes.map((option) => (
+            {projectTypeFilterOptions.map((option) => (
               <label key={option} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
                 <input
                   type="radio"
@@ -18569,13 +18689,31 @@ const HomeCarePage = ({ sellerItems = [] }) => {
   const hasMoreRelatedListings = filteredProviders.length > 4;
   const trendingProviders = showAllRelatedListings ? filteredProviders : filteredProviders.slice(0, 4);
 
+  const dynamicHomeCareServiceCategories = useMemo(() => {
+    const seen = new Set(homeCareServiceCategories.filter((o) => o !== 'All'));
+    providerCatalog.forEach((provider) => {
+      const v = String(provider.category || '').trim();
+      if (v && v.toLowerCase() !== 'other' && v !== 'Book @ Home-Care Services') seen.add(v);
+    });
+    return ['All', ...Array.from(seen)];
+  }, [providerCatalog]);
+
+  const dynamicHomeCareServiceTypes = useMemo(() => {
+    const seen = new Set(homeCareServiceTypes.filter((o) => o !== 'All'));
+    providerCatalog.forEach((provider) => {
+      const v = String(provider.serviceType || '').trim();
+      if (v && v.toLowerCase() !== 'other' && v !== 'Flexible') seen.add(v);
+    });
+    return ['All', ...Array.from(seen)];
+  }, [providerCatalog]);
+
   const FilterPanel = (
     <div className="flex h-full flex-col bg-white font-['Inter',sans-serif]">
       <div className="space-y-7 px-6 py-8">
         <div>
           <h3 className="text-base font-medium text-[#1A1A1A]">Service Category</h3>
           <div className="mt-4 space-y-2.5">
-            {homeCareServiceCategories.map((option) => (
+            {dynamicHomeCareServiceCategories.map((option) => (
               <label key={option} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
                 <input
                   type="checkbox"
@@ -18592,7 +18730,7 @@ const HomeCarePage = ({ sellerItems = [] }) => {
         <div>
           <h3 className="text-base font-medium text-[#1A1A1A]">Service Type</h3>
           <div className="mt-4 space-y-2.5">
-            {homeCareServiceTypes.map((option) => (
+            {dynamicHomeCareServiceTypes.map((option) => (
               <label key={option} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
                 <input
                   type="checkbox"
@@ -18650,34 +18788,38 @@ const HomeCarePage = ({ sellerItems = [] }) => {
         <div>
           <h3 className="text-base font-medium text-[#1A1A1A]">Location</h3>
           <div className="mt-4 space-y-3">
-            <div className="relative">
-              <select
+            <div>
+              <input
+                type="text"
+                list="homecare-country-list"
                 value={selectedCountry}
                 onChange={(event) => {
                   setSelectedCountry(event.target.value);
                   setSelectedCity('');
                 }}
-                className="h-11 w-full appearance-none rounded-lg border border-[#E5E7EB] bg-white px-3 pr-10 text-sm text-[#1A1A1A] outline-none focus:border-[#0f9fb2]"
-              >
-                <option value="">Select Country</option>
+                placeholder="Search country…"
+                className="h-11 w-full rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#1A1A1A] outline-none focus:border-[#0f9fb2]"
+              />
+              <datalist id="homecare-country-list">
                 {homeCareCountries.map((country) => (
-                  <option key={country} value={country}>{country}</option>
+                  <option key={country} value={country} />
                 ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B7280]" />
+              </datalist>
             </div>
-            <div className="relative">
-              <select
+            <div>
+              <input
+                type="text"
+                list="homecare-city-list"
                 value={selectedCity}
                 onChange={(event) => setSelectedCity(event.target.value)}
-                className="h-11 w-full appearance-none rounded-lg border border-[#E5E7EB] bg-white px-3 pr-10 text-sm text-[#1A1A1A] outline-none focus:border-[#0f9fb2]"
-              >
-                <option value="">Select City</option>
+                placeholder="Search city…"
+                className="h-11 w-full rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#1A1A1A] outline-none focus:border-[#0f9fb2]"
+              />
+              <datalist id="homecare-city-list">
                 {visibleCities.map((city) => (
-                  <option key={city} value={city}>{city}</option>
+                  <option key={city} value={city} />
                 ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B7280]" />
+              </datalist>
             </div>
           </div>
         </div>
@@ -19150,6 +19292,24 @@ const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
     return ['All', ...Array.from(set)];
   }, [marketItems]);
 
+  const dynamicProductTypes = useMemo(() => {
+    const seen = new Set(HARDWARE_SOFTWARE_PRODUCT_TYPES);
+    marketItems.forEach((item) => { const v = String(item.productType || '').trim(); if (v && v.toLowerCase() !== 'other') seen.add(v); });
+    return Array.from(seen);
+  }, [marketItems]);
+
+  const dynamicAvailability = useMemo(() => {
+    const seen = new Set(HARDWARE_SOFTWARE_AVAILABILITY);
+    marketItems.forEach((item) => { const v = String(item.availability || '').trim(); if (v && v.toLowerCase() !== 'other') seen.add(v); });
+    return Array.from(seen);
+  }, [marketItems]);
+
+  const dynamicLicenses = useMemo(() => {
+    const seen = new Set(HARDWARE_SOFTWARE_LICENSES);
+    marketItems.forEach((item) => { const v = String(item.licenseType || '').trim(); if (v && v.toLowerCase() !== 'other') seen.add(v); });
+    return Array.from(seen);
+  }, [marketItems]);
+
   const priceBounds = useMemo(() => {
     const numericPrices = marketItems
       .map((item) => Number(getNumericPriceValue(item.price)))
@@ -19286,9 +19446,9 @@ const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
     <HardwareSoftwareFiltersPanel
       categories={dynamicCategories}
       brands={dynamicBrands}
-      productTypes={HARDWARE_SOFTWARE_PRODUCT_TYPES}
-      availability={HARDWARE_SOFTWARE_AVAILABILITY}
-      licenses={HARDWARE_SOFTWARE_LICENSES}
+      productTypes={dynamicProductTypes}
+      availability={dynamicAvailability}
+      licenses={dynamicLicenses}
       priceBounds={priceBounds}
       selectedCategories={selectedCategories}
       setSelectedCategories={setSelectedCategories}
@@ -19960,6 +20120,68 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
 
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'fashionStyle'), ...fashionStyleItems], [sellerItems]);
 
+  const fashionSubcategoryOptions = useMemo(() => {
+    const seen = new Set(fashionSubcategories);
+    marketItems.forEach((item) => {
+      const v = String(item.subcategory || '').trim();
+      if (v && v.toLowerCase() !== 'other') seen.add(v);
+    });
+    return Array.from(seen);
+  }, [marketItems]);
+
+  const fashionClothingSizeOptions = useMemo(() => {
+    const seen = new Set(fashionClothingSizes);
+    marketItems.forEach((item) => {
+      getItemSizeOptions(item).forEach((s) => {
+        const sz = String(s).trim();
+        if (sz && !/^uk\s*\d/i.test(sz) && sz.toLowerCase() !== 'other') seen.add(sz);
+      });
+    });
+    return Array.from(seen);
+  }, [marketItems]);
+
+  const fashionShoeSizeOptions = useMemo(() => {
+    const seen = new Set(fashionShoeSizes);
+    marketItems.forEach((item) => {
+      getItemSizeOptions(item).forEach((s) => {
+        const sz = String(s).trim();
+        if (sz && /^uk\s*\d/i.test(sz)) seen.add(sz);
+      });
+    });
+    return Array.from(seen);
+  }, [marketItems]);
+
+  const allFashionColorOptions = useMemo(() => {
+    const existing = new Set(fashionColorOptions.map((c) => c.name.toLowerCase()));
+    const extras = [];
+    marketItems.forEach((item) => {
+      const v = String(item.color || '').trim();
+      if (v && v.toLowerCase() !== 'other' && !existing.has(v.toLowerCase())) {
+        existing.add(v.toLowerCase());
+        extras.push({ name: v, hex: '#888888' });
+      }
+    });
+    return [...fashionColorOptions, ...extras];
+  }, [marketItems]);
+
+  const fashionMaterialAllOptions = useMemo(() => {
+    const seen = new Set(fashionMaterialOptions.filter((o) => o !== 'All'));
+    marketItems.forEach((item) => {
+      const v = String(item.material || item.specification || '').trim();
+      if (v && v.toLowerCase() !== 'other') seen.add(v);
+    });
+    return ['All', ...Array.from(seen)];
+  }, [marketItems]);
+
+  const fashionOccasionOptions = useMemo(() => {
+    const seen = new Set(fashionStyleOccasions.filter((o) => o !== 'All'));
+    marketItems.forEach((item) => {
+      const v = String(item.occasion || '').trim();
+      if (v && v.toLowerCase() !== 'other') seen.add(v);
+    });
+    return ['All', ...Array.from(seen)];
+  }, [marketItems]);
+
   const matchesField = (itemValue, selectedValues) => {
     if (!selectedValues.length) return true;
     if (!itemValue) return true; // permissive: items missing the field still appear
@@ -20119,7 +20341,7 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
         <div>
           <h4 className="text-sm font-medium text-[#1A1A1A]">Subcategory</h4>
           <div className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
-            {fashionSubcategories.map((option) => (
+            {fashionSubcategoryOptions.map((option) => (
               <label key={option} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
                 <input
                   type="checkbox"
@@ -20136,7 +20358,7 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
         <div>
           <h4 className="text-sm font-medium text-[#1A1A1A]">Clothing Size</h4>
           <div className="mt-3 flex flex-wrap gap-2">
-            {fashionClothingSizes.map((size) => {
+            {fashionClothingSizeOptions.map((size) => {
               const isActive = selectedSizes.includes(size);
               return (
                 <button
@@ -20156,7 +20378,7 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
         <div>
           <h4 className="text-sm font-medium text-[#1A1A1A]">Shoe Size</h4>
           <div className="mt-3 flex flex-wrap gap-2">
-            {fashionShoeSizes.map((size) => {
+            {fashionShoeSizeOptions.map((size) => {
               const isActive = selectedSizes.includes(size);
               return (
                 <button
@@ -20176,7 +20398,7 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
         <div>
           <h4 className="text-sm font-medium text-[#1A1A1A]">Color</h4>
           <div className="mt-3 grid grid-cols-7 gap-2">
-            {fashionColorOptions.map((color) => {
+            {allFashionColorOptions.map((color) => {
               const isActive = selectedColors.includes(color.name);
               return (
                 <button
@@ -20197,7 +20419,7 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
         <div>
           <h4 className="text-sm font-medium text-[#1A1A1A]">Material</h4>
           <div className="mt-3 space-y-2">
-            {fashionMaterialOptions.map((option) => (
+            {fashionMaterialAllOptions.map((option) => (
               <label key={option} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
                 <input
                   type="radio"
@@ -20215,7 +20437,7 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
         <div>
           <h4 className="text-sm font-medium text-[#1A1A1A]">Occasion / Style</h4>
           <div className="mt-3 space-y-2">
-            {fashionStyleOccasions.map((option) => (
+            {fashionOccasionOptions.map((option) => (
               <label key={option} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
                 <input
                   type="radio"
@@ -22899,18 +23121,32 @@ const GeneralLabourPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIt
                 <div className="mb-5">
                   <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Location</h3>
                   <div className="flex flex-col gap-2">
-                    <select value={selectedCountry} onChange={(event) => setSelectedCountry(event.target.value)} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2.5 py-2 text-sm text-[var(--svs-text)] outline-none">
-                      <option value="">All Countries</option>
-                      {countryOptions.map((option) => (
-                        <option key={option} value={option}>{option}</option>
-                      ))}
-                    </select>
-                    <select value={selectedCity} onChange={(event) => setSelectedCity(event.target.value)} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2.5 py-2 text-sm text-[var(--svs-text)] outline-none">
-                      <option value="">All Cities</option>
-                      {cityOptions.map((option) => (
-                        <option key={option} value={option}>{option}</option>
-                      ))}
-                    </select>
+                    <div>
+                      <input
+                        type="text"
+                        list="labour-country-list"
+                        value={selectedCountry}
+                        onChange={(event) => setSelectedCountry(event.target.value)}
+                        placeholder="Search country…"
+                        className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2.5 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                      />
+                      <datalist id="labour-country-list">
+                        {countryOptions.map((option) => <option key={option} value={option} />)}
+                      </datalist>
+                    </div>
+                    <div>
+                      <input
+                        type="text"
+                        list="labour-city-list"
+                        value={selectedCity}
+                        onChange={(event) => setSelectedCity(event.target.value)}
+                        placeholder="Search city…"
+                        className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2.5 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                      />
+                      <datalist id="labour-city-list">
+                        {cityOptions.map((option) => <option key={option} value={option} />)}
+                      </datalist>
+                    </div>
                   </div>
                 </div>
               ) : null}
@@ -27009,10 +27245,26 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
     setListActionMessage('');
     setListActionMessageType('idle');
 
-    const normalizedQuantity = normalizeListingQuantity(editForm.quantity, NaN);
+    const hasMultipleSizes = editForm.sizingMode === 'multi';
+    const normalizedQuantity = hasMultipleSizes
+      ? Object.values(editForm.sizeStock).reduce((sum, n) => sum + (Number(n) || 0), 0)
+      : normalizeListingQuantity(editForm.quantity, NaN);
+    const sizePriceValues = hasMultipleSizes
+      ? editForm.sizes.map((s) => Number(String(editForm.sizePrices[s] ?? '').replace(/[^\d.]/g, ''))).filter((n) => Number.isFinite(n) && n > 0)
+      : [];
+    const effectivePrice = hasMultipleSizes
+      ? (sizePriceValues.length ? String(Math.min(...sizePriceValues)) : editForm.price)
+      : editForm.price;
 
-    if (!Number.isFinite(normalizedQuantity)) {
+    if (!hasMultipleSizes && !Number.isFinite(normalizedQuantity)) {
       setEditMessage('Enter a valid stock quantity using whole numbers (0 or more).');
+      setEditMessageType('error');
+      setIsSaving(false);
+      return;
+    }
+
+    if (hasMultipleSizes && editForm.sizes.some((s) => !editForm.sizePrices[s] || !String(editForm.sizePrices[s]).trim())) {
+      setEditMessage('Set a price for every size before saving.');
       setEditMessageType('error');
       setIsSaving(false);
       return;
@@ -27041,7 +27293,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
       {
         title: editForm.title,
         description: editForm.description,
-        price: editForm.price,
+        price: effectivePrice,
         quantity: normalizedQuantity,
         marketKey: editForm.marketKey,
         detailsJson: buildSellerItemDetailsJson(editForm),
@@ -28098,32 +28350,51 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                 <input name="title" value={editForm.title} onChange={handleEditChange} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Price</label>
-                  <div className="flex gap-2">
+                {editForm.sizingMode === 'multi' ? (
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Currency</label>
                     <CurrencyPickerField
                       name="currency"
                       value={editForm.currency || 'USD'}
                       onChange={handleEditChange}
                       ariaLabel="Listing currency"
                     />
-                    <input name="price" value={editForm.price} onChange={handleEditChange} placeholder="e.g. 29.99" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
+                    <p className="mt-1 text-[10px] text-[var(--svs-muted)]">Set a price for each size below. You are paid in this currency.</p>
                   </div>
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Quantity</label>
-                  <input
-                    name="quantity"
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={editForm.quantity}
-                    onChange={handleEditChange}
-                    placeholder="e.g. 25"
-                    className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
-                  />
-                  <p className="mt-1 text-[10px] text-[var(--svs-muted)]">How many units are available for checkout.</p>
-                </div>
+                ) : (
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Price</label>
+                    <div className="flex gap-2">
+                      <CurrencyPickerField
+                        name="currency"
+                        value={editForm.currency || 'USD'}
+                        onChange={handleEditChange}
+                        ariaLabel="Listing currency"
+                      />
+                      <input name="price" value={editForm.price} onChange={handleEditChange} placeholder="e.g. 29.99" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
+                    </div>
+                  </div>
+                )}
+                {editForm.sizingMode === 'multi' ? (
+                  <div className="flex items-center rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2">
+                    <span className="text-xs text-[var(--svs-muted)]">Stock tracked per size below</span>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Quantity</label>
+                    <input
+                      name="quantity"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={editForm.quantity}
+                      onChange={handleEditChange}
+                      placeholder="e.g. 25"
+                      className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
+                    />
+                    <p className="mt-1 text-[10px] text-[var(--svs-muted)]">How many units are available for checkout.</p>
+                  </div>
+                )}
                 <div className="col-span-2">
                   <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Market</label>
                   <MarketSelectorField
@@ -28167,6 +28438,16 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                   isCompact
                 />
               ) : null}
+              <SizeVariantEditor
+                idPrefix={`edit-size-${editingItem.dbId}`}
+                marketKey={editForm.marketKey}
+                sizes={editForm.sizes}
+                sizeStock={editForm.sizeStock}
+                sizePrices={editForm.sizePrices}
+                basePrice={editForm.sizingMode === 'multi' ? '' : editForm.price}
+                currency={editForm.currency}
+                onChange={(next) => setEditForm((current) => ({ ...current, ...next }))}
+              />
               <div>
                 <label className="mb-1 block text-xs font-medium text-[var(--svs-text)]">Description</label>
                 <textarea name="description" value={editForm.description} onChange={handleEditChange} rows={3} className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none" />
@@ -30031,6 +30312,59 @@ const SIZE_VARIANT_PRESETS = {
   constructionTools: { required: false, placeholder: 'e.g. 18V, 125mm, 2.5kg', contextNote: 'Add size or spec variants if the same tool comes in different configurations.' },
   mobilityVehicles: { required: false, placeholder: 'e.g. 195/65 R15, S, M, L', contextNote: 'Add sizes for parts or accessories (e.g. tyre sizes).' },
   informalMarket: { required: false, placeholder: 'e.g. S, M, L or 500g or 1L', contextNote: 'Add sizes or variants relevant to what you\'re selling.' },
+  tickets: {
+    required: false,
+    placeholder: 'e.g. Standard, VIP, Premium',
+    contextNote: 'Add seat or ticket categories if this event offers multiple tiers.',
+    groups: [
+      { label: 'Seat type', options: ['Standard', 'VIP', 'Premium', 'Box', 'Standing', 'Lawn'] },
+    ],
+  },
+  generalLabour: {
+    required: false,
+    placeholder: 'e.g. Half day, Full day, Weekly',
+    contextNote: 'Add duration or shift variants if you offer different engagement lengths.',
+    groups: [
+      { label: 'Duration', options: ['2hr', 'Half day (4hr)', 'Full day (8hr)', 'Weekend', 'Weekly', 'Monthly'] },
+      { label: 'Skill level', options: ['Trainee', 'Junior', 'Intermediate', 'Senior', 'Specialist'] },
+    ],
+  },
+  livestock: {
+    required: false,
+    placeholder: 'e.g. Single, Pair, ×5',
+    contextNote: 'Add bundle sizes if you are selling multiple animals in one listing.',
+    groups: [
+      { label: 'Bundle', options: ['Single', 'Pair (×2)', '×3', '×5', '×10', '×20', '×50'] },
+    ],
+  },
+  naturalResources: {
+    required: false,
+    placeholder: 'e.g. 1t, 5t, 10t or 1m³',
+    contextNote: 'Add weight or volume variants if the same resource is sold in different quantities.',
+    groups: [
+      { label: 'Weight (ton)', options: ['0.5t', '1t', '2t', '5t', '10t', '20t', '50t', '100t'] },
+      { label: 'Volume (m³)', options: ['1m³', '2m³', '5m³', '10m³', '20m³', '50m³'] },
+    ],
+  },
+  property: {
+    required: false,
+    placeholder: 'e.g. Studio, 2 Bed, 3 Bed',
+    contextNote: 'Add bedroom or unit configurations if you are listing multiple units of the same building.',
+    groups: [
+      { label: 'Bedrooms', options: ['Studio', '1 Bed', '2 Bed', '3 Bed', '4 Bed', '5+ Bed'] },
+      { label: 'Size (m²)', options: ['< 50m²', '50–100m²', '100–150m²', '150–200m²', '200m²+'] },
+    ],
+  },
+  hardwareSoftware: {
+    required: false,
+    placeholder: 'e.g. 256GB, 8GB RAM, 15.6"',
+    contextNote: 'Add storage, RAM, or screen size variants if the same product comes in multiple specs.',
+    groups: [
+      { label: 'Storage', options: ['64GB', '128GB', '256GB', '512GB', '1TB', '2TB'] },
+      { label: 'RAM', options: ['4GB', '8GB', '16GB', '32GB', '64GB'] },
+      { label: 'Clothing', options: ['XS', 'S', 'M', 'L', 'XL', 'XXL'] },
+    ],
+  },
 };
 
 const SizeVariantEditor = ({
@@ -30038,6 +30372,7 @@ const SizeVariantEditor = ({
   sizeStock = {},
   sizePrices = {},
   basePrice = '',
+  currency = '',
   idPrefix = 'size',
   marketKey = '',
   onChange,
@@ -30058,13 +30393,13 @@ const SizeVariantEditor = ({
   );
   const [multiInput, setMultiInput] = useState('');
 
-  const emit = (nextSizes, nextStock, nextPrices) => {
-    onChange?.({ sizes: nextSizes, sizeStock: nextStock, sizePrices: nextPrices });
+  const emit = (nextSizes, nextStock, nextPrices, emitMode = mode) => {
+    onChange?.({ sizes: nextSizes, sizeStock: nextStock, sizePrices: nextPrices, sizingMode: emitMode });
   };
 
   const selectMode = (next) => {
     setMode(next);
-    emit([], {}, {});
+    emit([], {}, {}, next);
     setSingleValue('');
     setMultiInput('');
   };
@@ -30143,7 +30478,7 @@ const SizeVariantEditor = ({
           >
             <span className="text-2xl">1️⃣</span>
             <span className="text-sm font-bold text-[var(--svs-text)]">One size</span>
-            <span className="text-[11px] text-[var(--svs-muted)]">This item comes in a single size or one fixed variant (e.g. "XL" or "500ml")</span>
+            <span className="text-[11px] text-[var(--svs-muted)]">Single size or variant. One price, one stock count — set both in the fields above.</span>
           </button>
           <button
             type="button"
@@ -30152,7 +30487,7 @@ const SizeVariantEditor = ({
           >
             <span className="text-2xl">🗂️</span>
             <span className="text-sm font-bold text-[var(--svs-text)]">Multiple sizes</span>
-            <span className="text-[11px] text-[var(--svs-muted)]">Each size has its own stock count — buyers choose their size at checkout</span>
+            <span className="text-[11px] text-[var(--svs-muted)]">Each size tracks its own stock. Prices can be shared or set individually per size.</span>
           </button>
           {preset?.required ? null : (
             <button
@@ -30187,13 +30522,38 @@ const SizeVariantEditor = ({
             placeholder={singlePlaceholder}
             className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
           />
-          <p className="mt-1 text-[10px] text-[var(--svs-muted)]">Buyers see this as the size of the item. Your main Quantity field above controls how many units you have.</p>
+          <p className="mt-1.5 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-3 py-2 text-[11px] text-[var(--svs-muted)]">
+            <strong className="font-semibold text-[var(--svs-text)]">Price</strong> — set in the Price field above. &nbsp;
+            <strong className="font-semibold text-[var(--svs-text)]">Stock</strong> — set in the Quantity field above. Both apply to this single size.
+          </p>
         </div>
       ) : null}
 
       {/* Step 2b — multiple sizes */}
       {mode === 'multi' ? (
         <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3">
+          {/* Contextual pricing guidance — updates as the seller fills the price column */}
+          {(() => {
+            const filledPrices = sizes.filter((s) => sizePrices[s] !== undefined && String(sizePrices[s]).trim() !== '').length;
+            const allPriced = sizes.length > 0 && filledPrices === sizes.length;
+            const somePriced = filledPrices > 0 && !allPriced;
+            let hint, hintColor;
+            if (allPriced) {
+              hint = '✓ Every size has its own price — the Base Price field above is now hidden.';
+              hintColor = 'border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-300';
+            } else if (somePriced) {
+              hint = `${filledPrices} size${filledPrices > 1 ? 's have' : ' has'} a custom price. Sizes without a price will use the Base Price set above.`;
+              hintColor = 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300';
+            } else {
+              hint = sizes.length > 0
+                ? 'All sizes share the Base Price above. Fill the Price column only for sizes that cost more or less.'
+                : 'Add sizes below. All sizes will share the Base Price above unless you set a different price per size.';
+              hintColor = 'border-[var(--svs-border)] bg-[var(--svs-surface)] text-[var(--svs-muted)]';
+            }
+            return (
+              <p className={`mb-3 rounded-lg border px-3 py-2 text-[11px] leading-snug ${hintColor}`}>{hint}</p>
+            );
+          })()}
           {/* Quick-pick groups */}
           {preset?.groups?.map((group) => (
             <div key={group.label} className="mb-2.5">
@@ -30249,7 +30609,7 @@ const SizeVariantEditor = ({
               <div className="grid grid-cols-[1fr_72px_100px_28px] border-b border-[var(--svs-border)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-[var(--svs-muted)]">
                 <span>Size</span>
                 <span className="text-center">Qty</span>
-                <span className="text-center">Price (opt.)</span>
+                <span className="text-center">Price{currency ? ` (${currency})` : ''}</span>
                 <span />
               </div>
               {sizes.map((sv) => (
@@ -30270,7 +30630,7 @@ const SizeVariantEditor = ({
                       inputMode="decimal"
                       value={sizePrices[sv] ?? ''}
                       onChange={(event) => setSizePriceValue(sv, event.target.value)}
-                      placeholder={basePrice || 'Base price'}
+                      placeholder={basePrice ? `${currency ? currency + ' ' : ''}${basePrice}` : (currency ? `e.g. ${currency} 150` : 'e.g. 150')}
                       aria-label={`Price for ${sv}`}
                       className="w-full rounded border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-1.5 py-1 text-center text-sm outline-none focus:border-[var(--svs-primary)]"
                     />
@@ -30281,10 +30641,22 @@ const SizeVariantEditor = ({
                   </button>
                 </div>
               ))}
-              <div className="px-3 py-1.5 text-[11px] text-[var(--svs-muted)]">
-                Total stock: <strong className="text-[var(--svs-text)]">{sizes.reduce((s, sv) => s + (Number(sizeStock[sv]) || 0), 0)}</strong>
-                <span className="ml-2">· Price column is optional — leave blank to use your base price</span>
-              </div>
+              {(() => {
+                const totalUnits = sizes.reduce((s, sv) => s + (Number(sizeStock[sv]) || 0), 0);
+                const totalValue = sizes.reduce((s, sv) => {
+                  const price = Number(String(sizePrices[sv] ?? basePrice ?? '').replace(/[^\d.]/g, '')) || 0;
+                  return s + price * (Number(sizeStock[sv]) || 0);
+                }, 0);
+                const currencyPrefix = currency ? `${currency} ` : '';
+                return (
+                  <div className="flex flex-wrap gap-x-4 px-3 py-1.5 text-[11px] text-[var(--svs-muted)]">
+                    <span>Total stock: <strong className="text-[var(--svs-text)]">{totalUnits}</strong></span>
+                    {totalValue > 0 ? (
+                      <span>Total value: <strong className="text-[var(--svs-text)]">{currencyPrefix}{totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span>
+                    ) : null}
+                  </div>
+                );
+              })()}
             </div>
           ) : (
             <p className="mt-2 text-[11px] text-[var(--svs-muted)]">
@@ -30588,9 +30960,14 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
     stationery:             { sizePlaceholder: 'e.g. A4, A5, 0.5mm, 100 sheets',     sizeRequired: false },
     wellness:               { sizePlaceholder: 'e.g. 60 tablets, 100ml, 500mg',      sizeRequired: false },
     traditionalMedicines:   { sizePlaceholder: 'e.g. 50g, 100ml, 250ml',             sizeRequired: false },
-    secondhand:             { sizePlaceholder: 'e.g. S, M, L or UK 7 or 256GB',      sizeRequired: false, sizeOptions: ['XS', 'S', 'M', 'L', 'XL', 'XXL'] },
-    ecommerce:              { sizePlaceholder: 'e.g. S, M, L, XL or 256GB or 500ml', sizeRequired: false, sizeOptions: ['XS', 'S', 'M', 'L', 'XL', 'XXL'] },
-    informalMarket:         { sizePlaceholder: 'e.g. S, M, L or 500g or 1L',         sizeRequired: false },
+    secondhand:             { sizePlaceholder: 'e.g. S, M, L or UK 7 or 256GB',       sizeRequired: false, sizeOptions: ['XS', 'S', 'M', 'L', 'XL', 'XXL'] },
+    ecommerce:              { sizePlaceholder: 'e.g. S, M, L, XL or 256GB or 500ml',  sizeRequired: false, sizeOptions: ['XS', 'S', 'M', 'L', 'XL', 'XXL'] },
+    informalMarket:         { sizePlaceholder: 'e.g. S, M, L or 500g or 1L',          sizeRequired: false },
+    tickets:                { sizePlaceholder: 'e.g. Standard, VIP, Premium',          sizeRequired: false, sizeOptions: ['Standard', 'VIP', 'Premium', 'Box', 'Standing', 'Lawn'] },
+    generalLabour:          { sizePlaceholder: 'e.g. Half day, Full day, Weekly',      sizeRequired: false, sizeOptions: ['2hr', 'Half day (4hr)', 'Full day (8hr)', 'Weekend', 'Weekly'] },
+    livestock:              { sizePlaceholder: 'e.g. Single, Pair, ×5',                sizeRequired: false, sizeOptions: ['Single', 'Pair (×2)', '×5', '×10', '×20'] },
+    naturalResources:       { sizePlaceholder: 'e.g. 1t, 5t, 10t or 1m³',             sizeRequired: false, sizeOptions: ['0.5t', '1t', '2t', '5t', '10t', '20t', '50t'] },
+    property:               { sizePlaceholder: 'e.g. Studio, 2 Bed, 3 Bed',            sizeRequired: false, sizeOptions: ['Studio', '1 Bed', '2 Bed', '3 Bed', '4 Bed', '5+ Bed'] },
   }), []);
 
   const getBulkMissingFields = useCallback((draft) => {
@@ -30947,15 +31324,12 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
     const trimmedPrice = cleanedPrice || rawPrice;
     const normalizedQuantity = normalizeListingQuantity(formData.quantity, NaN);
 
-    const hasMultipleSizes = formData.sizes.length > 0;
-    const allSizesHavePrice =
-      hasMultipleSizes &&
-      formData.sizes.every((s) => {
-        const v = formData.sizePrices[s];
-        return v !== undefined && String(v).trim() !== '';
-      });
-    const effectivePrice = allSizesHavePrice
-      ? String(Math.min(...formData.sizes.map((s) => Number(String(formData.sizePrices[s]).replace(/[^\d.]/g, '')))))
+    const hasMultipleSizes = formData.sizingMode === 'multi';
+    const sizePriceValues = hasMultipleSizes
+      ? formData.sizes.map((s) => Number(String(formData.sizePrices[s] ?? '').replace(/[^\d.]/g, ''))).filter((n) => Number.isFinite(n) && n > 0)
+      : [];
+    const effectivePrice = hasMultipleSizes
+      ? (sizePriceValues.length ? String(Math.min(...sizePriceValues)) : '')
       : trimmedPrice;
     const totalSizeStock = hasMultipleSizes
       ? Object.values(formData.sizeStock).reduce((sum, n) => sum + (Number(n) || 0), 0)
@@ -30973,8 +31347,20 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
       return;
     }
 
-    if (!effectivePrice) {
-      setMessage(allSizesHavePrice ? 'Enter a price for at least one size before publishing.' : 'Enter a price before publishing your listing.');
+    if (hasMultipleSizes && !formData.sizes.length) {
+      setMessage('Add at least one size before publishing.');
+      setMessageType('error');
+      return;
+    }
+
+    if (hasMultipleSizes && formData.sizes.some((s) => !formData.sizePrices[s] || !String(formData.sizePrices[s]).trim())) {
+      setMessage('Set a price for every size before publishing.');
+      setMessageType('error');
+      return;
+    }
+
+    if (!hasMultipleSizes && !trimmedPrice) {
+      setMessage('Enter a price before publishing your listing.');
       setMessageType('error');
       return;
     }
@@ -31471,45 +31857,35 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                 <label htmlFor="seller-title" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Item title</label>
                 <input id="seller-title" name="title" value={formData.title} onChange={handleChange} required className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
               </div>
-              {(() => {
-                const _hasMultipleSizes = formData.sizes && formData.sizes.length > 0;
-                const _allSizesHavePrice =
-                  _hasMultipleSizes &&
-                  formData.sizes.every((s) => {
-                    const v = formData.sizePrices && formData.sizePrices[s];
-                    return v !== undefined && String(v).trim() !== '';
-                  });
-                if (_allSizesHavePrice) {
-                  return (
-                    <div className="flex items-center gap-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5">
-                      <span className="text-sm text-[var(--svs-muted)]">Price set per size — lowest used on listing card</span>
-                    </div>
-                  );
-                }
-                return (
-                  <div>
-                    <label htmlFor="seller-price" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">
-                      {_hasMultipleSizes ? 'Base Price' : 'Price'}
-                    </label>
-                    <div className="flex gap-2">
-                      <CurrencyPickerField
-                        id="seller-currency"
-                        name="currency"
-                        value={formData.currency}
-                        onChange={handleChange}
-                        ariaLabel="Listing currency"
-                      />
-                      <input id="seller-price" name="price" value={formData.price} onChange={handleChange} required={!_hasMultipleSizes} placeholder="129.99" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
-                    </div>
-                    <p className="mt-1 text-[11px] text-[var(--svs-muted)]">
-                      {_hasMultipleSizes
-                        ? 'Used for sizes without their own price. You are paid in this currency.'
-                        : 'You will always be paid in your listing currency. Buyers see prices auto-converted to their selected currency.'}
-                    </p>
+              {formData.sizingMode === 'multi' ? (
+                <div>
+                  <label htmlFor="seller-currency" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Currency</label>
+                  <CurrencyPickerField
+                    id="seller-currency"
+                    name="currency"
+                    value={formData.currency}
+                    onChange={handleChange}
+                    ariaLabel="Listing currency"
+                  />
+                  <p className="mt-1 text-[11px] text-[var(--svs-muted)]">Set a price for each size in the table below. You are paid in this currency.</p>
+                </div>
+              ) : (
+                <div>
+                  <label htmlFor="seller-price" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Price</label>
+                  <div className="flex gap-2">
+                    <CurrencyPickerField
+                      id="seller-currency"
+                      name="currency"
+                      value={formData.currency}
+                      onChange={handleChange}
+                      ariaLabel="Listing currency"
+                    />
+                    <input id="seller-price" name="price" value={formData.price} onChange={handleChange} required placeholder="129.99" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
                   </div>
-                );
-              })()}
-              {formData.sizes && formData.sizes.length > 0 ? (
+                  <p className="mt-1 text-[11px] text-[var(--svs-muted)]">You will always be paid in your listing currency. Buyers see prices auto-converted to their selected currency.</p>
+                </div>
+              )}
+              {formData.sizingMode === 'multi' ? (
                 <div className="flex items-center gap-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5">
                   <span className="text-sm text-[var(--svs-muted)]">Stock tracked per size below</span>
                 </div>
@@ -31560,6 +31936,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                 sizeStock={formData.sizeStock}
                 sizePrices={formData.sizePrices}
                 basePrice={formData.price}
+                currency={formData.currency}
                 onChange={(next) => setFormData((current) => ({ ...current, ...next }))}
               />
               <div className="sm:col-span-2">
@@ -35777,6 +36154,34 @@ const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onOpen
   );
 };
 
+const verifyAccountPasswordHash = async (password, storedHash) => {
+  if (!storedHash || !storedHash.includes(':')) return false;
+  const [saltHex, expectedHashHex] = storedHash.split(':');
+  const saltBytes = new Uint8Array((saltHex.match(/.{1,2}/g) || []).map((h) => parseInt(h, 16)));
+  if (!saltBytes.length || !expectedHashHex) return false;
+  const encoder = new TextEncoder();
+  const passwordBytes = encoder.encode(password);
+  const combined = new Uint8Array(saltBytes.length + passwordBytes.length);
+  combined.set(saltBytes, 0);
+  combined.set(passwordBytes, saltBytes.length);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', combined);
+  const actualHex = Array.from(new Uint8Array(hashBuffer)).map((b) => b.toString(16).padStart(2, '0')).join('');
+  return actualHex === expectedHashHex;
+};
+
+const generateAccountPasswordHash = async (password) => {
+  const saltBytes = crypto.getRandomValues(new Uint8Array(16));
+  const encoder = new TextEncoder();
+  const passwordBytes = encoder.encode(password);
+  const combined = new Uint8Array(saltBytes.length + passwordBytes.length);
+  combined.set(saltBytes, 0);
+  combined.set(passwordBytes, saltBytes.length);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', combined);
+  const saltHex = Array.from(saltBytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+  const hashHex = Array.from(new Uint8Array(hashBuffer)).map((b) => b.toString(16).padStart(2, '0')).join('');
+  return `${saltHex}:${hashHex}`;
+};
+
 const NOTIFICATION_PREF_OPTIONS = [
   { key: 'orderUpdates', label: 'Order updates', description: 'Order confirmations, status changes, delivery updates.' },
   { key: 'bookingUpdates', label: 'Booking updates', description: 'Booking confirmed/declined/rescheduled, reminders.' },
@@ -35815,12 +36220,25 @@ const AccountSettingsPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [fullName, setFullName] = useState('');
   const [contactNumber, setContactNumber] = useState('');
+  const [memberSince, setMemberSince] = useState('');
   const [notificationPrefs, setNotificationPrefs] = useState({});
   const [addresses, setAddresses] = useState([]);
   const [addressForm, setAddressForm] = useState(emptyAddressForm);
   const [isAddingAddress, setIsAddingAddress] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('idle');
+  const [passwordForm, setPasswordForm] = useState({ current: '', next: '', confirm: '' });
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
+  const [pwMessage, setPwMessage] = useState('');
+  const [pwMessageType, setPwMessageType] = useState('idle');
+  const [isSavingPw, setIsSavingPw] = useState(false);
+  const [emailForm, setEmailForm] = useState({ newEmail: '', password: '' });
+  const [showEmailPw, setShowEmailPw] = useState(false);
+  const [emailMessage, setEmailMessage] = useState('');
+  const [emailMessageType, setEmailMessageType] = useState('idle');
+  const [isSavingEmail, setIsSavingEmail] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated || !userEmail || !hasSupabaseEnv || !supabase) return;
@@ -35828,7 +36246,7 @@ const AccountSettingsPage = () => {
     (async () => {
       setIsLoading(true);
       const [userRes, addressesRes] = await Promise.all([
-        supabase.from('account_users').select('full_name, contact_number, notification_prefs').eq('email_address', userEmail).maybeSingle(),
+        supabase.from('account_users').select('full_name, contact_number, notification_prefs, created_at').eq('email_address', userEmail).maybeSingle(),
         supabase.from('buyer_addresses').select('*').eq('user_email', userEmail).order('created_at', { ascending: false }),
       ]);
       if (isCancelled) return;
@@ -35836,6 +36254,7 @@ const AccountSettingsPage = () => {
         setFullName(userRes.data.full_name || '');
         setContactNumber(userRes.data.contact_number || '');
         setNotificationPrefs(userRes.data.notification_prefs || {});
+        setMemberSince(userRes.data.created_at || '');
       }
       setAddresses((addressesRes.data || []).map(mapBuyerAddressRecord));
       setIsLoading(false);
@@ -35847,16 +36266,20 @@ const AccountSettingsPage = () => {
     event.preventDefault();
     setMessage('');
     setMessageType('idle');
-    const { error } = await supabase
-      .from('account_users')
-      .update({ full_name: fullName.trim(), contact_number: contactNumber.trim() })
-      .eq('email_address', userEmail);
-    if (error) {
-      setMessage(error.message);
+    const trimmedName = fullName.trim();
+    const trimmedContact = contactNumber.trim();
+    const [buyerRes] = await Promise.all([
+      supabase.from('account_users').update({ full_name: trimmedName, contact_number: trimmedContact }).eq('email_address', userEmail),
+      // If the user also has a seller profile, keep legal_full_name and phone_number in sync.
+      // UPDATE on a non-existent row silently updates 0 rows — safe for buyers without a seller profile.
+      supabase.from('seller_profiles').update({ legal_full_name: trimmedName, phone_number: trimmedContact }).eq('user_email', userEmail),
+    ]);
+    if (buyerRes.error) {
+      setMessage(buyerRes.error.message);
       setMessageType('error');
       return;
     }
-    if (typeof window !== 'undefined' && fullName.trim()) window.localStorage.setItem('svs-user-name', fullName.trim());
+    if (typeof window !== 'undefined' && trimmedName) window.localStorage.setItem('svs-user-name', trimmedName);
     setMessage('Profile updated.');
     setMessageType('success');
   };
@@ -35932,6 +36355,137 @@ const AccountSettingsPage = () => {
     setAddresses((current) => current.map((address) => ({ ...address, isDefault: address.id === id })));
   };
 
+  const handleChangePassword = async (event) => {
+    event.preventDefault();
+    setPwMessage('');
+    setPwMessageType('idle');
+    const { current, next, confirm } = passwordForm;
+    if (!current || !next || !confirm) {
+      setPwMessage('Please fill in all three password fields.');
+      setPwMessageType('error');
+      return;
+    }
+    if (next.length < 8) {
+      setPwMessage('New password must be at least 8 characters.');
+      setPwMessageType('error');
+      return;
+    }
+    if (next !== confirm) {
+      setPwMessage('New password and confirmation do not match.');
+      setPwMessageType('error');
+      return;
+    }
+    setIsSavingPw(true);
+    const { data: hashData, error: fetchError } = await supabase
+      .from('account_users')
+      .select('password_hash')
+      .eq('email_address', userEmail)
+      .maybeSingle();
+    if (fetchError || !hashData) {
+      setPwMessage(fetchError?.message || 'Could not verify current password.');
+      setPwMessageType('error');
+      setIsSavingPw(false);
+      return;
+    }
+    const isValid = await verifyAccountPasswordHash(current, hashData.password_hash);
+    if (!isValid) {
+      setPwMessage('Current password is incorrect.');
+      setPwMessageType('error');
+      setIsSavingPw(false);
+      return;
+    }
+    const newHash = await generateAccountPasswordHash(next);
+    const { error: updateError } = await supabase
+      .from('account_users')
+      .update({ password_hash: newHash })
+      .eq('email_address', userEmail);
+    setIsSavingPw(false);
+    if (updateError) {
+      setPwMessage(updateError.message);
+      setPwMessageType('error');
+      return;
+    }
+    setPasswordForm({ current: '', next: '', confirm: '' });
+    setPwMessage('Password changed successfully.');
+    setPwMessageType('success');
+  };
+
+  const handleChangeEmail = async (event) => {
+    event.preventDefault();
+    setEmailMessage('');
+    setEmailMessageType('idle');
+    const trimmedEmail = emailForm.newEmail.trim().toLowerCase();
+    if (!trimmedEmail || !emailForm.password) {
+      setEmailMessage('Please enter both a new email address and your current password.');
+      setEmailMessageType('error');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setEmailMessage('Please enter a valid email address.');
+      setEmailMessageType('error');
+      return;
+    }
+    if (trimmedEmail === userEmail) {
+      setEmailMessage('That is already your current email address.');
+      setEmailMessageType('error');
+      return;
+    }
+    setIsSavingEmail(true);
+    const { data: hashData, error: fetchError } = await supabase
+      .from('account_users')
+      .select('password_hash')
+      .eq('email_address', userEmail)
+      .maybeSingle();
+    if (fetchError || !hashData) {
+      setEmailMessage(fetchError?.message || 'Could not verify password.');
+      setEmailMessageType('error');
+      setIsSavingEmail(false);
+      return;
+    }
+    const isValid = await verifyAccountPasswordHash(emailForm.password, hashData.password_hash);
+    if (!isValid) {
+      setEmailMessage('Password is incorrect.');
+      setEmailMessageType('error');
+      setIsSavingEmail(false);
+      return;
+    }
+    const escapedNew = trimmedEmail.replace(/[\\%_]/g, (m) => `\\${m}`);
+    const { data: existing } = await supabase
+      .from('account_users')
+      .select('id')
+      .ilike('email_address', escapedNew)
+      .maybeSingle();
+    if (existing) {
+      setEmailMessage('An account with that email address already exists.');
+      setEmailMessageType('error');
+      setIsSavingEmail(false);
+      return;
+    }
+    const results = await Promise.all([
+      supabase.from('account_users').update({ email_address: trimmedEmail }).eq('email_address', userEmail),
+      supabase.from('buyer_addresses').update({ user_email: trimmedEmail }).eq('user_email', userEmail),
+      supabase.from(CART_ITEMS_TABLE).update({ user_email: trimmedEmail }).eq('user_email', userEmail),
+      supabase.from(WISHLIST_ITEMS_TABLE).update({ user_email: trimmedEmail }).eq('user_email', userEmail),
+      supabase.from(ORDERS_TABLE).update({ user_email: trimmedEmail }).eq('user_email', userEmail),
+      // Seller-side cascade: seller profile identity + all active listings
+      supabase.from('seller_profiles').update({ user_email: trimmedEmail }).eq('user_email', userEmail),
+      supabase.from(SELLER_ITEMS_TABLE).update({ seller_email: trimmedEmail }).eq('seller_email', userEmail),
+      supabase.from('notifications').update({ user_email: trimmedEmail }).eq('user_email', userEmail),
+    ]);
+    setIsSavingEmail(false);
+    const failed = results.find((r) => r.error);
+    if (failed) {
+      setEmailMessage(failed.error.message);
+      setEmailMessageType('error');
+      return;
+    }
+    window.localStorage.setItem('svs-user-email', trimmedEmail);
+    window.dispatchEvent(new Event('svs-auth-changed'));
+    setEmailForm({ newEmail: '', password: '' });
+    setEmailMessage('Email address updated. You are still signed in.');
+    setEmailMessageType('success');
+  };
+
   if (!isAuthenticated) {
     return (
       <PageFrame title="Account Settings" subtitle="Sign in to manage your profile, addresses, and notification preferences.">
@@ -35975,9 +36529,81 @@ const AccountSettingsPage = () => {
                   className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
                 />
               </label>
+              <label className="block text-sm">
+                <span className="mb-1 block font-semibold text-[var(--svs-text)]">Email address</span>
+                <input
+                  value={userEmail}
+                  readOnly
+                  className="w-full cursor-default rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-muted)] outline-none"
+                />
+              </label>
+              {memberSince ? (
+                <p className="flex items-end text-xs text-[var(--svs-muted)]">
+                  Member since {new Date(memberSince).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                </p>
+              ) : <span />}
               <div className="sm:col-span-2">
                 <button type="submit" className={`${cudyBluePrimaryButtonClassName} rounded-lg bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
                   Save Profile
+                </button>
+              </div>
+            </form>
+          </section>
+
+          {/* Change Email */}
+          <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+            <div className="flex items-center gap-2">
+              <Mail className="h-4 w-4 text-[var(--svs-primary)]" />
+              <h2 className="text-base font-bold text-[var(--svs-text)]">Change Email Address</h2>
+            </div>
+            <p className="mt-1 text-xs text-[var(--svs-muted)]">
+              Your current email is <span className="font-semibold text-[var(--svs-text)]">{userEmail}</span>. Enter a new address and your password to confirm the change.
+            </p>
+            {emailMessage ? (
+              <div className={`mt-3 rounded-xl px-4 py-3 text-sm ${emailMessageType === 'error' ? 'border border-rose-200 bg-rose-50 text-rose-700' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+                {emailMessage}
+              </div>
+            ) : null}
+            <form onSubmit={handleChangeEmail} className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="block text-sm sm:col-span-2">
+                <span className="mb-1 block font-semibold text-[var(--svs-text)]">New email address</span>
+                <input
+                  type="email"
+                  value={emailForm.newEmail}
+                  onChange={(event) => setEmailForm((f) => ({ ...f, newEmail: event.target.value }))}
+                  required
+                  placeholder="Enter new email address"
+                  className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                />
+              </label>
+              <label className="block text-sm sm:col-span-2">
+                <span className="mb-1 block font-semibold text-[var(--svs-text)]">Current password to confirm</span>
+                <div className="relative">
+                  <input
+                    type={showEmailPw ? 'text' : 'password'}
+                    value={emailForm.password}
+                    onChange={(event) => setEmailForm((f) => ({ ...f, password: event.target.value }))}
+                    required
+                    placeholder="Enter your current password"
+                    className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 pr-10 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowEmailPw((v) => !v)}
+                    aria-label={showEmailPw ? 'Hide password' : 'Show password'}
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-[var(--svs-muted)] transition hover:text-[var(--svs-text)]"
+                  >
+                    {showEmailPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </label>
+              <div className="sm:col-span-2">
+                <button
+                  type="submit"
+                  disabled={isSavingEmail}
+                  className={`${cudyBluePrimaryButtonClassName} rounded-lg bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60`}
+                >
+                  {isSavingEmail ? 'Updating…' : 'Update Email'}
                 </button>
               </div>
             </form>
@@ -36060,6 +36686,92 @@ const AccountSettingsPage = () => {
                 );
               })}
             </ul>
+          </section>
+
+          {/* Change Password */}
+          <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+            <div className="flex items-center gap-2">
+              <Lock className="h-4 w-4 text-[var(--svs-primary)]" />
+              <h2 className="text-base font-bold text-[var(--svs-text)]">Change Password</h2>
+            </div>
+            <p className="mt-1 text-xs text-[var(--svs-muted)]">Enter your current password to verify your identity, then set a new one.</p>
+            {pwMessage ? (
+              <div className={`mt-3 rounded-xl px-4 py-3 text-sm ${pwMessageType === 'error' ? 'border border-rose-200 bg-rose-50 text-rose-700' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+                {pwMessage}
+              </div>
+            ) : null}
+            <form onSubmit={handleChangePassword} className="mt-4 space-y-3">
+              <label className="block text-sm">
+                <span className="mb-1 block font-semibold text-[var(--svs-text)]">Current password</span>
+                <div className="relative">
+                  <input
+                    type={showCurrentPw ? 'text' : 'password'}
+                    value={passwordForm.current}
+                    onChange={(event) => setPasswordForm((f) => ({ ...f, current: event.target.value }))}
+                    required
+                    placeholder="Enter your current password"
+                    className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 pr-10 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPw((v) => !v)}
+                    aria-label={showCurrentPw ? 'Hide password' : 'Show password'}
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-[var(--svs-muted)] transition hover:text-[var(--svs-text)]"
+                  >
+                    {showCurrentPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </label>
+              <label className="block text-sm">
+                <span className="mb-1 block font-semibold text-[var(--svs-text)]">New password</span>
+                <div className="relative">
+                  <input
+                    type={showNewPw ? 'text' : 'password'}
+                    value={passwordForm.next}
+                    onChange={(event) => setPasswordForm((f) => ({ ...f, next: event.target.value }))}
+                    required
+                    placeholder="At least 8 characters"
+                    className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 pr-10 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPw((v) => !v)}
+                    aria-label={showNewPw ? 'Hide password' : 'Show password'}
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-[var(--svs-muted)] transition hover:text-[var(--svs-text)]"
+                  >
+                    {showNewPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </label>
+              <label className="block text-sm">
+                <span className="mb-1 block font-semibold text-[var(--svs-text)]">Confirm new password</span>
+                <div className="relative">
+                  <input
+                    type={showConfirmPw ? 'text' : 'password'}
+                    value={passwordForm.confirm}
+                    onChange={(event) => setPasswordForm((f) => ({ ...f, confirm: event.target.value }))}
+                    required
+                    placeholder="Repeat your new password"
+                    className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 pr-10 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPw((v) => !v)}
+                    aria-label={showConfirmPw ? 'Hide password' : 'Show password'}
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-[var(--svs-muted)] transition hover:text-[var(--svs-text)]"
+                  >
+                    {showConfirmPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </label>
+              <button
+                type="submit"
+                disabled={isSavingPw}
+                className={`${cudyBluePrimaryButtonClassName} rounded-lg bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60`}
+              >
+                {isSavingPw ? 'Verifying…' : 'Change Password'}
+              </button>
+            </form>
           </section>
         </div>
       )}
@@ -39636,6 +40348,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
         history: agentHistory,
         context: {
           userRole: currentRole,
+          isSeller: typeof window !== 'undefined' && window.localStorage.getItem(SELLER_ACCESS_STORAGE_KEY) === 'true',
           issueType: updatedThread.issueType || 'General Support',
           orderReference: updatedThread.orderReference || '',
           orderId: updatedThread.orderId || '',
