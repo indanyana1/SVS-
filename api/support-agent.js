@@ -82,6 +82,27 @@ const buildSystemPrompt = (context = {}) => {
     // ------- Market-specific sell pages -------
     'MARKET-SPECIFIC SELL PAGES: Some markets have their own dedicated listing pages that sellers navigate to directly. Home Care providers use /home-care/sell to list their services. Property listers use /property-hub/sell. Vehicle sellers use /mobility-vehicles/sell. Natural resource sellers use /natural-resources-minerals/sell. General Labour workers use /general-labour-market/sell. All other markets use /seller/upload.',
 
+    // ------- My Wallet (/wallet) -------
+    'MY WALLET (/wallet): The wallet is available to all signed-in users. It lets you store money on SVS, pay for items at checkout, send money to other SVS users, and withdraw back to a bank account.',
+
+    'WALLET — BALANCE CARD: At the top of the wallet page is the balance card showing the current balance. If the buyer has chosen a different currency site-wide, the balance is shown converted into that currency for convenience, but the wallet ledger itself is always held in a single currency (the first currency ever deposited). There is a Refresh button to reload the latest balance from the server.',
+
+    'WALLET — ADD FUNDS: To top up the wallet, the user picks a deposit currency from the currency picker, enters an amount, and clicks Add funds (or Pay by card if card payments are enabled). Quick-pick buttons for +10, +25, +50, and +100 are available for fast entry. If the user deposits in a different currency from the wallet\'s held currency, the amount is automatically converted using live exchange rates before being credited — a preview line shows exactly how much the wallet will receive. Every add-funds action requires an OTP (one-time password sent to the user\'s email) to confirm before the money is credited.',
+
+    'WALLET — SEND MONEY (TRANSFER): To send money to another SVS user, the sender first adds a beneficiary using the Beneficiary Manager — they enter the recipient\'s email address and save it. Then they select the beneficiary from the list, enter the amount (in the wallet\'s own currency), optionally add a note, and click Send money. The amount cannot exceed the current wallet balance, and a user cannot send money to themselves. Every transfer requires OTP confirmation before it goes through.',
+
+    'WALLET — WITHDRAW: To withdraw money back to a bank account, the user enters the amount they want (entered in their display currency, automatically converted to the wallet currency if different), then selects a saved bank account from the Bank Account Manager or adds a new one. A "Use max" button fills the full balance. Clicking Request withdrawal triggers an OTP confirmation, and once approved, the withdrawal is processed within 1–3 business days. A confirmation email is also sent.',
+
+    'WALLET — SMART SAVE: Smart Save is a non-transactional sub-account inside the wallet. Money in Smart Save cannot be spent at checkout, sent to another user, or withdrawn to a bank directly — it can only move between Smart Save and the main wallet. This makes it useful for setting aside savings that won\'t accidentally be spent. To move money into Smart Save, the user picks a currency and amount and clicks Move to Smart Save — the amount is converted into the wallet currency if needed. To move money back, they enter an amount and click Move to main wallet (a "Use max" button is available). Both directions show a confirmation dialog before executing. All Smart Save moves appear in the Activity list. No OTP is required for Smart Save moves.',
+
+    'WALLET — ACTIVITY: Below the Smart Save section is the Activity panel showing the most recent wallet transactions. Each row shows: the transaction type (e.g. Top-up, Transfer sent, Transfer received, Withdrawal, Smart Save deposit, Smart Save withdrawal), the counterparty email if applicable, a description or note, the timestamp, the amount (green + for credits, plain − for debits), and a status badge (e.g. completed, pending). The list updates automatically after every successful action.',
+
+    'WALLET — OTP SECURITY: Add funds, Send money, and Withdraw all require the user to first confirm a one-time password (OTP) sent to their registered email. The OTP modal appears automatically before the action proceeds — the user enters the code in the pop-up and clicks Verify. Smart Save moves do NOT require OTP — they show a confirmation dialog instead.',
+
+    'WALLET — BENEFICIARY MANAGER: Inside the Send money panel there is a Beneficiary Manager. The user can save frequently used recipient email addresses under a nickname for quick selection. To add one they click Add beneficiary, enter the recipient\'s email, and save. To transfer, they click the saved beneficiary and it fills the transfer form automatically.',
+
+    'WALLET — BANK ACCOUNT MANAGER: Inside the Withdraw panel there is a Bank Account Manager. The user can save bank accounts (account holder name, bank name, account number, branch code) for fast selection when withdrawing. To add one they click Add bank account and fill in the details. They can have multiple saved accounts and switch between them.',
+
     'Cover website help for buyers, sellers, property listers, and livestock traders.',
     // ------- Let's Talk Business chat tools -------
     "The user may send STRUCTURED CARDS through Let's Talk Business chat. They are marked with bracketed prefixes in the message text:",
