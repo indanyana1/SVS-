@@ -40082,6 +40082,30 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     prefilledThreadBootstrapRef.current = prefillKey;
   }, [createThread, prefillIssueTypeFromState, prefillOrderIdFromState, prefillRecipientEmailFromState, prefillItemKeyFromState, prefillItemLinkFromState, prefillItemTitleFromState]);
 
+  // ---- URL deep-link: notification tap → auto-open specific thread ----
+  // When the user taps a chat notification, the SW navigates to
+  // /support/chat?thread=<id>. We wait until that thread appears in the
+  // threads list (local or after remote load) then select it automatically.
+  const pendingThreadIdFromUrl = useMemo(
+    () => new URLSearchParams(location.search).get('thread') || '',
+    [location.search],
+  );
+  const urlThreadHandledRef = useRef('');
+
+  useEffect(() => {
+    if (!pendingThreadIdFromUrl) return;
+    if (urlThreadHandledRef.current === pendingThreadIdFromUrl) return;
+    const match = threads.find(
+      (t) => t.id === pendingThreadIdFromUrl
+        && Array.isArray(t.participants)
+        && t.participants.includes(currentUserEmail),
+    );
+    if (!match) return;
+    urlThreadHandledRef.current = pendingThreadIdFromUrl;
+    setSelectedThreadId(match.id);
+    setMobilePanel('chat');
+  }, [pendingThreadIdFromUrl, threads, currentUserEmail]);
+
   const visibleThreads = useMemo(() => {
     const filtered = threads.filter((thread) => Array.isArray(thread?.participants) && thread.participants.includes(currentUserEmail));
     return filtered.sort((left, right) => {
@@ -40496,7 +40520,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
         type: 'chat',
         title: `New message from ${currentUserName || 'SVS user'}`,
         message: messagePreview,
-        href: '/support/chat',
+        href: `/support/chat?thread=${updatedThread.id}`,
         orderId: updatedThread.orderId || null,
       });
     }
