@@ -42162,42 +42162,23 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                 </div>
 
                 <div ref={messageListRef} className="flex-1 space-y-3 overflow-y-auto bg-[var(--svs-surface-soft)] px-3 py-3 pb-24 sm:px-6 sm:py-4 sm:pb-6">
-                  {activeThread?.itemDetails ? (
-                    <details open className="group/summary sticky top-0 z-10 mx-0 sm:-mx-6 border-b border-[var(--svs-border)] bg-gradient-to-b from-[var(--svs-cyan-surface)] to-[var(--svs-surface-soft)] px-3 py-3 sm:px-6 sm:py-3.5">
-                      <summary className="flex cursor-pointer list-none items-center justify-between">
-                        <span className="text-[12px] font-bold text-[var(--svs-primary-strong)]">Deal Summary</span>
-                        <ChevronDown className="h-4 w-4 text-[var(--svs-primary-strong)] transition group-open/summary:rotate-180" aria-hidden="true" />
-                      </summary>
-                      <div className="mt-2.5 flex items-start gap-3 rounded-lg border border-[var(--svs-border)] bg-white p-2.5">
+                  {activeThread?.itemDetails?.itemTitle ? (
+                    <div className="flex justify-start">
+                      <div className="w-[220px] max-w-[78%] overflow-hidden rounded-2xl rounded-bl-md border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-sm">
                         {activeThread.itemDetails.itemImage ? (
-                          <img src={activeThread.itemDetails.itemImage} alt={activeThread.itemDetails.itemTitle} className="h-12 w-12 shrink-0 rounded-lg object-cover" />
+                          <img src={activeThread.itemDetails.itemImage} alt="" className="h-28 w-full object-cover" />
                         ) : null}
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-bold text-[var(--svs-primary-strong)]">{activeThread.itemDetails.itemTitle}</p>
+                        <div className="px-3 py-2.5">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--svs-muted)]">Shared item</p>
+                          <p className="mt-0.5 line-clamp-2 text-sm font-bold leading-snug text-[var(--svs-primary-strong)]">{activeThread.itemDetails.itemTitle}</p>
                           {activeThread.itemDetails.itemLink ? (
-                            <a href={activeThread.itemDetails.itemLink} target="_blank" rel="noopener noreferrer" className="mt-0.5 inline-block text-xs font-semibold text-[#33b9f2] hover:underline">View Item →</a>
+                            <Link to={activeThread.itemDetails.itemLink} className="mt-1.5 inline-flex items-center gap-0.5 text-xs font-semibold text-[#33b9f2] hover:underline">
+                              View Item →
+                            </Link>
                           ) : null}
                         </div>
                       </div>
-                      <div className="mt-2.5 grid grid-cols-2 gap-x-4 gap-y-2.5 rounded-lg border border-[var(--svs-border)] bg-white px-3 py-2.5">
-                        <div>
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--svs-muted)]">Contact</p>
-                          <p className="mt-0.5 truncate text-xs font-semibold text-[var(--svs-text)]">{resolveCounterparty(activeThread).name}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--svs-muted)]">Topic</p>
-                          <p className="mt-0.5 truncate text-xs font-semibold text-[var(--svs-text)]">{activeThread.issueType || 'General Support'}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--svs-muted)]">Reference</p>
-                          <p className="mt-0.5 truncate text-xs font-semibold text-[var(--svs-text)]">{activeThread.orderReference || '—'}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--svs-muted)]">Status</p>
-                          <p className="mt-0.5 truncate text-xs font-bold text-[var(--svs-primary-strong)]">{dealStatusMeta[dealStatus]?.label || dealStatus}</p>
-                        </div>
-                      </div>
-                    </details>
+                    </div>
                   ) : null}
                   {(() => {
                     const pinned = filteredMessages.filter((m) => m.metadata?.pinned);
