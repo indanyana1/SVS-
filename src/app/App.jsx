@@ -35352,24 +35352,27 @@ const MarketsPage = ({ sellerItems = [] }) => {
           const isInformalMarket = market.href === '/informal-market';
           const useBookingsPreset = isBookings;
           const overlayClassName = useBookingsPreset
-            ? 'absolute inset-0 bg-gradient-to-t from-[#041a26]/70 via-[#0f6f84]/35 to-[#14b8a6]/15'
-            : 'absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent';
+            ? 'absolute inset-0 bg-gradient-to-t from-[#041a26]/80 via-[#0f6f84]/50 to-[#14b8a6]/20'
+            : 'absolute inset-0 bg-gradient-to-t from-black/75 via-black/50 to-black/20';
           const marketTitleClassName = 'text-base font-bold leading-tight text-white drop-shadow line-clamp-3 sm:text-lg sm:line-clamp-none';
           const hasHeroImage = isFastFood || isFashion || isBookings || isBeverages || isGroceries || isMobility || isEcommerce || isBetting || isConstruction || isLivestock || isHomeCare || isNaturalResources || isGeneralLabour || isWellness || isStationery || isProperty || isHerbs || isSecondhand || isBeautyFitnessSports || isToysKids || isJewelleryAccessories || isDirectLinks || isInformalMarket;
           const heroImageUrl = isFastFood
             ? 'https://images.pexels.com/photos/2983101/pexels-photo-2983101.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isFashion
-            ? 'https://images.pexels.com/photos/2529148/pexels-photo-2529148.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            // Dark fashion editorial — model against deep shadow backdrop
+            ? 'https://images.pexels.com/photos/1536619/pexels-photo-1536619.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isBookings
             ? 'https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isBeverages
             ? 'https://images.pexels.com/photos/1283219/pexels-photo-1283219.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isGroceries
-            ? 'https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg?auto=compress&cs=tinysrgb&w=1600'
+            // Dark produce market with warm ambient lighting
+            ? 'https://images.pexels.com/photos/1367267/pexels-photo-1367267.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isMobility
             ? 'https://images.pexels.com/photos/120049/pexels-photo-120049.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isEcommerce
-            ? 'https://images.pexels.com/photos/1444416/pexels-photo-1444416.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            // Dark tech/device setup — rich navy & black tones
+            ? 'https://images.pexels.com/photos/3861969/pexels-photo-3861969.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isBetting
             ? 'https://images.pexels.com/photos/6664248/pexels-photo-6664248.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isConstruction
@@ -35377,17 +35380,20 @@ const MarketsPage = ({ sellerItems = [] }) => {
             : isLivestock
             ? 'https://images.pexels.com/photos/422218/pexels-photo-422218.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isHomeCare
-            ? 'https://images.pexels.com/photos/3846022/pexels-photo-3846022.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            // Dark moody cleaning/laundry scene
+            ? 'https://images.pexels.com/photos/4239091/pexels-photo-4239091.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isNaturalResources
             ? 'https://images.pexels.com/photos/2101137/pexels-photo-2101137.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isGeneralLabour
             ? 'https://images.pexels.com/photos/1216589/pexels-photo-1216589.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isWellness
-            ? 'https://images.pexels.com/photos/3822622/pexels-photo-3822622.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            // Dark spa atmosphere — candles and moody tones
+            ? 'https://images.pexels.com/photos/3757952/pexels-photo-3757952.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isStationery
             ? 'https://images.pexels.com/photos/256370/pexels-photo-256370.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isProperty
-            ? 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            // Dramatic dusk/night property exterior
+            ? 'https://images.pexels.com/photos/1732414/pexels-photo-1732414.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isHerbs
             ? 'https://images.pexels.com/photos/906150/pexels-photo-906150.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isSecondhand
@@ -35395,6 +35401,7 @@ const MarketsPage = ({ sellerItems = [] }) => {
             : isBeautyFitnessSports
             ? 'https://images.pexels.com/photos/2533266/pexels-photo-2533266.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isToysKids
+            // Dark playroom / colourful toys on dark shelf
             ? 'https://images.pexels.com/photos/3661193/pexels-photo-3661193.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isJewelleryAccessories
             ? 'https://images.pexels.com/photos/691046/pexels-photo-691046.jpeg?auto=compress&cs=tinysrgb&w=1200'
@@ -39246,6 +39253,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   // `draftTextareaRef` is used to focus the input + scroll it into view
   // when a reply is staged via swipe / hover button.
   const messagesEndRef = useRef(null);
+  const messageListRef = useRef(null);
   const draftTextareaRef = useRef(null);
   // First-unread divider target — when present we scroll here instead of
   // the very bottom so the user lands on the first message they haven't
@@ -40229,34 +40237,67 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     return () => { cancelled = true; };
   }, [messages, currentUserEmail, loadRemoteChat]);
 
+  // True when the active thread is the SVS Agent / Support thread.
+  // Must be defined before the scroll effect that references it.
+  const isAgentThread = useMemo(() => {
+    if (!activeThread) return false;
+    const participants = activeThread.participants || [];
+    return participants
+      .map((participant) => normalizeEmail(participant))
+      .includes(SUPPORT_ADMIN_EMAIL);
+  }, [activeThread]);
+
   // Pin the scroll position when the active thread changes (opening a
-  // chat) or a new message lands. Prefers the first-unread divider so the
-  // user lands on their first unseen message; otherwise jumps to the
-  // newest bubble. Uses two RAFs so the scroll happens after the new
-  // bubble has been committed AND laid out.
+  // chat) or a new message lands. For the SVS Agent thread (and any time
+  // a message is sent/received) always jump to the very bottom so the
+  // latest reply is immediately visible. For peer threads with unread
+  // history we land on the first-unread divider instead, then let the
+  // user scroll up naturally. Uses two RAFs so the paint is complete
+  // before we move the scroll position.
   useEffect(() => {
-    const target = unreadDividerRef.current || messagesEndRef.current;
-    if (!target) return;
-    // First switch into a thread → jump instantly. Subsequent updates
-    // (new incoming / outgoing message) → smooth scroll for polish.
-    const landingOnUnread = Boolean(unreadDividerRef.current);
-    const behavior = (activeMessages.length <= 1 || landingOnUnread) ? 'auto' : 'smooth';
-    const block = landingOnUnread ? 'center' : 'end';
+    const container = messageListRef.current;
+    if (!container) return;
+
+    const hasUnreadDivider = Boolean(unreadDividerRef.current);
+    const forceBottom = isAgentThread || !hasUnreadDivider;
+    const instant = activeMessages.length <= 1 || isAgentThread;
+
+    const doScroll = () => {
+      if (forceBottom) {
+        if (instant) {
+          container.scrollTop = container.scrollHeight;
+        } else {
+          container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+        }
+      } else {
+        try {
+          unreadDividerRef.current?.scrollIntoView({ behavior: 'auto', block: 'center' });
+        } catch (_) { /* older browsers */ }
+      }
+    };
+
     const raf1 = window.requestAnimationFrame(() => {
       const raf2 = window.requestAnimationFrame(() => {
-        try {
-          target.scrollIntoView({ behavior, block });
-        } catch (_) { /* older browsers */ }
+        // On mobile the chat panel is hidden until mobilePanel === 'chat'.
+        // A hidden element has scrollHeight === 0 — retry after the CSS
+        // transition completes so the scroll lands in the right place.
+        if (container.scrollHeight === 0) {
+          const tid = window.setTimeout(doScroll, 80);
+          container.dataset.tid = String(tid);
+        } else {
+          doScroll();
+        }
       });
-      // Stash the inner RAF id so we can cancel on unmount.
-      target.dataset.raf = String(raf2);
+      container.dataset.raf = String(raf2);
     });
     return () => {
       window.cancelAnimationFrame(raf1);
-      const innerId = Number(target.dataset.raf || 0);
+      const innerId = Number(container.dataset.raf || 0);
       if (innerId) window.cancelAnimationFrame(innerId);
+      const timerId = Number(container.dataset.tid || 0);
+      if (timerId) window.clearTimeout(timerId);
     };
-  }, [activeMessages.length, selectedThreadId, firstUnreadMessageId]);
+  }, [activeMessages.length, selectedThreadId, firstUnreadMessageId, isAgentThread, isAgentReplying, mobilePanel]);
 
   // When a reply is staged (swipe-left or hover-Reply), pull the
   // textarea into view and focus it so the user can immediately type.
@@ -40278,18 +40319,6 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     node.style.height = 'auto';
     node.style.height = `${node.scrollHeight}px`;
   }, [draftMessage]);
-
-  // True when the active thread is the SVS Agent / Support thread.
-  // The deal-closing toolkit (offers, payment requests, location, photos,
-  // voice notes, status updates, quick replies) only makes sense between
-  // real buyers and sellers, not when chatting with the support agent.
-  const isAgentThread = useMemo(() => {
-    if (!activeThread) return false;
-    const participants = activeThread.participants || [];
-    return participants
-      .map((participant) => normalizeEmail(participant))
-      .includes(SUPPORT_ADMIN_EMAIL);
-  }, [activeThread]);
 
   const resolveCounterparty = useCallback((thread) => {
     if (!thread || !Array.isArray(thread.participants)) {
@@ -41651,8 +41680,8 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
           </div>
         </div>
 
-        <div className="grid min-h-[calc(100vh-180px)] grid-cols-1 sm:min-h-[560px] lg:grid-cols-[320px_1fr]">
-          <aside className={`${mobilePanel === 'chat' ? 'hidden lg:flex' : 'flex'} flex-col border-b border-[#e5eef8] bg-[#f8fbff] lg:border-b-0 lg:border-r`}>
+        <div className="grid h-[calc(100dvh-180px)] min-h-[560px] grid-cols-1 overflow-hidden lg:grid-cols-[320px_1fr]">
+          <aside className={`${mobilePanel === 'chat' ? 'hidden lg:flex' : 'flex'} min-h-0 flex-1 flex-col overflow-hidden border-b border-[#e5eef8] bg-[#f8fbff] lg:border-b-0 lg:border-r`}>
             {/* Sticky "Conversations" header — mirrors the dedicated sidebar header in the inspiration screenshot. */}
             <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-[var(--svs-border)] bg-white/95 px-3 py-2.5 backdrop-blur-sm sm:px-4 sm:py-3">
               <div className="min-w-0">
@@ -41959,7 +41988,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
             </div>
           </aside>
 
-          <div className={`${mobilePanel === 'contacts' ? 'hidden lg:flex' : 'flex'} min-h-[560px] flex-col bg-white`}>
+          <div className={`${mobilePanel === 'contacts' ? 'hidden lg:flex' : 'flex'} min-h-0 flex-1 flex-col overflow-hidden bg-white`}>
             {activeThread ? (
               <>
                 <div className="sticky top-0 z-20 border-b border-[#e5eef8] bg-white px-3 py-2.5 sm:px-6 sm:py-3">
@@ -42108,7 +42137,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
                   ) : null}
                 </div>
 
-                <div className="flex-1 space-y-3 overflow-y-auto bg-[var(--svs-surface-soft)] px-3 py-3 pb-24 sm:px-6 sm:py-4 sm:pb-6">
+                <div ref={messageListRef} className="flex-1 space-y-3 overflow-y-auto bg-[var(--svs-surface-soft)] px-3 py-3 pb-24 sm:px-6 sm:py-4 sm:pb-6">
                   {activeThread?.itemDetails ? (
                     <details open className="group/summary sticky top-0 z-10 mx-0 sm:-mx-6 border-b border-[var(--svs-border)] bg-gradient-to-b from-[var(--svs-cyan-surface)] to-[var(--svs-surface-soft)] px-3 py-3 sm:px-6 sm:py-3.5">
                       <summary className="flex cursor-pointer list-none items-center justify-between">
@@ -49858,6 +49887,40 @@ const App = () => {
     seenNotificationIdsRef.current = null;
   }, [activeUserEmail]);
 
+  // Keep the PWA app-icon badge in sync with the unread notification count.
+  // navigator.setAppBadge is supported on Android Chrome, Windows Edge, and
+  // macOS Safari when the site is installed as a PWA. It is a no-op elsewhere.
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('setAppBadge' in navigator)) return;
+    const unreadCount = notifications.reduce((n, notif) => (notif.read ? n : n + 1), 0);
+    if (unreadCount > 0) {
+      navigator.setAppBadge(unreadCount).catch(() => {});
+    } else {
+      navigator.clearAppBadge().catch(() => {});
+    }
+  }, [notifications]);
+
+  // Listen for SVS_NAVIGATE messages posted by the service worker when the
+  // user taps an OS notification (notificationclick) while the app is open.
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return undefined;
+    const handleSwMessage = (event) => {
+      if (event.data?.type === 'SVS_NAVIGATE' && event.data.url) {
+        navigate(event.data.url);
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', handleSwMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', handleSwMessage);
+  }, [navigate]);
+
+  // Request notification permission once after the user signs in so background
+  // OS notifications can be shown when the tab is hidden (see pushNotificationToUser).
+  useEffect(() => {
+    if (!activeUserEmail) return;
+    if (typeof Notification === 'undefined' || Notification.permission !== 'default') return;
+    Notification.requestPermission().catch(() => {});
+  }, [activeUserEmail]);
+
   const pushNotificationToUser = useCallback((userEmail, notificationPayload) => {
     const notification = createNotificationRecord(notificationPayload);
     const normalizedTargetEmail = normalizeEmail(userEmail);
@@ -49868,6 +49931,26 @@ const App = () => {
 
     if (normalizedTargetEmail === normalizeEmail(activeUserEmail)) {
       setNotifications((currentNotifications) => [notification, ...currentNotifications].slice(0, 80));
+
+      // Show an OS-level notification via the service worker when the tab is
+      // hidden (app minimised or screen off). The SW's notificationclick handler
+      // will deep-link the user back to notification.href when they tap it.
+      if (
+        typeof document !== 'undefined' &&
+        document.hidden &&
+        typeof Notification !== 'undefined' &&
+        Notification.permission === 'granted' &&
+        typeof navigator !== 'undefined' &&
+        navigator.serviceWorker?.controller
+      ) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'SVS_SHOW_NOTIFICATION',
+          title: notification.title,
+          body: notification.message,
+          url: notification.href || '/',
+          tag: notification.id,
+        });
+      }
     }
 
     // Best-effort email copy of every notification (bookings, orders, seller

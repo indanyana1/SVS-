@@ -226,13 +226,13 @@
     "homeCare": "BOOK SERVICE",
     "hardwareSoftware": "LIFESTYLE TECH",
     "mobilityVehicles": "AUTOMOBILITY",
-    "naturalResources": "EARTHRESOURCES",
+    "naturalResources": "EARTH-RESOURCES",
     "generalLabour": "WORKFORCE",
     "bettingLotteryGames": "GAMES",
     "propertyHub": "PROPERTY",
     "livestockHub": "LIVESTOCK",
     "safety": "TOYS",
-    "directLinks": "COMMERCELINK",
+    "directLinks": "COMMERCE-LINK",
     "informalMarket": "VENDORS"
   },
   "marketsPage": {
