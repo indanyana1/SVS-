@@ -3,21 +3,41 @@
    navigation requests. Intentionally lightweight — no precaching of the
    hashed build assets (CRA handles cache-busting via file names). */
 
-// Show an OS-level notification when the page posts SVS_SHOW_NOTIFICATION.
-// Surfaces in-app alerts when the tab is hidden or the screen is off (Android PWA).
+// ─── VERSION ────────────────────────────────────────────────────────────────
+// DEVELOPER: bump APP_VERSION every time you deploy new features.
+// Changing this string is the signal the browser uses to detect that a new
+// service worker has been deployed and should prompt users to update.
+// Format suggestion: 'YYYY-MM-DD-N' (e.g. '2026-07-07-1', '2026-07-07-2').
+const APP_VERSION = '2026-07-07-1';
+const CACHE_NAME = `svs-pwa-${APP_VERSION}`;
+// ────────────────────────────────────────────────────────────────────────────
+
+const OFFLINE_URLS = ['/', '/index.html', '/manifest.json'];
+
 self.addEventListener('message', (event) => {
   const data = event.data || {};
-  if (data.type !== 'SVS_SHOW_NOTIFICATION') return;
-  event.waitUntil(
-    self.registration.showNotification(data.title || 'SVS', {
-      body: data.body || '',
-      icon: '/favicon.ico',
-      badge: '/favicon.ico',
-      tag: data.tag || 'svs-notification',
-      renotify: true,
-      data: { url: data.url || '/' },
-    }),
-  );
+
+  // User confirmed the update prompt — activate the waiting service worker
+  // immediately so the app reloads with new code without needing a tab close.
+  if (data.type === 'SVS_SKIP_WAITING') {
+    self.skipWaiting();
+    return;
+  }
+
+  // Show an OS-level notification when the page posts SVS_SHOW_NOTIFICATION.
+  // Surfaces in-app alerts when the tab is hidden or the screen is off (Android PWA).
+  if (data.type === 'SVS_SHOW_NOTIFICATION') {
+    event.waitUntil(
+      self.registration.showNotification(data.title || 'SVS', {
+        body: data.body || '',
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        tag: data.tag || 'svs-notification',
+        renotify: true,
+        data: { url: data.url || '/' },
+      }),
+    );
+  }
 });
 
 // Deep-link the user to the relevant screen when they tap an OS notification.
@@ -41,14 +61,12 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-const CACHE_NAME = 'svs-pwa-v1';
-const OFFLINE_URLS = ['/', '/index.html', '/manifest.json'];
-
 self.addEventListener('install', (event) => {
+  // Do NOT call skipWaiting() here — we want the new SW to wait so the app
+  // can show the user an "Update available" prompt before taking control.
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(OFFLINE_URLS)).catch(() => undefined),
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -57,6 +75,9 @@ self.addEventListener('activate', (event) => {
       keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)),
     )),
   );
+  // Claim all open clients immediately after activation so the new version
+  // is live without requiring a navigation. The React app listens for
+  // 'controllerchange' and reloads automatically at this point.
   self.clients.claim();
 });
 

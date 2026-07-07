@@ -34656,7 +34656,7 @@ const LivestockHubPage = ({
                             itemKey: selectedItemKey,
                             itemTitle: selectedItem.title,
                             itemImage: selectedItem.image || selectedItem.images?.[0] || '',
-                            itemLink: selectedItem.link || `/e-commerce?item=${selectedItemKey}`,
+                            itemLink: `${selectedItem.route || '/e-commerce'}?focus=${encodeURIComponent(selectedItemKey)}`,
                           },
                         });
                       }}
@@ -46901,7 +46901,7 @@ const ItemDetailsModal = ({
           itemKey,
           itemTitle: item.title,
           itemImage: item.image || item.images?.[0] || '',
-          itemLink: `/informal-market?item=${itemKey}`,
+          itemLink: `${item.route || '/informal-market'}?focus=${encodeURIComponent(itemKey)}`,
         },
       });
     };
@@ -47637,7 +47637,7 @@ const ItemDetailsModal = ({
                       itemKey,
                       itemTitle: item.title,
                       itemImage: item.image || item.images?.[0] || '',
-                      itemLink: `/e-commerce?item=${itemKey}`,
+                      itemLink: `${item.route || '/e-commerce'}?focus=${encodeURIComponent(itemKey)}`,
                     },
                   });
                 }}
@@ -47763,7 +47763,7 @@ const ItemDetailsModal = ({
                             itemKey,
                             itemTitle: item.title,
                             itemImage: item.image || item.images?.[0] || '',
-                            itemLink: `/mobility-vehicles?item=${itemKey}`,
+                            itemLink: `${item.route || '/mobility-vehicles'}?focus=${encodeURIComponent(itemKey)}`,
                           },
                         });
                       }}
@@ -49231,7 +49231,7 @@ const CardGrid = ({ items, focusItems, boundsItems, buttonLabel, secondaryButton
                           itemKey,
                           itemTitle: itemTitle,
                           itemImage: item.image || item.images?.[0] || '',
-                          itemLink: item.link || `/e-commerce?item=${itemKey}`,
+                          itemLink: `${item.route || '/e-commerce'}?focus=${encodeURIComponent(itemKey)}`,
                         },
                       });
                     }}
@@ -49660,6 +49660,8 @@ const App = () => {
   // Tracks the set of notification ids already seen so a chime only plays for
   // genuinely new arrivals, never on first load or when marking items read.
   const seenNotificationIdsRef = useRef(null);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const swUpdateRegistrationRef = useRef(null);
   const [sellerItems, setSellerItems] = useState([]);
   const [productReviews, setProductReviews] = useState([]);
   const [productReviewSummaryMap, setProductReviewSummaryMap] = useState(() => buildProductReviewSummaryMap(getStoredProductReviews()));
@@ -49925,6 +49927,45 @@ const App = () => {
     if (typeof Notification === 'undefined' || Notification.permission !== 'default') return;
     Notification.requestPermission().catch(() => {});
   }, [activeUserEmail]);
+
+  // Detect when a new service worker is waiting (developer deployed new code)
+  // and surface the "Update available" banner. When the user taps "Update Now"
+  // we send SVS_SKIP_WAITING → the new SW activates → controllerchange fires →
+  // we reload so the user immediately gets the new version.
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return undefined;
+
+    let refreshing = false;
+
+    const trackInstalling = (worker) => {
+      worker.addEventListener('statechange', () => {
+        if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+          swUpdateRegistrationRef.current = worker;
+          setUpdateAvailable(true);
+        }
+      });
+    };
+
+    navigator.serviceWorker.getRegistration().then((registration) => {
+      if (!registration) return;
+      if (registration.waiting && navigator.serviceWorker.controller) {
+        swUpdateRegistrationRef.current = registration.waiting;
+        setUpdateAvailable(true);
+      }
+      registration.addEventListener('updatefound', () => {
+        if (registration.installing) trackInstalling(registration.installing);
+      });
+      registration.update().catch(() => {});
+    }).catch(() => {});
+
+    const handleControllerChange = () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    };
+    navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
+    return () => navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+  }, []);
 
   const pushNotificationToUser = useCallback((userEmail, notificationPayload) => {
     const notification = createNotificationRecord(notificationPayload);
@@ -51569,8 +51610,35 @@ const App = () => {
     </>
   );
 
+  const updateBanner = updateAvailable ? (
+    <div className="fixed bottom-20 left-0 right-0 z-[9999] flex justify-center px-4 sm:bottom-6">
+      <div className="flex w-full max-w-sm items-center gap-3 rounded-2xl border border-cyan-200 bg-white px-4 py-3.5 shadow-2xl shadow-black/20 sm:w-auto sm:min-w-[340px]">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--svs-primary)]/10">
+          <RefreshCw className="h-4.5 w-4.5 text-[var(--svs-primary)]" aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold text-[var(--svs-primary-strong)]">Update Available</p>
+          <p className="text-xs text-slate-500">A new version of SVS is ready to install.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            if (swUpdateRegistrationRef.current) {
+              swUpdateRegistrationRef.current.postMessage({ type: 'SVS_SKIP_WAITING' });
+            } else {
+              window.location.reload();
+            }
+          }}
+          className="shrink-0 rounded-xl bg-[var(--svs-primary)] px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[var(--svs-primary-strong)] active:scale-95"
+        >
+          Update Now
+        </button>
+      </div>
+    </div>
+  ) : null;
+
   if (isStandaloneShellRoute) {
-    return appContent;
+    return <>{appContent}{updateBanner}</>;
   }
 
   return (
@@ -51584,6 +51652,7 @@ const App = () => {
       searchCatalog={shellSearchCatalog}
     >
       {appContent}
+      {updateBanner}
     </Shell>
   );
 };
