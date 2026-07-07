@@ -49961,6 +49961,21 @@ const App = () => {
 
     let refreshing = false;
 
+    // Wire up BEFORE any async work so we never miss the event.
+    const handleControllerChange = () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    };
+    navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
+
+    const applyWaiting = (registration) => {
+      if (registration.waiting && navigator.serviceWorker.controller) {
+        swUpdateRegistrationRef.current = registration.waiting;
+        setUpdateAvailable(true);
+      }
+    };
+
     const trackInstalling = (worker) => {
       worker.addEventListener('statechange', () => {
         if (worker.state === 'installed' && navigator.serviceWorker.controller) {
@@ -49970,25 +49985,26 @@ const App = () => {
       });
     };
 
-    navigator.serviceWorker.getRegistration().then((registration) => {
-      if (!registration) return;
-      if (registration.waiting && navigator.serviceWorker.controller) {
-        swUpdateRegistrationRef.current = registration.waiting;
-        setUpdateAvailable(true);
-      }
-      registration.addEventListener('updatefound', () => {
-        if (registration.installing) trackInstalling(registration.installing);
-      });
-      registration.update().catch(() => {});
-    }).catch(() => {});
-
-    const handleControllerChange = () => {
-      if (refreshing) return;
-      refreshing = true;
-      window.location.reload();
+    const checkForUpdate = () => {
+      navigator.serviceWorker.getRegistration().then((registration) => {
+        if (!registration) return;
+        applyWaiting(registration);
+        registration.addEventListener('updatefound', () => {
+          if (registration.installing) trackInstalling(registration.installing);
+        });
+        registration.update().catch(() => {});
+      }).catch(() => {});
     };
-    navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
-    return () => navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+
+    checkForUpdate();
+
+    // Re-check every 60 s so long-lived sessions detect deploys automatically.
+    const intervalId = setInterval(checkForUpdate, 60000);
+
+    return () => {
+      navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+      clearInterval(intervalId);
+    };
   }, []);
 
   const pushNotificationToUser = useCallback((userEmail, notificationPayload) => {
@@ -51676,9 +51692,17 @@ const App = () => {
         </div>
         <button
           type="button"
-          onClick={() => {
-            if (swUpdateRegistrationRef.current) {
-              swUpdateRegistrationRef.current.postMessage({ type: 'SVS_SKIP_WAITING' });
+          onClick={async () => {
+            // Dismiss the banner immediately so the user sees instant feedback.
+            setUpdateAvailable(false);
+            // Use the cached ref first; fall back to querying the registration
+            // directly so we never reload without activating the new SW.
+            const waitingWorker = swUpdateRegistrationRef.current
+              ?? (await navigator.serviceWorker?.getRegistration().catch(() => null))?.waiting
+              ?? null;
+            if (waitingWorker) {
+              waitingWorker.postMessage({ type: 'SVS_SKIP_WAITING' });
+              // controllerchange listener will call window.location.reload().
             } else {
               window.location.reload();
             }
