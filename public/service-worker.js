@@ -25,15 +25,23 @@ self.addEventListener('message', (event) => {
   // Show an OS-level notification when the page posts SVS_SHOW_NOTIFICATION.
   // Surfaces in-app alerts when the tab is hidden or the screen is off (Android PWA).
   if (data.type === 'SVS_SHOW_NOTIFICATION') {
+    const badgeCount = Number(data.badgeCount) || 1;
     event.waitUntil(
-      self.registration.showNotification(data.title || 'SVS', {
-        body: data.body || '',
-        icon: '/favicon.ico',
-        badge: '/favicon.ico',
-        tag: data.tag || 'svs-notification',
-        renotify: true,
-        data: { url: data.url || '/' },
-      }),
+      Promise.all([
+        self.registration.showNotification(data.title || 'SVS', {
+          body: data.body || '',
+          icon: '/images/svs-logo.jpeg',
+          badge: '/images/svs-logo.jpeg',
+          tag: data.tag || 'svs-notification',
+          renotify: true,
+          data: { url: data.url || '/' },
+        }),
+        // Update the home-screen icon badge so the count is visible even
+        // while the app tab is in the background.
+        self.registration.setAppBadge
+          ? self.registration.setAppBadge(badgeCount).catch(() => {})
+          : Promise.resolve(),
+      ]),
     );
   }
 });
@@ -41,6 +49,10 @@ self.addEventListener('message', (event) => {
 // Deep-link the user to the relevant screen when they tap an OS notification.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  // Clear the badge — the app will re-set the exact count once it opens.
+  if (self.registration.clearAppBadge) {
+    self.registration.clearAppBadge().catch(() => {});
+  }
   const targetPath = (event.notification.data && event.notification.data.url) || '/';
   event.waitUntil(
     self.clients

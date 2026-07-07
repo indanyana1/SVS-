@@ -50013,12 +50013,14 @@ const App = () => {
         typeof navigator !== 'undefined' &&
         navigator.serviceWorker?.controller
       ) {
+        const currentUnread = notifications.filter((n) => !n.read).length + 1;
         navigator.serviceWorker.controller.postMessage({
           type: 'SVS_SHOW_NOTIFICATION',
           title: notification.title,
           body: notification.message,
           url: notification.href || '/',
           tag: notification.id,
+          badgeCount: currentUnread,
         });
       }
     }
@@ -50077,7 +50079,7 @@ const App = () => {
     if (normalizedTargetEmail !== normalizeEmail(activeUserEmail)) {
       pushNotificationToStorage(normalizedTargetEmail, notification);
     }
-  }, [activeUserEmail]);
+  }, [activeUserEmail, notifications]);
 
   const handleClearNotifications = useCallback(async () => {
     setNotifications([]);
