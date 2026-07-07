@@ -49564,7 +49564,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/wishlist/share" element={<WishlistSharePage />} />
     <Route path="/checkout" element={<CheckoutPage cartItems={cartItems} buyNowCheckout={buyNowCheckout} onUpdateCartQuantity={onUpdateCartQuantity} onRemoveCartItem={onRemoveCartItem} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />
     <Route path="/checkout/payfast" element={<PayfastCheckoutPage buyNowCheckout={buyNowCheckout} onPlaceOrder={onPlaceOrder} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />
-    <Route path="/support/chat" element={<SupportChatPage orders={orders} onPushNotificationToUser={onPushNotificationToUser} />} />
+    <Route path="/support/chat" element={<SupportChatPage orders={orders} onPushNotificationToUser={onPushNotificationToUser} onDismissChatNotifications={onDismissChatNotifications} />} />
     <Route path="/u/:handle" element={<UserProfileLinkPage />} />
     <Route path="/search" element={<SearchResultsPage sellerItems={sellerItems} />} />
 
