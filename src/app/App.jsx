@@ -39151,9 +39151,15 @@ const VoiceNotePlayer = ({ src, durationSec = 0, mine = false }) => {
   );
 };
 
-const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
+const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatNotifications }) => {
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Clear all chat notifications as soon as the user opens the chat page.
+  useEffect(() => {
+    if (onDismissChatNotifications) onDismissChatNotifications();
+  }, [onDismissChatNotifications]);
+
   const prefillOrderIdFromState = String(location.state?.orderId || '').trim();
   const prefillRecipientEmailFromState = normalizeEmail(location.state?.recipientEmail || '');
   const prefillRecipientNameFromState = String(location.state?.recipientName || '').trim();
@@ -49538,7 +49544,7 @@ const FloatingSupportChatButton = () => (
   </Link>
 );
 
-const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerItems, buyNowCheckout, productReviewSummaryMap, onAddToCart, onBuyNow, onToggleWishlist, onRemoveWishlistItem, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder, onClearBuyNowCheckout, onCancelOrder, onSellerItemCreated, onDeleteSellerItem, onUpdateSellerItem, onToggleListingPaused, onUpdateOrderStatus, onAdminSetOrderStatus, onOpenItemDetails, onPushNotificationToUser }) => {
+const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerItems, buyNowCheckout, productReviewSummaryMap, onAddToCart, onBuyNow, onToggleWishlist, onRemoveWishlistItem, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder, onClearBuyNowCheckout, onCancelOrder, onSellerItemCreated, onDeleteSellerItem, onUpdateSellerItem, onToggleListingPaused, onUpdateOrderStatus, onAdminSetOrderStatus, onOpenItemDetails, onPushNotificationToUser, onDismissChatNotifications }) => {
   const { t } = useTranslation();
 
   return (
@@ -51607,6 +51613,7 @@ const App = () => {
         onAdminSetOrderStatus={handleAdminSetOrderStatus}
         onOpenItemDetails={handleOpenItemDetails}
         onPushNotificationToUser={pushNotificationToUser}
+        onDismissChatNotifications={dismissChatNotifications}
       />
       <ItemDetailsModal
         item={selectedItemDetails}
