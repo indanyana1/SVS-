@@ -32,6 +32,7 @@
     "start": "cross-env NODE_NO_WARNINGS=1 react-scripts start",
     "start:server": "node server.js",
     "dev": "cross-env NODE_NO_WARNINGS=1 concurrently \"npm run start:server\" \"npm start\"",
+    "prebuild": "node scripts/version-sw.js",
     "build": "cross-env NODE_NO_WARNINGS=1 DISABLE_ESLINT_PLUGIN=true react-scripts build",
     "test": "react-scripts test",
     "test:ci": "cross-env CI=true react-scripts test --watch=false --passWithNoTests",

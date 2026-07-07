@@ -4,11 +4,9 @@
    hashed build assets (CRA handles cache-busting via file names). */
 
 // ─── VERSION ────────────────────────────────────────────────────────────────
-// DEVELOPER: bump APP_VERSION every time you deploy new features.
-// Changing this string is the signal the browser uses to detect that a new
-// service worker has been deployed and should prompt users to update.
-// Format suggestion: 'YYYY-MM-DD-N' (e.g. '2026-07-07-1', '2026-07-07-2').
-const APP_VERSION = '2026-07-07-1';
+// Auto-stamped by scripts/version-sw.js at build time (git hash + date).
+// DO NOT edit manually — every `npm run build` overwrites this automatically.
+const APP_VERSION = '2026-07-07-61779b7';
 const CACHE_NAME = `svs-pwa-${APP_VERSION}`;
 // ────────────────────────────────────────────────────────────────────────────
 
