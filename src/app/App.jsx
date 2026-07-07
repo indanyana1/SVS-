@@ -10913,7 +10913,7 @@ const MarketSelectorField = ({
   );
 };
 
-const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notifications = [], onMarkNotificationsRead, onMarkNotificationRead, onClearNotifications, searchCatalog = [] }) => {
+const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notifications = [], onMarkNotificationsRead, onMarkNotificationRead, onRemoveNotification, onClearNotifications, searchCatalog = [] }) => {
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -10932,6 +10932,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
   const [sellerHomePath, setSellerHomePath] = useState(getSellerHomePath);
   const [profileOpen, setProfileOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const notificationsPanelWasOpenRef = useRef(false);
   const [profileName, setProfileName] = useState('SVS User');
   const [theme, setTheme] = useState(getThemePreference);
   // Add default priceRange state to prevent ReferenceError
@@ -11041,6 +11042,15 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
       window.removeEventListener('touchstart', handlePointerDown);
     };
   }, [isNotificationsOpen]);
+
+  // Clear all remaining notifications when the panel closes so that every
+  // notification the user has seen disappears once the panel is dismissed.
+  useEffect(() => {
+    if (notificationsPanelWasOpenRef.current && !isNotificationsOpen) {
+      onClearNotifications?.();
+    }
+    notificationsPanelWasOpenRef.current = isNotificationsOpen;
+  }, [isNotificationsOpen, onClearNotifications]);
 
   useEffect(() => {
     window.localStorage.setItem('svs-theme', theme);
@@ -11706,7 +11716,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                         key={notification.id}
                         to={notification.href || '/orders'}
                         onClick={() => {
-                          onMarkNotificationRead?.(notification.id);
+                          onRemoveNotification?.(notification.id);
                           setIsNotificationsOpen(false);
                         }}
                         className={`mb-1 block rounded-lg border px-2 py-1.5 text-left transition last:mb-0 sm:rounded-xl sm:px-3 sm:py-2.5 ${
@@ -50135,6 +50145,20 @@ const App = () => {
     }
   }, [activeUserEmail, notifications]);
 
+  const removeNotification = useCallback((notificationId) => {
+    const id = String(notificationId || '').trim();
+    if (!id) return;
+    setNotifications((current) => current.filter((n) => n.id !== id));
+    if (getAuthState() && activeUserEmail && hasSupabaseEnv && supabase) {
+      supabase
+        .from(NOTIFICATIONS_TABLE)
+        .delete()
+        .eq('user_email', normalizeEmail(activeUserEmail))
+        .eq('notification_key', id)
+        .then(() => {});
+    }
+  }, [activeUserEmail]);
+
   useEffect(() => {
     // Remove old shared keys so cart/wishlist no longer leak between users.
     window.localStorage.removeItem(CART_STORAGE_KEY);
@@ -51676,6 +51700,7 @@ const App = () => {
       notifications={notifications}
       onMarkNotificationsRead={markNotificationsAsRead}
       onMarkNotificationRead={markNotificationAsRead}
+      onRemoveNotification={removeNotification}
       onClearNotifications={handleClearNotifications}
       searchCatalog={shellSearchCatalog}
     >
