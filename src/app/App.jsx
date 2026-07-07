@@ -40117,6 +40117,14 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
   }, [currentUserEmail, threads, pinnedThreadIds]);
 
   useEffect(() => {
+    // When the user tapped a notification deep-link, the URL effect is
+    // responsible for selecting that specific thread. Skip auto-select entirely
+    // while the URL thread is visible so we don't overwrite the URL effect's
+    // setSelectedThreadId call in the same render batch.
+    if (pendingThreadIdFromUrl && visibleThreads.some((t) => t.id === pendingThreadIdFromUrl)) {
+      return;
+    }
+
     if (!visibleThreads.length) {
       setSelectedThreadId('');
       return;
@@ -40158,7 +40166,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser }) => {
     }
 
     setSelectedThreadId(visibleThreads[0].id);
-  }, [currentUserEmail, preferredRecipientEmail, selectedOrderId, selectedThreadId, visibleThreads]);
+  }, [currentUserEmail, pendingThreadIdFromUrl, preferredRecipientEmail, selectedOrderId, selectedThreadId, visibleThreads]);
 
   const activeThread = useMemo(
     () => visibleThreads.find((thread) => thread.id === selectedThreadId) || null,
@@ -50063,6 +50071,19 @@ const App = () => {
         .from(NOTIFICATIONS_TABLE)
         .delete()
         .eq('user_email', normalizeEmail(activeUserEmail));
+    }
+  }, [activeUserEmail]);
+
+  const dismissChatNotifications = useCallback(() => {
+    setNotifications((current) => current.filter((n) => n.type !== 'chat'));
+
+    if (getAuthState() && activeUserEmail && hasSupabaseEnv && supabase) {
+      supabase
+        .from(NOTIFICATIONS_TABLE)
+        .delete()
+        .eq('user_email', normalizeEmail(activeUserEmail))
+        .eq('type', 'chat')
+        .then(() => {});
     }
   }, [activeUserEmail]);
 
