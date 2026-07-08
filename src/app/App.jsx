@@ -51336,19 +51336,22 @@ const App = () => {
     );
 
     // Sync cart prices and notify users when the seller changes the price.
+    // item_key stored in cart_items/wishlist_items = `${route}:${item.id}` (getCollectionItemId).
+    // oldItem.id = "seller-<uuid>", oldItem.route = e.g. "/e-commerce".
     const newPrice = Number(updates.price || 0);
-    if (oldPrice > 0 && newPrice > 0 && newPrice !== oldPrice && oldItem?.itemKey) {
+    const savedItemKey = oldItem?.id && oldItem?.route ? `${oldItem.route}:${oldItem.id}` : null;
+    if (oldPrice > 0 && newPrice > 0 && newPrice !== oldPrice && savedItemKey) {
       const newCurrency = updates.currency || oldItem?.currency || 'ZAR';
       const newPriceLabel = getSalePrices(updates.price, 0, newCurrency).nowPrice;
       const sym = getCurrencyDefinition(newCurrency).symbol;
       const itemTitle = updates.title || oldItem?.title || '';
-      const itemHref = `${oldItem.route || '/e-commerce'}?focus=${encodeURIComponent(oldItem.itemKey)}`;
+      const itemHref = `${oldItem.route}?focus=${encodeURIComponent(oldItem.id)}`;
 
       // Update all cart rows to the new price so buyers see the correct total at checkout.
       supabase
         .from(CART_ITEMS_TABLE)
         .update({ unit_price: newPrice, unit_price_label: newPriceLabel, updated_at: new Date().toISOString() })
-        .eq('item_key', oldItem.itemKey)
+        .eq('item_key', savedItemKey)
         .then(() => {});
 
       // Only notify on price drops.
@@ -51356,8 +51359,8 @@ const App = () => {
         const dropMsg = `${itemTitle} dropped from ${sym}${oldPrice.toLocaleString()} to ${sym}${newPrice.toLocaleString()}`;
 
         const [{ data: wishlistRows }, { data: cartRows }] = await Promise.all([
-          supabase.from(WISHLIST_ITEMS_TABLE).select('user_email').eq('item_key', oldItem.itemKey),
-          supabase.from(CART_ITEMS_TABLE).select('user_email').eq('item_key', oldItem.itemKey),
+          supabase.from(WISHLIST_ITEMS_TABLE).select('user_email').eq('item_key', savedItemKey),
+          supabase.from(CART_ITEMS_TABLE).select('user_email').eq('item_key', savedItemKey),
         ]);
 
         const notifiedEmails = new Set();
