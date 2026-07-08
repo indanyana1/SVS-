@@ -241,7 +241,7 @@
     "marketLabel": "Market {{number}}",
     "openMarket": "Open market",
     "enterMarket": "Enter Market",
-    "quickTip": "Quick tip: Use the top search to jump directly to products, tickets, medicines, or hardware in a single step.",
+    "quickTip": "Quick tip: Use the top search to jump directly to the market product and market.",
     "tags": {
       "superShopping": "SuperShopping",
       "superService": "SuperService",

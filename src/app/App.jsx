@@ -7816,12 +7816,6 @@ const presenceOnlineEmails = new Set();
 const presenceListeners = new Set();
 let presenceChannel = null;
 let presenceCurrentEmail = '';
-// {email → threadId} — who is currently typing in which thread
-let presenceTypingMap = {};
-const presenceTypingListeners = new Set();
-const notifyPresenceTypingListeners = () => {
-  presenceTypingListeners.forEach((l) => { try { l({ ...presenceTypingMap }); } catch (_) { /* ignore */ } });
-};
 
 const notifyPresenceListeners = () => {
   presenceListeners.forEach((listener) => {
@@ -7833,7 +7827,6 @@ const recomputePresenceFromState = (state) => {
   const previouslyOnline = new Set(presenceOnlineEmails);
   presenceOnlineEmails.clear();
   const nowIso = new Date().toISOString();
-  const newTypingMap = {};
   Object.values(state || {}).forEach((entries) => {
     (entries || []).forEach((entry) => {
       const email = normalizeEmail(entry?.email || '');
@@ -7842,13 +7835,9 @@ const recomputePresenceFromState = (state) => {
         // Anyone we can see online is "seen" right now — keep it fresh so the
         // moment they drop off we already have an accurate last-seen.
         lastSeenCache.set(email, nowIso);
-        if (entry.typing) newTypingMap[email] = entry.typing;
       }
     });
   });
-  const prevJson = JSON.stringify(presenceTypingMap);
-  presenceTypingMap = newTypingMap;
-  if (JSON.stringify(newTypingMap) !== prevJson) notifyPresenceTypingListeners();
   // Anyone who was online a moment ago but isn't now just went offline.
   // Record their real last-seen from *our* vantage point (works even when
   // their own browser never wrote a heartbeat).
@@ -7900,18 +7889,6 @@ const joinPresence = (rawEmail) => {
   startLastSeenHeartbeat(email);
 };
 
-// Broadcast that the current user is typing in a specific thread.
-// Call with null / '' to clear the typing state (auto-cleared by the chat
-// input after 3 s of no keypress so it always expires naturally).
-const broadcastTyping = (threadId) => {
-  if (!presenceChannel || !presenceCurrentEmail) return;
-  presenceChannel.track({
-    email: presenceCurrentEmail,
-    online_at: new Date().toISOString(),
-    typing: threadId || null,
-  });
-};
-
 // React hook: subscribe to the live set of online emails.
 const usePresence = () => {
   const [onlineEmails, setOnlineEmails] = useState(() => new Set(presenceOnlineEmails));
@@ -7922,18 +7899,6 @@ const usePresence = () => {
     return () => { presenceListeners.delete(listener); };
   }, []);
   return onlineEmails;
-};
-
-// React hook: subscribe to the live typing map { email → threadId }.
-const useTyping = () => {
-  const [typingMap, setTypingMap] = useState(() => ({ ...presenceTypingMap }));
-  useEffect(() => {
-    const listener = (next) => setTypingMap(next);
-    presenceTypingListeners.add(listener);
-    setTypingMap({ ...presenceTypingMap });
-    return () => presenceTypingListeners.delete(listener);
-  }, []);
-  return typingMap;
 };
 
 // --- Last-seen heartbeat --------------------------------------------------
@@ -35502,7 +35467,9 @@ const MarketsPage = ({ sellerItems = [] }) => {
       </div>
 
       <div className="mt-7 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
-        <p className="text-sm text-[var(--svs-text)]">{t('marketsPage.quickTip')}</p>
+        <p className="text-sm text-[var(--svs-text)]">
+          <span className="font-bold">Quick tip:</span>{' '}Use the top search to jump directly to the market product and market.
+        </p>
       </div>
     </div>
     </section>
@@ -39217,8 +39184,9 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
   const prefillDraftMessageFromState = String(location.state?.draftMessage || '').trim();
   const currentUserEmail = normalizeEmail(getCurrentUserEmail()) || GUEST_ORDER_EMAIL;
   const onlineEmails = usePresence();
-  const typingMap = useTyping();
+  const [typingMap, setTypingMap] = useState({});
   const typingTimeoutRef = useRef(null);
+  const typingChannelRef = useRef(null);
   // The SVS Agent is an always-available bot; everyone else must really be
   // connected (present in the Realtime presence channel) to show as online.
   const isUserOnline = useCallback((email) => {
@@ -39254,6 +39222,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
   const [showNewChatPanel, setShowNewChatPanel] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState(prefillOrderIdFromState);
   const [isRemoteChatEnabled, setIsRemoteChatEnabled] = useState(false);
+  const [isChatSyncChecking, setIsChatSyncChecking] = useState(true);
   const [remoteChatStatusMessage, setRemoteChatStatusMessage] = useState('Checking chat sync...');
   const [isAgentReplying, setIsAgentReplying] = useState(false);
   const prefilledThreadBootstrapRef = useRef('');
@@ -39558,18 +39527,21 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
 
     if (!getAuthState()) {
       setIsRemoteChatEnabled(false);
+      setIsChatSyncChecking(false);
       setRemoteChatStatusMessage('You are not signed in. Chat is saved only on this device.');
       return false;
     }
 
     if (!currentUserEmail) {
       setIsRemoteChatEnabled(false);
+      setIsChatSyncChecking(false);
       setRemoteChatStatusMessage('No user email found for this session.');
       return false;
     }
 
     if (!hasSupabaseEnv || !supabase) {
       setIsRemoteChatEnabled(false);
+      setIsChatSyncChecking(false);
       setRemoteChatStatusMessage('Supabase is not configured. Add REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_ANON_KEY.');
       return false;
     }
@@ -39582,6 +39554,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
 
     if (threadError) {
       setIsRemoteChatEnabled(false);
+      setIsChatSyncChecking(false);
       setRemoteChatStatusMessage(`Supabase chat sync failed: ${threadError.message || 'apply support-chat.sql and check policies.'}`);
       return false;
     }
@@ -39613,6 +39586,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     setThreads((current) => mergeFetchedThreads(current, mappedThreads, pendingThreadWritesRef.current));
     setMessages((current) => mergeFetchedMessages(current, mappedMessages, pendingMessageWritesRef.current));
     setIsRemoteChatEnabled(true);
+    setIsChatSyncChecking(false);
     setRemoteChatStatusMessage('Realtime chat is connected.');
     return true;
   }, [currentUserEmail]);
@@ -39666,10 +39640,36 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
       )
       .subscribe();
 
+    // Dedicated broadcast channel for typing indicators — much faster than
+    // Presence sync which can take 2–4 s. Every typing keystroke sends a
+    // broadcast that the other party receives in under 100 ms.
+    const typingChannel = supabase
+      .channel('svs-chat-typing', { config: { broadcast: { self: false } } })
+      .on('broadcast', { event: 'typing' }, ({ payload }) => {
+        if (cancelled) return;
+        const senderEmail = normalizeEmail(payload?.email || '');
+        const threadId = payload?.threadId || null;
+        if (!senderEmail || senderEmail === currentUserEmail) return;
+        setTypingMap((prev) => {
+          if (!threadId) {
+            if (!prev[senderEmail]) return prev;
+            const next = { ...prev };
+            delete next[senderEmail];
+            return next;
+          }
+          if (prev[senderEmail] === threadId) return prev;
+          return { ...prev, [senderEmail]: threadId };
+        });
+      })
+      .subscribe();
+    typingChannelRef.current = typingChannel;
+
     return () => {
       cancelled = true;
+      typingChannelRef.current = null;
       supabase.removeChannel(threadsChannel);
       supabase.removeChannel(messagesChannel);
+      supabase.removeChannel(typingChannel);
     };
   }, [currentUserEmail, loadRemoteChat]);
 
@@ -41772,7 +41772,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
               <div className="min-w-0">
                 <h2 className="text-sm font-black text-[var(--svs-primary-strong)] sm:text-base">Conversations</h2>
                 <p className="truncate text-[10px] font-semibold text-[var(--svs-muted)]">
-                  {visibleThreads.length} {visibleThreads.length === 1 ? 'thread' : 'threads'} · <span className={isRemoteChatEnabled ? 'text-emerald-700' : 'text-amber-700'}>{isRemoteChatEnabled ? 'Live sync' : 'Local only'}</span>
+                  {visibleThreads.length} {visibleThreads.length === 1 ? 'thread' : 'threads'} · <span className={isRemoteChatEnabled ? 'text-emerald-700' : isChatSyncChecking ? 'text-sky-600' : 'text-amber-700'}>{isRemoteChatEnabled ? 'Live sync' : isChatSyncChecking ? 'Connecting…' : 'Local only'}</span>
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-1.5">
@@ -41922,8 +41922,8 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
                   </div>
                   <div className="flex-1 overflow-y-auto bg-[#f8fbff] p-4 sm:p-6">
                     <div className="mx-auto w-full max-w-2xl rounded-2xl border border-[#d6e6f5] bg-white p-4 shadow-sm sm:p-6">
-                  <p className={`text-[11px] font-semibold ${isRemoteChatEnabled ? 'text-emerald-700' : 'text-amber-700'}`}>
-                    {isRemoteChatEnabled ? 'Live sync: ON' : 'Live sync: OFF (local fallback)'}
+                  <p className={`text-[11px] font-semibold ${isRemoteChatEnabled ? 'text-emerald-700' : isChatSyncChecking ? 'text-sky-600' : 'text-amber-700'}`}>
+                    {isRemoteChatEnabled ? 'Live sync: ON' : isChatSyncChecking ? 'Connecting to live sync…' : 'Live sync: OFF (local fallback)'}
                   </p>
                   <p className={`mt-1 text-[11px] ${isRemoteChatEnabled ? 'text-emerald-700/90' : 'text-amber-700/90'}`}>
                     {remoteChatStatusMessage}
@@ -43177,10 +43177,18 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
                       value={draftMessage}
                       onChange={(event) => {
                         setDraftMessage(event.target.value);
-                        if (activeThread?.id && !isAgentThread) {
-                          broadcastTyping(activeThread.id);
+                        if (activeThread?.id && !isAgentThread && typingChannelRef.current) {
+                          typingChannelRef.current.send({
+                            type: 'broadcast', event: 'typing',
+                            payload: { email: currentUserEmail, threadId: activeThread.id },
+                          });
                           clearTimeout(typingTimeoutRef.current);
-                          typingTimeoutRef.current = setTimeout(() => broadcastTyping(null), 3000);
+                          typingTimeoutRef.current = setTimeout(() => {
+                            typingChannelRef.current?.send({
+                              type: 'broadcast', event: 'typing',
+                              payload: { email: currentUserEmail, threadId: null },
+                            });
+                          }, 3000);
                         }
                       }}
                       rows={1}
@@ -51903,7 +51911,7 @@ const App = () => {
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-[var(--svs-primary-strong)]">Update Available</p>
-          <p className="text-xs text-slate-500">A new version of SVS is ready to install.</p>
+          <p className="text-xs text-slate-500">A new version of SVS E-COMMERCE APP is ready to install.</p>
         </div>
         <button
           type="button"
