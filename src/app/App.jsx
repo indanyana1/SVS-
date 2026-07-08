@@ -7816,6 +7816,12 @@ const presenceOnlineEmails = new Set();
 const presenceListeners = new Set();
 let presenceChannel = null;
 let presenceCurrentEmail = '';
+// {email → threadId} — who is currently typing in which thread
+let presenceTypingMap = {};
+const presenceTypingListeners = new Set();
+const notifyPresenceTypingListeners = () => {
+  presenceTypingListeners.forEach((l) => { try { l({ ...presenceTypingMap }); } catch (_) { /* ignore */ } });
+};
 
 const notifyPresenceListeners = () => {
   presenceListeners.forEach((listener) => {
@@ -7827,6 +7833,7 @@ const recomputePresenceFromState = (state) => {
   const previouslyOnline = new Set(presenceOnlineEmails);
   presenceOnlineEmails.clear();
   const nowIso = new Date().toISOString();
+  const newTypingMap = {};
   Object.values(state || {}).forEach((entries) => {
     (entries || []).forEach((entry) => {
       const email = normalizeEmail(entry?.email || '');
@@ -7835,9 +7842,13 @@ const recomputePresenceFromState = (state) => {
         // Anyone we can see online is "seen" right now — keep it fresh so the
         // moment they drop off we already have an accurate last-seen.
         lastSeenCache.set(email, nowIso);
+        if (entry.typing) newTypingMap[email] = entry.typing;
       }
     });
   });
+  const prevJson = JSON.stringify(presenceTypingMap);
+  presenceTypingMap = newTypingMap;
+  if (JSON.stringify(newTypingMap) !== prevJson) notifyPresenceTypingListeners();
   // Anyone who was online a moment ago but isn't now just went offline.
   // Record their real last-seen from *our* vantage point (works even when
   // their own browser never wrote a heartbeat).
@@ -7889,6 +7900,18 @@ const joinPresence = (rawEmail) => {
   startLastSeenHeartbeat(email);
 };
 
+// Broadcast that the current user is typing in a specific thread.
+// Call with null / '' to clear the typing state (auto-cleared by the chat
+// input after 3 s of no keypress so it always expires naturally).
+const broadcastTyping = (threadId) => {
+  if (!presenceChannel || !presenceCurrentEmail) return;
+  presenceChannel.track({
+    email: presenceCurrentEmail,
+    online_at: new Date().toISOString(),
+    typing: threadId || null,
+  });
+};
+
 // React hook: subscribe to the live set of online emails.
 const usePresence = () => {
   const [onlineEmails, setOnlineEmails] = useState(() => new Set(presenceOnlineEmails));
@@ -7899,6 +7922,18 @@ const usePresence = () => {
     return () => { presenceListeners.delete(listener); };
   }, []);
   return onlineEmails;
+};
+
+// React hook: subscribe to the live typing map { email → threadId }.
+const useTyping = () => {
+  const [typingMap, setTypingMap] = useState(() => ({ ...presenceTypingMap }));
+  useEffect(() => {
+    const listener = (next) => setTypingMap(next);
+    presenceTypingListeners.add(listener);
+    setTypingMap({ ...presenceTypingMap });
+    return () => presenceTypingListeners.delete(listener);
+  }, []);
+  return typingMap;
 };
 
 // --- Last-seen heartbeat --------------------------------------------------
@@ -39182,6 +39217,8 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
   const prefillDraftMessageFromState = String(location.state?.draftMessage || '').trim();
   const currentUserEmail = normalizeEmail(getCurrentUserEmail()) || GUEST_ORDER_EMAIL;
   const onlineEmails = usePresence();
+  const typingMap = useTyping();
+  const typingTimeoutRef = useRef(null);
   // The SVS Agent is an always-available bot; everyone else must really be
   // connected (present in the Realtime presence channel) to show as online.
   const isUserOnline = useCallback((email) => {
@@ -43059,6 +43096,26 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
                     </div>
                   ) : null}
 
+                  {(() => {
+                    const cp = resolveCounterparty(activeThread);
+                    return cp?.email && typingMap[cp.email] === activeThread?.id ? (
+                      <div className="mb-1 flex items-center gap-2 px-1">
+                        <span className="flex items-center gap-0.5">
+                          {[0, 1, 2].map((i) => (
+                            <span
+                              key={i}
+                              className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--svs-primary)]"
+                              style={{ animation: `pulse 1.2s ease-in-out ${i * 0.25}s infinite` }}
+                            />
+                          ))}
+                        </span>
+                        <span className="text-xs italic text-[var(--svs-muted)]">
+                          {cp.name || 'Contact'} is typing…
+                        </span>
+                      </div>
+                    ) : null;
+                  })()}
+
                   {isRecordingVoice ? (
                     /* WhatsApp-style voice recording bar: cancel · timer ·
                        pause/resume · send. Replaces the text composer while
@@ -43118,7 +43175,14 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
                     <textarea
                       ref={draftTextareaRef}
                       value={draftMessage}
-                      onChange={(event) => setDraftMessage(event.target.value)}
+                      onChange={(event) => {
+                        setDraftMessage(event.target.value);
+                        if (activeThread?.id && !isAgentThread) {
+                          broadcastTyping(activeThread.id);
+                          clearTimeout(typingTimeoutRef.current);
+                          typingTimeoutRef.current = setTimeout(() => broadcastTyping(null), 3000);
+                        }
+                      }}
                       rows={1}
                       placeholder={isAgentThread ? 'Ask the SVS Agent anything about the site...' : 'Type your message here...'}
                       className="min-h-[40px] max-h-32 flex-1 resize-none border-0 bg-transparent px-2 py-2 text-sm text-[var(--svs-text)] outline-none placeholder:text-[var(--svs-muted)] sm:min-h-[44px]"
@@ -44188,12 +44252,24 @@ const getOrderDisplayMeta = (order) => {
   };
 };
 
+const DISPUTE_REASONS = [
+  { value: 'not_received', label: 'Item not received' },
+  { value: 'wrong_item', label: 'Wrong item delivered' },
+  { value: 'damaged', label: 'Item arrived damaged' },
+  { value: 'not_as_described', label: 'Not as described' },
+  { value: 'quality', label: 'Quality issue' },
+  { value: 'other', label: 'Other' },
+];
+
 const OrderCard = ({ order, onCancelOrder, cancellingOrderId, onSetCancelError, onAddToCart }) => {
   const navigate = useNavigate();
   const meta = getOrderDisplayMeta(order);
   const item = order.items?.[0];
   const existingReturn = useMemo(() => getReturnForOrder(order.id), [order.id]);
   const existingExchange = useMemo(() => getExchangeForOrder(order.id), [order.id]);
+  const [showDisputeModal, setShowDisputeModal] = useState(false);
+  const [disputeReason, setDisputeReason] = useState('not_received');
+  const [disputeNote, setDisputeNote] = useState('');
   if (!item) return null;
 
   const labelToneClass = meta.tone === 'cancelled'
@@ -44328,6 +44404,16 @@ const OrderCard = ({ order, onCancelOrder, cancellingOrderId, onSetCancelError, 
                 {isCancelling ? 'Cancelling...' : 'Cancel Order'}
               </button>
             ) : null}
+            {/* Dispute: available for processing / shipped / delivered orders. */}
+            {!canCancel && meta.tone !== 'cancelled' ? (
+              <button
+                type="button"
+                onClick={() => setShowDisputeModal(true)}
+                className="rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+              >
+                Dispute Order
+              </button>
+            ) : null}
             {/* Return / Exchange: only after successful delivery and within the return window. */}
             {existingReturn ? (
               <button
@@ -44366,6 +44452,76 @@ const OrderCard = ({ order, onCancelOrder, cancellingOrderId, onSetCancelError, 
           </div>
         </div>
       </div>
+      {showDisputeModal ? (
+        <div className="fixed inset-0 z-[9998] flex items-end justify-center bg-black/40 sm:items-center" onClick={() => setShowDisputeModal(false)}>
+          <div
+            className="w-full max-w-md rounded-t-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-2xl sm:rounded-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-base font-bold text-[var(--svs-primary-strong)]">Dispute Order</h3>
+            <p className="mt-1 text-xs text-[var(--svs-muted)]">
+              Ref: {order.reference} — we'll open a chat with the seller so this can be resolved.
+            </p>
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-[var(--svs-text)]">Reason</label>
+                <select
+                  value={disputeReason}
+                  onChange={(e) => setDisputeReason(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                >
+                  {DISPUTE_REASONS.map((r) => (
+                    <option key={r.value} value={r.value}>{r.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[var(--svs-text)]">Details <span className="font-normal text-[var(--svs-muted)]">(optional)</span></label>
+                <textarea
+                  value={disputeNote}
+                  onChange={(e) => setDisputeNote(e.target.value)}
+                  rows={3}
+                  placeholder="Describe what happened…"
+                  className="mt-1 w-full resize-none rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                />
+              </div>
+            </div>
+            <div className="mt-4 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowDisputeModal(false)}
+                className="flex-1 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] py-2.5 text-sm font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface)]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const reasonLabel = DISPUTE_REASONS.find((r) => r.value === disputeReason)?.label || disputeReason;
+                  const draft = `Dispute — ${reasonLabel}${disputeNote.trim() ? `\n\n${disputeNote.trim()}` : ''}`;
+                  setShowDisputeModal(false);
+                  navigate('/support/chat', {
+                    state: {
+                      recipientEmail: normalizeEmail(order.sellerEmail || order.items?.[0]?.sellerEmail || ''),
+                      recipientName: order.sellerName || order.items?.[0]?.sellerName || 'Seller',
+                      recipientRole: 'seller',
+                      orderId: order.id,
+                      orderReference: order.reference,
+                      issueType: 'Order Dispute',
+                      draftMessage: draft,
+                      itemTitle: order.items?.[0]?.title || '',
+                      itemKey: order.items?.[0]?.itemKey || order.items?.[0]?.id || '',
+                    },
+                  });
+                }}
+                className="flex-1 rounded-xl bg-rose-600 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-rose-700"
+              >
+                Open Dispute
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </article>
   );
 };
@@ -51084,6 +51240,9 @@ const App = () => {
   const handleUpdateSellerItem = useCallback(async (dbId, updates, newImageFiles) => {
     if (!hasSupabaseEnv || !supabase) return { error: 'Supabase is not configured.' };
     const sellerEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
+    // Snapshot old price before the update so we can detect a price drop.
+    const oldItem = sellerItems.find((item) => item.dbId === dbId);
+    const oldPrice = Number(oldItem?.price || 0);
 
     if (!sellerEmail) {
       return { error: 'You must be signed in to update this listing.' };
@@ -51176,8 +51335,48 @@ const App = () => {
       currentItems.map((item) => (item.dbId === dbId ? mapSellerItemRecord(data) : item)),
     );
 
+    // Notify wishlist and cart users when the price has dropped.
+    const newPrice = Number(updates.price || 0);
+    if (oldPrice > 0 && newPrice > 0 && newPrice < oldPrice && oldItem?.itemKey) {
+      const sym = getCurrencyDefinition(updates.currency || oldItem?.currency || 'ZAR').symbol;
+      const itemTitle = updates.title || oldItem?.title || '';
+      const itemHref = `${oldItem.route || '/e-commerce'}?focus=${encodeURIComponent(oldItem.itemKey)}`;
+      const dropMsg = `${itemTitle} dropped from ${sym}${oldPrice.toLocaleString()} to ${sym}${newPrice.toLocaleString()}`;
+
+      const [{ data: wishlistRows }, { data: cartRows }] = await Promise.all([
+        supabase.from(WISHLIST_ITEMS_TABLE).select('user_email').eq('item_key', oldItem.itemKey),
+        supabase.from(CART_ITEMS_TABLE).select('user_email').eq('item_key', oldItem.itemKey),
+      ]);
+
+      const notifiedEmails = new Set();
+      (wishlistRows || []).forEach((row) => {
+        const buyerEmail = normalizeEmail(row.user_email || '');
+        if (buyerEmail && buyerEmail !== sellerEmail && !notifiedEmails.has(buyerEmail)) {
+          notifiedEmails.add(buyerEmail);
+          pushNotificationToUser(buyerEmail, {
+            type: 'info',
+            title: 'Price drop on your wishlist!',
+            message: dropMsg,
+            href: itemHref,
+          });
+        }
+      });
+      (cartRows || []).forEach((row) => {
+        const buyerEmail = normalizeEmail(row.user_email || '');
+        if (buyerEmail && buyerEmail !== sellerEmail && !notifiedEmails.has(buyerEmail)) {
+          notifiedEmails.add(buyerEmail);
+          pushNotificationToUser(buyerEmail, {
+            type: 'info',
+            title: 'Price drop on your cart item!',
+            message: dropMsg,
+            href: itemHref,
+          });
+        }
+      });
+    }
+
     return { data };
-  }, []);
+  }, [sellerItems, pushNotificationToUser]);
 
   const handleUpdateOrderStatus = useCallback(async (orderId, nextStatus) => {
     if (!orderId || ![...ORDER_STATUS_FLOW, ...REFUND_STATUS_FLOW].includes(nextStatus)) {
