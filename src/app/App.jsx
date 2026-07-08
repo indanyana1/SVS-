@@ -51335,44 +51335,57 @@ const App = () => {
       currentItems.map((item) => (item.dbId === dbId ? mapSellerItemRecord(data) : item)),
     );
 
-    // Notify wishlist and cart users when the price has dropped.
+    // Sync cart prices and notify users when the seller changes the price.
     const newPrice = Number(updates.price || 0);
-    if (oldPrice > 0 && newPrice > 0 && newPrice < oldPrice && oldItem?.itemKey) {
-      const sym = getCurrencyDefinition(updates.currency || oldItem?.currency || 'ZAR').symbol;
+    if (oldPrice > 0 && newPrice > 0 && newPrice !== oldPrice && oldItem?.itemKey) {
+      const newCurrency = updates.currency || oldItem?.currency || 'ZAR';
+      const newPriceLabel = getSalePrices(updates.price, 0, newCurrency).nowPrice;
+      const sym = getCurrencyDefinition(newCurrency).symbol;
       const itemTitle = updates.title || oldItem?.title || '';
       const itemHref = `${oldItem.route || '/e-commerce'}?focus=${encodeURIComponent(oldItem.itemKey)}`;
-      const dropMsg = `${itemTitle} dropped from ${sym}${oldPrice.toLocaleString()} to ${sym}${newPrice.toLocaleString()}`;
 
-      const [{ data: wishlistRows }, { data: cartRows }] = await Promise.all([
-        supabase.from(WISHLIST_ITEMS_TABLE).select('user_email').eq('item_key', oldItem.itemKey),
-        supabase.from(CART_ITEMS_TABLE).select('user_email').eq('item_key', oldItem.itemKey),
-      ]);
+      // Update all cart rows to the new price so buyers see the correct total at checkout.
+      supabase
+        .from(CART_ITEMS_TABLE)
+        .update({ unit_price: newPrice, unit_price_label: newPriceLabel, updated_at: new Date().toISOString() })
+        .eq('item_key', oldItem.itemKey)
+        .then(() => {});
 
-      const notifiedEmails = new Set();
-      (wishlistRows || []).forEach((row) => {
-        const buyerEmail = normalizeEmail(row.user_email || '');
-        if (buyerEmail && buyerEmail !== sellerEmail && !notifiedEmails.has(buyerEmail)) {
-          notifiedEmails.add(buyerEmail);
-          pushNotificationToUser(buyerEmail, {
-            type: 'info',
-            title: 'Price drop on your wishlist!',
-            message: dropMsg,
-            href: itemHref,
-          });
-        }
-      });
-      (cartRows || []).forEach((row) => {
-        const buyerEmail = normalizeEmail(row.user_email || '');
-        if (buyerEmail && buyerEmail !== sellerEmail && !notifiedEmails.has(buyerEmail)) {
-          notifiedEmails.add(buyerEmail);
-          pushNotificationToUser(buyerEmail, {
-            type: 'info',
-            title: 'Price drop on your cart item!',
-            message: dropMsg,
-            href: itemHref,
-          });
-        }
-      });
+      // Only notify on price drops.
+      if (newPrice < oldPrice) {
+        const dropMsg = `${itemTitle} dropped from ${sym}${oldPrice.toLocaleString()} to ${sym}${newPrice.toLocaleString()}`;
+
+        const [{ data: wishlistRows }, { data: cartRows }] = await Promise.all([
+          supabase.from(WISHLIST_ITEMS_TABLE).select('user_email').eq('item_key', oldItem.itemKey),
+          supabase.from(CART_ITEMS_TABLE).select('user_email').eq('item_key', oldItem.itemKey),
+        ]);
+
+        const notifiedEmails = new Set();
+        (wishlistRows || []).forEach((row) => {
+          const buyerEmail = normalizeEmail(row.user_email || '');
+          if (buyerEmail && buyerEmail !== sellerEmail && !notifiedEmails.has(buyerEmail)) {
+            notifiedEmails.add(buyerEmail);
+            pushNotificationToUser(buyerEmail, {
+              type: 'info',
+              title: 'Price drop on your wishlist!',
+              message: dropMsg,
+              href: itemHref,
+            });
+          }
+        });
+        (cartRows || []).forEach((row) => {
+          const buyerEmail = normalizeEmail(row.user_email || '');
+          if (buyerEmail && buyerEmail !== sellerEmail && !notifiedEmails.has(buyerEmail)) {
+            notifiedEmails.add(buyerEmail);
+            pushNotificationToUser(buyerEmail, {
+              type: 'info',
+              title: 'Price drop on your cart item!',
+              message: dropMsg,
+              href: itemHref,
+            });
+          }
+        });
+      }
     }
 
     return { data };
