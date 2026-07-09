@@ -49658,7 +49658,7 @@ const SiteFooter = () => {
             <img
               src={logo}
               alt="SVS E-Commerce logo"
-              className="mt-3 h-10 w-10 rounded-lg object-cover sm:mt-6 sm:h-16 sm:w-16"
+              className="mt-3 h-10 w-10 rounded-lg object-contain sm:mt-6 sm:h-16 sm:w-16"
             />
           </Link>
 
