@@ -1574,61 +1574,61 @@ const homeHeroSlides = [
     id: 'hero-1',
     image:
       'https://images.pexels.com/photos/6169668/pexels-photo-6169668.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'Trending Fashion',
-    title: 'Fashion Forward Collection',
-    subtitle: 'Trending styles for the modern you',
+    label: 'APPAREL',
+    title: 'Fashion & Style',
+    subtitle: 'Trending clothing, shoes & accessories',
     route: '/fashion-style',
   },
   {
     id: 'hero-2',
     image:
       'https://images.pexels.com/photos/356056/pexels-photo-356056.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'Smart Tech Deals',
+    label: 'LIFESTYLE TECH',
     title: 'Electronics & Gadgets',
-    subtitle: 'Latest devices at unbeatable prices',
+    subtitle: 'Tech gadgets, software bundles & secure electronics',
     route: '/hardware-software',
   },
   {
     id: 'hero-3',
     image:
       'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'Fresh & Fast',
+    label: 'GROCERY',
     title: 'Groceries & Fresh Produce',
-    subtitle: 'Farm-fresh essentials delivered to your door',
+    subtitle: 'Fresh produce & everyday essentials delivered',
     route: '/groceries',
   },
   {
     id: 'hero-4',
     image:
       'https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'Order Now',
+    label: 'FAST FOOD',
     title: 'Fast Food & Takeaway',
-    subtitle: 'Your favourite meals ready in minutes',
+    subtitle: 'Hot meals delivered fast & fresh',
     route: '/fast-food',
   },
   {
     id: 'hero-5',
     image:
       'https://images.pexels.com/photos/2747449/pexels-photo-2747449.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'Live Events',
+    label: 'BOOK TICKET',
     title: 'Tickets & Entertainment',
-    subtitle: 'Book concerts, sports, and showbiz events',
+    subtitle: 'Events, travel & experience bookings',
     route: '/tickets',
   },
   {
     id: 'hero-6',
     image:
       'https://images.pexels.com/photos/3735149/pexels-photo-3735149.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'Self-Care',
-    title: 'Wellness & Beauty',
-    subtitle: 'Premium health & beauty products for a healthier lifestyle',
+    label: 'PHARMACEUTICS',
+    title: 'Wellness & Pharmaceutics',
+    subtitle: 'Pharmacy, health & wellness products',
     route: '/wellness',
   },
   {
     id: 'hero-7',
     image:
       'https://images.pexels.com/photos/1283219/pexels-photo-1283219.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'Sip & Celebrate',
+    label: 'DRINKS',
     title: 'Beverages & Liquors',
     subtitle: 'Wines, spirits & refreshing drinks delivered',
     route: '/beverages-liquors',
@@ -1637,17 +1637,17 @@ const homeHeroSlides = [
     id: 'hero-8',
     image:
       'https://images.pexels.com/photos/1249611/pexels-photo-1249611.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'Build It Right',
+    label: 'HARDWARE',
     title: 'Building & Construction Tools',
-    subtitle: 'Tools & materials for every project',
+    subtitle: 'Tools & materials for every build',
     route: '/building-construction-tools',
   },
   {
     id: 'hero-9',
     image:
       'https://images.pexels.com/photos/120049/pexels-photo-120049.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'On the Move',
-    title: 'Mobility & Vehicles',
+    label: 'AUTOMOBILITY',
+    title: 'Automobility & Vehicles',
     subtitle: 'Cars, bikes & mobility solutions',
     route: '/mobility-vehicles',
   },
@@ -1655,16 +1655,16 @@ const homeHeroSlides = [
     id: 'hero-10',
     image:
       'https://images.pexels.com/photos/2101137/pexels-photo-2101137.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'Raw Materials',
-    title: 'Natural Resources and Minerals Exchange',
-    subtitle: 'Quality raw materials sourced responsibly',
+    label: 'EARTH-RESOURCES',
+    title: 'Natural Resources & Minerals',
+    subtitle: 'Quality raw materials & minerals sourced responsibly',
     route: '/natural-resources-minerals',
   },
   {
     id: 'hero-11',
     image:
       'https://images.pexels.com/photos/3846022/pexels-photo-3846022.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'On-Demand Help',
+    label: 'BOOK SERVICE',
     title: 'Book @ Home-Care Services',
     subtitle: 'Trusted cleaning, laundry & home essentials',
     route: '/home-care',
@@ -1673,8 +1673,8 @@ const homeHeroSlides = [
     id: 'hero-12',
     image:
       'https://images.pexels.com/photos/1444416/pexels-photo-1444416.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'Shop Everything',
-    title: 'Lifestyle and Tech Essentials',
+    label: 'LIFESTYLE TECH',
+    title: 'Lifestyle Tech Essentials',
     subtitle: 'Lifestyle picks & tech essentials in one place',
     route: '/e-commerce',
   },
@@ -1682,16 +1682,16 @@ const homeHeroSlides = [
     id: 'hero-13',
     image:
       'https://images.pexels.com/photos/906150/pexels-photo-906150.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'Natural Remedies',
-    title: 'Traditional Medicines and Herbs',
-    subtitle: 'Authentic herbs & natural wellness',
+    label: 'ANCIENT REMEDIES',
+    title: 'Traditional Medicines & Herbs',
+    subtitle: 'Authentic herbs & natural remedies',
     route: '/traditional-medicines-herbs',
   },
   {
     id: 'hero-14',
     image:
       'https://images.pexels.com/photos/422218/pexels-photo-422218.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'Farm Trade',
+    label: 'LIVESTOCK',
     title: 'Livestock Hub',
     subtitle: 'Buy & sell livestock with confidence',
     route: '/livestock-hub',
@@ -1700,17 +1700,17 @@ const homeHeroSlides = [
     id: 'hero-15',
     image:
       'https://images.pexels.com/photos/6664248/pexels-photo-6664248.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'Play & Win',
+    label: 'GAMES',
     title: 'Betting, Lottery & Games',
-    subtitle: 'Predict, play & win big rewards',
+    subtitle: 'Play, predict & win big rewards',
     route: '/betting-lottery-games',
   },
   {
     id: 'hero-16',
     image:
       'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'Find Your Space',
-    title: 'Property Marketplace',
+    label: 'PROPERTY',
+    title: 'Property Hub',
     subtitle: 'Homes, rentals & commercial spaces',
     route: '/property-hub',
   },
@@ -1718,7 +1718,7 @@ const homeHeroSlides = [
     id: 'hero-17',
     image:
       'https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'Pre-Loved Finds',
+    label: 'USED ITEMS',
     title: 'SecondHand Central',
     subtitle: 'Quality pre-loved goods at great prices',
     route: '/secondhand-central',
@@ -1727,8 +1727,8 @@ const homeHeroSlides = [
     id: 'hero-18',
     image:
       'https://images.pexels.com/photos/6444/pencil-typography-black-design.jpg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'Work & Study',
-    title: 'Stationery and Office Supplies',
+    label: 'STATIONERY',
+    title: 'Stationery & Office Supplies',
     subtitle: 'Office, school & creative supplies',
     route: '/stationery-office',
   },
@@ -4366,7 +4366,16 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
                   <p className="flex items-center gap-2 text-sm text-[#374151]"><Star className="h-4 w-4 fill-[#FBBF24] text-[#FBBF24]" /> 4.8 (145 reviews)</p>
                   <button
                     type="button"
-                    onClick={() => navigate(`/home-care/provider/${provider.id}`)}
+                    onClick={() => {
+                      recordRecentlyViewed({
+                        id: provider.id,
+                        title: provider.name || 'Home-Care Provider',
+                        image: provider.image || '',
+                        route: '/home-care',
+                        marketKey: 'homeCare',
+                      });
+                      navigate(`/home-care/provider/${provider.id}`);
+                    }}
                     className="mt-1 h-12 w-full rounded-lg bg-[#0f9fb2] text-sm font-medium text-white transition hover:bg-[#0d8a9c]"
                   >
                     View Profile
@@ -18693,6 +18702,13 @@ const HomeCarePage = ({ sellerItems = [] }) => {
   ]);
 
   const handleOpenProvider = (provider) => {
+    recordRecentlyViewed({
+      id: provider.id,
+      title: provider.name || provider.title || 'Home-Care Provider',
+      image: provider.image || '',
+      route: '/home-care',
+      marketKey: 'homeCare',
+    });
     navigate(`/home-care/provider/${provider.id}`);
   };
 
@@ -22942,7 +22958,16 @@ const GeneralLabourPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIt
   // Worker profiles get their own dedicated page (Hero, About, Skills &
   // Services, Available Days, Pricing tiers, Reviews, Similar Workers)
   // rather than the shared item-details modal other markets use.
-  const openItemDetails = (item) => navigate(`/general-labour-market/worker/${item.id}`);
+  const openItemDetails = (item) => {
+    recordRecentlyViewed({
+      id: item.id,
+      title: item.title || item.name || 'Worker',
+      image: item.image || item.photo || '',
+      route: '/general-labour-market',
+      marketKey: 'generalLabour',
+    });
+    navigate(`/general-labour-market/worker/${item.id}`);
+  };
 
   // Lets a `?focus=<id>` link (e.g. from the Trending carousel) jump
   // straight to a worker's profile page, whether that's a catalog profile
@@ -35169,11 +35194,12 @@ const TrendingSellerHero = ({ items }) => {
                 aria-hidden="true"
               />
               <div className="relative z-10 mx-auto flex h-full max-w-md flex-col items-center justify-center gap-1.5 px-12 pb-14 pt-6 text-center">
-                <span className="inline-flex max-w-full items-center gap-1 truncate rounded-full border border-white/30 bg-white/15 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
-                  <Sparkles className="h-3 w-3 shrink-0" />
-                  <span className="truncate">
-                    {t('marketsPage.trending.badge', { defaultValue: 'Trending' })}
-                    {' • '}
+                <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-white/30 bg-white/15 px-3 py-1 backdrop-blur-sm">
+                  <Sparkles className="h-3 w-3 shrink-0 text-yellow-300" />
+                  <span className="text-[9px] font-black uppercase tracking-widest text-yellow-300">
+                    Trending Markets:
+                  </span>
+                  <span className="truncate text-[9px] font-bold uppercase tracking-wide text-white">
                     {marketLabel}
                   </span>
                 </span>
@@ -35852,15 +35878,6 @@ const WishlistShareModal = ({ open, onClose, wishlistItems = [] }) => {
     }
   }, [handleCopy, shareText, shareTitle, shareUrl]);
 
-  const whatsappHref = useMemo(() => (shareUrl ? `https://wa.me/?text=${encodeURIComponent(`${shareText}\n${shareUrl}`)}` : '#'), [shareText, shareUrl]);
-  const emailHref = useMemo(() => {
-    if (!shareUrl) return '#';
-    const subject = encodeURIComponent(shareTitle);
-    const body = encodeURIComponent(`${shareText}\n\n${shareUrl}`);
-    return `mailto:?subject=${subject}&body=${body}`;
-  }, [shareText, shareTitle, shareUrl]);
-  const smsHref = useMemo(() => (shareUrl ? `sms:?&body=${encodeURIComponent(`${shareText}\n${shareUrl}`)}` : '#'), [shareText, shareUrl]);
-  const telegramHref = useMemo(() => (shareUrl ? `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}` : '#'), [shareText, shareUrl]);
 
   if (!open) return null;
   return (
@@ -35960,53 +35977,6 @@ const WishlistShareModal = ({ open, onClose, wishlistItems = [] }) => {
             <Share2 className="h-4 w-4" aria-hidden="true" />
             Share to any app
           </button>
-          <p className="mt-2 text-center text-[10px] font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Or share directly via</p>
-          <div className="mt-2 grid grid-cols-4 gap-2">
-          <a
-            href={whatsappHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-disabled={wishlistItems.length === 0}
-            onClick={(e) => { if (wishlistItems.length === 0) e.preventDefault(); }}
-            className={`inline-flex flex-col items-center justify-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-2 text-[11px] font-bold text-emerald-700 transition hover:bg-emerald-100 ${wishlistItems.length === 0 ? 'opacity-50' : ''}`}
-            title="Share on WhatsApp"
-          >
-            <MessageCircle className="h-4 w-4" aria-hidden="true" />
-            WhatsApp
-          </a>
-          <a
-            href={emailHref}
-            aria-disabled={wishlistItems.length === 0}
-            onClick={(e) => { if (wishlistItems.length === 0) e.preventDefault(); }}
-            className={`inline-flex flex-col items-center justify-center gap-1 rounded-md border border-cyan-200 bg-cyan-50 px-2 py-2 text-[11px] font-bold text-cyan-800 transition hover:bg-cyan-100 ${wishlistItems.length === 0 ? 'opacity-50' : ''}`}
-            title="Share by email"
-          >
-            <Mail className="h-4 w-4" aria-hidden="true" />
-            Email
-          </a>
-          <a
-            href={smsHref}
-            aria-disabled={wishlistItems.length === 0}
-            onClick={(e) => { if (wishlistItems.length === 0) e.preventDefault(); }}
-            className={`inline-flex flex-col items-center justify-center gap-1 rounded-md border border-violet-200 bg-violet-50 px-2 py-2 text-[11px] font-bold text-violet-700 transition hover:bg-violet-100 ${wishlistItems.length === 0 ? 'opacity-50' : ''}`}
-            title="Share by SMS"
-          >
-            <Smartphone className="h-4 w-4" aria-hidden="true" />
-            SMS
-          </a>
-          <a
-            href={telegramHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-disabled={wishlistItems.length === 0}
-            onClick={(e) => { if (wishlistItems.length === 0) e.preventDefault(); }}
-            className={`inline-flex flex-col items-center justify-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-2 py-2 text-[11px] font-bold text-sky-700 transition hover:bg-sky-100 ${wishlistItems.length === 0 ? 'opacity-50' : ''}`}
-            title="Share on Telegram"
-          >
-            <Send className="h-4 w-4" aria-hidden="true" />
-            Telegram
-          </a>
-          </div>
         </div>
       </div>
     </div>
@@ -37040,6 +37010,32 @@ const UserProfileLinkPage = () => {
   );
 };
 
+const CartQtyInput = ({ quantity, onChange }) => {
+  const [draft, setDraft] = useState(String(quantity));
+  useEffect(() => { setDraft(String(quantity)); }, [quantity]);
+  const commit = () => {
+    const parsed = parseInt(draft, 10);
+    if (!isNaN(parsed) && parsed >= 1) {
+      onChange(Math.min(99, Math.max(1, parsed)));
+    } else {
+      setDraft(String(quantity));
+    }
+  };
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      value={draft}
+      onChange={(e) => setDraft(e.target.value.replace(/[^0-9]/g, ''))}
+      onBlur={commit}
+      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+      className="w-10 bg-transparent text-center text-sm font-semibold text-[var(--svs-text)] focus:outline-none"
+      aria-label="Item quantity"
+    />
+  );
+};
+
 const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemoveCartItem, onClearBuyNowCheckout }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -37506,25 +37502,26 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
                   </p>
 
                   {isCartMode ? (
-                    <div className="mt-3 flex items-center gap-3">
-                      <div className="inline-flex items-center rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface-soft)]">
+                    <div className="mt-3 flex items-center">
+                      <div className="inline-flex items-center overflow-hidden rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface-soft)]">
                         <button
                           type="button"
                           onClick={() => handleQtyChange(item, item.quantity - 1)}
                           disabled={item.quantity <= 1}
                           aria-label="Decrease quantity"
-                          className="h-8 w-8 rounded-full text-base font-bold text-[var(--svs-text)] transition hover:text-[var(--svs-primary)] disabled:cursor-not-allowed disabled:opacity-40"
+                          className="h-10 w-12 text-lg font-bold text-[var(--svs-text)] transition hover:bg-[var(--svs-border)]/30 hover:text-[var(--svs-primary)] disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           −
                         </button>
-                        <span className="min-w-[2ch] text-center text-sm font-semibold text-[var(--svs-text)]">
-                          {item.quantity}
-                        </span>
+                        <CartQtyInput
+                          quantity={item.quantity}
+                          onChange={(nextQty) => handleQtyChange(item, nextQty)}
+                        />
                         <button
                           type="button"
                           onClick={() => handleQtyChange(item, item.quantity + 1)}
                           aria-label="Increase quantity"
-                          className="h-8 w-8 rounded-full text-base font-bold text-[var(--svs-text)] transition hover:text-[var(--svs-primary)]"
+                          className="h-10 w-12 text-lg font-bold text-[var(--svs-text)] transition hover:bg-[var(--svs-border)]/30 hover:text-[var(--svs-primary)]"
                         >
                           +
                         </button>
@@ -37532,7 +37529,7 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
                       <button
                         type="button"
                         onClick={() => handleRemove(item)}
-                        className="text-xs font-semibold text-[var(--svs-muted)] underline-offset-2 transition hover:text-[#d94d4d] hover:underline"
+                        className="ml-auto text-xs font-semibold text-[var(--svs-muted)] underline-offset-2 transition hover:text-[#d94d4d] hover:underline"
                       >
                         Remove
                       </button>
@@ -46576,12 +46573,41 @@ const MarketShowcase = ({
   </section>
 );
 
+// Lightweight helper so any market page that navigates to its own detail
+// sub-page (instead of using the shared item-details modal) can still write
+// a Recently Viewed entry. Mirrors the exact format that handleOpenItemDetails
+// uses so the strip renders them identically.
+const recordRecentlyViewed = ({ id, title, image, route, marketKey }) => {
+  if (typeof window === 'undefined' || !id) return;
+  try {
+    const strId = String(id);
+    const summary = {
+      id: strId,
+      title: title || 'Item',
+      image: image || '',
+      route: route || '',
+      marketKey: marketKey || '',
+      openUrl: (route && strId) ? `${route}?focus=${encodeURIComponent(strId)}` : '',
+      viewedAt: Date.now(),
+    };
+    const raw = window.localStorage.getItem('svs-recently-viewed');
+    let list = [];
+    try { list = raw ? JSON.parse(raw) : []; } catch (_e) { list = []; }
+    const cleaned = (Array.isArray(list) ? list : []).filter((x) => String(x.id) !== strId);
+    window.localStorage.setItem('svs-recently-viewed', JSON.stringify([summary, ...cleaned].slice(0, 12)));
+    window.dispatchEvent(new CustomEvent('svs-recently-viewed-updated'));
+  } catch (_e) { /* ignore storage failures */ }
+};
+
 // "Recently viewed" horizontal strip — fed by handleOpenItemDetails which
 // pushes a summary of every item the buyer opens. Returns null when the
 // list is empty so it never adds visual noise to first-time visitors.
+const RECENTLY_VIEWED_AUTO_SCROLL_THRESHOLD = 4;
 const RecentlyViewedStrip = () => {
   const navigate = useNavigate();
   const [items, setItems] = useState([]);
+  const scrollRef = useRef(null);
+  const animFrameRef = useRef(null);
 
   useEffect(() => {
     const read = () => {
@@ -46589,11 +46615,9 @@ const RecentlyViewedStrip = () => {
       try {
         const raw = window.localStorage.getItem('svs-recently-viewed');
         const parsed = raw ? JSON.parse(raw) : [];
-        // Only show items that have a valid openUrl or route so old items
-        // stored before the routing fix don't appear with broken navigation.
         const valid = (Array.isArray(parsed) ? parsed : [])
           .filter((item) => item.openUrl || item.route);
-        setItems(valid.slice(0, 12));
+        setItems(valid.slice(0, 20));
       } catch (_e) {
         setItems([]);
       }
@@ -46609,13 +46633,42 @@ const RecentlyViewedStrip = () => {
     };
   }, []);
 
+  // Auto-scroll right→left when items exceed the threshold. Pauses on
+  // hover / touch so the user can read or tap a card without fighting the animation.
+  const isMany = items.length > RECENTLY_VIEWED_AUTO_SCROLL_THRESHOLD;
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!isMany || !container) return undefined;
+    let active = true;
+    const tick = () => {
+      if (!active) return;
+      container.scrollLeft += 0.6;
+      if (container.scrollLeft + container.clientWidth >= container.scrollWidth - 1) {
+        container.scrollLeft = 0;
+      }
+      animFrameRef.current = requestAnimationFrame(tick);
+    };
+    animFrameRef.current = requestAnimationFrame(tick);
+    const pause = () => { active = false; cancelAnimationFrame(animFrameRef.current); };
+    const resume = () => { if (!active) { active = true; animFrameRef.current = requestAnimationFrame(tick); } };
+    container.addEventListener('mouseenter', pause);
+    container.addEventListener('mouseleave', resume);
+    container.addEventListener('touchstart', pause, { passive: true });
+    container.addEventListener('touchend', resume, { passive: true });
+    return () => {
+      active = false;
+      cancelAnimationFrame(animFrameRef.current);
+      container.removeEventListener('mouseenter', pause);
+      container.removeEventListener('mouseleave', resume);
+      container.removeEventListener('touchstart', pause);
+      container.removeEventListener('touchend', resume);
+    };
+  }, [isMany, items.length]);
+
   if (!items.length) return null;
 
   const handleOpen = (item) => {
-    if (item.openUrl) {
-      navigate(item.openUrl);
-      return;
-    }
+    if (item.openUrl) { navigate(item.openUrl); return; }
     const route = item.route || sellerMarketConfig[item.marketKey || '']?.route || '';
     if (route && item.id) {
       navigate(`${route}?focus=${encodeURIComponent(item.id)}`);
@@ -46624,7 +46677,19 @@ const RecentlyViewedStrip = () => {
     }
   };
 
-  const handleClear = () => {
+  const handleRemoveOne = (itemId) => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = window.localStorage.getItem('svs-recently-viewed');
+      const parsed = raw ? JSON.parse(raw) : [];
+      const next = (Array.isArray(parsed) ? parsed : []).filter((i) => i.id !== itemId);
+      window.localStorage.setItem('svs-recently-viewed', JSON.stringify(next));
+    } catch (_) { /* ignore */ }
+    setItems((prev) => prev.filter((i) => i.id !== itemId));
+    window.dispatchEvent(new CustomEvent('svs-recently-viewed-updated'));
+  };
+
+  const handleClearAll = () => {
     if (typeof window === 'undefined') return;
     window.localStorage.removeItem('svs-recently-viewed');
     setItems([]);
@@ -46636,52 +46701,78 @@ const RecentlyViewedStrip = () => {
       <div className="mx-auto w-full max-w-7xl">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-[var(--svs-text)] sm:text-xl">Recently viewed</h2>
+            <h2 className="text-lg font-bold text-[var(--svs-text)] sm:text-xl">
+              Recently viewed
+              <span className="ml-2 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--svs-primary)] px-1.5 text-[10px] font-bold text-white">
+                {items.length}
+              </span>
+            </h2>
             <p className="mt-0.5 text-xs text-[var(--svs-muted)]">Pick up right where you left off.</p>
           </div>
           <button
             type="button"
-            onClick={handleClear}
-            className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-1.5 text-[11px] font-semibold text-[var(--svs-muted)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
+            onClick={handleClearAll}
+            className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-1.5 text-[11px] font-semibold text-[var(--svs-muted)] transition hover:border-rose-400 hover:text-rose-500"
           >
-            Clear
+            Clear all
           </button>
         </div>
-        <div className="mt-4 -mx-1 flex gap-3 overflow-x-auto px-1 pb-2 [scrollbar-width:thin]">
+
+        {/* Scroll container — static flex wrap when few items, auto-scrolling row when many */}
+        <div
+          ref={scrollRef}
+          className={`mt-4 -mx-1 px-1 pb-2 ${isMany
+            ? 'flex gap-3 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+            : 'flex flex-wrap gap-3'}`}
+        >
           {items.map((item) => (
-            <button
+            <div
               key={item.id}
-              type="button"
-              onClick={() => handleOpen(item)}
-              className="group flex w-[148px] shrink-0 flex-col overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] text-left shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition hover:-translate-y-0.5 hover:border-[var(--svs-primary)] hover:shadow-md sm:w-[168px]"
+              className="group relative flex w-[148px] shrink-0 flex-col overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] text-left shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition hover:-translate-y-0.5 hover:border-[var(--svs-primary)] hover:shadow-md sm:w-[168px]"
             >
-              <div className="aspect-square w-full bg-[var(--svs-surface-soft)]">
-                {item.image ? (
-                  <img src={item.image} alt={item.title} loading="lazy" className="h-full w-full object-cover transition group-hover:scale-105" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-[var(--svs-muted)]">
-                    <Package className="h-8 w-8" />
-                  </div>
-                )}
-              </div>
-              <div className="p-2.5">
-                <p className="line-clamp-2 text-xs font-semibold text-[var(--svs-text)]">{item.title}</p>
-                {Number(item.price) > 0 ? (
-                  <p className="mt-1 text-sm font-bold text-[var(--svs-primary-strong)]">
-                    {formatAmountInCurrency(Number(item.price) || 0, item.currency || 'USD')}
-                  </p>
-                ) : null}
-                {item.viewedAt ? (
-                  <p className="mt-1.5 text-[9px] leading-tight text-[var(--svs-muted)]">
-                    {(() => {
-                      const d = new Date(item.viewedAt);
-                      const pad = (n) => String(n).padStart(2, '0');
-                      return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-                    })()}
-                  </p>
-                ) : null}
-              </div>
-            </button>
+              {/* Per-item remove button */}
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); handleRemoveOne(item.id); }}
+                aria-label={`Remove ${item.title}`}
+                className="absolute right-1.5 top-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100"
+              >
+                <X className="h-3 w-3" aria-hidden="true" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleOpen(item)}
+                className="flex flex-1 flex-col text-left"
+              >
+                <div className="aspect-square w-full bg-[var(--svs-surface-soft)]">
+                  {item.image ? (
+                    <img src={item.image} alt={item.title} loading="lazy" className="h-full w-full object-cover transition group-hover:scale-105" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-[var(--svs-muted)]">
+                      <Package className="h-8 w-8" />
+                    </div>
+                  )}
+                </div>
+                <div className="p-2.5">
+                  <p className="line-clamp-2 text-xs font-semibold text-[var(--svs-text)]">{item.title}</p>
+                  {Number(item.price) > 0 ? (
+                    <p className="mt-1 text-sm font-bold text-[var(--svs-primary-strong)]">
+                      {formatAmountInCurrency(Number(item.price) || 0, item.currency || 'USD')}
+                    </p>
+                  ) : null}
+                  {item.viewedAt ? (
+                    <p className="mt-1.5 text-[9px] leading-tight text-[var(--svs-muted)]">
+                      {(() => {
+                        const d = new Date(item.viewedAt);
+                        const pad = (n) => String(n).padStart(2, '0');
+                        return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+                      })()}
+                    </p>
+                  ) : null}
+                </div>
+              </button>
+            </div>
           ))}
         </div>
       </div>
@@ -49175,9 +49266,25 @@ const SecondHandProductDetailPage = ({ onAddToCart, onBuyNow, onToggleWishlist, 
                 {product.seller.type} &bull; {product.seller.location}
               </p>
             </div>
-            <button type="button" className={`${cudyBluePrimaryButtonClassName} w-full rounded-lg bg-[#0f766e] py-3.5 text-[15px] font-semibold text-white transition hover:bg-[#0d6357] sm:w-auto sm:px-8`}>
-              Contact Seller
-            </button>
+            <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+              <button
+                type="button"
+                onClick={() => navigate('/support/chat')}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-[#0f766e] bg-[#0f766e] px-5 py-3 text-[14px] font-semibold text-white transition hover:bg-[#0d6357] sm:flex-none"
+              >
+                <MessageCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                Let&rsquo;s Talk For More Info
+              </button>
+              {product.seller.phone ? (
+                <a
+                  href={`tel:${product.seller.phone}`}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-5 py-3 text-[14px] font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-border)]/40 sm:flex-none"
+                >
+                  <Phone className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  Call
+                </a>
+              ) : null}
+            </div>
           </div>
         </section>
       ) : null}
@@ -49682,7 +49789,7 @@ const InstallAppBanner = () => {
         <div className="flex items-center gap-2">
           <Smartphone className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" aria-hidden="true" />
           <p className="text-[11px] font-semibold leading-tight sm:text-xs">
-            Install the SVS app for a faster, full-screen shopping &amp; chat experience.
+            Install the SVS E-COMMERCE APP for a faster, full-screen shopping &amp; chat experience.
           </p>
         </div>
         <button
