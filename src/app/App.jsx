@@ -1681,7 +1681,7 @@ const homeHeroSlides = [
   {
     id: 'hero-13',
     image:
-      'https://images.pexels.com/photos/906150/pexels-photo-906150.jpeg?auto=compress&cs=tinysrgb&w=1920',
+      'https://images.pexels.com/photos/5480192/pexels-photo-5480192.jpeg?auto=compress&cs=tinysrgb&w=1920',
     label: 'ANCIENT REMEDIES',
     title: 'Traditional Medicines & Herbs',
     subtitle: 'Authentic herbs & natural remedies',
@@ -35047,7 +35047,7 @@ const MARKETS_HERO_SLIDES = [
   'https://images.pexels.com/photos/2101137/pexels-photo-2101137.jpeg?auto=compress&cs=tinysrgb&w=1600',
   'https://images.pexels.com/photos/159211/headache-pain-pills-medication-159211.jpeg?auto=compress&cs=tinysrgb&w=1600',
   'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=1600',
-  'https://images.pexels.com/photos/906150/pexels-photo-906150.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  'https://images.pexels.com/photos/5480192/pexels-photo-5480192.jpeg?auto=compress&cs=tinysrgb&w=1600',
   'https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=1600',
 ];
 
@@ -35431,7 +35431,7 @@ const MarketsPage = ({ sellerItems = [] }) => {
             // Dramatic dusk/night property exterior
             ? 'https://images.pexels.com/photos/1732414/pexels-photo-1732414.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isHerbs
-            ? 'https://images.pexels.com/photos/906150/pexels-photo-906150.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            ? 'https://images.pexels.com/photos/5480192/pexels-photo-5480192.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isSecondhand
             ? 'https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isBeautyFitnessSports
