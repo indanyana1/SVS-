@@ -6769,8 +6769,7 @@ const footerLinks = {
     { labelKey: 'footer.blog', href: '/blog' },
   ],
   support: [
-    { labelKey: 'footer.help', href: '/support/chat' },
-    { labelKey: 'footer.contact', href: '/contact' },
+    { labelKey: 'footer.help', href: '/support/chat', state: { recipientEmail: 'support@svs.app', recipientName: 'SVS Agent' } },
     { labelKey: 'footer.terms', href: '/terms' },
     { labelKey: 'footer.privacy', href: '/privacy' },
     { labelKey: 'footer.refunds', href: '/refunds' },
@@ -49644,26 +49643,24 @@ const SiteFooter = () => {
             <ul className="mt-1.5 space-y-1 text-[9px] sm:mt-4 sm:space-y-2 sm:text-sm">
               {footerLinks.support.map((item) => (
                 <li key={item.href}>
-                  <Link to={item.href} className="text-slate-200 transition hover:text-white hover:underline">{t(item.labelKey)}</Link>
+                  <Link to={item.href} state={item.state} className="text-slate-200 transition hover:text-white hover:underline">{t(item.labelKey)}</Link>
                 </li>
               ))}
             </ul>
           </div>
 
           {/* Column 2 – Brand */}
-          <div>
+          <Link to="/markets" aria-label="Go to Markets" className="block transition hover:opacity-80">
             <h3 className="text-[10px] font-bold sm:whitespace-nowrap sm:text-xl">SVS E-Commerce</h3>
             <ul className="mt-1.5 space-y-1 text-[9px] leading-snug text-slate-200 sm:mt-3 sm:space-y-2 sm:text-base">
               <li>{t('site.tagline', { defaultValue: 'Your one-stop marketplace for everything you need – from groceries to tickets!' })}</li>
             </ul>
-            <Link to="/markets" aria-label="Go to Markets">
-              <img
-                src={logo}
-                alt="SVS E-Commerce logo"
-                className="mt-3 h-10 w-10 rounded-lg object-cover transition hover:opacity-80 sm:mt-6 sm:h-16 sm:w-16"
-              />
-            </Link>
-          </div>
+            <img
+              src={logo}
+              alt="SVS E-Commerce logo"
+              className="mt-3 h-10 w-10 rounded-lg object-cover sm:mt-6 sm:h-16 sm:w-16"
+            />
+          </Link>
 
           {/* Column 3 – Subscribe to Offers */}
           <div>
