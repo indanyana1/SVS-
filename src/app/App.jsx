@@ -39174,6 +39174,35 @@ const buildReplySnippetFromBody = (rawBody) => {
 // helper above can run without entering the React component.
 const SVS_CARD_PREFIX_FALLBACK = '[svs-card]';
 
+const formatLastMessagePreview = (raw) => {
+  if (!raw) return '';
+  const body = String(raw);
+  if (!body.startsWith(SVS_CARD_PREFIX_FALLBACK)) return body;
+  try {
+    const card = JSON.parse(body.slice(SVS_CARD_PREFIX_FALLBACK.length));
+    switch (card.type) {
+      case 'product-digest':
+        return `🛍️ ${card.total || card.products?.length || ''} product offer${(card.total || 0) !== 1 ? 's' : ''} across ${card.totalMarkets || ''} market${(card.totalMarkets || 0) !== 1 ? 's' : ''}`;
+      case 'offer':
+        return `🤝 Offer: ${card.currency || ''}${card.amount ? Number(card.amount).toLocaleString() : ''}${card.note ? ` — ${card.note}` : ''}`;
+      case 'voice':
+        return `🎤 Voice note${card.durationSec ? ` (${card.durationSec}s)` : ''}`;
+      case 'video':
+        return `🎥 Video message${card.durationSec ? ` (${card.durationSec}s)` : ''}`;
+      case 'image':
+        return `📷 Photo${card.name ? `: ${card.name}` : ''}`;
+      case 'document':
+        return `📄 ${card.name || 'Document'}`;
+      case 'deal-status':
+        return `✅ Deal status: ${card.status || ''}`;
+      default:
+        return '📎 Attachment';
+    }
+  } catch (_) {
+    return '📎 Attachment';
+  }
+};
+
 // Matches either a full http(s) URL or an in-app route path like
 // "/signup" or "/sell/onboarding". The lookbehind prevents matching
 // slashes that sit inside another word (e.g. "n/a", "24/7").
@@ -42059,7 +42088,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
                           <span className="truncate text-[10px] font-semibold text-[var(--svs-muted)]">{thread.orderReference}</span>
                         ) : null}
                       </span>
-                      <span className="mt-1 block truncate text-xs text-slate-600">{thread.lastMessage || 'No messages yet'}</span>
+                      <span className="mt-1 block truncate text-xs text-slate-600">{formatLastMessagePreview(thread.lastMessage) || 'No messages yet'}</span>
                     </span>
                   </button>
                   <button
@@ -43050,7 +43079,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
                                   </span>
                                   <span className="min-w-0 flex-1">
                                     <span className="block truncate text-sm font-bold text-[var(--svs-text)]">{counterparty.name}</span>
-                                    <span className="block truncate text-[11px] text-[var(--svs-muted)]">{thread.issueType || thread.lastMessage || 'Conversation'}</span>
+                                    <span className="block truncate text-[11px] text-[var(--svs-muted)]">{thread.issueType || formatLastMessagePreview(thread.lastMessage) || 'Conversation'}</span>
                                   </span>
                                   <Send className="h-4 w-4 flex-none text-[var(--svs-primary)]" aria-hidden="true" />
                                 </button>
