@@ -11547,20 +11547,55 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
 
                 {!query.trim() ? (
                   <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3">
-                    <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                    <style>{`
+                      @keyframes svs-marquee-left {
+                        0%   { transform: translateX(0); }
+                        100% { transform: translateX(-50%); }
+                      }
+                      @keyframes svs-marquee-right {
+                        0%   { transform: translateX(-50%); }
+                        100% { transform: translateX(0); }
+                      }
+                    `}</style>
+                    <p className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-[var(--svs-muted)]">
                       Popular searches
+                      <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--svs-primary)] px-1.5 text-[10px] font-bold text-white">
+                        {popularSearchTerms.length}
+                      </span>
                     </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {popularSearchTerms.map((term) => (
-                        <button
-                          key={`popular-${term}`}
-                          type="button"
-                          onClick={() => handleQuickSelect(term)}
-                          className="rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-1 text-xs font-semibold text-[var(--svs-primary-strong)] transition hover:border-[var(--svs-primary)] hover:bg-[var(--svs-cyan-surface)]"
-                        >
-                          {term}
-                        </button>
-                      ))}
+                    <div className="flex flex-col gap-1.5">
+                      {Array.from({ length: Math.ceil(popularSearchTerms.length / 4) }, (_, rowIdx) => {
+                        const rowTerms = popularSearchTerms.slice(rowIdx * 4, rowIdx * 4 + 4);
+                        const goLeft = rowIdx % 2 === 0;
+                        const doubled = [...rowTerms, ...rowTerms];
+                        const duration = `${10 + rowTerms.length * 3}s`;
+                        return (
+                          <div key={`row-${rowIdx}`} className="overflow-hidden">
+                            <div
+                              className="flex gap-1.5"
+                              style={{
+                                width: 'max-content',
+                                animation: `${goLeft ? 'svs-marquee-left' : 'svs-marquee-right'} ${duration} linear infinite`,
+                              }}
+                              onMouseEnter={(e) => { e.currentTarget.style.animationPlayState = 'paused'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.animationPlayState = 'running'; }}
+                              onTouchStart={(e) => { e.currentTarget.style.animationPlayState = 'paused'; }}
+                              onTouchEnd={(e) => { e.currentTarget.style.animationPlayState = 'running'; }}
+                            >
+                              {doubled.map((term, i) => (
+                                <button
+                                  key={`popular-r${rowIdx}-${i}`}
+                                  type="button"
+                                  onClick={() => handleQuickSelect(term)}
+                                  className="whitespace-nowrap rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-1 text-xs font-semibold text-[var(--svs-primary-strong)] transition hover:border-[var(--svs-primary)] hover:bg-[var(--svs-cyan-surface)]"
+                                >
+                                  {term}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                     <p className="mt-3 text-[11px] text-[var(--svs-muted)]">
                       Start typing to search across our directory, the web, and AI engines.
@@ -31608,8 +31643,8 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
               <div className="flex items-start gap-2">
                 <Sparkles className="mt-0.5 h-5 w-5 text-purple-600" aria-hidden="true" />
                 <div>
-                  <h2 className="text-lg font-bold text-[var(--svs-text)]">AI Quick Lister</h2>
-                  <p className="mt-0.5 text-xs text-[var(--svs-muted)]">Upload one or more photos of the <span className="font-bold">same</span> product (front, back, size tag, packaging). SVS AI reads every photo and fills in the title, description, market, price, size, condition and key features for ONE listing. Review, edit, then publish.</p>
+                  <h2 className="text-xl font-extrabold text-[var(--svs-text)]">AI Quick Lister</h2>
+                  <p className="mt-1 text-sm font-medium text-[var(--svs-muted)]">Upload one or more photos of the <span className="font-extrabold text-[var(--svs-text)]">same</span> product (front, back, size tag, packaging). SVS AI reads every photo and fills in the title, description, market, price, size, condition and key features for ONE listing. Review, edit, then publish.</p>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -31625,7 +31660,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                   type="button"
                   onClick={() => bulkInputRef.current?.click()}
                   disabled={bulkDraft?.status === 'publishing' || bulkDraft?.status === 'analyzing'}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-purple-300 bg-white px-3 py-2 text-xs font-bold text-purple-700 transition hover:bg-purple-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-purple-300 bg-white px-4 py-2.5 text-sm font-bold text-purple-700 transition hover:bg-purple-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {bulkDraft?.files?.length ? '+ Add more photos' : '+ Add photos'}
                 </button>
@@ -31633,7 +31668,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                   type="button"
                   onClick={handleAnalyzeAll}
                   disabled={isBulkAnalyzing || !bulkDraft?.files?.length || bulkDraft?.status === 'publishing'}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
                   {isBulkAnalyzing ? 'Analyzing\u2026' : 'Analyze with AI'}
@@ -31643,7 +31678,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                     type="button"
                     onClick={publishBulkDraft}
                     disabled={bulkDraft.status === 'publishing'}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--svs-primary)] px-3 py-2 text-xs font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--svs-primary)] px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Publish item
                   </button>
@@ -31652,7 +31687,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                   <button
                     type="button"
                     onClick={startNewBulkDraft}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 transition hover:bg-emerald-100"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-sm font-bold text-emerald-800 transition hover:bg-emerald-100"
                   >
                     + List another item
                   </button>
@@ -31661,7 +31696,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                   <button
                     type="button"
                     onClick={startNewBulkDraft}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--svs-border)] bg-white px-3 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-50"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--svs-border)] bg-white px-4 py-2.5 text-sm font-bold text-rose-700 transition hover:bg-rose-50"
                   >
                     Discard
                   </button>
@@ -31670,12 +31705,12 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
             </div>
 
             {bulkMessage ? (
-              <p className="mt-3 rounded-lg border border-[var(--svs-border)] bg-white px-3 py-2 text-xs font-semibold text-[var(--svs-text)]">{bulkMessage}</p>
+              <p className="mt-3 rounded-lg border border-[var(--svs-border)] bg-white px-3 py-2 text-sm font-bold text-[var(--svs-text)]">{bulkMessage}</p>
             ) : null}
 
             {!bulkDraft || !bulkDraft.files?.length ? (
-              <div className="mt-4 rounded-xl border-2 border-dashed border-purple-200 bg-white/60 px-4 py-6 text-center text-xs text-[var(--svs-muted)]">
-                Tap <span className="font-bold text-purple-700">+ Add photos</span> and select all the photos of the <span className="font-bold">same</span> product (front view, back view, tag, packaging \u2014 up to 4). The AI will fuse them into one listing.
+              <div className="mt-4 rounded-xl border-2 border-dashed border-purple-200 bg-white/60 px-4 py-6 text-center text-sm font-medium text-[var(--svs-muted)]">
+                Tap <span className="font-extrabold text-purple-700">+ Add photos</span> and select all the photos of the <span className="font-extrabold text-[var(--svs-text)]">same</span> product (front view, back view, tag, packaging \u2014 up to 4). The AI will fuse them into one listing.
               </div>
             ) : (
               <article className="mt-4 rounded-xl border border-[var(--svs-border)] bg-white p-3 shadow-sm">
@@ -31709,11 +31744,11 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                 </div>
 
                 {bulkDraft.status === 'pending' ? (
-                  <p className="mt-3 text-xs text-[var(--svs-muted)]">Press <span className="font-bold">Analyze with AI</span> above to read these photos and fill in the listing details.</p>
+                  <p className="mt-3 text-sm font-medium text-[var(--svs-muted)]">Press <span className="font-extrabold text-[var(--svs-text)]">Analyze with AI</span> above to read these photos and fill in the listing details.</p>
                 ) : bulkDraft.status === 'analyzing' ? (
-                  <p className="mt-3 text-xs text-amber-700">AI is reading your photos\u2026 this usually takes 5\u201310 seconds.</p>
+                  <p className="mt-3 text-sm font-bold text-amber-700">AI is reading your photos\u2026 this usually takes 5\u201310 seconds.</p>
                 ) : bulkDraft.status === 'published' ? (
-                  <p className="mt-3 text-xs font-semibold text-emerald-700">Published. The item is now live in {sellerMarketConfig[bulkDraft.marketKey] ? t(sellerMarketConfig[bulkDraft.marketKey].labelKey) : bulkDraft.marketKey}. Hit <span className="font-bold">List another item</span> to add the next product.</p>
+                  <p className="mt-3 text-sm font-bold text-emerald-700">Published. The item is now live in {sellerMarketConfig[bulkDraft.marketKey] ? t(sellerMarketConfig[bulkDraft.marketKey].labelKey) : bulkDraft.marketKey}. Hit <span className="font-extrabold">List another item</span> to add the next product.</p>
                 ) : (
                   <>
                     {bulkDraft.status === 'ready' ? (
@@ -35892,6 +35927,7 @@ const WISHLIST_SHARE_OCCASIONS = [
   { value: 'housewarming', label: '🏡 Housewarming' },
   { value: 'holiday', label: '🎄 Holiday gift' },
   { value: 'just-because', label: '💝 Just because' },
+  { value: 'other', label: '✨ Other' },
 ];
 
 const WishlistShareModal = ({ open, onClose, wishlistItems = [] }) => {
@@ -35914,11 +35950,11 @@ const WishlistShareModal = ({ open, onClose, wishlistItems = [] }) => {
   }, [senderName, open]);
 
   const occasionMeta = WISHLIST_SHARE_OCCASIONS.find((o) => o.value === occasion) || WISHLIST_SHARE_OCCASIONS[0];
-  const shareTitle = senderName ? `${senderName}'s wishlist` : 'My SVS wishlist';
+  const shareTitle = senderName ? `${senderName}'s wishlist` : 'My SVS E-COMMERCE wishlist';
   const shareText = (() => {
     const intro = senderName
-      ? (occasion ? `${senderName} shared a ${occasionMeta.label.replace(/^[^a-zA-Z]+/, '').toLowerCase()} wishlist with you on SVS.` : `${senderName} shared a wishlist with you on SVS.`)
-      : 'Check out my wishlist on SVS.';
+      ? (occasion ? `${senderName} shared a ${occasionMeta.label.replace(/^[^a-zA-Z]+/, '').toLowerCase()} wishlist with you on SVS E-COMMERCE.` : `${senderName} shared a wishlist with you on SVS E-COMMERCE.`)
+      : 'Check out my wishlist on SVS E-COMMERCE.';
     return note ? `${intro}\n\n"${note}"` : intro;
   })();
 
@@ -35992,18 +36028,30 @@ const WishlistShareModal = ({ open, onClose, wishlistItems = [] }) => {
             />
           </label>
 
-          <label className="block text-xs font-semibold text-[var(--svs-text)]">
+          <div className="block text-xs font-semibold text-[var(--svs-text)]">
             Occasion (optional)
-            <select
-              value={occasion}
-              onChange={(e) => setOccasion(e.target.value)}
-              className="mt-1 w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-bg)] px-3 py-2 text-sm text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none"
-            >
-              {WISHLIST_SHARE_OCCASIONS.map((o) => (
-                <option key={o.value || 'none'} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </label>
+            <div className="relative mt-1 flex items-center gap-2">
+              <select
+                value={occasion}
+                onChange={(e) => setOccasion(e.target.value)}
+                className="w-full rounded-md border border-[var(--svs-border)] bg-[var(--svs-bg)] px-3 py-2 text-sm text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:outline-none"
+              >
+                {WISHLIST_SHARE_OCCASIONS.map((o) => (
+                  <option key={o.value || 'none'} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+              {occasion ? (
+                <button
+                  type="button"
+                  onClick={() => setOccasion('')}
+                  aria-label="Clear occasion"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600 transition hover:bg-rose-200 active:scale-95"
+                >
+                  <X className="h-4 w-4 stroke-[3]" aria-hidden="true" />
+                </button>
+              ) : null}
+            </div>
+          </div>
 
           <label className="block text-xs font-semibold text-[var(--svs-text)]">
             Personal note (optional)
@@ -36062,7 +36110,7 @@ const WishlistShareModal = ({ open, onClose, wishlistItems = [] }) => {
   );
 };
 
-const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onOpenItemDetails, sellerItems = [] }) => {
+const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onClearWishlist, onOpenItemDetails, sellerItems = [] }) => {
   const [shareOpen, setShareOpen] = useState(false);
 
   // Share wishlist: try the device's native share sheet directly first (it
@@ -36082,8 +36130,8 @@ const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onOpen
     if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
       try {
         await navigator.share({
-          title: savedName ? `${savedName}'s wishlist` : 'My SVS wishlist',
-          text: savedName ? `${savedName} shared a wishlist with you on SVS.` : 'Check out my wishlist on SVS.',
+          title: savedName ? `${savedName}'s wishlist` : 'My SVS E-COMMERCE wishlist',
+          text: savedName ? `${savedName} shared a wishlist with you on SVS E-COMMERCE.` : 'Check out my wishlist on SVS E-COMMERCE.',
           url: shareUrl,
         });
         return;
@@ -36102,6 +36150,15 @@ const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onOpen
         {wishlistItems.length ? `${wishlistItems.length} saved item${wishlistItems.length === 1 ? '' : 's'}` : 'No saved items yet.'}
       </p>
       <div className="flex items-center gap-1.5">
+        {wishlistItems.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => onClearWishlist?.()}
+            className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 transition hover:bg-rose-100"
+          >
+            Clear all
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={handleQuickShareWishlist}
@@ -36858,7 +36915,7 @@ const WishlistSharePage = () => {
   const occasionMeta = data ? WISHLIST_SHARE_OCCASIONS.find((o) => o.value === data.occasion) || null : null;
   const headline = data?.senderName
     ? `${data.senderName}'s${data.occasion ? ` ${occasionMeta?.label?.replace(/^[^a-zA-Z]+/, '').toLowerCase()}` : ''} wishlist`
-    : 'Shared wishlist';
+    : 'SVS E-COMMERCE';
 
   if (!data) {
     return (
@@ -36876,7 +36933,7 @@ const WishlistSharePage = () => {
   const items = data.items || [];
 
   return (
-    <PageFrame title={headline} subtitle={`A read-only wishlist shared on SVS — tap any item to view it on the marketplace.`}>
+    <PageFrame title={`${headline}${items.length > 0 ? ` (${items.length})` : ''}`} subtitle={`A read-only wishlist shared on SVS — tap any item to view it on the marketplace.`}>
       {data.note ? (
         <div className="mb-4 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 text-sm text-[var(--svs-text)] shadow-sm">
           <p className="text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">A note from {data.senderName || 'them'}</p>
@@ -36918,7 +36975,7 @@ const WishlistSharePage = () => {
 
       <div className="mt-6 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 text-sm text-[var(--svs-text)]">
         <p className="font-bold text-[var(--svs-primary)]">Want a wishlist of your own?</p>
-        <p className="mt-1 text-[var(--svs-muted)]">Sign up free and start saving items across all 11 SVS marketplaces. Share yours when birthdays come around.</p>
+        <p className="mt-1 text-[var(--svs-muted)]">Sign up free and start saving items across all 24+ SVS E-COMMERCE market places. Share yours when birthdays come around.</p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Link to="/signup" className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-xs font-bold text-white`}>
             Create Your Account
@@ -39291,6 +39348,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
   const [selectedThreadId, setSelectedThreadId] = useState('');
   const [draftMessage, setDraftMessage] = useState(prefillDraftMessageFromState);
   const [issueType, setIssueType] = useState(prefillIssueTypeFromState || 'General Support');
+  const [customIssueReason, setCustomIssueReason] = useState('');
   const [recipientEmail, setRecipientEmail] = useState(prefillRecipientEmailFromState || SUPPORT_ADMIN_EMAIL);
   const [recipientSearchQuery, setRecipientSearchQuery] = useState(prefillRecipientNameFromState || prefillRecipientEmailFromState || '');
   const [remoteRecipientMatches, setRemoteRecipientMatches] = useState([]);
@@ -40066,7 +40124,8 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
       return null;
     }
 
-    const targetIssueType = String(options.issueType || issueType || 'General Support').trim() || 'General Support';
+    const resolvedIssueType = issueType === 'Other' ? (customIssueReason.trim() || 'Other') : issueType;
+    const targetIssueType = String(options.issueType || resolvedIssueType || 'General Support').trim() || 'General Support';
     const targetOrderId = String(options.orderId ?? selectedOrderId ?? '').trim();
     const hasPrefillItemDetails = Boolean(
       prefillItemKeyFromState
@@ -40168,7 +40227,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     }
 
     return nextThread;
-  }, [currentUserEmail, currentUserName, issueType, loadRemoteChat, orderOptions, prefillRecipientEmailFromState, prefillRecipientNameFromState, prefillItemKeyFromState, prefillItemTitleFromState, prefillItemImageFromState, prefillItemLinkFromState, recipientEmail, recipientOptions, selectedOrderId, threads]);
+  }, [currentUserEmail, currentUserName, issueType, customIssueReason, loadRemoteChat, orderOptions, prefillRecipientEmailFromState, prefillRecipientNameFromState, prefillItemKeyFromState, prefillItemTitleFromState, prefillItemImageFromState, prefillItemLinkFromState, recipientEmail, recipientOptions, selectedOrderId, threads]);
 
   const handleRecipientChange = useCallback((nextRecipientEmail) => {
     const normalizedRecipient = normalizeEmail(nextRecipientEmail);
@@ -40999,6 +41058,32 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     if (editingMessageId === message.id) setEditingMessageId('');
     updateMessageBodyRemote(message.id, DELETED_TOKEN);
   }, [currentUserEmail, editingMessageId, updateMessageBodyRemote]);
+
+  // eslint-disable-next-line no-unused-vars
+  const handleSaveMessage = useCallback((message) => {
+    if (!message) return;
+    setOpenMenuMessageId('');
+    const body = String(message.body || '');
+    const cardRaw = body.startsWith(SVS_CARD_PREFIX_FALLBACK) ? body.slice(SVS_CARD_PREFIX_FALLBACK.length) : null;
+    let card = null;
+    if (cardRaw) { try { card = JSON.parse(cardRaw); } catch (_) { card = null; } }
+    if (card && card.src && (card.type === 'voice' || card.type === 'video' || card.type === 'image' || card.type === 'document')) {
+      const ext = card.type === 'voice' ? 'webm' : card.type === 'video' ? 'mp4' : card.type === 'image' ? 'jpg' : 'file';
+      const filename = card.name || `svs-${card.type}-${Date.now()}.${ext}`;
+      const a = document.createElement('a');
+      a.href = card.src;
+      a.download = filename;
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } else {
+      const plainText = body.startsWith(SVS_CARD_PREFIX_FALLBACK) ? '' : body;
+      if (plainText.trim() && navigator.clipboard) {
+        navigator.clipboard.writeText(plainText.trim()).catch(() => {});
+      }
+    }
+  }, []);
 
   // Delete for me — hides locally only (works for any message, incl. ones
   // sent by the other party or the AI agent).
@@ -42118,21 +42203,44 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
                   )}
                 </div>
 
-                <label className="mt-3 block text-xs font-semibold text-slate-600">
+                <div className="mt-3 block text-xs font-semibold text-slate-600">
                   Issue type
-                  <select
-                    value={issueType}
-                    onChange={(event) => setIssueType(event.target.value)}
-                    className="mt-1 w-full rounded-lg border border-[#d6e6f5] bg-white px-3 py-2 text-sm text-slate-700"
-                  >
-                    <option value="General Support">General Support</option>
-                    <option value="Item Enquiry">Item Enquiry</option>
-                    <option value="Order Issue">Order Issue</option>
-                    <option value="Payment Issue">Payment Issue</option>
-                    <option value="Delivery Issue">Delivery Issue</option>
-                    <option value="Refund Issue">Refund Issue</option>
-                  </select>
-                </label>
+                  <div className="mt-1 flex items-center gap-2">
+                    <select
+                      value={issueType}
+                      onChange={(event) => { setIssueType(event.target.value); setCustomIssueReason(''); }}
+                      className="w-full rounded-lg border border-[#d6e6f5] bg-white px-3 py-2 text-sm text-slate-700"
+                    >
+                      <option value="General Support">General Support</option>
+                      <option value="Item Enquiry">Item Enquiry</option>
+                      <option value="Order Issue">Order Issue</option>
+                      <option value="Payment Issue">Payment Issue</option>
+                      <option value="Delivery Issue">Delivery Issue</option>
+                      <option value="Refund Issue">Refund Issue</option>
+                      <option value="Other">Other</option>
+                    </select>
+                    {issueType !== 'General Support' ? (
+                      <button
+                        type="button"
+                        onClick={() => { setIssueType('General Support'); setCustomIssueReason(''); }}
+                        aria-label="Reset issue type"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600 transition hover:bg-rose-200 active:scale-95"
+                      >
+                        <X className="h-4 w-4 stroke-[3]" aria-hidden="true" />
+                      </button>
+                    ) : null}
+                  </div>
+                  {issueType === 'Other' ? (
+                    <input
+                      type="text"
+                      value={customIssueReason}
+                      onChange={(e) => setCustomIssueReason(e.target.value)}
+                      placeholder="Describe your reason…"
+                      maxLength={120}
+                      className="mt-2 w-full rounded-lg border border-[#d6e6f5] bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-[#0f6674]"
+                    />
+                  ) : null}
+                </div>
 
                 <label className="mt-3 block text-xs font-semibold text-slate-600">
                   Related order (optional)
@@ -42517,6 +42625,13 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
                                       className="flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold text-[var(--svs-text)] transition hover:bg-[var(--svs-surface-soft)]"
                                     >
                                       <Pin className="h-3.5 w-3.5" aria-hidden="true" /> {message.metadata?.pinned ? 'Unpin' : 'Pin'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSaveMessage(message)}
+                                      className="flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50"
+                                    >
+                                      <Download className="h-3.5 w-3.5" aria-hidden="true" /> Save
                                     </button>
                                     {canEdit ? (
                                       <button
@@ -43338,17 +43453,17 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
               </>
             ) : (
               <div className="flex h-full items-center justify-center px-4 py-10 text-center sm:px-6">
-                <div>
-                  <p className="text-lg font-bold text-[#0f6674]">No active support conversation</p>
-                  <p className="mt-2 text-sm text-slate-600">Create a new chat on the left to contact a seller or admin support.</p>
+                <div className="w-full max-w-sm">
+                  <p className="text-2xl font-extrabold text-[#0f6674]">No active support conversation</p>
+                  <p className="mt-3 text-base font-medium text-slate-700">Create a new chat on the left to contact a seller or admin support.</p>
                     {recipientOptions.length ? (
-                      <div className="mx-auto mt-4 max-w-sm rounded-2xl border border-[#d6e6f5] bg-[#f8fbff] p-4 text-left">
-                        <label className="block text-xs font-semibold text-slate-600">
+                      <div className="mx-auto mt-5 rounded-2xl border-2 border-[#0f6674]/30 bg-[#f0f9fb] p-5 text-left shadow-sm">
+                        <label className="block text-base font-bold text-slate-800">
                           Start with a contact
                           <select
                             value={preferredRecipientEmail}
                             onChange={(event) => handleRecipientChange(event.target.value)}
-                            className="mt-1 w-full rounded-lg border border-[#d6e6f5] bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-[#0f6674]"
+                            className="mt-2 w-full rounded-xl border-2 border-[#0f6674]/40 bg-white px-4 py-3 text-base font-semibold text-slate-800 outline-none focus:border-[#0f6674]"
                           >
                             {groupedRecipientOptions.map((group) => (
                               <optgroup key={`empty-group-${group.key}`} label={group.title}>
@@ -43361,23 +43476,25 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
                             ))}
                           </select>
                         </label>
-                        <p className="mt-2 text-xs text-slate-500">Pick a person, seller, or agent before you start typing.</p>
+                        <p className="mt-3 text-sm font-medium text-slate-600">Pick a person, seller, or agent before you start typing.</p>
                       </div>
                     ) : null}
-                  <button
-                    type="button"
-                    onClick={() => setMobilePanel('contacts')}
-                    className="mt-4 rounded-xl border border-[#d6e6f5] bg-white px-4 py-2 text-sm font-semibold text-[#0f6674] lg:hidden"
-                  >
-                    Browse contacts
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => navigate('/orders')}
-                    className="mt-4 rounded-xl border border-[#d6e6f5] bg-white px-4 py-2 text-sm font-semibold text-[#0f6674]"
-                  >
-                    Go to orders
-                  </button>
+                  <div className="mt-5 flex flex-wrap justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setMobilePanel('contacts')}
+                      className="rounded-xl border-2 border-[#0f6674] bg-white px-6 py-3 text-base font-bold text-[#0f6674] shadow-sm transition hover:bg-[#0f6674] hover:text-white lg:hidden"
+                    >
+                      Browse contacts
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/orders')}
+                      className="rounded-xl border-2 border-[#0f6674] bg-[#0f6674] px-6 py-3 text-base font-bold text-white shadow-sm transition hover:bg-[#0a4f5c]"
+                    >
+                      Go to orders
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -43430,30 +43547,32 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
               </span>
             </div>
 
-            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-white px-4 py-3">
-              <button
-                type="button"
-                onClick={handleDiscardVideoPreview}
-                className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
-              >
-                Discard
-              </button>
-              <button
-                type="button"
-                onClick={handleReplaceVideoAttachment}
-                className="inline-flex items-center gap-1 rounded-md border border-[#d6e6f5] bg-white px-3 py-1.5 text-xs font-bold text-[#0f6674] hover:bg-[#e8f7fb]"
-              >
-                <Video className="h-3.5 w-3.5" aria-hidden="true" />
-                Choose another video
-              </button>
+            <div className="flex flex-col gap-2 border-t border-slate-200 bg-white px-4 py-4">
               <button
                 type="button"
                 onClick={handleSendVideoPreview}
                 disabled={isAnalyzingMedia}
-                className="rounded-md bg-[#0f6674] px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-60"
+                className="w-full rounded-xl bg-[#0f6674] py-3 text-base font-extrabold text-white transition hover:opacity-90 disabled:opacity-60 active:scale-[0.98]"
               >
-                {isAnalyzingMedia ? 'Sending...' : 'Send video'}
+                {isAnalyzingMedia ? 'Sending…' : '▶ Send video'}
               </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleReplaceVideoAttachment}
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border-2 border-[#0f6674] bg-white py-2.5 text-sm font-bold text-[#0f6674] transition hover:bg-[#e8f7fb] active:scale-[0.98]"
+                >
+                  <Video className="h-4 w-4" aria-hidden="true" />
+                  Choose another
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDiscardVideoPreview}
+                  className="inline-flex flex-1 items-center justify-center rounded-xl border-2 border-rose-300 bg-rose-50 py-2.5 text-sm font-bold text-rose-700 transition hover:bg-rose-100 active:scale-[0.98]"
+                >
+                  Discard
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -46892,7 +47011,7 @@ const recordRecentlyViewed = ({ id, title, image, route, marketKey }) => {
     let list = [];
     try { list = raw ? JSON.parse(raw) : []; } catch (_e) { list = []; }
     const cleaned = (Array.isArray(list) ? list : []).filter((x) => String(x.id) !== strId);
-    window.localStorage.setItem('svs-recently-viewed', JSON.stringify([summary, ...cleaned].slice(0, 12)));
+    window.localStorage.setItem('svs-recently-viewed', JSON.stringify([summary, ...cleaned].slice(0, 10)));
     window.dispatchEvent(new CustomEvent('svs-recently-viewed-updated'));
   } catch (_e) { /* ignore storage failures */ }
 };
@@ -47028,14 +47147,14 @@ const RecentlyViewedStrip = () => {
               key={item.id}
               className="group relative flex w-[148px] shrink-0 flex-col overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] text-left shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition hover:-translate-y-0.5 hover:border-[var(--svs-primary)] hover:shadow-md sm:w-[168px]"
             >
-              {/* Per-item remove button */}
+              {/* Per-item remove button — always visible, bold */}
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); handleRemoveOne(item.id); }}
                 aria-label={`Remove ${item.title}`}
-                className="absolute right-1.5 top-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100"
+                className="absolute right-1.5 top-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-rose-600 text-white shadow-md transition hover:bg-rose-700 active:scale-95"
               >
-                <X className="h-3 w-3" aria-hidden="true" />
+                <X className="h-4 w-4 stroke-[3]" aria-hidden="true" />
               </button>
 
               <button
@@ -50324,7 +50443,7 @@ const FloatingSupportChatButton = () => (
   </Link>
 );
 
-const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerItems, buyNowCheckout, productReviewSummaryMap, onAddToCart, onBuyNow, onToggleWishlist, onRemoveWishlistItem, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder, onClearBuyNowCheckout, onCancelOrder, onSellerItemCreated, onDeleteSellerItem, onUpdateSellerItem, onToggleListingPaused, onUpdateOrderStatus, onAdminSetOrderStatus, onOpenItemDetails, onPushNotificationToUser, onDismissChatNotifications }) => {
+const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerItems, buyNowCheckout, productReviewSummaryMap, onAddToCart, onBuyNow, onToggleWishlist, onRemoveWishlistItem, onClearWishlist, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder, onClearBuyNowCheckout, onCancelOrder, onSellerItemCreated, onDeleteSellerItem, onUpdateSellerItem, onToggleListingPaused, onUpdateOrderStatus, onAdminSetOrderStatus, onOpenItemDetails, onPushNotificationToUser, onDismissChatNotifications }) => {
   const { t } = useTranslation();
 
   return (
@@ -50346,7 +50465,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/order-confirmation" element={<OrderConfirmationPage orders={orders} />} />
     <Route path="/betting-order-confirmation" element={<Navigate to="/betting-ticket-tracking" replace />} />
     <Route path="/betting-ticket-tracking" element={<BettingTicketTrackingPage orders={orders} />} />
-    <Route path="/wishlist" element={<WishlistPage wishlistItems={wishlistItems} onAddToCart={onAddToCart} onRemoveWishlistItem={onRemoveWishlistItem} onOpenItemDetails={onOpenItemDetails} sellerItems={sellerItems} />} />
+    <Route path="/wishlist" element={<WishlistPage wishlistItems={wishlistItems} onAddToCart={onAddToCart} onRemoveWishlistItem={onRemoveWishlistItem} onClearWishlist={onClearWishlist} onOpenItemDetails={onOpenItemDetails} sellerItems={sellerItems} />} />
     <Route path="/wishlist/share" element={<WishlistSharePage />} />
     <Route path="/checkout" element={<CheckoutPage cartItems={cartItems} buyNowCheckout={buyNowCheckout} onUpdateCartQuantity={onUpdateCartQuantity} onRemoveCartItem={onRemoveCartItem} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />
     <Route path="/checkout/payfast" element={<PayfastCheckoutPage buyNowCheckout={buyNowCheckout} onPlaceOrder={onPlaceOrder} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />
@@ -51506,6 +51625,13 @@ const App = () => {
     removeWishlistItemFromRemote(itemId);
   }, [removeWishlistItemFromRemote, activeUserEmail]);
 
+  const handleClearWishlist = useCallback(() => {
+    setWishlistItems([]);
+    if (getAuthState() && activeUserEmail && hasSupabaseEnv && supabase) {
+      supabase.from(WISHLIST_ITEMS_TABLE).delete().eq('user_email', activeUserEmail).then(() => {});
+    }
+  }, [activeUserEmail]);
+
   const handlePlaceOrder = useCallback(async (customer, paymentDetails = null, checkoutOptions = {}) => {
     const sourceItems = Array.isArray(checkoutOptions.items) && checkoutOptions.items.length
       ? checkoutOptions.items
@@ -52353,7 +52479,7 @@ const App = () => {
         let list = [];
         try { list = raw ? JSON.parse(raw) : []; } catch (_e) { list = []; }
         const cleaned = (Array.isArray(list) ? list : []).filter((x) => String(x.id) !== String(summary.id));
-        const next = [summary, ...cleaned].slice(0, 12);
+        const next = [summary, ...cleaned].slice(0, 10);
         window.localStorage.setItem('svs-recently-viewed', JSON.stringify(next));
         window.dispatchEvent(new CustomEvent('svs-recently-viewed-updated'));
       }
@@ -52478,6 +52604,7 @@ const App = () => {
         onBuyNow={handleBuyNow}
         onToggleWishlist={handleToggleWishlist}
         onRemoveWishlistItem={handleRemoveWishlistItem}
+        onClearWishlist={handleClearWishlist}
         onUpdateCartQuantity={handleUpdateCartQuantity}
         onRemoveCartItem={handleRemoveCartItem}
         onPlaceOrder={handlePlaceOrder}
