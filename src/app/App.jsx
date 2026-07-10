@@ -35573,7 +35573,7 @@ const MarketsPage = ({ sellerItems = [] }) => {
 
       <div className="mt-7 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
         <p className="text-sm text-[var(--svs-text)]">
-          <span className="font-bold">Quick tip:</span>{' '}Use the top search to jump directly to the market product and market.
+          <span className="font-bold">Quick tip:</span>{' '}Use the top search to jump directly to selling products and services offered in a single step.
         </p>
       </div>
     </div>
@@ -36921,10 +36921,10 @@ const WishlistSharePage = () => {
         <p className="mt-1 text-[var(--svs-muted)]">Sign up free and start saving items across all 11 SVS marketplaces. Share yours when birthdays come around.</p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Link to="/signup" className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-xs font-bold text-white`}>
-            Create my account
+            Create Your Account
           </Link>
           <Link to="/markets" className="rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-xs font-bold text-[var(--svs-primary)] hover:bg-[var(--svs-surface-strong,#f1f5f9)]">
-            Browse markets
+            Browse Market Products
           </Link>
         </div>
       </div>
@@ -39104,6 +39104,7 @@ const buildReplySnippetFromBody = (rawBody) => {
           video: `\uD83C\uDFA5 Video (${card.durationSec || 0}s)`,
           document: `\uD83D\uDCCE ${card.name || 'Document'}`,
           'deal-status': `\u2705 Deal status: ${card.status || ''}`,
+          'product-digest': `\ud83d\udecd\ufe0f ${card.total || ''} products available across SVS`,
         };
         return map[card.type] || 'Message card';
       }
@@ -39486,6 +39487,10 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
       }
       case 'deal-status':
         return `[Deal status update] The user marked the deal as: ${card.status}.`;
+      case 'product-digest': {
+        const lines = (card.products || []).map((p) => `• ${p.title} — ${p.price} (${p.market})`).join('\n');
+        return `[Product advert] ${card.total || 0} products available across ${card.totalMarkets || 0} markets:\n${lines}`;
+      }
       default:
         return `[${card.type}] ${JSON.stringify(card)}`;
     }
@@ -41785,6 +41790,15 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
           body = `<div>&#128205; ${esc(card.label || 'Shared location')} &mdash; ${esc(card.lat)}, ${esc(card.lng)}</div>`;
         } else if (card.type === 'deal-status') {
           body = `<div>&#9989; Deal status: <strong>${esc(card.status)}</strong></div>`;
+        } else if (card.type === 'product-digest') {
+          const productHtml = (card.products || []).map((p) =>
+            `<div style="display:inline-block;vertical-align:top;width:130px;margin:0 6px 6px 0;border:1px solid #d6e6f5;border-radius:10px;overflow:hidden">` +
+            (p.imageUrl ? `<img src="${esc(p.imageUrl)}" style="width:130px;height:100px;object-fit:cover" alt="${esc(p.title)}"/>` : '') +
+            `<div style="padding:6px 8px"><p style="margin:0;font-size:11px;font-weight:700;color:#111;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.title)}</p>` +
+            (p.price ? `<p style="margin:2px 0 0;font-size:12px;font-weight:800;color:#0f6674">${esc(p.price)}</p>` : '') +
+            `<p style="margin:2px 0 0;font-size:10px;color:#64748b">${esc(p.market)}</p></div></div>`,
+          ).join('');
+          body = `<div><p style="margin:0 0 6px;font-size:12px;font-weight:700">&#128717; ${esc(String(card.total || ''))} products available</p><div>${productHtml}</div></div>`;
         } else {
           body = `<div>${esc(cardToReadableText(m.body))}</div>`;
         }
@@ -42703,6 +42717,44 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
                                 <p className={`rounded-lg px-2.5 py-1.5 text-xs font-bold ${mine ? 'bg-white/15 text-cyan-50' : 'bg-slate-100 text-slate-700'}`}>
                                   ✅ Deal status changed to: <span className="uppercase">{card.status}</span>
                                 </p>
+                              ) : null}
+                              {card.type === 'product-digest' && Array.isArray(card.products) && card.products.length > 0 ? (
+                                <div>
+                                  <p className={`mb-2 text-[11px] font-bold ${mine ? 'text-cyan-50' : 'text-slate-700'}`}>
+                                    🛍️ {card.total} product{card.total !== 1 ? 's' : ''} available across {card.totalMarkets} market{card.totalMarkets !== 1 ? 's' : ''}
+                                  </p>
+                                  <div className="flex gap-2 overflow-x-auto pb-1">
+                                    {card.products.map((product) => (
+                                      <Link
+                                        key={product.id}
+                                        to={product.route || '/markets'}
+                                        className="flex-none w-32 rounded-xl border border-slate-200 overflow-hidden bg-white shadow-sm transition hover:shadow-md hover:scale-[1.02]"
+                                      >
+                                        {product.imageUrl ? (
+                                          <img
+                                            src={product.imageUrl}
+                                            alt={product.title}
+                                            className="h-24 w-full object-cover"
+                                            loading="lazy"
+                                          />
+                                        ) : (
+                                          <div className="h-24 w-full bg-slate-100 flex items-center justify-center text-2xl">🛒</div>
+                                        )}
+                                        <div className="p-1.5">
+                                          <p className="text-[11px] font-semibold text-slate-900 truncate" title={product.title}>{product.title}</p>
+                                          {product.price ? <p className="text-[12px] font-extrabold text-[#0f6674]">{product.price}</p> : null}
+                                          <p className="text-[10px] text-slate-500 truncate">{product.market}</p>
+                                        </div>
+                                      </Link>
+                                    ))}
+                                  </div>
+                                  <Link
+                                    to="/markets"
+                                    className={`mt-2 inline-block text-[11px] font-semibold underline underline-offset-2 ${mine ? 'text-cyan-200' : 'text-[#0f6674]'}`}
+                                  >
+                                    Browse all markets →
+                                  </Link>
+                                </div>
                               ) : null}
                             </div>
                           ) : (
@@ -46652,6 +46704,173 @@ const MarketShowcase = ({
   </section>
 );
 
+// Sends ONE daily digest of newly listed products to the user's SVS Agent
+// chat — silently no-ops if there's nothing new or the cooldown hasn't expired.
+// Rules that keep it non-annoying:
+//   • 24-hour cooldown per user (localStorage key)
+//   • Minimum 3 new items before any message is sent
+//   • Groups by market (never lists individual items)
+//   • Shows max 4 markets + "X more" — compact, scannable
+//   • Silent fail — never blocks the app
+const PRODUCT_DIGEST_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const PRODUCT_DIGEST_MIN_ITEMS = 1;
+const DIGEST_COOLDOWN_KEY_PREFIX = 'svs-digest-last-';
+const OFFERS_OPT_IN_KEY_PREFIX = 'svs-offers-opted-in-';
+const DIGEST_MARKET_LABELS = {
+  ecommerce: 'Lifestyle Tech', groceries: 'Grocery', fastFood: 'Fast Food',
+  fashionStyle: 'Apparel', mobilityVehicles: 'Automobility', votingClients: 'Wellness',
+  bettingLotteryGames: 'Games', beverages: 'Drinks', homeCare: 'Book Service',
+  tickets: 'Book Ticket', constructionTools: 'Hardware', directLinks: 'Commerce Link',
+  generalLabour: 'Workforce', informalMarket: 'Vendors', votingProviders: 'Jewelry',
+  livestockHub: 'Livestock', naturalResources: 'Earth Resources', wellness: 'Pharmaceutics',
+  propertyHub: 'Property', secondhand: 'Used Items', stationery: 'Stationery',
+  safety: 'Toys', traditionalMedicines: 'Ancient Remedies',
+};
+const DIGEST_MARKET_ROUTES = {
+  ecommerce: '/e-commerce', groceries: '/groceries', fastFood: '/fast-food',
+  fashionStyle: '/fashion-style', mobilityVehicles: '/mobility-vehicles', votingClients: '/voting-clients',
+  bettingLotteryGames: '/betting-lottery-games', beverages: '/beverages-liquors', homeCare: '/home-care',
+  tickets: '/tickets', constructionTools: '/building-construction-tools', directLinks: '/retailer-direct-links',
+  generalLabour: '/general-labour-market', informalMarket: '/informal-market', votingProviders: '/voting-providers',
+  livestockHub: '/livestock-hub', naturalResources: '/natural-resources-minerals', wellness: '/wellness',
+  propertyHub: '/property-hub', secondhand: '/secondhand-central', stationery: '/stationery-office',
+  safety: '/safety', traditionalMedicines: '/traditional-medicines-herbs',
+};
+
+const sendProductDigestIfDue = async (userEmail) => {
+  const normalizedUser = normalizeEmail(userEmail);
+  if (!normalizedUser || normalizedUser === SUPPORT_ADMIN_EMAIL) return;
+  if (!hasSupabaseEnv || !supabase) return;
+  if (localStorage.getItem(`${OFFERS_OPT_IN_KEY_PREFIX}${normalizedUser}`) !== 'true') return;
+
+  const cooldownKey = `${DIGEST_COOLDOWN_KEY_PREFIX}${normalizedUser}`;
+  try {
+    const lastSent = parseInt(localStorage.getItem(cooldownKey) || '0', 10);
+    if (Date.now() - lastSent < PRODUCT_DIGEST_COOLDOWN_MS) return;
+
+    // Query all available listings with image and price so the advert card
+    // can show a real photo, price tag, and a direct link to the market.
+    const { data: allItems, error: itemsError } = await supabase
+      .from(SELLER_ITEMS_TABLE)
+      .select('id, title, market_key, price, image_url')
+      .limit(100);
+
+    if (itemsError || !allItems || allItems.length < PRODUCT_DIGEST_MIN_ITEMS) return;
+
+    // Pick 5 featured products — one per market for variety, randomised each
+    // time so the user sees different items on every digest delivery.
+    // Items with both image and price are preferred; within that tier the
+    // order is random so repeated sends never show the same set.
+    const shuffle = (arr) => {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    };
+    const withBoth = shuffle(allItems.filter((i) => i.image_url && i.price));
+    const withImage = shuffle(allItems.filter((i) => i.image_url && !i.price));
+    const rest = shuffle(allItems.filter((i) => !i.image_url));
+    const pool = [...withBoth, ...withImage, ...rest];
+
+    const seenMarkets = new Set();
+    const featured = [];
+    for (const item of pool) {
+      if (featured.length >= 5) break;
+      const mk = item.market_key || 'other';
+      if (!seenMarkets.has(mk)) {
+        seenMarkets.add(mk);
+        featured.push({
+          id: String(item.id),
+          title: String(item.title || ''),
+          price: String(item.price || ''),
+          imageUrl: String(item.image_url || ''),
+          route: DIGEST_MARKET_ROUTES[mk] || '/markets',
+          market: DIGEST_MARKET_LABELS[mk] || mk,
+        });
+      }
+    }
+
+    const totalMarkets = new Set(allItems.map((i) => i.market_key).filter(Boolean)).size;
+    const body = `[svs-card]${JSON.stringify({
+      type: 'product-digest',
+      products: featured,
+      total: allItems.length,
+      totalMarkets,
+    })}`;
+
+    const now = new Date().toISOString();
+    const participants = [normalizedUser, SUPPORT_ADMIN_EMAIL].sort();
+
+    // Find the SVS Agent thread from localStorage first (fastest, most reliable).
+    // Falls back to creating a new thread if none exists yet.
+    let threadKey = null;
+    try {
+      const threadStorageKey = getUserScopedStorageKey(SUPPORT_CHAT_THREADS_STORAGE_KEY, normalizedUser);
+      const storedThreads = JSON.parse(localStorage.getItem(threadStorageKey) || '[]');
+      const match = storedThreads.find((t) =>
+        Array.isArray(t.participants) &&
+        [...t.participants].sort().join('|') === participants.join('|'),
+      );
+      threadKey = match?.id || null;
+    } catch (_e) { /* ignore */ }
+
+    if (!threadKey) {
+      threadKey = `chat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    }
+
+    await supabase.from(SUPPORT_CHAT_THREADS_TABLE).upsert([{
+      thread_key: threadKey,
+      participants,
+      participant_names: { [normalizedUser]: normalizedUser.split('@')[0], [SUPPORT_ADMIN_EMAIL]: SUPPORT_ADMIN_NAME },
+      issue_type: 'General Support',
+      order_id: null,
+      order_reference: null,
+      item_details: null,
+      created_at: now,
+      updated_at: now,
+      last_message: body,
+    }], { onConflict: 'thread_key' });
+
+    const msgKey = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    // Write to localStorage first — message appears immediately in any open
+    // chat session. Supabase write follows so it syncs to other devices.
+    try {
+      const threadStorageKey = getUserScopedStorageKey(SUPPORT_CHAT_THREADS_STORAGE_KEY, normalizedUser);
+      const msgStorageKey = getUserScopedStorageKey(SUPPORT_CHAT_MESSAGES_STORAGE_KEY, normalizedUser);
+      const storedThreads = JSON.parse(localStorage.getItem(threadStorageKey) || '[]');
+      const hasThread = storedThreads.some((t) => t.id === threadKey);
+      localStorage.setItem(threadStorageKey, JSON.stringify(
+        hasThread
+          ? storedThreads.map((t) => (t.id === threadKey ? { ...t, updatedAt: now, lastMessage: body } : t))
+          : [{
+            id: threadKey, participants,
+            participantNames: { [normalizedUser]: normalizedUser.split('@')[0], [SUPPORT_ADMIN_EMAIL]: SUPPORT_ADMIN_NAME },
+            issueType: 'General Support', orderId: null, orderReference: '', itemDetails: null,
+            createdAt: now, updatedAt: now, lastMessage: body,
+          }, ...storedThreads],
+      ));
+      const storedMsgs = JSON.parse(localStorage.getItem(msgStorageKey) || '[]');
+      localStorage.setItem(msgStorageKey, JSON.stringify([...storedMsgs, {
+        id: msgKey, threadId: threadKey,
+        senderEmail: SUPPORT_ADMIN_EMAIL, senderName: SUPPORT_ADMIN_NAME, senderRole: 'admin',
+        body, metadata: { type: 'product_digest' }, createdAt: now,
+      }]));
+    } catch (_e) { /* ignore storage quota */ }
+
+    localStorage.setItem(cooldownKey, String(Date.now()));
+
+    // Supabase write in background — Realtime will refresh any open chat page
+    supabase.from(SUPPORT_CHAT_MESSAGES_TABLE).insert([{
+      message_key: msgKey, thread_key: threadKey,
+      sender_email: SUPPORT_ADMIN_EMAIL, sender_name: SUPPORT_ADMIN_NAME, sender_role: 'admin',
+      body, metadata: { type: 'product_digest' }, created_at: now,
+    }]).then(() => { /* ignore result — localStorage is the source of truth here */ });
+  } catch (_e) { /* silent fail — digest is best-effort */ }
+};
+
 // Lightweight helper so any market page that navigates to its own detail
 // sub-page (instead of using the shared item-details modal) can still write
 // a Recently Viewed entry. Mirrors the exact format that handleOpenItemDetails
@@ -49711,6 +49930,97 @@ const CardGrid = ({ items, focusItems, boundsItems, buttonLabel, secondaryButton
 
 const SiteFooter = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [showOptIn, setShowOptIn] = useState(false);
+  const [showOptOut, setShowOptOut] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(() => {
+    const email = normalizeEmail(getCurrentUserEmail());
+    return email ? localStorage.getItem(`${OFFERS_OPT_IN_KEY_PREFIX}${email}`) === 'true' : false;
+  });
+
+  const handleUnsubscribe = () => {
+    const email = normalizeEmail(getCurrentUserEmail());
+    if (email) localStorage.removeItem(`${OFFERS_OPT_IN_KEY_PREFIX}${email}`);
+    setIsSubscribed(false);
+    setShowOptOut(false);
+  };
+
+  const handleOptIn = () => {
+    const email = getCurrentUserEmail();
+    const normalizedUser = normalizeEmail(email);
+
+    if (!normalizedUser) {
+      setShowOptIn(false);
+      navigate('/signin');
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const participants = [normalizedUser, SUPPORT_ADMIN_EMAIL].sort();
+    const welcomeBody = `🛍️ You're subscribed to Offers & New Products!\n\nNew product drops, deals & seller ads will be delivered right here in your SVS chat — automatically.\n\nTap "Browse Market Products" to explore all listings now.`;
+
+    // Find or create a thread key from localStorage (fast, synchronous)
+    const threadStorageKey = getUserScopedStorageKey(SUPPORT_CHAT_THREADS_STORAGE_KEY, normalizedUser);
+    const msgStorageKey = getUserScopedStorageKey(SUPPORT_CHAT_MESSAGES_STORAGE_KEY, normalizedUser);
+    let storedThreads = [];
+    try { storedThreads = JSON.parse(localStorage.getItem(threadStorageKey) || '[]'); } catch (_e) { /* ignore */ }
+
+    const existingThread = storedThreads.find((t) =>
+      Array.isArray(t.participants) &&
+      [...t.participants].sort().join('|') === participants.join('|'),
+    );
+    const threadKey = existingThread?.id || `chat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const msgKey = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    // Write thread to localStorage immediately so chat page shows it on mount
+    try {
+      const updatedThreads = existingThread
+        ? storedThreads.map((t) => (t.id === threadKey ? { ...t, updatedAt: now, lastMessage: welcomeBody } : t))
+        : [{
+          id: threadKey, participants,
+          participantNames: { [normalizedUser]: normalizedUser.split('@')[0], [SUPPORT_ADMIN_EMAIL]: SUPPORT_ADMIN_NAME },
+          issueType: 'General Support', orderId: '', orderReference: '', itemDetails: null,
+          createdAt: now, updatedAt: now, lastMessage: welcomeBody,
+        }, ...storedThreads];
+      localStorage.setItem(threadStorageKey, JSON.stringify(updatedThreads));
+
+      const storedMsgs = JSON.parse(localStorage.getItem(msgStorageKey) || '[]');
+      localStorage.setItem(msgStorageKey, JSON.stringify([...storedMsgs, {
+        id: msgKey, threadId: threadKey,
+        senderEmail: SUPPORT_ADMIN_EMAIL, senderName: SUPPORT_ADMIN_NAME, senderRole: 'admin',
+        body: welcomeBody, metadata: { type: 'offers_subscription' }, createdAt: now,
+      }]));
+    } catch (_e) { /* ignore storage quota errors */ }
+
+    // Fire Supabase write in background — does not block navigation
+    if (hasSupabaseEnv && supabase) {
+      (async () => {
+        try {
+          await supabase.from(SUPPORT_CHAT_THREADS_TABLE).upsert([{
+            thread_key: threadKey, participants,
+            participant_names: { [normalizedUser]: normalizedUser.split('@')[0], [SUPPORT_ADMIN_EMAIL]: SUPPORT_ADMIN_NAME },
+            issue_type: 'General Support', order_id: null, order_reference: null, item_details: null,
+            created_at: now, updated_at: now, last_message: welcomeBody,
+          }], { onConflict: 'thread_key' });
+          await supabase.from(SUPPORT_CHAT_MESSAGES_TABLE).insert([{
+            message_key: msgKey, thread_key: threadKey,
+            sender_email: SUPPORT_ADMIN_EMAIL, sender_name: SUPPORT_ADMIN_NAME, sender_role: 'admin',
+            body: welcomeBody, metadata: { type: 'offers_subscription' }, created_at: now,
+          }]);
+        } catch (_e) { /* localStorage fallback is already active */ }
+      })();
+    }
+
+    // Mark as subscribed, always reset cooldown so the digest fires
+    // immediately — randomisation ensures different items each time.
+    localStorage.setItem(`${OFFERS_OPT_IN_KEY_PREFIX}${normalizedUser}`, 'true');
+    localStorage.setItem(`${DIGEST_COOLDOWN_KEY_PREFIX}${normalizedUser}`, '0');
+    sendProductDigestIfDue(normalizedUser);
+    setIsSubscribed(true);
+
+    setShowOptIn(false);
+    navigate('/support/chat', { state: { recipientEmail: SUPPORT_ADMIN_EMAIL, recipientName: SUPPORT_ADMIN_NAME } });
+  };
 
   return (
     <footer className="bg-gradient-to-b from-[#0c2a32] to-[#0f6674] text-white">
@@ -49742,24 +50052,36 @@ const SiteFooter = () => {
             />
           </Link>
 
-          {/* Column 3 – Subscribe to Offers */}
+          {/* Column 3 – Offers via Chat */}
           <div>
-            <h4 className="text-[10px] font-bold uppercase leading-tight tracking-wide sm:whitespace-nowrap sm:text-sm">{t('footer.subscribe')}</h4>
-            <p className="mt-1.5 text-[9px] leading-snug text-slate-300 sm:mt-3 sm:text-sm">{t('footer.subscribeText')}</p>
-            <div className="mt-1.5 flex flex-col gap-1 sm:mt-4 sm:flex-row sm:gap-2">
-              <input
-                type="text"
-                placeholder={t('footer.subscribePlaceholder')}
-                className="min-w-0 flex-1 rounded-full border border-white/20 bg-white/10 px-2 py-1 text-[9px] text-white placeholder:text-slate-300 focus:border-cyan-300 focus:outline-none focus:ring-1 focus:ring-cyan-300 sm:px-4 sm:py-2.5 sm:text-sm"
-                aria-label={t('footer.subscribeAria')}
-              />
+            <h4 className="text-[10px] font-bold uppercase leading-tight tracking-wide sm:whitespace-nowrap sm:text-sm">Offers &amp; New Products</h4>
+            <p className="mt-1.5 text-[9px] leading-snug text-slate-300 sm:mt-3 sm:text-sm">
+              All deals, new product drops &amp; seller ads are delivered straight to your SVS chat — automatically.
+            </p>
+            {isSubscribed ? (
+              <div className="mt-2 flex flex-col gap-1 sm:mt-4">
+                <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-emerald-300 sm:text-xs">
+                  <CheckCircle2 className="h-3 w-3 shrink-0 sm:h-4 sm:w-4" aria-hidden="true" />
+                  Subscribed to offers
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowOptOut(true)}
+                  className="w-fit text-[9px] text-slate-400 underline underline-offset-2 transition hover:text-slate-200 sm:text-xs"
+                >
+                  Unsubscribe
+                </button>
+              </div>
+            ) : (
               <button
                 type="button"
-                className={`${cudyBluePrimaryButtonClassName} shrink-0 rounded-full bg-[var(--svs-primary)] px-2 py-1 text-[9px] font-semibold text-white transition hover:bg-[#0088b8] sm:px-5 sm:py-2.5 sm:text-sm`}
+                onClick={() => setShowOptIn(true)}
+                className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[var(--svs-primary)] px-2.5 py-1.5 text-[9px] font-semibold text-white transition hover:bg-[#0088b8] sm:mt-4 sm:gap-2 sm:px-5 sm:py-2.5 sm:text-sm"
               >
-                Subscribe
+                <MessageCircle className="h-3 w-3 shrink-0 sm:h-4 sm:w-4" aria-hidden="true" />
+                Get Offers in Chat
               </button>
-            </div>
+            )}
           </div>
 
           {/* Column 4 – Quick Links */}
@@ -49779,6 +50101,106 @@ const SiteFooter = () => {
           {t('footer.securePayments')}
         </p>
       </div>
+
+      {/* Offers opt-in confirmation dialog */}
+      {showOptIn && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="offers-optin-title"
+        >
+          <div className="relative w-full max-w-sm rounded-2xl bg-white shadow-2xl dark:bg-[#0f1e24]">
+            <button
+              type="button"
+              onClick={() => setShowOptIn(false)}
+              aria-label="Close"
+              className="absolute right-4 top-4 text-slate-400 transition hover:text-slate-600 dark:hover:text-slate-200"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="flex flex-col items-center gap-4 p-6 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--svs-primary)]/10">
+                <Bell className="h-7 w-7 text-[var(--svs-primary)]" />
+              </div>
+              <div>
+                <h3 id="offers-optin-title" className="text-lg font-bold text-slate-900 dark:text-white">
+                  Offers &amp; New Products
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-300">
+                  You'll receive new product drops, deals &amp; seller ads straight to your SVS chat — automatically. No spam, just what's new.
+                </p>
+              </div>
+              <div className="mt-1 flex w-full flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={handleOptIn}
+                  className="w-full rounded-full bg-[var(--svs-primary)] py-2.5 text-sm font-semibold text-white transition hover:bg-[#0088b8]"
+                >
+                  Yes, send me offers
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowOptIn(false)}
+                  className="w-full rounded-full border border-slate-200 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  Not now
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unsubscribe confirmation dialog */}
+      {showOptOut && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="offers-optout-title"
+        >
+          <div className="relative w-full max-w-sm rounded-2xl bg-white shadow-2xl dark:bg-[#0f1e24]">
+            <button
+              type="button"
+              onClick={() => setShowOptOut(false)}
+              aria-label="Close"
+              className="absolute right-4 top-4 text-slate-400 transition hover:text-slate-600 dark:hover:text-slate-200"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="flex flex-col items-center gap-4 p-6 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-rose-100 dark:bg-rose-900/30">
+                <Bell className="h-7 w-7 text-rose-500" />
+              </div>
+              <div>
+                <h3 id="offers-optout-title" className="text-lg font-bold text-slate-900 dark:text-white">
+                  Unsubscribe from Offers?
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-300">
+                  You'll stop receiving product drops, deals &amp; seller ads in your SVS chat. You can re-subscribe any time from the footer.
+                </p>
+              </div>
+              <div className="mt-1 flex w-full flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={handleUnsubscribe}
+                  className="w-full rounded-full bg-rose-500 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-600"
+                >
+                  Yes, unsubscribe me
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowOptOut(false)}
+                  className="w-full rounded-full border border-slate-200 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  Keep my subscription
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </footer>
   );
 };
@@ -50717,6 +51139,13 @@ const App = () => {
       isCancelled = true;
     };
   }, [activeUserEmail, replaceOrdersFromRemote]);
+
+  // Once per app load: send a daily product digest to authenticated non-seller
+  // users if there are ≥3 new listings since their last digest.
+  useEffect(() => {
+    if (!hasLoadedUserCollections || !getAuthState() || !activeUserEmail) return;
+    sendProductDigestIfDue(activeUserEmail);
+  }, [hasLoadedUserCollections, activeUserEmail]);
 
   useEffect(() => {
     if (!hasLoadedUserCollections || !getAuthState() || !activeUserEmail || !hasSupabaseEnv || !supabase) {
