@@ -9992,6 +9992,7 @@ const mapOrderRecord = (record) => ({
   total: Number(record.total) || 0,
   status: normalizeOrderStatus(record.status || ORDER_STATUS_FLOW[0]),
   statusHistory: Array.isArray(record.status_history) ? record.status_history : [],
+  refundBankDetails: record.refund_bank_details || null,
 });
 
 const toOrderRecord = (userEmail, order) => ({
@@ -26075,7 +26076,7 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
       const [buyersRes, sellersRes, ordersRes] = await Promise.all([
         supabase.from('account_users').select('id, full_name, email_address, contact_number, created_at').order('created_at', { ascending: false }),
         supabase.from('seller_profiles').select('id, user_email, business_name, legal_full_name, phone_number, id_number, tax_number, compliance_status, id_document_is_dark, selfie_is_dark, created_at, updated_at').order('created_at', { ascending: false }),
-        supabase.from(ORDERS_TABLE).select('user_email, order_key, reference, order_created_at, customer, items, currency, subtotal, service_fee, total, status').order('order_created_at', { ascending: false }),
+        supabase.from(ORDERS_TABLE).select('user_email, order_key, reference, order_created_at, customer, items, currency, subtotal, service_fee, total, status, payment_method, refund_bank_details').order('order_created_at', { ascending: false }),
       ]);
 
       if (isCancelled) return;
@@ -26340,20 +26341,59 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
   const handleAdminRefundAction = async (order, nextStatus) => {
     if (!supabase) return;
     setRefundActionMessage('');
+
+    const isWalletOrder = order.payment_method === 'SVS Wallet';
+    const ref = order.reference || order.order_key;
+
+    // Wallet orders: credit the wallet immediately and jump straight to "Refund Made"
+    if (nextStatus === 'Refund Pending' && isWalletOrder) {
+      const refundAmt = Number(order.total || order.subtotal || 0);
+      const walletResult = await refundWallet({
+        email: order.user_email,
+        amount: refundAmt,
+        reference: ref,
+        description: `Refund for cancelled order ${ref}`,
+      });
+      if (!walletResult.ok) {
+        setRefundActionMessage(`Wallet refund failed: ${walletResult.error}`);
+        return;
+      }
+      nextStatus = 'Refund Made';
+    }
+
     const { error } = await supabase
       .from(ORDERS_TABLE)
       .update({ status: nextStatus })
       .eq('order_key', order.order_key);
     if (error) { setRefundActionMessage(error.message); return; }
     setAdminOrders((current) => current.map((o) => (o.order_key === order.order_key ? { ...o, status: nextStatus } : o)));
-    setRefundActionMessage(`Order ${order.reference || order.order_key} updated to "${nextStatus}".`);
+    setRefundActionMessage(`Order ${ref} updated to "${nextStatus}".`);
+
+    if (nextStatus === 'Refund Pending') {
+      onPushNotificationToUser?.(order.user_email, {
+        type: 'order',
+        title: `Action needed: refund for ${ref}`,
+        message: 'Please provide your bank account details in the Orders section so we can process your EFT refund.',
+        href: '/orders',
+      });
+    } else if (nextStatus === 'Refund Made') {
+      onPushNotificationToUser?.(order.user_email, {
+        type: 'order',
+        title: 'Refund processed',
+        message: isWalletOrder
+          ? `Your SVS Wallet has been credited for cancelled order ${ref}.`
+          : `Your refund for order ${ref} has been processed. Allow 3–7 business days for your bank to reflect it.`,
+        href: '/orders',
+      });
+    }
+
     try {
       await supabase.rpc('admin_log_action', {
         p_token: token,
         p_action: 'refund_status_updated',
         p_target_type: 'order',
         p_target_id: order.order_key,
-        p_details: { previous_status: order.status, next_status: nextStatus, user_email: order.user_email },
+        p_details: { previous_status: order.status, next_status: nextStatus, user_email: order.user_email, wallet_auto_refund: isWalletOrder },
       });
     } catch (_) { /* audit log failure is non-fatal */ }
   };
@@ -26967,6 +27007,8 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                       <th className="px-4 py-3">Buyer</th>
                       <th className="px-4 py-3">Amount</th>
                       <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Payment</th>
+                      <th className="px-4 py-3">Bank Details</th>
                       <th className="px-4 py-3">Date</th>
                       <th className="px-4 py-3">Actions</th>
                     </tr>
@@ -26975,6 +27017,8 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                     {visibleRefundOrders.map((order) => {
                       const currentIdx = REFUND_STATUS_FLOW.indexOf(order.status);
                       const nextStatus = currentIdx >= 0 && currentIdx < REFUND_STATUS_FLOW.length - 1 ? REFUND_STATUS_FLOW[currentIdx + 1] : null;
+                      const isWallet = order.payment_method === 'SVS Wallet';
+                      const bd = order.refund_bank_details;
                       return (
                         <tr key={order.order_key}>
                           <td className="px-4 py-3 font-mono text-xs font-semibold text-[var(--svs-text)]">{order.reference || order.order_key}</td>
@@ -26990,15 +27034,38 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                               {order.status}
                             </span>
                           </td>
+                          <td className="px-4 py-3">
+                            {isWallet ? (
+                              <span className="rounded-full bg-cyan-50 px-2 py-0.5 text-[11px] font-bold text-cyan-700 ring-1 ring-cyan-200">SVS Wallet</span>
+                            ) : (
+                              <span className="text-xs text-[var(--svs-muted)]">{order.payment_method || '—'}</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-[var(--svs-muted)]">
+                            {isWallet ? (
+                              <span className="text-cyan-600">Auto-refunded</span>
+                            ) : bd ? (
+                              <div className="space-y-0.5">
+                                <div className="font-semibold text-[var(--svs-text)]">{bd.accountHolder}</div>
+                                <div>{bd.bankName}</div>
+                                <div className="font-mono">{bd.accountNumber}</div>
+                                {bd.accountType ? <div className="capitalize text-[10px]">{bd.accountType}</div> : null}
+                              </div>
+                            ) : (
+                              <span className="italic">Awaiting buyer</span>
+                            )}
+                          </td>
                           <td className="px-4 py-3 text-[var(--svs-muted)]">{order.order_created_at ? formatTimestampWithSeconds(order.order_created_at) : '—'}</td>
                           <td className="px-4 py-3">
                             {nextStatus ? (
                               <button
                                 type="button"
                                 onClick={() => handleAdminRefundAction(order, nextStatus)}
-                                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${nextStatus === 'Refund Pending' ? 'bg-amber-500 text-white hover:bg-amber-600' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${nextStatus === 'Refund Pending' ? (isWallet ? 'bg-cyan-600 text-white hover:bg-cyan-700' : 'bg-amber-500 text-white hover:bg-amber-600') : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
                               >
-                                {nextStatus === 'Refund Pending' ? 'Mark Refund Pending' : 'Mark Refund Made'}
+                                {nextStatus === 'Refund Pending'
+                                  ? (isWallet ? 'Refund Wallet' : 'Mark Refund Pending')
+                                  : 'Mark Refund Made'}
                               </button>
                             ) : (
                               <span className="text-xs font-semibold text-emerald-600">Done</span>
@@ -44671,6 +44738,98 @@ const DISPUTE_REASONS = [
   { value: 'other', label: 'Other' },
 ];
 
+const ORDERS_TABLE_NAME = 'orders';
+
+const RefundBankDetailsForm = ({ order }) => {
+  const [fields, setFields] = useState({ bankName: '', accountHolder: '', accountNumber: '', accountType: 'cheque' });
+  const [status, setStatus] = useState('idle');
+  const [message, setMessage] = useState('');
+
+  if (order.refundBankDetails) {
+    return (
+      <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+        Bank details submitted — the admin will process your EFT shortly.
+      </div>
+    );
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!fields.bankName.trim() || !fields.accountHolder.trim() || !fields.accountNumber.trim()) {
+      setMessage('Please fill in all required fields.');
+      return;
+    }
+    setStatus('saving');
+    setMessage('');
+    const { error } = await supabase
+      .from(ORDERS_TABLE_NAME)
+      .update({ refund_bank_details: fields })
+      .eq('order_key', order.id)
+      .eq('user_email', normalizeEmail(order.ownerEmail));
+    if (error) {
+      setMessage('Could not save details. Please try again.');
+      setStatus('idle');
+      return;
+    }
+    setStatus('done');
+  };
+
+  if (status === 'done') {
+    return (
+      <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+        Bank details submitted — the admin will process your EFT shortly.
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 rounded-xl border border-orange-200 bg-orange-50 p-3">
+      <p className="mb-2 text-xs font-semibold text-orange-800">
+        Please provide your bank details so we can process your EFT refund.
+      </p>
+      {message ? <p className="mb-2 text-xs text-red-600">{message}</p> : null}
+      <form onSubmit={handleSubmit} className="space-y-2">
+        <div className="grid grid-cols-2 gap-2">
+          <input
+            placeholder="Bank name *"
+            value={fields.bankName}
+            onChange={(e) => setFields((p) => ({ ...p, bankName: e.target.value }))}
+            className="col-span-2 w-full rounded-lg border border-orange-200 bg-white px-2.5 py-1.5 text-xs text-[var(--svs-text)] outline-none focus:border-orange-400"
+          />
+          <input
+            placeholder="Account holder name *"
+            value={fields.accountHolder}
+            onChange={(e) => setFields((p) => ({ ...p, accountHolder: e.target.value }))}
+            className="col-span-2 w-full rounded-lg border border-orange-200 bg-white px-2.5 py-1.5 text-xs text-[var(--svs-text)] outline-none focus:border-orange-400"
+          />
+          <input
+            placeholder="Account number *"
+            value={fields.accountNumber}
+            onChange={(e) => setFields((p) => ({ ...p, accountNumber: e.target.value }))}
+            className="rounded-lg border border-orange-200 bg-white px-2.5 py-1.5 text-xs text-[var(--svs-text)] outline-none focus:border-orange-400"
+          />
+          <select
+            value={fields.accountType}
+            onChange={(e) => setFields((p) => ({ ...p, accountType: e.target.value }))}
+            className="rounded-lg border border-orange-200 bg-white px-2.5 py-1.5 text-xs text-[var(--svs-text)] outline-none focus:border-orange-400"
+          >
+            <option value="cheque">Cheque / Current</option>
+            <option value="savings">Savings</option>
+            <option value="transmission">Transmission</option>
+          </select>
+        </div>
+        <button
+          type="submit"
+          disabled={status === 'saving'}
+          className="w-full rounded-lg bg-orange-500 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-orange-600 disabled:opacity-60"
+        >
+          {status === 'saving' ? 'Saving…' : 'Submit Bank Details'}
+        </button>
+      </form>
+    </div>
+  );
+};
+
 const OrderCard = ({ order, onCancelOrder, cancellingOrderId, onSetCancelError, onAddToCart }) => {
   const navigate = useNavigate();
   const meta = getOrderDisplayMeta(order);
@@ -44709,14 +44868,22 @@ const OrderCard = ({ order, onCancelOrder, cancellingOrderId, onSetCancelError, 
         </Link>
       </div>
 
-      {order.status === 'Refund Pending' ? (
-        <div className="mt-3 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-700">
-          Refund has been initiated. Please allow 3-7 business days for your bank to post the reversal.
+      {order.status === 'Refund Pending' && order.paymentMethod === 'SVS Wallet' ? (
+        <div className="mt-3 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs text-cyan-700">
+          Your SVS Wallet refund is being processed by our team.
         </div>
       ) : null}
-      {order.status === 'Refund Made' ? (
+      {order.status === 'Refund Pending' && order.paymentMethod !== 'SVS Wallet' ? (
+        <RefundBankDetailsForm order={order} />
+      ) : null}
+      {order.status === 'Refund Made' && order.paymentMethod === 'SVS Wallet' ? (
+        <div className="mt-3 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs text-cyan-700">
+          Your SVS Wallet has been credited. Check your wallet balance.
+        </div>
+      ) : null}
+      {order.status === 'Refund Made' && order.paymentMethod !== 'SVS Wallet' ? (
         <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-          Refund has been made by the seller. Bank reflection can still take 3-7 business days.
+          Refund has been processed. Allow 3–7 business days for your bank to reflect it.
         </div>
       ) : null}
 
@@ -51268,7 +51435,7 @@ const App = () => {
 
     const { data, error } = await supabase
       .from(ORDERS_TABLE)
-      .select('user_email, order_key, reference, order_created_at, customer, items, payment_method, payment_provider, payment_status, payment_reference, currency, subtotal, service_fee, total, status, status_history')
+      .select('user_email, order_key, reference, order_created_at, customer, items, payment_method, payment_provider, payment_status, payment_reference, currency, subtotal, service_fee, total, status, status_history, refund_bank_details')
       .eq('user_email', normalizedUserEmail)
       .order('order_created_at', { ascending: false });
 
