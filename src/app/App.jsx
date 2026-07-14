@@ -26398,6 +26398,28 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
     } catch (_) { /* audit log failure is non-fatal */ }
   };
 
+  const [bankDetailRequestSent, setBankDetailRequestSent] = useState({});
+
+  const handleRequestBankDetails = async (order) => {
+    const ref = order.reference || order.order_key;
+    const buyerName = order.customer?.fullName || order.customer?.email || order.user_email;
+    onPushNotificationToUser?.(order.user_email, {
+      type: 'order',
+      title: `Action needed: refund for ${ref}`,
+      message: 'Please provide your bank account details in the Orders section so we can process your EFT refund.',
+      href: '/orders',
+    });
+    sendNotificationEmail({
+      email: order.user_email,
+      name: buyerName,
+      title: `Refund bank details needed — Order ${ref}`,
+      message: `Hi ${buyerName},\n\nYour refund for order ${ref} is ready to be processed. Please log in to SVS E-Commerce and go to your Orders page to submit your bank account details so we can complete the EFT transfer.\n\nThank you.`,
+      link: `${typeof window !== 'undefined' ? window.location.origin : ''}/orders`,
+    });
+    setBankDetailRequestSent((prev) => ({ ...prev, [order.order_key]: true }));
+    setRefundActionMessage(`Bank detail request emailed to ${order.user_email}.`);
+  };
+
   const handleAdminLogout = async () => {
     if (supabase) {
       await supabase.rpc('admin_logout', { p_token: token });
@@ -27051,8 +27073,20 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                                 <div className="font-mono">{bd.accountNumber}</div>
                                 {bd.accountType ? <div className="capitalize text-[10px]">{bd.accountType}</div> : null}
                               </div>
+                            ) : order.status === 'Refund Pending' ? (
+                              <div className="space-y-1">
+                                <span className="italic text-[var(--svs-muted)]">Awaiting buyer</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRequestBankDetails(order)}
+                                  disabled={!!bankDetailRequestSent[order.order_key]}
+                                  className="block rounded-md bg-amber-100 px-2 py-1 text-[11px] font-semibold text-amber-800 transition hover:bg-amber-200 disabled:opacity-60"
+                                >
+                                  {bankDetailRequestSent[order.order_key] ? '✓ Sent' : '📧 Request Details'}
+                                </button>
+                              </div>
                             ) : (
-                              <span className="italic">Awaiting buyer</span>
+                              <span className="italic">—</span>
                             )}
                           </td>
                           <td className="px-4 py-3 text-[var(--svs-muted)]">{order.order_created_at ? formatTimestampWithSeconds(order.order_created_at) : '—'}</td>
