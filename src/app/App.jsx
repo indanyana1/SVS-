@@ -25961,6 +25961,7 @@ const ADMIN_DASHBOARD_TABS = [
   { key: 'buyers', label: 'Buyers', icon: Users },
   { key: 'sellers', label: 'Sellers', icon: Store },
   { key: 'orders', label: 'Orders', icon: ClipboardList },
+  { key: 'refunds', label: 'Refunds', icon: RefreshCw },
   { key: 'transactions', label: 'Transactions', icon: Wallet },
   { key: 'reports', label: 'Reports', icon: FileText },
 ];
@@ -26031,6 +26032,8 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
   const [buyerSearch, setBuyerSearch] = useState('');
   const [sellerSearch, setSellerSearch] = useState('');
   const [orderSearch, setOrderSearch] = useState('');
+  const [refundSearch, setRefundSearch] = useState('');
+  const [refundActionMessage, setRefundActionMessage] = useState('');
   const [transactionSearch, setTransactionSearch] = useState('');
   const [reportSearch, setReportSearch] = useState('');
 
@@ -26072,7 +26075,7 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
       const [buyersRes, sellersRes, ordersRes] = await Promise.all([
         supabase.from('account_users').select('id, full_name, email_address, contact_number, created_at').order('created_at', { ascending: false }),
         supabase.from('seller_profiles').select('id, user_email, business_name, legal_full_name, phone_number, id_number, tax_number, compliance_status, id_document_is_dark, selfie_is_dark, created_at, updated_at').order('created_at', { ascending: false }),
-        supabase.from(ORDERS_TABLE).select('user_email, order_key, reference, order_created_at, items, currency, subtotal, service_fee, total, status').order('order_created_at', { ascending: false }),
+        supabase.from(ORDERS_TABLE).select('user_email, order_key, reference, order_created_at, customer, items, currency, subtotal, service_fee, total, status').order('order_created_at', { ascending: false }),
       ]);
 
       if (isCancelled) return;
@@ -26334,6 +26337,27 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
     setTransactionMessage(`Withdrawal marked ${decision}.`);
   };
 
+  const handleAdminRefundAction = async (order, nextStatus) => {
+    if (!supabase) return;
+    setRefundActionMessage('');
+    const { error } = await supabase
+      .from(ORDERS_TABLE)
+      .update({ status: nextStatus })
+      .eq('order_key', order.order_key);
+    if (error) { setRefundActionMessage(error.message); return; }
+    setAdminOrders((current) => current.map((o) => (o.order_key === order.order_key ? { ...o, status: nextStatus } : o)));
+    setRefundActionMessage(`Order ${order.reference || order.order_key} updated to "${nextStatus}".`);
+    try {
+      await supabase.rpc('admin_log_action', {
+        p_token: token,
+        p_action: 'refund_status_updated',
+        p_target_type: 'order',
+        p_target_id: order.order_key,
+        p_details: { previous_status: order.status, next_status: nextStatus, user_email: order.user_email },
+      });
+    } catch (_) { /* audit log failure is non-fatal */ }
+  };
+
   const handleAdminLogout = async () => {
     if (supabase) {
       await supabase.rpc('admin_logout', { p_token: token });
@@ -26373,6 +26397,18 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
   const visibleOrderLineItems = useMemo(() => (
     orderLineItems.filter((line) => adminRecordMatchesSearch(line, orderSearch, ['reference', 'orderKey', 'buyerEmail', 'sellerEmail', 'title', 'status']))
   ), [orderLineItems, orderSearch]);
+
+  const refundOrders = useMemo(() => (
+    adminOrders.filter((o) => REFUND_STATUS_FLOW.includes(o.status))
+  ), [adminOrders]);
+
+  const pendingRefundsCount = useMemo(() => (
+    refundOrders.filter((o) => o.status === 'Cancelled by Buyer' || o.status === 'Refund Pending').length
+  ), [refundOrders]);
+
+  const visibleRefundOrders = useMemo(() => (
+    refundOrders.filter((o) => adminRecordMatchesSearch(o, refundSearch, ['reference', 'order_key', 'user_email', 'customer', 'status']))
+  ), [refundOrders, refundSearch]);
 
   // Neither wallet table stores a name or phone — both buyers and sellers
   // share the same account_users row, so this lookup (built off the buyers
@@ -26458,6 +26494,8 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
             <span>{label}</span>
             {key === 'sellers' && pendingSellers.length > 0 ? (
               <span className={`ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-bold ${activeTab === key ? 'bg-white/25 text-white' : 'bg-rose-500 text-white'}`}>{pendingSellers.length}</span>
+            ) : key === 'refunds' && pendingRefundsCount > 0 ? (
+              <span className={`ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-bold ${activeTab === key ? 'bg-white/25 text-white' : 'bg-amber-500 text-white'}`}>{pendingRefundsCount}</span>
             ) : null}
           </button>
         ))}
@@ -26887,6 +26925,94 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                     ))}
                     {visibleOrderLineItems.length === 0 ? (
                       <tr><td colSpan={6} className="px-4 py-6 text-center text-[var(--svs-muted)]">{orderLineItems.length === 0 ? 'No orders yet.' : 'No orders match your search.'}</td></tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          ) : activeTab === 'refunds' ? (
+            <section className="space-y-6">
+              {refundActionMessage ? (
+                <div className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 ring-1 ring-emerald-200">{refundActionMessage}</div>
+              ) : null}
+
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="relative flex-1 min-w-[200px] max-w-sm">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--svs-muted)]" />
+                  <input
+                    type="text"
+                    value={refundSearch}
+                    onChange={(event) => setRefundSearch(event.target.value)}
+                    placeholder="Search by ref, buyer, or status..."
+                    className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] py-2 pl-9 pr-3 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  {REFUND_STATUS_FLOW.map((status) => {
+                    const count = refundOrders.filter((o) => o.status === status).length;
+                    return (
+                      <span key={status} className={`rounded-full px-3 py-1 text-xs font-bold ${status === 'Cancelled by Buyer' ? 'bg-rose-50 text-rose-700 ring-1 ring-rose-200' : status === 'Refund Pending' ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-200' : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'}`}>
+                        {status}: {count}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="overflow-x-auto rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)]">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-[var(--svs-surface-soft)] text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                    <tr>
+                      <th className="px-4 py-3">Order Ref</th>
+                      <th className="px-4 py-3">Buyer</th>
+                      <th className="px-4 py-3">Amount</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Date</th>
+                      <th className="px-4 py-3">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--svs-border)]">
+                    {visibleRefundOrders.map((order) => {
+                      const currentIdx = REFUND_STATUS_FLOW.indexOf(order.status);
+                      const nextStatus = currentIdx >= 0 && currentIdx < REFUND_STATUS_FLOW.length - 1 ? REFUND_STATUS_FLOW[currentIdx + 1] : null;
+                      return (
+                        <tr key={order.order_key}>
+                          <td className="px-4 py-3 font-mono text-xs font-semibold text-[var(--svs-text)]">{order.reference || order.order_key}</td>
+                          <td className="px-4 py-3 text-[var(--svs-muted)]">
+                            <div>{order.customer?.fullName || order.customer?.email || order.user_email}</div>
+                            {(order.customer?.fullName || order.customer?.email) ? <div className="text-[10px] text-[var(--svs-muted)]">{order.user_email}</div> : null}
+                          </td>
+                          <td className="px-4 py-3 font-semibold text-[var(--svs-text)]">
+                            {formatAmountInCurrency(order.total || order.subtotal, order.currency)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase ${order.status === 'Cancelled by Buyer' ? 'bg-rose-50 text-rose-700' : order.status === 'Refund Pending' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                              {order.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-[var(--svs-muted)]">{order.order_created_at ? formatTimestampWithSeconds(order.order_created_at) : '—'}</td>
+                          <td className="px-4 py-3">
+                            {nextStatus ? (
+                              <button
+                                type="button"
+                                onClick={() => handleAdminRefundAction(order, nextStatus)}
+                                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${nextStatus === 'Refund Pending' ? 'bg-amber-500 text-white hover:bg-amber-600' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                              >
+                                {nextStatus === 'Refund Pending' ? 'Mark Refund Pending' : 'Mark Refund Made'}
+                              </button>
+                            ) : (
+                              <span className="text-xs font-semibold text-emerald-600">Done</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {visibleRefundOrders.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-8 text-center text-[var(--svs-muted)]">
+                          {refundOrders.length === 0 ? 'No refund or cancellation requests yet.' : 'No orders match your search.'}
+                        </td>
+                      </tr>
                     ) : null}
                   </tbody>
                 </table>
