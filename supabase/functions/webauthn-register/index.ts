@@ -45,8 +45,17 @@ Deno.serve(async (req) => {
     return err('Unauthorized: email mismatch');
   }
 
-  const rpID = Deno.env.get('WEBAUTHN_RP_ID') ?? 'localhost';
-  const expectedOrigin = Deno.env.get('WEBAUTHN_ORIGIN') ?? `http://localhost:3000`;
+  const requestOrigin = req.headers.get('origin') ?? '';
+  let rpID: string;
+  let expectedOrigin: string;
+  try {
+    const u = new URL(requestOrigin);
+    rpID = u.hostname;
+    expectedOrigin = u.origin;
+  } catch {
+    rpID = Deno.env.get('WEBAUTHN_RP_ID') ?? 'localhost';
+    expectedOrigin = Deno.env.get('WEBAUTHN_ORIGIN') ?? 'http://localhost:3000';
+  }
 
   // ── Step 1: generate options ─────────────────────────────────────────────
   if (step === 'options') {
