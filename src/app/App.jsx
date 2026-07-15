@@ -14339,6 +14339,8 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
   const [sidebarConditionFilters, setSidebarConditionFilters] = useState([]);
   const [sidebarMinPrice, setSidebarMinPrice] = useState('');
   const [sidebarMaxPrice, setSidebarMaxPrice] = useState('');
+  const [isConditionSheetOpen, setIsConditionSheetOpen] = useState(false);
+  const [isSortSheetOpen, setIsSortSheetOpen] = useState(false);
 
   const activeCategoryCard = secondhandCategoryCards.find((c) => c.key === categoryKey) || null;
 
@@ -14616,19 +14618,16 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
         <div className="mt-4 rounded-xl border border-[var(--svs-border)] bg-white/80 px-4 py-3 shadow-[0_2px_8px_rgba(15,23,42,0.06)] backdrop-blur sm:px-5">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-              {/* Condition dropdown */}
-              <div className="relative">
-                <ShieldCheck className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
-                <select
-                  value={selectedCondition}
-                  onChange={(e) => setSelectedCondition(e.target.value)}
-                  className="h-9 w-full appearance-none rounded-full border border-[var(--svs-border)] bg-white pl-9 pr-8 text-xs font-semibold text-[var(--svs-text)] outline-none transition hover:border-[var(--svs-primary)] focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30 sm:w-[180px]"
-                >
-                  <option value="all">All Conditions</option>
-                  {conditionOptions.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
-              </div>
+              {/* Condition picker */}
+              <button
+                type="button"
+                onClick={() => setIsConditionSheetOpen(true)}
+                className="flex h-9 w-full items-center gap-2 rounded-full border border-[var(--svs-border)] bg-white pl-3 pr-3 text-xs font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] sm:w-[180px]"
+              >
+                <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-[var(--svs-primary-strong)]" />
+                <span className="flex-1 text-left">{selectedCondition === 'all' ? 'All Conditions' : selectedCondition}</span>
+                <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[var(--svs-primary-strong)]" />
+              </button>
 
               {/* Category pill tabs */}
               <div className="flex flex-wrap gap-1.5 sm:flex-nowrap sm:gap-2 sm:overflow-x-auto sm:pb-0">
@@ -14655,18 +14654,16 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
               </div>
             </div>
 
-            {/* Sort dropdown */}
-            <div className="relative shrink-0">
-              <select
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value)}
-                className="h-9 w-full appearance-none rounded-full border border-[var(--svs-border)] bg-white px-4 pr-8 text-xs font-semibold text-[var(--svs-text)] outline-none transition hover:border-[var(--svs-primary)] focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30 sm:w-[145px]"
+            {/* Sort picker */}
+            <div className="shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsSortSheetOpen(true)}
+                className="flex h-9 w-full items-center gap-2 rounded-full border border-[var(--svs-border)] bg-white px-3 text-xs font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] sm:w-[145px]"
               >
-                <option value="Newest">Default</option>
-                <option value="Price Low">Price: Low → High</option>
-                <option value="Price High">Price: High → Low</option>
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
+                <span className="flex-1 text-left">{sortOrder === 'Newest' ? 'Default' : sortOrder === 'Price Low' ? 'Price: Low → High' : 'Price: High → Low'}</span>
+                <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[var(--svs-primary-strong)]" />
+              </button>
             </div>
           </div>
         </div>
@@ -14806,6 +14803,84 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
           No items match your current search and filters. Adjust the condition, category, or search query to see more options.
         </div>
       )}
+
+      {/* ── Condition bottom-sheet ── */}
+      {isConditionSheetOpen ? (
+        <div
+          className="fixed inset-0 z-[90] flex items-end justify-center bg-black/40"
+          onClick={() => setIsConditionSheetOpen(false)}
+        >
+          <div
+            className="w-full max-w-lg overflow-hidden rounded-t-2xl bg-white pb-safe"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-[var(--svs-border)] px-5 py-4">
+              <span className="text-sm font-bold text-[var(--svs-primary-strong)]">Condition</span>
+              <button
+                type="button"
+                onClick={() => setIsConditionSheetOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            {[{ value: 'all', label: 'All Conditions' }, ...conditionOptions.map((c) => ({ value: c, label: c }))].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => { setSelectedCondition(opt.value); setIsConditionSheetOpen(false); }}
+                className="flex w-full items-center justify-between border-b border-[var(--svs-border)] px-5 py-4 text-left text-sm font-semibold text-[var(--svs-text)] transition hover:bg-[#f4fbfe]"
+              >
+                {opt.label}
+                <span className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${selectedCondition === opt.value ? 'border-[#0f6674] bg-[#0f6674]' : 'border-slate-300'}`}>
+                  {selectedCondition === opt.value ? <span className="h-2 w-2 rounded-full bg-white" /> : null}
+                </span>
+              </button>
+            ))}
+            <div className="h-5" />
+          </div>
+        </div>
+      ) : null}
+
+      {/* ── Sort bottom-sheet ── */}
+      {isSortSheetOpen ? (
+        <div
+          className="fixed inset-0 z-[90] flex items-end justify-center bg-black/40"
+          onClick={() => setIsSortSheetOpen(false)}
+        >
+          <div
+            className="w-full max-w-lg overflow-hidden rounded-t-2xl bg-white pb-safe"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-[var(--svs-border)] px-5 py-4">
+              <span className="text-sm font-bold text-[var(--svs-primary-strong)]">Sort by</span>
+              <button
+                type="button"
+                onClick={() => setIsSortSheetOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            {[{ value: 'Newest', label: 'Default' }, { value: 'Price Low', label: 'Price: Low → High' }, { value: 'Price High', label: 'Price: High → Low' }].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => { setSortOrder(opt.value); setIsSortSheetOpen(false); }}
+                className="flex w-full items-center justify-between border-b border-[var(--svs-border)] px-5 py-4 text-left text-sm font-semibold text-[var(--svs-text)] transition hover:bg-[#f4fbfe]"
+              >
+                {opt.label}
+                <span className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${sortOrder === opt.value ? 'border-[#0f6674] bg-[#0f6674]' : 'border-slate-300'}`}>
+                  {sortOrder === opt.value ? <span className="h-2 w-2 rounded-full bg-white" /> : null}
+                </span>
+              </button>
+            ))}
+            <div className="h-5" />
+          </div>
+        </div>
+      ) : null}
     </MarketShowcase>
   );
 };
