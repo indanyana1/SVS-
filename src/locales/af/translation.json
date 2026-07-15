@@ -1,4 +1,4 @@
-{
+﻿{
   "nav": {
     "home": "Tuis",
     "markets": "Markte",
@@ -31,7 +31,7 @@
     "mobileAria": "Mobiele globale soek"
   },
   "profile": {
-    "defaultName": "SVS Gebruiker",
+    "defaultName": "Biznisdil Gebruiker",
     "signedInAs": "Aangemeld as",
     "logout": "Teken uit",
     "signIn": "Teken in",
@@ -152,7 +152,7 @@
   },
   "searchResults": {
     "title": "Soekresultate",
-    "subtitle": "Vind produkte, kaartjies en markitems onmiddellik oor SVS E-Commerce.",
+    "subtitle": "Vind produkte, kaartjies en markitems onmiddellik oor Biznisdil.",
     "noResults": "Geen resultate gevind nie."
   },
   "offers": {

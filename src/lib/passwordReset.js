@@ -76,7 +76,7 @@ export const sendResetEmail = async (_supabase, { email, resetLink, role, fullNa
 		return { delivered: false, reason: 'emailjs-not-configured' };
 	}
 
-	const roleLabel = role === 'seller' ? 'Seller Central' : 'SVS';
+	const roleLabel = role === 'seller' ? 'Seller Central' : 'Biznisdil';
 	const displayName = fullName || 'there';
 
 	// Provide multiple aliases for the recipient so whichever variable

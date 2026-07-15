@@ -49,8 +49,8 @@ const StandalonePageShell = ({ title, brandHref = '/markets', children, mainClas
 			<header className="border-b border-[var(--svs-border)] bg-[var(--svs-surface)]/95 backdrop-blur-sm">
 				<div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
 					<div className="flex min-w-0 items-center gap-3">
-						<Link to={brandHref} aria-label="Back to SVS E-Commerce" className="shrink-0">
-							<img src={logo} alt="SVS E-Commerce" className="h-10 w-auto rounded-lg" />
+						<Link to={brandHref} aria-label="Back to Biznisdil" className="shrink-0">
+							<img src={logo} alt="Biznisdil" className="h-10 w-auto rounded-lg" />
 						</Link>
 						<h1 className="truncate text-2xl font-black text-[var(--svs-text)]">{title}</h1>
 					</div>

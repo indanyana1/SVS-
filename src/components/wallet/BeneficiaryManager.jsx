@@ -186,7 +186,7 @@ const BeneficiaryManager = ({ ownerEmail, selectedBeneficiaryId, onSelectBenefic
       ) : !matchedUser ? (
         <p className="mt-3 flex items-center gap-2 rounded-xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-4 text-center text-xs text-[var(--svs-muted)]">
           <UserPlus className="h-3.5 w-3.5 shrink-0" />
-          Add a beneficiary above to send money — only registered SVS accounts can be added.
+          Add a beneficiary above to send money — only registered Biznisdil accounts can be added.
         </p>
       ) : null}
     </div>

@@ -16,7 +16,7 @@ const looksLikeEmail = (value) => /@/.test(value);
 
 export const lookupRegisteredUser = async (identifier) => {
   if (!hasSupabaseEnv || !supabase) {
-    return { ok: false, error: 'Looking up SVS accounts needs a connected Supabase project.' };
+    return { ok: false, error: 'Looking up Biznisdil accounts needs a connected Supabase project.' };
   }
   const raw = String(identifier || '').trim();
   if (!raw) return { ok: false, error: 'Enter an email address or phone number.' };
@@ -33,7 +33,7 @@ export const lookupRegisteredUser = async (identifier) => {
       .maybeSingle();
     if (error) throw error;
     if (!data) {
-      return { ok: false, error: 'No SVS account is registered with that email or phone number.' };
+      return { ok: false, error: 'No Biznisdil account is registered with that email or phone number.' };
     }
     return { ok: true, user: data };
   } catch (error) {

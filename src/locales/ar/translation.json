@@ -1,4 +1,4 @@
-{
+﻿{
   "nav": {
     "home": "الرئيسية",
     "markets": "الأسواق",
@@ -31,7 +31,7 @@
     "mobileAria": "بحث عام للجوال"
   },
   "profile": {
-    "defaultName": "مستخدم SVS",
+    "defaultName": "مستخدم Biznisdil",
     "signedInAs": "تم تسجيل الدخول باسم",
     "logout": "تسجيل الخروج",
     "signIn": "تسجيل الدخول",
@@ -116,7 +116,7 @@
   },
   "searchResults": {
     "title": "نتائج البحث",
-    "subtitle": "اعثر فورًا على المنتجات والتذاكر وعناصر السوق عبر SVS E-Commerce.",
+    "subtitle": "اعثر فورًا على المنتجات والتذاكر وعناصر السوق عبر Biznisdil.",
     "noResults": "لم يتم العثور على نتائج."
   },
   "offers": {
@@ -178,7 +178,7 @@
   },
   "marketsPage": {
     "title": "كل الأسواق",
-    "subtitle": "تنقّل عبر منصة SVS الكاملة متعددة الأسواق.",
+    "subtitle": "تنقّل عبر منصة Biznisdil الكاملة متعددة الأسواق.",
     "marketLabel": "السوق {{number}}",
     "openMarket": "افتح السوق",
     "enterMarket": "ادخل السوق",

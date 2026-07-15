@@ -1,4 +1,4 @@
-{
+﻿{
   "nav": {
     "home": "Heim",
     "markets": "Märkte",
@@ -31,7 +31,7 @@
     "mobileAria": "Mobile globale Suche"
   },
   "profile": {
-    "defaultName": "SVS Benutzer",
+    "defaultName": "Biznisdil Benutzer",
     "signedInAs": "Angemeldet als",
     "logout": "Abmelden",
     "signIn": "Anmelden",
@@ -152,7 +152,7 @@
   },
   "searchResults": {
     "title": "Suchergebnisse",
-    "subtitle": "Finden Sie Produkte, Tickets und Marktartikel sofort im gesamten SVS E-Commerce.",
+    "subtitle": "Finden Sie Produkte, Tickets und Marktartikel sofort im gesamten Biznisdil.",
     "noResults": "Keine Ergebnisse gefunden."
   },
   "offers": {
@@ -175,7 +175,7 @@
   },
   "marketsPage": {
     "title": "Alle Märkte",
-    "subtitle": "Navigieren Sie durch die vollständige Multi-Marktplatz-Plattform SVS.",
+    "subtitle": "Navigieren Sie durch die vollständige Multi-Marktplatz-Plattform Biznisdil.",
     "marketLabel": "Markt {{number}}",
     "openMarket": "Offener Markt",
     "enterMarket": "Betreten Sie den Markt",

@@ -54,7 +54,7 @@ export const sendNotificationEmail = async ({ email, name, title, message, link 
 		action_url: actionUrl,
 		reset_link: actionUrl,
 		link: actionUrl,
-		role_label: title || 'SVS',
+		role_label: title || 'Biznisdil',
 	};
 
 	try {

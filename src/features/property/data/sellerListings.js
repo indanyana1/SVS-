@@ -83,7 +83,7 @@ const rowToListing = (row) => {
 		sellerType: row.seller_type || 'Owner',
 		sellerEmail: row.seller_email || '',
 		agent: {
-			name: row.agent_name || 'SVS Seller',
+			name: row.agent_name || 'Biznisdil Seller',
 			phone: row.agent_phone || '',
 			email: row.agent_email || '',
 			badge: row.agent_badge || 'Verified Seller',
@@ -344,12 +344,12 @@ export const buildSellerListing = ({
 		furnishing: furnishing?.trim() || 'Unfurnished',
 		about:
 			about?.trim() ||
-			'Listed by an SVS verified seller. Contact the seller for more details and a private viewing.',
+			'Listed by a Biznisdil verified seller. Contact the seller for more details and a private viewing.',
 		highlights: [],
 		facilities: [],
 		trustSafety: [],
 		agent: {
-			name: sellerName?.trim() || 'SVS Seller',
+			name: sellerName?.trim() || 'Biznisdil Seller',
 			phone: sellerPhone?.trim() || '',
 			email: sellerEmail?.trim() || '',
 			badge: 'Verified Seller',

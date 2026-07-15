@@ -215,7 +215,7 @@ const SellerSignupPage = () => {
 						</div>
 
 						<p className="text-xs text-[var(--svs-muted)]">
-							By registering, you agree to SVS&apos;s{' '}
+							By registering, you agree to Biznisdil&apos;s{' '}
 							<Link to="/terms" className="text-[var(--svs-primary)] hover:underline">
 								Terms of Service
 							</Link>{' '}

@@ -6,7 +6,7 @@ const steps = [
 	{
 		step: 1,
 		title: 'Choose your email and password',
-		body: 'If you already have a buyer account on SVS, you can use the same email and password to sign in as a seller.',
+		body: 'If you already have a buyer account on Biznisdil, you can use the same email and password to sign in as a seller.',
 	},
 	{
 		step: 2,
@@ -21,7 +21,7 @@ const steps = [
 	{
 		step: 4,
 		title: 'Upload your products',
-		body: 'Use the Seller Upload flow to add title, images, price, and quantity. Products are published directly to SVS markets.',
+		body: 'Use the Seller Upload flow to add title, images, price, and quantity. Products are published directly to Biznisdil markets.',
 	},
 	{
 		step: 5,
@@ -44,12 +44,12 @@ const features = [
 	{
 		icon: Globe,
 		title: 'Multi-Market Selling',
-		body: 'Sell across SVS categories from one account and one login.',
+		body: 'Sell across Biznisdil categories from one account and one login.',
 	},
 	{
 		icon: ShieldCheck,
 		title: 'Trusted Checkout',
-		body: 'Orders run through SVS checkout options, including card and offline methods.',
+		body: 'Orders run through Biznisdil checkout options, including card and offline methods.',
 	},
 	{
 		icon: Truck,
@@ -59,7 +59,7 @@ const features = [
 	{
 		icon: Users,
 		title: 'Built-In Buyer Base',
-		body: 'Reach the same customers already shopping in your existing SVS project.',
+		body: 'Reach the same customers already shopping in your existing Biznisdil project.',
 	},
 ];
 
@@ -70,7 +70,7 @@ const SellerLandingPage = () => {
 				<div className="mx-auto max-w-6xl text-center">
 					<p className="text-sm font-semibold text-[var(--svs-primary)]">Seller Central</p>
 					<h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">
-						Grow your store on SVS E-COMMERCE
+						Grow your store on Biznisdil
 					</h1>
 					<p className="mx-auto mt-5 max-w-3xl text-base text-[var(--svs-muted)] sm:text-lg">
 						Use the same account credentials as buyers, then switch into seller tools to upload products,
@@ -159,7 +159,7 @@ const SellerLandingPage = () => {
 					<Store className="mx-auto h-10 w-10 text-[var(--svs-primary)]" />
 					<h2 className="mt-4 text-3xl font-black">Ready to grow your business?</h2>
 					<p className="mx-auto mt-3 max-w-2xl text-[var(--svs-muted)]">
-						Start selling on SVS today with a familiar login system and seller tooling that fits directly into this project.
+						Start selling on Biznisdil today with a familiar login system and seller tooling that fits directly into this project.
 					</p>
 					<div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
 						<Link

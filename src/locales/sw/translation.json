@@ -1,4 +1,4 @@
-{
+﻿{
   "nav": {
     "home": "Nyumbani",
     "markets": "Masoko",
@@ -30,7 +30,7 @@
     "mobileAria": "Utafutaji wa jumla kwenye simu"
   },
   "profile": {
-    "defaultName": "Mtumiaji wa SVS",
+    "defaultName": "Mtumiaji wa Biznisdil",
     "signedInAs": "Umeingia kama",
     "logout": "Toka",
     "signIn": "Ingia",
@@ -113,7 +113,7 @@
   },
   "searchResults": {
     "title": "Matokeo ya Utafutaji",
-    "subtitle": "Pata bidhaa, tiketi, na vitu vya soko mara moja kote SVS E-Commerce.",
+    "subtitle": "Pata bidhaa, tiketi, na vitu vya soko mara moja kote Biznisdil.",
     "noResults": "Hakuna matokeo yaliyopatikana."
   },
   "offers": {
@@ -156,7 +156,7 @@
   },
   "marketsPage": {
     "title": "Masoko Yote",
-    "subtitle": "Tembelea jukwaa lote la masoko mengi la SVS.",
+    "subtitle": "Tembelea jukwaa lote la masoko mengi la Biznisdil.",
     "marketLabel": "Soko {{number}}",
     "openMarket": "Fungua soko",
     "enterMarket": "Ingia Sokoni",

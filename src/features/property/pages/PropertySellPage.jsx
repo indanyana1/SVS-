@@ -543,7 +543,7 @@ const PropertySellPage = () => {
 						<p className="mt-2 max-w-2xl text-xs text-white/85 sm:text-sm">
 							{isEditing
 								? 'Update the details below and save to refresh your listing on the market.'
-								: 'Share the details below and your property will go live on the SVS market immediately.'}
+								: 'Share the details below and your property will go live on the Biznisdil market immediately.'}
 						</p>
 					</div>
 				</div>

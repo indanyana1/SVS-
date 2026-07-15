@@ -1,6 +1,6 @@
 // Shareable per-user chat-link helpers.
 //
-// Every registered person on SVS E-Commerce gets a stable, URL-friendly
+// Every registered person on Biznisdil gets a stable, URL-friendly
 // `user_handle` (e.g. "jane-doe-4f2a").  We use it to mint a public
 // "open a chat with me" link of the form `${origin}/u/${handle}` that
 // the owner can share anywhere (WhatsApp, business card, email

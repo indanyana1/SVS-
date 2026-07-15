@@ -150,7 +150,7 @@ const SellerSigninPage = () => {
 					</div>
 					<h1 className="text-2xl font-black">Sign in to Seller Central</h1>
 					<p className="mt-2 text-sm text-[var(--svs-muted)]">
-						Use your SVS account credentials to access your store.
+						Use your Biznisdil account credentials to access your store.
 					</p>
 				</div>
 

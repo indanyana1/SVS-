@@ -370,7 +370,7 @@ const MARKET_FIELD_SPEC = {
       { name: 'experience', label: 'Experience', type: 'select', options: ['0-1 Year', '1-3 Years', '4-5 Years', '5+ Years'] },
       { name: 'availability', label: 'Availability', type: 'select', options: ['Morning', 'Afternoon', 'Evening', 'Full Day', 'By Appointment'] },
       { name: 'serviceArea', label: 'Service area / City', type: 'text', required: true, placeholder: 'e.g. Cape Town, Durban, Lagos' },
-      { name: 'brand', label: 'Provider name / Brand', type: 'text', placeholder: 'e.g. SVS Cleaners' },
+      { name: 'brand', label: 'Provider name / Brand', type: 'text', placeholder: 'e.g. Biznisdil Cleaners' },
       { name: 'phone', label: 'Contact number', type: 'text', placeholder: 'e.g. +27 82 555 1234', helper: 'Shown as the Call button on your service page.' },
       { name: 'languages', label: 'Languages spoken', type: 'text', placeholder: 'e.g. English, Zulu, French' },
       { name: 'servicesOffered', label: 'Services offered', type: 'text', placeholder: 'e.g. Nursing Care, Wound Care, Medication Management' },
@@ -408,7 +408,7 @@ const MARKET_FIELD_SPEC = {
       { name: 'color', label: 'Colour', type: 'text', placeholder: 'e.g. Blue, Assorted' },
       { name: 'volume', label: 'Pack size', type: 'text', placeholder: 'e.g. Pack of 12, Single' },
       { name: 'material', label: 'Material', type: 'text', placeholder: 'e.g. Plastic, Steel, Premium-grade' },
-      { name: 'warranty', label: 'Warranty', type: 'text', placeholder: 'e.g. 12 months, SVS guarantee' },
+      { name: 'warranty', label: 'Warranty', type: 'text', placeholder: 'e.g. 12 months, Biznisdil guarantee' },
     ],
   },
   // Aligned with FastFoodPage filter dimensions: categories (from static items),
@@ -425,7 +425,7 @@ const MARKET_FIELD_SPEC = {
       { name: 'spiceLevel', label: 'Spice level', type: 'select', options: ['Mild', 'Medium', 'Hot', 'Extra Hot'] },
       { name: 'volume', label: 'Serving size', type: 'text', placeholder: 'e.g. 250g, Single, Family Pack' },
       { name: 'prepTime', label: 'Prep time', type: 'text', placeholder: 'e.g. 15 min' },
-      { name: 'brand', label: 'Outlet / Brand', type: 'text', placeholder: 'e.g. SVS Diner' },
+      { name: 'brand', label: 'Outlet / Brand', type: 'text', placeholder: 'e.g. Biznisdil Diner' },
     ],
   },
   // Aligned with SecondHandPage. Static items group by item.categoryKey
@@ -2490,7 +2490,7 @@ const normalizeStationerySellerItem = (item) => {
 // populated even for sparse seller listings.
 const buildStationeryDetailPayload = (item) => {
   const productType = item.productType || item.category || 'Office supplies';
-  const brand = item.brand || 'SVS Marketplace';
+  const brand = item.brand || 'Biznisdil';
   const description = item.description || '';
 
   const productOverview = item.productOverview
@@ -2503,7 +2503,7 @@ const buildStationeryDetailPayload = (item) => {
       `Ideal for ${String(item.requirement || 'individual and bulk').toLowerCase()} buyers`,
       'Comfortable, consistent performance from first use',
       'Neat, professional finish for school and office',
-      'Backed by SVS buyer protection and easy returns',
+      'Backed by Biznisdil buyer protection and easy returns',
     ];
 
   const technicalSpecs = item.technicalSpecs && typeof item.technicalSpecs === 'object'
@@ -2516,7 +2516,7 @@ const buildStationeryDetailPayload = (item) => {
       'Colour': item.color || 'Assorted',
       'Pack Size': item.volume || item.packSize || 'Standard pack',
       'Material': item.material || 'Premium-grade materials',
-      'Warranty': item.warranty || 'SVS satisfaction guarantee',
+      'Warranty': item.warranty || 'Biznisdil satisfaction guarantee',
     };
 
   return { productOverview, keyHighlights, technicalSpecs, specsTitle: 'Product Details' };
@@ -3984,7 +3984,7 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
         ratingLabel: 'New',
         experienceLevel: sellerItem.experience || 'Experienced provider',
         serviceType: sellerItem.serviceType || 'Flexible',
-        location: sellerItem.serviceArea || sellerItem.location || sellerItem.sellerName || 'SVS Seller',
+        location: sellerItem.serviceArea || sellerItem.location || sellerItem.sellerName || 'Biznisdil Seller',
         image: sellerItem.image || 'https://images.pexels.com/photos/3846022/pexels-photo-3846022.jpeg?auto=compress&cs=tinysrgb&w=1200',
         aboutText: sellerItem.description || 'This provider has not added an about section yet.',
         languages: languages.length ? languages : ['English'],
@@ -5504,7 +5504,7 @@ const MOBILITY_MOTORCYCLE_BODY_TYPES = ['Standard', 'Cruiser', 'Sport Tourer'];
 // MobilityVehicleSellPage) always win over the generated fallbacks below.
 const buildVehicleDetailPayload = (item) => {
   const category = item.category;
-  const brand = item.brand || 'SVS Auto';
+  const brand = item.brand || 'Biznisdil Auto';
   const seed = item.id;
 
   if (category === 'Spare Part') {
@@ -6849,7 +6849,7 @@ const footerLinks = {
     { labelKey: 'footer.blog', href: '/blog' },
   ],
   support: [
-    { labelKey: 'footer.help', href: '/support/chat', state: { recipientEmail: 'support@svs.app', recipientName: 'SVS Agent' } },
+    { labelKey: 'footer.help', href: '/support/chat', state: { recipientEmail: 'support@svs.app', recipientName: 'Biznisdil Agent' } },
     { labelKey: 'footer.terms', href: '/terms' },
     { labelKey: 'footer.privacy', href: '/privacy' },
     { labelKey: 'footer.refunds', href: '/refunds' },
@@ -9301,7 +9301,7 @@ const getCartSubtotal = (cartItems) => cartItems.reduce((total, item) => {
 const getServiceFee = (subtotal) => subtotal * 0.03;
 const GUEST_ORDER_EMAIL = 'guest@svs.app';
 const SUPPORT_ADMIN_EMAIL = 'support@svs.app';
-const SUPPORT_ADMIN_NAME = 'SVS Agent';
+const SUPPORT_ADMIN_NAME = 'Biznisdil Agent';
 const STANDARD_SHIPPING_FEE = 150;
 const SOUTH_AFRICA_PROVINCES = [
   'Eastern Cape',
@@ -9440,7 +9440,7 @@ const requestSupportAgentReply = async ({ message, context = {}, history = [] })
   } catch (networkError) {
     // eslint-disable-next-line no-console
     console.error('[support-agent] network error:', networkError);
-    throw new Error('Cannot reach SVS Agent right now. Please try again shortly.');
+    throw new Error('Cannot reach Biznisdil Agent right now. Please try again shortly.');
   }
 
   const rawBody = await response.text();
@@ -9457,13 +9457,13 @@ const requestSupportAgentReply = async ({ message, context = {}, history = [] })
     const detail = result.error
       || result.message
       || (rawBody && rawBody.length < 240 ? rawBody : '')
-      || 'SVS Agent is currently unavailable.';
+      || 'Biznisdil Agent is currently unavailable.';
     throw new Error(`${detail} (HTTP ${response.status})`);
   }
 
   const reply = String(result.reply || '').trim();
   if (!reply) {
-    throw new Error('SVS Agent returned an empty response.');
+    throw new Error('Biznisdil Agent returned an empty response.');
   }
 
   return reply;
@@ -11022,7 +11022,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
   const [profileOpen, setProfileOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const notificationsPanelWasOpenRef = useRef(false);
-  const [profileName, setProfileName] = useState('SVS User');
+  const [profileName, setProfileName] = useState('Biznisdil User');
   const [theme, setTheme] = useState(getThemePreference);
   // Add default priceRange state to prevent ReferenceError
   const [priceRange] = useState([0, 20]);
@@ -11477,7 +11477,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                 to="/sell"
                 className="ml-1 rounded-full bg-orange-500 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-orange-600"
               >
-                Sell on SVS
+                Sell on Biznisdil
               </Link>
             )}
           </nav>
@@ -12007,7 +12007,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                   onClick={() => setMobileOpen(false)}
                   className="block rounded-md bg-orange-500 px-3 py-2 font-bold text-white"
                 >
-                  Sell on SVS
+                  Sell on Biznisdil
                 </Link>
               )}
               {!isAuthenticated ? (
@@ -12174,7 +12174,7 @@ const HomePage = () => {
 
       <section className="bg-[var(--svs-surface-soft)] px-4 py-12">
         <div className="mx-auto w-full max-w-4xl text-center">
-          <h2 className="text-3xl font-bold text-[var(--svs-text)] sm:text-4xl">What SVS E-COMMERCE Offers</h2>
+          <h2 className="text-3xl font-bold text-[var(--svs-text)] sm:text-4xl">What Biznisdil Offers</h2>
           <div className="mt-5 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
             <p className="mt-4 text-base leading-7 text-[var(--svs-muted)] sm:text-lg">
               Shop, order, and book service provider you need - all in one intelligent platform. From daily essentials,
@@ -13178,7 +13178,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
       title: item.title || 'Seller Event',
       subtitle: item.subtitle || item.description || 'Seller listing',
       meta: item.meta || 'Seller listing',
-      provider: item.provider || item.sellerName || 'SVS Seller',
+      provider: item.provider || item.sellerName || 'Biznisdil Seller',
       date: item.date || '',
       sortDate: item.date || item.createdAt || '',
       location: item.location || 'Online booking',
@@ -14974,7 +14974,7 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
     ...marketItems.map(i => i.outletType).filter(Boolean),
   ]));
   const brands = Array.from(new Set([
-    'SVS Burger', 'Pizza Palace', 'Chicken Hub', 'Taco Town',
+    'Biznisdil Burger', 'Pizza Palace', 'Chicken Hub', 'Taco Town',
     ...marketItems.map(i => i.brand).filter(Boolean),
   ]));
   const availabilities = ['Available Now', 'Preorder'];
@@ -15024,7 +15024,7 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
 
       {/* Informational Section */}
       <section className="py-14 bg-[var(--svs-surface)] flex flex-col items-center">
-        <h2 className="font-extrabold text-[28px] text-[var(--svs-text)] mb-6" style={{letterSpacing:'-0.02em'}}>Why Choose SVS Fast Food?</h2>
+        <h2 className="font-extrabold text-[28px] text-[var(--svs-text)] mb-6" style={{letterSpacing:'-0.02em'}}>Why Choose Biznisdil Fast Food?</h2>
         <div className="flex flex-col md:flex-row gap-8 md:gap-16 justify-center">
           <div className="flex flex-col items-center text-center max-w-xs">
             <img src="https://img.icons8.com/fluency/96/000000/hamburger.png" alt="Burger" className="mb-3 w-20 h-20" />
@@ -15258,7 +15258,7 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       category: item.category || '',
       title: item.title || 'Seller Beverage',
       subtitle: item.subtitle || item.description || 'Seller listing',
-      provider: item.provider || item.sellerName || 'SVS Seller',
+      provider: item.provider || item.sellerName || 'Biznisdil Seller',
       volume: item.volume || '',
       availableQuantity: normalizeListingQuantity(item.availableQuantity, 0),
       price: item.price || '0.00',
@@ -15704,7 +15704,7 @@ const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
             navigate('/support/chat', {
               state: {
                 recipientEmail: sellerEmail || 'support@svs.app',
-                recipientName: item.sellerName || item.sellerEmail || 'SVS Support',
+                recipientName: item.sellerName || item.sellerEmail || 'Biznisdil Support',
                 recipientRole: 'seller',
                 issueType: 'Pharmaceutics Enquiry',
                 itemKey,
@@ -16601,12 +16601,6 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
     { metric: 'Real', label: 'No fake delivery promises' },
   ];
 
-  const buildCartItem = useCallback((item) => createCartItem({
-    ...item,
-    route: '/informal-market',
-    marketName: t('markets.informalMarket'),
-    details: `${item.category || 'Informal listing'} • ${item.description || item.sellerName || 'Local informal seller'}`,
-  }), [t]);
   const buildWishlistItem = useCallback((item) => createWishlistItem({
     ...item,
     route: '/informal-market',
@@ -16649,7 +16643,7 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
       description: item.description || '',
       priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
       details: `${item.normalizedCategory || item.category || 'Informal listing'} • ${item.description || item.normalizedVendor || 'Local informal seller'}`,
-      cartItem: buildCartItem(item),
+      cartItem: null,
       wishlistItem: buildWishlistItem(item),
       // Informal-market-specific enrichment
       phone: contact.phone,
@@ -16659,7 +16653,7 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
       sellerNote: buildInformalSellerNote(item),
       similarProducts: sameCategory,
     });
-  }, [allItems, buildCartItem, buildWishlistItem, onOpenItemDetails, t]);
+  }, [allItems, buildWishlistItem, onOpenItemDetails, t]);
 
   const jumpToAllListings = useCallback(() => {
     allListingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -18190,7 +18184,7 @@ const RetailerDirectLinksPage = () => {
       ) : null}
 
       <p className="mt-8 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4 text-xs text-[var(--svs-text)] sm:text-sm">
-        Links open in a new tab. SVS E-Commerce is not affiliated with these retailers; we provide convenient shortcuts to compare prices and brands.
+        Links open in a new tab. Biznisdil is not affiliated with these retailers; we provide convenient shortcuts to compare prices and brands.
       </p>
 
       {/* ── Why Shop With Us? ── */}
@@ -18824,7 +18818,7 @@ const HomeCarePage = ({ sellerItems = [] }) => {
       name: item.title || 'Home-Care Service',
       image: item.image || 'https://images.pexels.com/photos/3846022/pexels-photo-3846022.jpeg?auto=compress&cs=tinysrgb&w=1200',
       category: item.category || 'Book @ Home-Care Services',
-      location: item.serviceArea || item.sellerName || 'SVS Seller',
+      location: item.serviceArea || item.sellerName || 'Biznisdil Seller',
       experience: item.experience || item.description || 'Seller listed service',
       experienceYears: 0,
       serviceType: item.serviceType || 'Flexible',
@@ -20323,7 +20317,7 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
         <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { icon: ShieldCheck, title: 'Verified Sellers', body: 'Every seller is screened and listings are moderated for accuracy and fraud prevention.' },
-            { icon: Truck, title: 'Delivery Support', body: 'Ownership transfer and logistics support available across SVS-served regions.' },
+            { icon: Truck, title: 'Delivery Support', body: 'Ownership transfer and logistics support available across Biznisdil-served regions.' },
             { icon: ClipboardList, title: 'Vehicle History Verification', body: 'Service, accident, and odometer verification available before you buy.' },
             { icon: Phone, title: '24/7 Customer Support', body: 'Round-the-clock support for every step of your buying and selling journey.' },
           ].map((item) => (
@@ -22598,7 +22592,7 @@ const NaturalResourcesSellPage = ({ sellerItems = [], onSellerItemCreated, onUpd
   const [messageType, setMessageType] = useState('idle');
   const isAuthenticated = getAuthState();
   const userEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
-  const userName = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-name') || 'SVS Seller');
+  const userName = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-name') || 'Biznisdil Seller');
 
   const myListings = useMemo(
     () => getSellerItemsForMarket(sellerItems, 'naturalResources').filter((item) => normalizeEmail(item.sellerEmail) === userEmail),
@@ -23666,7 +23660,7 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
   const [messageType, setMessageType] = useState('idle');
   const isAuthenticated = getAuthState();
   const userEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
-  const userName = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-name') || 'SVS Worker');
+  const userName = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-name') || 'Biznisdil Worker');
 
   const myListings = useMemo(
     () => getSellerItemsForMarket(sellerItems, 'generalLabour').filter((item) => normalizeEmail(item.sellerEmail) === userEmail),
@@ -26480,7 +26474,7 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
         type: 'order',
         title: 'Refund processed',
         message: isWalletOrder
-          ? `Your SVS Wallet has been credited for cancelled order ${ref}.`
+          ? `Your Biznisdil Wallet has been credited for cancelled order ${ref}.`
           : `Your refund for order ${ref} has been processed. Allow 3–7 business days for your bank to reflect it.`,
         href: '/orders',
       });
@@ -26512,7 +26506,7 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
       email: order.user_email,
       name: buyerName,
       title: `Refund bank details needed — Order ${ref}`,
-      message: `Hi ${buyerName},\n\nYour refund for order ${ref} is ready to be processed. Please log in to SVS E-Commerce and go to your Orders page to submit your bank account details so we can complete the EFT transfer.\n\nThank you.`,
+      message: `Hi ${buyerName},\n\nYour refund for order ${ref} is ready to be processed. Please log in to Biznisdil and go to your Orders page to submit your bank account details so we can complete the EFT transfer.\n\nThank you.`,
       link: `${typeof window !== 'undefined' ? window.location.origin : ''}/orders`,
     });
     setBankDetailRequestSent((prev) => ({ ...prev, [order.order_key]: true }));
@@ -27142,7 +27136,7 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                       const bd = order.refund_bank_details;
                       return (
                         <tr key={order.order_key}>
-                          <td className="px-4 py-3 font-mono text-xs font-semibold text-[var(--svs-text)]">{order.reference || order.order_key}</td>
+                          <td className="px-4 py-3 font-mono text-xs font-semibold text-[var(--svs-text)]">{displayOrderRef(order.reference || order.order_key)}</td>
                           <td className="px-4 py-3 text-[var(--svs-muted)]">
                             <div>{order.customer?.fullName || order.customer?.email || order.user_email}</div>
                             {(order.customer?.fullName || order.customer?.email) ? <div className="text-[10px] text-[var(--svs-muted)]">{order.user_email}</div> : null}
@@ -27157,7 +27151,7 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                           </td>
                           <td className="px-4 py-3">
                             {isWallet ? (
-                              <span className="rounded-full bg-cyan-50 px-2 py-0.5 text-[11px] font-bold text-cyan-700 ring-1 ring-cyan-200">SVS Wallet</span>
+                              <span className="rounded-full bg-cyan-50 px-2 py-0.5 text-[11px] font-bold text-cyan-700 ring-1 ring-cyan-200">Biznisdil Wallet</span>
                             ) : (
                               <span className="text-xs text-[var(--svs-muted)]">{order.payment_method || '—'}</span>
                             )}
@@ -28627,7 +28621,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                   return (
                     <li key={order.id} className="flex flex-wrap items-center gap-3 py-3">
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-bold text-[var(--svs-text)]">{order.reference || order.id}</p>
+                        <p className="truncate text-sm font-bold text-[var(--svs-text)]">{displayOrderRef(order.reference || order.id)}</p>
                         <p className="text-xs text-[var(--svs-muted)]">
                           {order.customer?.fullName || order.customer?.email || 'Guest customer'} • {itemCount} item{itemCount === 1 ? '' : 's'}
                         </p>
@@ -28726,7 +28720,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Order</p>
-                          <p className="text-sm font-bold text-[var(--svs-text)]">{typeof order.reference === 'string' ? order.reference : (order.id || '')}</p>
+                          <p className="text-sm font-bold text-[var(--svs-text)]">{displayOrderRef(typeof order.reference === 'string' ? order.reference : (order.id || ''))}</p>
                           <p className="text-xs text-[var(--svs-muted)]">{formatTimestampWithSeconds(order.createdAt)}</p>
                         </div>
                         <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getStatusClasses(order.status)}`}>
@@ -29951,7 +29945,7 @@ const WalletPage = () => {
 
   if (!isAuthenticated || !userEmail) {
     return (
-      <PageFrame title="My Wallet" subtitle="Sign in to store, send and spend money on SVS.">
+      <PageFrame title="My Wallet" subtitle="Sign in to store, send and spend money on Biznisdil.">
         <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-6 text-sm text-[var(--svs-text)]">
           <p className="mb-4">You need to be signed in to use your wallet.</p>
           <Link to="/signin" className={`${cudyBluePrimaryButtonClassName} inline-flex rounded-md bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>Sign In</Link>
@@ -29964,7 +29958,7 @@ const WalletPage = () => {
   const cardTopUpAvailable = embeddedCardCheckoutEnabled;
 
   return (
-    <PageFrame title="My Wallet" subtitle="Store money on SVS, pay for items, send funds to other users or withdraw to your bank.">
+    <PageFrame title="My Wallet" subtitle="Store money on Biznisdil, pay for items, send funds to other users or withdraw to your bank.">
       {otpModalElement}
       {feedback.message ? (
         <div
@@ -31155,7 +31149,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
   const [messageType, setMessageType] = useState('idle');
   const isAuthenticated = getAuthState();
   const userEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
-  const userName = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-name') || 'SVS Seller');
+  const userName = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-name') || 'Biznisdil Seller');
 
   useEffect(() => {
     if (!imageFiles.length) {
@@ -31970,7 +31964,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                 <Sparkles className="mt-0.5 h-5 w-5 text-purple-600" aria-hidden="true" />
                 <div>
                   <h2 className="text-xl font-extrabold text-[var(--svs-text)]">AI Quick Lister</h2>
-                  <p className="mt-1 text-sm font-medium text-[var(--svs-muted)]">Upload one or more photos of the <span className="font-extrabold text-[var(--svs-text)]">same</span> product (front, back, size tag, packaging). SVS AI reads every photo and fills in the title, description, market, price, size, condition and key features for ONE listing. Review, edit, then publish.</p>
+                  <p className="mt-1 text-sm font-medium text-[var(--svs-muted)]">Upload one or more photos of the <span className="font-extrabold text-[var(--svs-text)]">same</span> product (front, back, size tag, packaging). Biznisdil AI reads every photo and fills in the title, description, market, price, size, condition and key features for ONE listing. Review, edit, then publish.</p>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -32538,7 +32532,7 @@ const HomeCareSellPage = ({ sellerItems = [], onSellerItemCreated, onPushNotific
   const [messageType, setMessageType] = useState('idle');
   const isAuthenticated = getAuthState();
   const userEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
-  const userName = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-name') || 'SVS Seller');
+  const userName = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-name') || 'Biznisdil Seller');
 
   const fieldOptions = (name) => (MARKET_FIELD_SPEC.homeCare.fields.find((field) => field.name === name)?.options || []);
 
@@ -32903,7 +32897,7 @@ const HomeCareSellPage = ({ sellerItems = [], onSellerItemCreated, onPushNotific
               </div>
               <div>
                 <label htmlFor="hc-brand" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Provider name / Brand</label>
-                <input id="hc-brand" name="brand" value={formData.brand} onChange={handleChange} placeholder="e.g. SVS Care Pros" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
+                <input id="hc-brand" name="brand" value={formData.brand} onChange={handleChange} placeholder="e.g. Biznisdil Care Pros" className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none" />
               </div>
               <div>
                 <label htmlFor="hc-phone" className="mb-1 block text-sm font-medium text-[var(--svs-text)]">Contact number</label>
@@ -33311,7 +33305,7 @@ const MobilityVehicleSellPage = ({ sellerItems = [], onSellerItemCreated, onUpda
   const [messageType, setMessageType] = useState('idle');
   const isAuthenticated = getAuthState();
   const userEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
-  const userName = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-name') || 'SVS Seller');
+  const userName = typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-name') || 'Biznisdil Seller');
 
   const myListings = useMemo(
     () => getSellerItemsForMarket(sellerItems, 'mobilityVehicles').filter((item) => normalizeEmail(item.sellerEmail) === userEmail),
@@ -34915,7 +34909,7 @@ const LivestockHubPage = ({
                           navigate('/support/chat', {
                             state: {
                               recipientEmail: normalizeEmail(item.sellerEmail || 'support@svs.app'),
-                              recipientName: item.sellerName || item.sellerEmail || 'SVS Support',
+                              recipientName: item.sellerName || item.sellerEmail || 'Biznisdil Support',
                               recipientRole: 'seller',
                               issueType: 'Livestock Enquiry',
                               itemKey,
@@ -35154,7 +35148,7 @@ const LivestockHubPage = ({
                       navigate('/support/chat', {
                         state: {
                           recipientEmail: normalizeEmail(selectedItem.sellerEmail || 'support@svs.app'),
-                          recipientName: selectedItem.sellerName || selectedItem.sellerEmail || 'SVS Support',
+                          recipientName: selectedItem.sellerName || selectedItem.sellerEmail || 'Biznisdil Support',
                           recipientRole: 'seller',
                           issueType: 'Livestock Enquiry',
                           itemKey,
@@ -35590,7 +35584,7 @@ const TrendingSellerHero = ({ items }) => {
           const marketConfig = sellerMarketConfig[item.marketKey];
           const route = marketConfig?.route || '/markets';
           const marketLabel = marketConfig?.label
-            || (marketConfig?.labelKey ? t(marketConfig.labelKey) : 'SVS Market');
+            || (marketConfig?.labelKey ? t(marketConfig.labelKey) : 'Biznisdil Market');
           // Link straight to the item's detail view. Secondhand has a dedicated
           // product route; every other market opens details via the ?focus= key.
           const itemDetailsLink = item.marketKey === 'secondhand'
@@ -36271,11 +36265,11 @@ const WishlistShareModal = ({ open, onClose, wishlistItems = [] }) => {
   }, [senderName, open]);
 
   const occasionMeta = WISHLIST_SHARE_OCCASIONS.find((o) => o.value === occasion) || WISHLIST_SHARE_OCCASIONS[0];
-  const shareTitle = senderName ? `${senderName}'s wishlist` : 'My SVS E-COMMERCE wishlist';
+  const shareTitle = senderName ? `${senderName}'s wishlist` : 'My Biznisdil wishlist';
   const shareText = (() => {
     const intro = senderName
-      ? (occasion ? `${senderName} shared a ${occasionMeta.label.replace(/^[^a-zA-Z]+/, '').toLowerCase()} wishlist with you on SVS E-COMMERCE.` : `${senderName} shared a wishlist with you on SVS E-COMMERCE.`)
-      : 'Check out my wishlist on SVS E-COMMERCE.';
+      ? (occasion ? `${senderName} shared a ${occasionMeta.label.replace(/^[^a-zA-Z]+/, '').toLowerCase()} wishlist with you on Biznisdil.` : `${senderName} shared a wishlist with you on Biznisdil.`)
+      : 'Check out my wishlist on Biznisdil.';
     return note ? `${intro}\n\n"${note}"` : intro;
   })();
 
@@ -36451,8 +36445,8 @@ const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onClea
     if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
       try {
         await navigator.share({
-          title: savedName ? `${savedName}'s wishlist` : 'My SVS E-COMMERCE wishlist',
-          text: savedName ? `${savedName} shared a wishlist with you on SVS E-COMMERCE.` : 'Check out my wishlist on SVS E-COMMERCE.',
+          title: savedName ? `${savedName}'s wishlist` : 'My Biznisdil wishlist',
+          text: savedName ? `${savedName} shared a wishlist with you on Biznisdil.` : 'Check out my wishlist on Biznisdil.',
           url: shareUrl,
         });
         return;
@@ -36514,6 +36508,7 @@ const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onClea
         {wishlistItems.map((item) => {
           const availableQuantity = getSellerListingStock(sellerItems, item);
           const isOutOfStock = availableQuantity !== null && availableQuantity <= 0;
+          const isInformalItem = item.route === '/informal-market' || item.marketKey === 'informalMarket' || String(item.marketName || '').toLowerCase().includes('informal market');
           const livePrice = getSellerListingLivePrice(sellerItems, item);
           const priceChange = livePrice && Number.isFinite(item.unitPrice) && item.unitPrice > 0 && Math.abs(livePrice.price - item.unitPrice) > 0.01
             ? (livePrice.price > item.unitPrice ? 'up' : 'down')
@@ -36567,17 +36562,19 @@ const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onClea
                 </p>
               ) : null}
               <div className="mt-4 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={isOutOfStock}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onAddToCart({ ...item, quantity: 1 });
-                  }}
-                  className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-400`}
-                >
-                  {isOutOfStock ? 'Out of stock' : 'Add to cart'}
-                </button>
+                {!isInformalItem ? (
+                  <button
+                    type="button"
+                    disabled={isOutOfStock}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onAddToCart({ ...item, quantity: 1 });
+                    }}
+                    className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-400`}
+                  >
+                    {isOutOfStock ? 'Out of stock' : 'Add to cart'}
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   onClick={(event) => {
@@ -37236,7 +37233,7 @@ const WishlistSharePage = () => {
   const occasionMeta = data ? WISHLIST_SHARE_OCCASIONS.find((o) => o.value === data.occasion) || null : null;
   const headline = data?.senderName
     ? `${data.senderName}'s${data.occasion ? ` ${occasionMeta?.label?.replace(/^[^a-zA-Z]+/, '').toLowerCase()}` : ''} wishlist`
-    : 'SVS E-COMMERCE';
+    : 'Biznisdil';
 
   if (!data) {
     return (
@@ -37254,7 +37251,7 @@ const WishlistSharePage = () => {
   const items = data.items || [];
 
   return (
-    <PageFrame title={`${headline}${items.length > 0 ? ` (${items.length})` : ''}`} subtitle={`A read-only wishlist shared on SVS — tap any item to view it on the marketplace.`}>
+    <PageFrame title={`${headline}${items.length > 0 ? ` (${items.length})` : ''}`} subtitle={`A read-only wishlist shared on Biznisdil — tap any item to view it on the marketplace.`}>
       {data.note ? (
         <div className="mb-4 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 text-sm text-[var(--svs-text)] shadow-sm">
           <p className="text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">A note from {data.senderName || 'them'}</p>
@@ -37296,7 +37293,7 @@ const WishlistSharePage = () => {
 
       <div className="mt-6 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 text-sm text-[var(--svs-text)]">
         <p className="font-bold text-[var(--svs-primary)]">Want a wishlist of your own?</p>
-        <p className="mt-1 text-[var(--svs-muted)]">Sign up free and start saving items across all 24+ SVS E-COMMERCE market places. Share yours when birthdays come around.</p>
+        <p className="mt-1 text-[var(--svs-muted)]">Sign up free and start saving items across all 24+ Biznisdil market places. Share yours when birthdays come around.</p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Link to="/signup" className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-3 py-2 text-xs font-bold text-white`}>
             Create Your Account
@@ -37435,7 +37432,7 @@ const UserProfileLinkPage = () => {
   }
 
   return (
-    <PageFrame title={`Chat with ${profile?.name || 'this person'}`} subtitle="They shared this link so you can start a direct conversation on SVS.">
+    <PageFrame title={`Chat with ${profile?.name || 'this person'}`} subtitle="They shared this link so you can start a direct conversation on Biznisdil.">
       <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[var(--svs-primary)] text-lg font-black text-white">
@@ -38769,8 +38766,8 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
     const otpVerificationId = await confirmWalletOtp(
       'spend',
       walletNeedsConversion
-        ? `Pay ${formatCheckoutAmount(payfastSession.totals.total, totalCurrency)} (≈ ${formatAmountInCurrency(walletChargeAmount, walletCurrency)} from your wallet) from your SVS Wallet.`
-        : `Pay ${formatCheckoutAmount(payfastSession.totals.total, totalCurrency)} from your SVS Wallet.`,
+        ? `Pay ${formatCheckoutAmount(payfastSession.totals.total, totalCurrency)} (≈ ${formatAmountInCurrency(walletChargeAmount, walletCurrency)} from your wallet) from your Biznisdil Wallet.`
+        : `Pay ${formatCheckoutAmount(payfastSession.totals.total, totalCurrency)} from your Biznisdil Wallet.`,
     );
     if (!otpVerificationId) return;
 
@@ -38790,7 +38787,7 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
       email: walletUserEmail,
       amount: finalChargeAmount,
       reference,
-      description: 'SVS order payment',
+      description: 'Biznisdil order payment',
       otpVerificationId,
     });
 
@@ -38885,7 +38882,7 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
         <div className="space-y-6">
           <div className="rounded-[24px] bg-[#f7f3ec] p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8a7967]">Order from:</p>
-            <p className="mt-2 text-2xl font-bold text-[#1f1f1f]">SVS E-Commerce</p>
+            <p className="mt-2 text-2xl font-bold text-[#1f1f1f]">Biznisdil</p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -38950,7 +38947,7 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
           {walletGroupNeedsExplicitChoice ? (
             <div className="rounded-2xl border border-[#f1d2a8] bg-[#fff8ec] px-4 py-3 text-sm text-[#8a5a1a]">
               {walletUserEmail
-                ? "Confirm which wallet you'd like to use before paying — pick a specific method above, or use your SVS Wallet below."
+                ? "Confirm which wallet you'd like to use before paying — pick a specific method above, or use your Biznisdil Wallet below."
                 : "Confirm which payment method you'd like to use before paying — pick a specific option above."}
             </div>
           ) : null}
@@ -38963,7 +38960,7 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
                     <Wallet className="h-5 w-5" />
                   </span>
                   <div>
-                    <p className="text-sm font-bold text-[#1f1f1f]">Pay with SVS Wallet</p>
+                    <p className="text-sm font-bold text-[#1f1f1f]">Pay with Biznisdil Wallet</p>
                     <p className="mt-0.5 text-xs text-[#6b6258]">
                       Balance: {formatAmountInCurrency(walletBalance, walletCurrency)}
                       {walletNeedsConversion ? ` · This order ≈ ${formatAmountInCurrency(walletChargeAmount, walletCurrency)}` : ''}
@@ -39188,7 +39185,7 @@ const BettingTicketTrackingPage = ({ orders }) => {
               <p className={`mt-2 flex items-center gap-2 text-lg font-bold ${liveStatusColor}`}>
                 <Circle className="h-3.5 w-3.5 animate-pulse fill-current" /> {liveStatusLabel}
               </p>
-              <p className="mt-1 text-xs text-cyan-50/90">Order ID: {order.reference}</p>
+              <p className="mt-1 text-xs text-cyan-50/90">Order ID: {displayOrderRef(order.reference)}</p>
               <p className="text-xs text-cyan-50/90">Purchased: {formatTimestampWithSeconds(orderPlacedAt)}</p>
             </div>
           </div>
@@ -39347,7 +39344,7 @@ const extractEditedMeta = (rawBody) => {
 };
 
 // `loadRemoteChat` fetches happen concurrently from several independent
-// triggers (Realtime events, read/delivery receipts, the SVS Agent's
+// triggers (Realtime events, read/delivery receipts, the Biznisdil Agent's
 // auto-reply firing in parallel with the user's own send). A fetch that
 // started before a pending insert/update commits is not "wrong" — it's
 // just a true snapshot from a moment slightly in the past — but blindly
@@ -39482,7 +39479,7 @@ const buildReplySnippetFromBody = (rawBody) => {
           video: `\uD83C\uDFA5 Video (${card.durationSec || 0}s)`,
           document: `\uD83D\uDCCE ${card.name || 'Document'}`,
           'deal-status': `\u2705 Deal status: ${card.status || ''}`,
-          'product-digest': `\ud83d\udecd\ufe0f ${card.total || ''} products available across SVS`,
+          'product-digest': `\ud83d\udecd\ufe0f ${card.total || ''} products available across Biznisdil`,
         };
         return map[card.type] || 'Message card';
       }
@@ -39497,7 +39494,7 @@ const SVS_CARD_PREFIX_FALLBACK = '[svs-card]';
 
 const formatLastMessagePreview = (raw) => {
   if (!raw) return '';
-  const body = String(raw);
+  const body = String(raw).replace(/\bSVS E-Commerce\b/g, 'Biznisdil').replace(/\bSVS E-COMMERCE\b/g, 'Biznisdil').replace(/\bSVS Agent\b/g, 'Biznisdil Agent').replace(/\bon SVS\b/g, 'on Biznisdil');
   if (!body.startsWith(SVS_CARD_PREFIX_FALLBACK)) return body;
   try {
     const card = JSON.parse(body.slice(SVS_CARD_PREFIX_FALLBACK.length));
@@ -39534,7 +39531,7 @@ const CHAT_LINK_CLASS = 'font-semibold text-[#0f6674] underline underline-offset
 // into clickable links. Returns an array of strings and React elements
 // suitable for a <p> child. Honours `whitespace-pre-wrap` on the parent.
 const renderChatBodyWithLinks = (text) => {
-  const src = String(text || '');
+  const src = String(text || '').replace(/\bSVS E-Commerce\b/g, 'Biznisdil').replace(/\bSVS E-COMMERCE\b/g, 'Biznisdil').replace(/\bSVS Marketplace\b/g, 'Biznisdil').replace(/\bSVS Agent\b/g, 'Biznisdil Agent').replace(/\bon SVS\b/g, 'on Biznisdil');
   if (!src) return null;
   if (!CHAT_URL_OR_PATH_REGEX.test(src)) return src;
   CHAT_URL_OR_PATH_REGEX.lastIndex = 0;
@@ -39671,7 +39668,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
   const [typingMap, setTypingMap] = useState({});
   const typingTimeoutRef = useRef(null);
   const typingChannelRef = useRef(null);
-  // The SVS Agent is an always-available bot; everyone else must really be
+  // The Biznisdil Agent is an always-available bot; everyone else must really be
   // connected (present in the Realtime presence channel) to show as online.
   const isUserOnline = useCallback((email) => {
     const normalized = normalizeEmail(email);
@@ -40812,7 +40809,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     return () => { cancelled = true; };
   }, [messages, currentUserEmail, loadRemoteChat]);
 
-  // True when the active thread is the SVS Agent / Support thread.
+  // True when the active thread is the Biznisdil Agent / Support thread.
   // Must be defined before the scroll effect that references it.
   const isAgentThread = useMemo(() => {
     if (!activeThread) return false;
@@ -40823,7 +40820,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
   }, [activeThread]);
 
   // Pin the scroll position when the active thread changes (opening a
-  // chat) or a new message lands. For the SVS Agent thread (and any time
+  // chat) or a new message lands. For the Biznisdil Agent thread (and any time
   // a message is sent/received) always jump to the very bottom so the
   // latest reply is immediately visible. For peer threads with unread
   // history we land on the first-unread divider instead, then let the
@@ -40905,9 +40902,10 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     const displayName = participantNames[counterpartEmail]
       || (counterpartEmail === SUPPORT_ADMIN_EMAIL ? SUPPORT_ADMIN_NAME : counterpartEmail);
 
+    const normalizedName = String(displayName || '').replace(/\bSVS\b/g, 'Biznisdil');
     return {
       email: counterpartEmail,
-      name: displayName,
+      name: normalizedName,
     };
   }, [currentUserEmail]);
 
@@ -40923,7 +40921,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
   }, [visibleThreads, resolveCounterparty]);
   const lastSeenMap = useLastSeen(counterpartyEmails);
 
-  // Ask the SVS Agent to reply in this thread. Used by plain-text messages
+  // Ask the Biznisdil Agent to reply in this thread. Used by plain-text messages
   // AND by the new card messages (offers, payment requests, location, voice
   // notes, etc.) so the AI can negotiate, confirm payment, etc.
   const triggerAgentReply = useCallback(async (updatedThread, userMessageText) => {
@@ -40992,7 +40990,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
       }
     } catch (agentError) {
       const fallbackTimestamp = new Date().toISOString();
-      const fallbackBody = `SVS Agent is temporarily unavailable. Please try again in a moment.\n\nDetails: ${agentError?.message || 'Unknown error.'}`;
+      const fallbackBody = `Biznisdil Agent is temporarily unavailable. Please try again in a moment.\n\nDetails: ${agentError?.message || 'Unknown error.'}`;
       const fallbackMessage = {
         id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         threadId: updatedThread.id,
@@ -41069,7 +41067,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
       const messagePreview = body.length > 120 ? `${body.slice(0, 117)}...` : body;
       onPushNotificationToUser?.(recipientEmail, {
         type: 'chat',
-        title: `New message from ${currentUserName || 'SVS user'}`,
+        title: `New message from ${currentUserName || 'Biznisdil user'}`,
         message: messagePreview,
         href: `/support/chat?thread=${updatedThread.id}`,
         orderId: updatedThread.orderId || null,
@@ -41165,7 +41163,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     if (recipientEmailLocal && recipientEmailLocal !== SUPPORT_ADMIN_EMAIL) {
       onPushNotificationToUser?.(recipientEmailLocal, {
         type: 'chat',
-        title: `New ${card.type.replace('-', ' ')} from ${currentUserName || 'SVS user'}`,
+        title: `New ${card.type.replace('-', ' ')} from ${currentUserName || 'Biznisdil user'}`,
         message: preview,
         href: '/support/chat',
         orderId: updatedThread.orderId || null,
@@ -41182,7 +41180,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
         .then(() => { loadRemoteChat(); });
     }
 
-    // If this card is destined for the SVS Agent, trigger an AI reply too.
+    // If this card is destined for the Biznisdil Agent, trigger an AI reply too.
     if (recipientEmailLocal === SUPPORT_ADMIN_EMAIL && !isAdmin) {
       triggerAgentReply(updatedThread, cardToReadableText(body));
     }
@@ -41390,7 +41388,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     if (recipientEmailLocal && recipientEmailLocal !== SUPPORT_ADMIN_EMAIL) {
       onPushNotificationToUser?.(recipientEmailLocal, {
         type: 'chat',
-        title: `Forwarded message from ${currentUserName || 'SVS user'}`,
+        title: `Forwarded message from ${currentUserName || 'Biznisdil user'}`,
         message: preview,
         href: '/support/chat',
         orderId: updatedThread.orderId || null,
@@ -41949,7 +41947,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
         return await requestImageDescription({
           imageBase64: base64,
           mimeType: 'image/jpeg',
-          context: 'Midpoint frame from a video attachment sent in the SVS Let\'s Talk Business chat.',
+          context: 'Midpoint frame from a video attachment sent in the Biznisdil Let\'s Talk Business chat.',
         });
       } catch (e) {
         // eslint-disable-next-line no-console
@@ -42048,7 +42046,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
       description = await requestImageDescription({
         imageBase64: base64,
         mimeType: mimeMatch ? mimeMatch[1] : 'image/jpeg',
-        context: 'Photo attached in the SVS Let\'s Talk Business chat.',
+        context: 'Photo attached in the Biznisdil Let\'s Talk Business chat.',
       });
     } catch (e) {
       // eslint-disable-next-line no-console
@@ -42251,7 +42249,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
       <h2 style="color:#0f6674;font-size:13px;font-weight:600;margin:0 0 6px 0">With ${esc(counterpartName)} &middot; ${esc(activeThread.issueType || 'General Support')}${activeThread.orderReference ? ` &middot; ${esc(activeThread.orderReference)}` : ''}</h2>
       <p style="color:#475569;font-size:12px;margin:0 0 18px 0">Exported by ${esc(currentUserName || currentUserEmail)} on ${esc(formatTimestampWithSeconds(new Date()))} &middot; Current deal status: <strong>${esc(dealStatusMeta[dealStatus]?.label || dealStatus)}</strong></p>
     `;
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>SVS Chat &mdash; ${esc(counterpartName)}</title>
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Biznisdil Chat &mdash; ${esc(counterpartName)}</title>
       <style>
         body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f7fbff;color:#1f2937;padding:24px;margin:0}
         .toolbar{margin:0 0 16px 0}
@@ -42326,8 +42324,8 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
                     try {
                       if (navigator.share) {
                         await navigator.share({
-                          title: 'Chat with me on SVS',
-                          text: 'Open this link to chat with me on SVS E-Commerce:',
+                          title: 'Chat with me on Biznisdil',
+                          text: 'Open this link to chat with me on Biznisdil:',
                           url,
                         });
                         return;
@@ -43785,7 +43783,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
                         }
                       }}
                       rows={1}
-                      placeholder={isAgentThread ? 'Ask the SVS Agent anything about the site...' : 'Type your message here...'}
+                      placeholder={isAgentThread ? 'Ask the Biznisdil Agent anything about the site...' : 'Type your message here...'}
                       className="min-h-[40px] max-h-32 flex-1 resize-none border-0 bg-transparent px-2 py-2 text-sm text-[var(--svs-text)] outline-none placeholder:text-[var(--svs-muted)] sm:min-h-[44px]"
                     />
                     <button
@@ -44105,11 +44103,12 @@ const OrderConfirmationPage = ({ orders }) => {
 
   const handleDownloadInvoice = () => {
     if (typeof window === 'undefined') return;
-    const html = `<!doctype html><html><head><meta charset="utf-8"/><title>Invoice ${order.reference}</title>
+    const orderRefDisplay = displayOrderRef(order.reference);
+    const html = `<!doctype html><html><head><meta charset="utf-8"/><title>Invoice ${orderRefDisplay}</title>
       <style>body{font-family:Arial,sans-serif;color:#1f1f1f;padding:40px;max-width:720px;margin:auto}h1{color:#1a73e8;margin:0 0 4px}h2{font-size:16px;margin:24px 0 8px;color:#1f1f1f}table{width:100%;border-collapse:collapse;margin-top:8px}th,td{text-align:left;padding:8px;border-bottom:1px solid #e2dbd0;font-size:13px}.right{text-align:right}.muted{color:#6b6258;font-size:12px}.box{border:1px solid #ddd5c8;border-radius:12px;padding:16px;margin-top:16px}</style>
       </head><body>
-      <h1>SVS E-Commerce</h1>
-      <p class="muted">Invoice • ${order.reference}</p>
+      <h1>Biznisdil</h1>
+      <p class="muted">Invoice • ${orderRefDisplay}</p>
       <p class="muted">Placed: ${formatTimestampWithSeconds(order.createdAt || Date.now())}</p>
       <h2>Bill To</h2>
       <div class="box">
@@ -44127,7 +44126,7 @@ const OrderConfirmationPage = ({ orders }) => {
         <tr><td><strong>Total</strong></td><td class="right"><strong>${formatCheckoutAmount(order.total)}</strong></td></tr>
         <tr><td>Payment</td><td class="right">${order.paymentMethod || ''} ${order.paymentReference ? `(${order.paymentReference})` : ''}</td></tr>
       </table>
-      <p class="muted" style="margin-top:32px">Thank you for shopping with SVS E-Commerce.</p>
+      <p class="muted" style="margin-top:32px">Thank you for shopping with Biznisdil.</p>
       <script>window.print();</script>
       </body></html>`;
     const blob = new Blob([html], { type: 'text/html' });
@@ -44136,7 +44135,7 @@ const OrderConfirmationPage = ({ orders }) => {
     if (!win) {
       const a = document.createElement('a');
       a.href = url;
-      a.download = `invoice-${order.reference}.html`;
+      a.download = `invoice-${orderRefDisplay}.html`;
       a.click();
     }
     setTimeout(() => URL.revokeObjectURL(url), 30000);
@@ -44226,7 +44225,7 @@ const OrderConfirmationPage = ({ orders }) => {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-[var(--svs-muted)]">Order ID:</span>
-              <span className="font-semibold text-[var(--svs-text)]">{order.reference}</span>
+              <span className="font-semibold text-[var(--svs-text)]">{displayOrderRef(order.reference)}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-[var(--svs-muted)]">Payment ID:</span>
@@ -44358,6 +44357,8 @@ const formatTrackTimestamp = (value) => {
   });
 };
 
+const displayOrderRef = (ref) => String(ref || '').replace(/^SVS-/i, 'BZD-');
+
 const formatTrackDate = (value) => {
   if (!value) return '';
   const date = value instanceof Date ? value : new Date(value);
@@ -44476,7 +44477,7 @@ const TrackOrderPage = ({ orders, onAdminSetOrderStatus }) => {
     const refundCompletedAt = refundCompleted ? (findHistoryAt('Refund Made') || new Date()) : null;
     return [
       { key: 'requested', title: 'Cancellation Requested', description: 'You requested to cancel this order.', reached: true, at: cancelledAt, location: 'Account', isCurrent: false },
-      { key: 'confirmed', title: 'Cancellation Confirmed', description: 'Order successfully cancelled and removed from fulfilment.', reached: true, at: cancelledAt, location: 'SVS', isCurrent: !refundInitiated },
+      { key: 'confirmed', title: 'Cancellation Confirmed', description: 'Order successfully cancelled and removed from fulfilment.', reached: true, at: cancelledAt, location: 'Biznisdil', isCurrent: !refundInitiated },
       { key: 'refundInitiated', title: 'Refund Initiated', description: wasCardPayment ? 'Refund issued back to your card.' : 'Refund being processed via your original payment method.', reached: refundInitiated, at: refundInitiatedAt, location: 'Payments', isCurrent: refundInitiated && !refundCompleted },
       { key: 'refundCompleted', title: refundCompleted ? 'Refund Completed' : 'Refund Completion', description: refundCompleted ? 'Refund settled to your account.' : 'Bank reflection can take 3-7 business days.', reached: refundCompleted, at: refundCompletedAt, location: 'Bank', isCurrent: false },
     ];
@@ -44518,8 +44519,8 @@ const TrackOrderPage = ({ orders, onAdminSetOrderStatus }) => {
     shipping.country,
   ].filter((line) => line && String(line).trim().length);
 
-  const courierName = order.fulfillment?.courier || 'SVS E-Commerce Logistics';
-  const trackingNumber = order.fulfillment?.trackingNumber || `SVS${String(order.reference || order.id || '').replace(/\D/g, '').slice(-12).padStart(12, '0')}`;
+  const courierName = order.fulfillment?.courier || 'Biznisdil Logistics';
+  const trackingNumber = order.fulfillment?.trackingNumber || `BZD${String(order.reference || order.id || '').replace(/\D/g, '').slice(-12).padStart(12, '0')}`;
   const badgeLabel = getTrackBadgeLabel(order.status);
   const badgeClass = TRACK_BADGE_STYLES[order.status] || 'bg-slate-50 text-slate-700 border-slate-200';
   const lastUpdatedRelative = (() => {
@@ -44574,7 +44575,7 @@ const TrackOrderPage = ({ orders, onAdminSetOrderStatus }) => {
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
                 <Package className="h-4 w-4 text-[var(--svs-primary-strong)]" /> Order ID
               </div>
-              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{order.reference || order.id}</p>
+              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{displayOrderRef(order.reference || order.id)}</p>
             </div>
             <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4">
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
@@ -44998,7 +44999,7 @@ const OrderCard = ({ order, onCancelOrder, cancellingOrderId, onSetCancelError, 
 
       {order.status === 'Refund Pending' && order.paymentMethod === 'SVS Wallet' ? (
         <div className="mt-3 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs text-cyan-700">
-          Your SVS Wallet refund is being processed by our team.
+          Your Biznisdil Wallet refund is being processed by our team.
         </div>
       ) : null}
       {order.status === 'Refund Pending' && order.paymentMethod !== 'SVS Wallet' ? (
@@ -45006,7 +45007,7 @@ const OrderCard = ({ order, onCancelOrder, cancellingOrderId, onSetCancelError, 
       ) : null}
       {order.status === 'Refund Made' && order.paymentMethod === 'SVS Wallet' ? (
         <div className="mt-3 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs text-cyan-700">
-          Your SVS Wallet has been credited. Check your wallet balance.
+          Your Biznisdil Wallet has been credited. Check your wallet balance.
         </div>
       ) : null}
       {order.status === 'Refund Made' && order.paymentMethod !== 'SVS Wallet' ? (
@@ -45672,7 +45673,7 @@ const ReturnOrderPage = ({ orders }) => {
                       <span className="rounded-md bg-[var(--svs-primary)]/10 px-2 py-0.5 font-semibold text-[var(--svs-primary-strong)]">{meta.label}</span>
                     ) : null}
                     {order.reference ? (
-                      <span className="rounded-md border border-[var(--svs-border)] bg-white px-2 py-0.5 font-medium text-[var(--svs-muted)]">{order.reference}</span>
+                      <span className="rounded-md border border-[var(--svs-border)] bg-white px-2 py-0.5 font-medium text-[var(--svs-muted)]">{displayOrderRef(order.reference)}</span>
                     ) : null}
                   </div>
                   <p className="mt-1 text-xs text-[var(--svs-muted)]">
@@ -46238,7 +46239,7 @@ const ExchangeOrderPage = ({ orders }) => {
                       <span className="rounded-md bg-[var(--svs-primary)]/10 px-2 py-0.5 font-semibold text-[var(--svs-primary-strong)]">{meta.label}</span>
                     ) : null}
                     {order.reference ? (
-                      <span className="rounded-md border border-[var(--svs-border)] bg-white px-2 py-0.5 font-medium text-[var(--svs-muted)]">{order.reference}</span>
+                      <span className="rounded-md border border-[var(--svs-border)] bg-white px-2 py-0.5 font-medium text-[var(--svs-muted)]">{displayOrderRef(order.reference)}</span>
                     ) : null}
                   </div>
                   <p className="mt-1 text-xs text-[var(--svs-muted)]">
@@ -46771,7 +46772,7 @@ const CancelOrderPage = ({ orders, onCancelOrder }) => {
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <div className="rounded-xl bg-white p-3">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Order ID</p>
-              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{order.reference || order.id}</p>
+              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{displayOrderRef(order.reference || order.id)}</p>
             </div>
             <div className="rounded-xl bg-white p-3">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Order Date</p>
@@ -47137,7 +47138,7 @@ const LogoFullscreenPage = () => {
       </button>
       <img
         src={logo}
-        alt="SVS E-Commerce logo"
+        alt="Biznisdil logo"
         className="max-h-[92vh] max-w-[92vw] object-contain"
       />
     </section>
@@ -47273,7 +47274,7 @@ const MarketShowcase = ({
   </section>
 );
 
-// Sends ONE daily digest of newly listed products to the user's SVS Agent
+// Sends ONE daily digest of newly listed products to the user's Biznisdil Agent
 // chat — silently no-ops if there's nothing new or the cooldown hasn't expired.
 // Rules that keep it non-annoying:
 //   • 24-hour cooldown per user (localStorage key)
@@ -47372,7 +47373,7 @@ const sendProductDigestIfDue = async (userEmail) => {
     const now = new Date().toISOString();
     const participants = [normalizedUser, SUPPORT_ADMIN_EMAIL].sort();
 
-    // Find the SVS Agent thread from localStorage first (fastest, most reliable).
+    // Find the Biznisdil Agent thread from localStorage first (fastest, most reliable).
     // Falls back to creating a new thread if none exists yet.
     let threadKey = null;
     try {
@@ -48151,7 +48152,7 @@ const ItemDetailsModal = ({
                   </span>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-row">
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row">
                 <button
                   type="button"
                   onClick={() => setIsQuickContactOpen(true)}
@@ -48168,14 +48169,6 @@ const ItemDetailsModal = ({
                 >
                   <Store className="h-3.5 w-3.5" aria-hidden="true" />
                   View Stall
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onAddToCart?.(actionCartItem)}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#0f6674] px-3 py-2 text-xs font-bold text-white shadow transition hover:bg-[#0d5762] sm:text-sm"
-                >
-                  <ShoppingCart className="h-3.5 w-3.5" aria-hidden="true" />
-                  Add to Cart
                 </button>
               </div>
             </div>
@@ -50526,7 +50519,7 @@ const SiteFooter = () => {
 
     const now = new Date().toISOString();
     const participants = [normalizedUser, SUPPORT_ADMIN_EMAIL].sort();
-    const welcomeBody = `🛍️ You're subscribed to Offers & New Products!\n\nNew product drops, deals & seller ads will be delivered right here in your SVS chat — automatically.\n\nTap "Browse Market Products" to explore all listings now.`;
+    const welcomeBody = `🛍️ You're subscribed to Offers & New Products!\n\nNew product drops, deals & seller ads will be delivered right here in your Biznisdil chat — automatically.\n\nTap "Browse Market Products" to explore all listings now.`;
 
     // Find or create a thread key from localStorage (fast, synchronous)
     const threadStorageKey = getUserScopedStorageKey(SUPPORT_CHAT_THREADS_STORAGE_KEY, normalizedUser);
@@ -50610,13 +50603,13 @@ const SiteFooter = () => {
 
           {/* Column 2 – Brand */}
           <Link to="/markets" aria-label="Go to Markets" className="block transition hover:opacity-80">
-            <h3 className="text-[10px] font-bold sm:whitespace-nowrap sm:text-xl">SVS E-Commerce</h3>
+            <h3 className="text-[10px] font-bold sm:whitespace-nowrap sm:text-xl">Biznisdil</h3>
             <ul className="mt-1.5 space-y-1 text-[9px] leading-snug text-slate-200 sm:mt-3 sm:space-y-2 sm:text-base">
               <li>{t('site.tagline', { defaultValue: 'Your one-stop marketplace for everything you need – from groceries to tickets!' })}</li>
             </ul>
             <img
               src={logo}
-              alt="SVS E-Commerce logo"
+              alt="Biznisdil logo"
               className="mt-3 h-10 w-10 rounded-lg object-contain sm:mt-6 sm:h-16 sm:w-16"
             />
           </Link>
@@ -50625,7 +50618,7 @@ const SiteFooter = () => {
           <div>
             <h4 className="text-[10px] font-bold uppercase leading-tight tracking-wide sm:whitespace-nowrap sm:text-sm">Offers &amp; New Products</h4>
             <p className="mt-1.5 text-[9px] leading-snug text-slate-300 sm:mt-3 sm:text-sm">
-              All deals, new product drops &amp; seller ads are delivered straight to your SVS chat — automatically.
+              All deals, new product drops &amp; seller ads are delivered straight to your Biznisdil chat — automatically.
             </p>
             {isSubscribed ? (
               <div className="mt-2 flex flex-col gap-1 sm:mt-4">
@@ -50697,7 +50690,7 @@ const SiteFooter = () => {
                   Offers &amp; New Products
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-300">
-                  You'll receive new product drops, deals &amp; seller ads straight to your SVS chat — automatically. No spam, just what's new.
+                  You'll receive new product drops, deals &amp; seller ads straight to your Biznisdil chat — automatically. No spam, just what's new.
                 </p>
               </div>
               <div className="mt-1 flex w-full flex-col gap-2">
@@ -50747,7 +50740,7 @@ const SiteFooter = () => {
                   Unsubscribe from Offers?
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-300">
-                  You'll stop receiving product drops, deals &amp; seller ads in your SVS chat. You can re-subscribe any time from the footer.
+                  You'll stop receiving product drops, deals &amp; seller ads in your Biznisdil chat. You can re-subscribe any time from the footer.
                 </p>
               </div>
               <div className="mt-1 flex w-full flex-col gap-2">
@@ -50857,7 +50850,7 @@ const InstallAppBanner = () => {
         <div className="flex items-center gap-2">
           <Smartphone className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" aria-hidden="true" />
           <p className="text-[11px] font-semibold leading-tight sm:text-xs">
-            Install the SVS E-COMMERCE APP for a faster, full-screen shopping &amp; chat experience.
+            Install the Biznisdil APP for a faster, full-screen shopping &amp; chat experience.
           </p>
         </div>
         <button
@@ -52161,7 +52154,7 @@ const App = () => {
     const orderOwnerEmail = normalizeEmail(activeUserEmail) || GUEST_ORDER_EMAIL;
     const order = {
       id: `order-${Date.now()}`,
-      reference: `SVS-${String(Date.now()).slice(-8)}`,
+      reference: `BZD-${String(Date.now()).slice(-8)}`,
       createdAt: new Date().toISOString(),
       ownerEmail: orderOwnerEmail,
       customer,
@@ -53101,7 +53094,7 @@ const App = () => {
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-[var(--svs-primary-strong)]">Update Available</p>
-          <p className="text-xs text-slate-500">A new version of SVS E-COMMERCE APP is ready to install.</p>
+          <p className="text-xs text-slate-500">A new version of Biznisdil APP is ready to install.</p>
         </div>
         <button
           type="button"

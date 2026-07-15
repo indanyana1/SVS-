@@ -1,4 +1,4 @@
-{
+﻿{
   "nav": {
     "home": "Home",
     "markets": "Markets",
@@ -30,7 +30,7 @@
     "mobileAria": "Mobile global search"
   },
   "profile": {
-    "defaultName": "SVS User",
+    "defaultName": "Biznisdil User",
     "signedInAs": "Signed in as",
     "logout": "Logout",
     "signIn": "Sign In",
@@ -149,7 +149,7 @@
   },
   "searchResults": {
     "title": "Search Results",
-    "subtitle": "Find products, tickets, and market items instantly across SVS E-Commerce.",
+    "subtitle": "Find products, tickets, and market items instantly across Biznisdil.",
     "noResults": "No results found."
   },
   "offers": {
@@ -172,7 +172,7 @@
   },
   "marketsPage": {
     "title": "All Markets",
-    "subtitle": "Navigate the full SVS multi-marketplace platform.",
+    "subtitle": "Navigate the full Biznisdil multi-marketplace platform.",
     "marketLabel": "Market {{number}}",
     "openMarket": "Open market",
     "enterMarket": "Enter Market",

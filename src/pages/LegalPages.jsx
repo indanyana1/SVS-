@@ -2,7 +2,7 @@ import React from 'react';
 import { formatInBuyerCurrency, useBuyerCurrency } from '../lib/buyerCurrency';
 
 /**
- * Legal pages for SVS E-Commerce. These render proper Privacy, Terms,
+ * Legal pages for Biznisdil. These render proper Privacy, Terms,
  * Refund and Cookie policies with real content (rather than the
  * "Coming soon" placeholder).
  *
@@ -16,7 +16,7 @@ import { formatInBuyerCurrency, useBuyerCurrency } from '../lib/buyerCurrency';
 
 const LAST_UPDATED = 'June 2026';
 const CONTACT_EMAIL = 'support@svs-ecommerce.com';
-const COMPANY_NAME = 'SVS E-Commerce';
+const COMPANY_NAME = 'Biznisdil';
 
 const Section = ({ id, title, children }) => (
   <section id={id} className="mb-6 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-sm sm:p-6">
@@ -106,7 +106,7 @@ export const TermsOfServicePage = () => {
           </a>{' '}
           or{' '}
           <a href="/support/chat" className="font-semibold text-[var(--svs-primary)] hover:underline">
-            chat with the SVS Agent
+            chat with the Biznisdil Agent
           </a>{' '}
           and we&rsquo;ll gladly walk you through them.
         </p>
@@ -226,7 +226,7 @@ export const TermsOfServicePage = () => {
 
       <Section id="terms-contact" title="13. Contact">
         <p>
-          Questions about these Terms? Email us at <a className="text-[var(--svs-primary)] underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> or <a className="font-semibold text-[var(--svs-primary)] underline" href="/support/chat">chat with the SVS Agent</a>.
+          Questions about these Terms? Email us at <a className="text-[var(--svs-primary)] underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> or <a className="font-semibold text-[var(--svs-primary)] underline" href="/support/chat">chat with the Biznisdil Agent</a>.
         </p>
       </Section>
     </PageWrap>

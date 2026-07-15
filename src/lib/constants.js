@@ -1,1 +1,1 @@
-export const APP_NAME = 'SVS E-COMMERCE';
+export const APP_NAME = 'Biznisdil';

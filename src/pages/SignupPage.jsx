@@ -121,7 +121,7 @@ const SignupPage = () => {
 				</button>
 				<h1 className="text-2xl font-bold text-white">Create Your Account</h1>
 				<p className="mt-2 text-sm text-slate-300">
-					Enter your details to sign up on SVS E-COMMERCE.
+					Enter your details to sign up on Biznisdil.
 				</p>
 
 				<form onSubmit={handleSubmit} className="mt-6 space-y-4">
