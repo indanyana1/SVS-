@@ -32,7 +32,7 @@ const resolveIpLocation = async () => {
     formattedAddress: payload.formattedAddress || '',
     locationLabel,
     isLoading: false,
-    error: locationLabel ? '' : 'Location detection returned an empty area.',
+    error: '',
     hasApproximateLocation: true,
   };
 };
@@ -55,7 +55,7 @@ const useLocation = () => {
             formattedAddress: '',
             locationLabel: '',
             isLoading: false,
-            error: 'Location services are not available in this browser.',
+            error: '',
             hasApproximateLocation: true,
           };
           setLocationState(fallbackState);
@@ -132,7 +132,7 @@ const useLocation = () => {
               formattedAddress: '',
               locationLabel: '',
               isLoading: false,
-              error: 'Unable to detect your location.',
+              error: '',
               hasApproximateLocation: true,
             };
 
@@ -158,9 +158,7 @@ const useLocation = () => {
             formattedAddress: '',
             locationLabel: '',
             isLoading: false,
-            error: error?.code === error.PERMISSION_DENIED
-              ? 'Location permission was not granted and API detection was unavailable.'
-              : 'Unable to detect location from browser or API.',
+            error: '',
             hasApproximateLocation: true,
           };
 

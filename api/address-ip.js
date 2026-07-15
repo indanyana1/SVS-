@@ -41,29 +41,49 @@ const normalizeFallbackReverseResult = (result) => {
   };
 };
 
-const fetchIpDetectedLocation = async (requestIp = '') => {
-  const ip = String(requestIp || '').replace(/^::ffff:/, '').trim();
-  const searchParams = new URLSearchParams({ localityLanguage: 'en' });
+const EMPTY_LOCATION = {
+  formattedAddress: '',
+  address1: '',
+  address2: '',
+  city: '',
+  province: '',
+  postalCode: '',
+  country: 'South Africa',
+};
 
-  if (ip && !isPrivateOrLocalIp(ip)) {
-    searchParams.set('ip', ip);
-  }
+const fetchBigDataCloud = async (ip) => {
+  const searchParams = new URLSearchParams({ localityLanguage: 'en' });
+  if (ip && !isPrivateOrLocalIp(ip)) searchParams.set('ip', ip);
 
   const response = await fetch(
     `https://api.bigdatacloud.net/data/ip-geolocation?${searchParams.toString()}`,
-    {
-      headers: {
-        Accept: 'application/json',
-      },
-    },
+    { headers: { Accept: 'application/json' } },
   );
-
-  if (!response.ok) {
-    throw new Error('IP geolocation request failed.');
-  }
-
+  if (!response.ok) throw new Error('bigdatacloud failed');
   const payload = await response.json().catch(() => ({}));
-  return normalizeFallbackReverseResult(payload);
+  const result = normalizeFallbackReverseResult(payload);
+  if (!result.city && !result.province) throw new Error('bigdatacloud returned empty location');
+  return result;
+};
+
+const fetchIpapiCo = async (ip) => {
+  const url = ip && !isPrivateOrLocalIp(ip)
+    ? `https://ipapi.co/${ip}/json/`
+    : 'https://ipapi.co/json/';
+
+  const response = await fetch(url, { headers: { Accept: 'application/json' } });
+  if (!response.ok) throw new Error('ipapi.co failed');
+  const payload = await response.json().catch(() => ({}));
+  if (!payload.city && !payload.region) throw new Error('ipapi.co returned empty location');
+  return {
+    formattedAddress: [payload.city, payload.region, payload.country_name].filter(Boolean).join(', '),
+    address1: '',
+    address2: '',
+    city: payload.city || '',
+    province: payload.region || '',
+    postalCode: payload.postal || '',
+    country: payload.country_name || 'South Africa',
+  };
 };
 
 module.exports = async (req, res) => {
@@ -78,14 +98,14 @@ module.exports = async (req, res) => {
   const realIp = String(req.headers['x-real-ip'] || '').trim();
   const socketIp = String(req.socket?.remoteAddress || '').trim();
   const candidateIp = forwardedIp || realIp || socketIp;
+  const ip = String(candidateIp || '').replace(/^::ffff:/, '').trim();
 
   try {
-    const payload = await fetchIpDetectedLocation(candidateIp);
+    const payload = await fetchBigDataCloud(ip).catch(() => fetchIpapiCo(ip));
     return res.status(200).json(payload);
   } catch (error) {
     console.error('IP location lookup error:', error.message);
-    return res
-      .status(400)
-      .json({ error: error.message || 'Unable to detect location from IP.' });
+    // Always return 200 so the client can degrade gracefully without an error state
+    return res.status(200).json(EMPTY_LOCATION);
   }
 };

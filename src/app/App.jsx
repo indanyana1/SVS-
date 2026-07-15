@@ -15481,6 +15481,7 @@ const WellnessFiltersPanel = ({
 
 const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'wellness'), ...wellnessItems], [sellerItems]);
 
   const dynamicCategories = useMemo(() => {
@@ -15617,11 +15618,27 @@ const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
           items={visibleItems}
           focusItems={marketItems}
           buttonLabel={t('common.add')}
-          secondaryButtonLabel={t('common.viewDetails')}
+          secondaryButtonLabel="View Details"
+          buyNowLabel="Let's Talk For More Info"
           reviewSummaryMap={productReviewSummaryMap}
           getItemReviewKey={(item) => getCollectionItemId('/wellness', item.id)}
           onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-          onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
+          onBuyNowAction={(item) => {
+            const itemKey = item.key || item.id;
+            const sellerEmail = normalizeEmail(item.sellerEmail || '');
+            navigate('/support/chat', {
+              state: {
+                recipientEmail: sellerEmail || 'support@svs.app',
+                recipientName: item.sellerName || item.sellerEmail || 'SVS Support',
+                recipientRole: 'seller',
+                issueType: 'Pharmaceutics Enquiry',
+                itemKey,
+                itemTitle: item.title,
+                itemImage: item.image || item.images?.[0] || '',
+                itemLink: `/wellness?focus=${encodeURIComponent(itemKey)}`,
+              },
+            });
+          }}
           onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
           onOpenItemDetails={(item) => {
             const wishlistItem = buildWishlistItem(item);
@@ -16748,14 +16765,14 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
                         onClick={() => openItemDetails(item)}
                         className="rounded-md border border-[var(--svs-border)] px-2 py-2 text-xs font-semibold text-[var(--svs-text)]"
                       >
-                        View details
+                        View Details
                       </button>
                       <button
                         type="button"
-                        onClick={() => onToggleWishlist(buildWishlistItem(item))}
-                        className={`rounded-md border px-2 py-2 text-xs font-semibold ${wishlistItemIds.includes(getCollectionItemId('/informal-market', item.id)) ? 'border-rose-300 bg-rose-50 text-rose-600' : 'border-[#bfdbea] bg-white text-[#0f6674]'}`}
+                        onClick={() => navigate('/support/chat', { state: { issueType: 'Informal Market Enquiry', prefillMessage: `Hi, I'm interested in "${item.title}" listed by ${item.normalizedVendor || item.sellerName || 'the seller'} in ${item.normalizedLocation || 'the informal market'}.` } })}
+                        className="rounded-md border border-[#0f6674] bg-[#0f6674] px-2 py-2 text-xs font-semibold text-white"
                       >
-                        {wishlistItemIds.includes(getCollectionItemId('/informal-market', item.id)) ? 'Saved' : 'Save'}
+                        Let's Talk
                       </button>
                     </div>
                   </div>
@@ -16847,16 +16864,23 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
                       onClick={() => openItemDetails(item)}
                       className="rounded-md border border-[#bfdbea] bg-[#f8fbff] px-2 py-1.5 text-[11px] font-bold text-[#0f6674]"
                     >
-                      Details
+                      View Details
                     </button>
                     <button
                       type="button"
-                      onClick={() => onToggleWishlist(buildWishlistItem(item))}
-                      className={`rounded-md border px-2 py-1.5 text-[11px] font-bold ${wishlistItemIds.includes(getCollectionItemId('/informal-market', item.id)) ? 'border-rose-300 bg-rose-50 text-rose-600' : 'border-[#bfdbea] bg-white text-[#0f6674]'}`}
+                      onClick={() => navigate('/support/chat', { state: { issueType: 'Informal Market Enquiry', prefillMessage: `Hi, I'm interested in "${item.title}" listed by ${item.normalizedVendor || item.sellerName || 'the seller'} in ${item.normalizedLocation || 'the informal market'}.` } })}
+                      className="rounded-md border border-[#0f6674] bg-[#0f6674] px-2 py-1.5 text-[11px] font-bold text-white"
                     >
-                      {wishlistItemIds.includes(getCollectionItemId('/informal-market', item.id)) ? 'Saved' : 'Save'}
+                      Let's Talk
                     </button>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => onToggleWishlist(buildWishlistItem(item))}
+                    className={`mt-1.5 w-full rounded-md border px-2 py-1 text-[10px] font-semibold ${wishlistItemIds.includes(getCollectionItemId('/informal-market', item.id)) ? 'border-rose-300 bg-rose-50 text-rose-600' : 'border-[#bfdbea] bg-white text-[#0f6674]'}`}
+                  >
+                    {wishlistItemIds.includes(getCollectionItemId('/informal-market', item.id)) ? '♥ Saved' : '♡ Save'}
+                  </button>
                 </div>
               </article>
             ))}
@@ -34574,14 +34598,6 @@ const LivestockHubPage = ({
     currency: item.currency || 'ZAR',
   });
 
-  const handleBuyNow = (item) => {
-    if (!isInStock(item)) return;
-    if (typeof onBuyNow === 'function') {
-      onBuyNow(createCartItem(buildSavedPayload(item)));
-    } else {
-      navigate('/checkout');
-    }
-  };
   const handleToggleWishlist = (item) => {
     if (typeof onToggleWishlist === 'function') {
       onToggleWishlist(createWishlistItem(buildSavedPayload(item)));
@@ -34805,21 +34821,40 @@ const LivestockHubPage = ({
                       <span className="font-semibold">{item.rating}</span>
                       <span className="text-[var(--svs-muted)]">({item.reviewCount} reviews)</span>
                     </p>
-                    <button
-                      type="button"
-                      disabled={!inStock}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        handleBuyNow(item);
-                      }}
-                      className={`mt-4 w-full rounded-md py-2 text-sm font-semibold transition ${
-                        inStock
-                          ? `${cudyBluePrimaryButtonClassName} bg-[var(--svs-primary)] text-white hover:bg-[var(--svs-primary-strong)]`
-                          : 'cursor-not-allowed bg-slate-200 text-slate-500'
-                      }`}
-                    >
-                      {inStock ? 'Buy Now' : 'Out of Stock'}
-                    </button>
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSelectedItem(item);
+                        }}
+                        className="rounded-md border border-[var(--svs-primary)] bg-white py-2 text-sm font-semibold text-[var(--svs-primary)] transition hover:bg-[var(--svs-primary)]/10"
+                      >
+                        View Details
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          const itemKey = item.key || item.id;
+                          navigate('/support/chat', {
+                            state: {
+                              recipientEmail: normalizeEmail(item.sellerEmail || 'support@svs.app'),
+                              recipientName: item.sellerName || item.sellerEmail || 'SVS Support',
+                              recipientRole: 'seller',
+                              issueType: 'Livestock Enquiry',
+                              itemKey,
+                              itemTitle: item.title,
+                              itemImage: item.image || item.images?.[0] || '',
+                              itemLink: `/livestock-hub?focus=${encodeURIComponent(itemKey)}`,
+                            },
+                          });
+                        }}
+                        className={`rounded-md py-2 text-sm font-semibold leading-tight transition ${cudyBluePrimaryButtonClassName} bg-[var(--svs-primary)] text-white hover:bg-[var(--svs-primary-strong)]`}
+                      >
+                        Let's Talk For More Info
+                      </button>
+                    </div>
                   </div>
                 </article>
               );
@@ -34827,15 +34862,22 @@ const LivestockHubPage = ({
           )}
         </div>
 
-        <div className="mt-6 flex justify-center">
-          <button
-            type="button"
-            onClick={() => navigate('/markets')}
-            className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-10 py-3 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}
-          >
-            View All
-          </button>
-        </div>
+        {activeCategory ? (
+          <div className="mt-6 flex justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveCategory(null);
+                if (featuredRef.current) {
+                  featuredRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }}
+              className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-10 py-3 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}
+            >
+              View All Livestock
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {/* ── Why Shop With Us? — trust badges over grass background ── */}
@@ -35014,33 +35056,9 @@ const LivestockHubPage = ({
                 ) : null}
 
                 {selectedItem.sellerEmail ? (
-                  <div className="mt-4 space-y-2">
-                    <p className="text-xs text-slate-500">
-                      Seller: <span className="font-semibold text-slate-700">{selectedItem.sellerEmail}</span>
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const selectedItemKey = selectedItem.key || selectedItem.id;
-                        setSelectedItem(null);
-                        navigate('/support/chat', {
-                          state: {
-                            recipientEmail: normalizeEmail(selectedItem.sellerEmail),
-                            recipientName: selectedItem.sellerName || selectedItem.sellerEmail,
-                            recipientRole: 'seller',
-                            issueType: 'Item Enquiry',
-                            itemKey: selectedItemKey,
-                            itemTitle: selectedItem.title,
-                            itemImage: selectedItem.image || selectedItem.images?.[0] || '',
-                            itemLink: `${selectedItem.route || '/e-commerce'}?focus=${encodeURIComponent(selectedItemKey)}`,
-                          },
-                        });
-                      }}
-                      className="rounded-md border border-[#0f6674] bg-[#e8f7fb] px-3 py-1.5 text-xs font-semibold text-[#0f6674] transition hover:bg-[#d7f0f8]"
-                    >
-                      Chat Seller
-                    </button>
-                  </div>
+                  <p className="mt-4 text-xs text-slate-500">
+                    Seller: <span className="font-semibold text-slate-700">{selectedItem.sellerEmail}</span>
+                  </p>
                 ) : null}
 
                 <div className="mt-auto grid grid-cols-1 gap-2 pt-5 sm:grid-cols-2">
@@ -35053,27 +35071,28 @@ const LivestockHubPage = ({
                   >
                     {wishSet.has(selectedItem.id) ? 'Remove from Wishlist' : 'Add to Wishlist'}
                   </button>
-                  {isInStock(selectedItem) ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleBuyNow(selectedItem);
-                        setSelectedItem(null);
-                      }}
-                      className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}
-                    >
-                      Buy Now
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled
-                      aria-disabled="true"
-                      className="cursor-not-allowed rounded-md bg-slate-200 py-2 text-sm font-semibold text-slate-500"
-                    >
-                      Out of Stock
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const itemKey = selectedItem.key || selectedItem.id;
+                      setSelectedItem(null);
+                      navigate('/support/chat', {
+                        state: {
+                          recipientEmail: normalizeEmail(selectedItem.sellerEmail || 'support@svs.app'),
+                          recipientName: selectedItem.sellerName || selectedItem.sellerEmail || 'SVS Support',
+                          recipientRole: 'seller',
+                          issueType: 'Livestock Enquiry',
+                          itemKey,
+                          itemTitle: selectedItem.title,
+                          itemImage: selectedItem.image || selectedItem.images?.[0] || '',
+                          itemLink: `/livestock-hub?focus=${encodeURIComponent(itemKey)}`,
+                        },
+                      });
+                    }}
+                    className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}
+                  >
+                    Let's Talk For More Info
+                  </button>
                 </div>
               </div>
             </div>
@@ -50158,7 +50177,7 @@ const SecondHandProductDetailPage = ({ onAddToCart, onBuyNow, onToggleWishlist, 
   );
 };
 
-const CardGrid = ({ items, focusItems, boundsItems, buttonLabel, secondaryButtonLabel, metaRenderer, onPrimaryAction, onBuyNowAction, onToggleWishlist, isItemWishlisted, onOpenItemDetails, reviewSummaryMap = {}, getItemReviewKey }) => {
+const CardGrid = ({ items, focusItems, boundsItems, buttonLabel, secondaryButtonLabel, buyNowLabel, metaRenderer, onPrimaryAction, onBuyNowAction, onToggleWishlist, isItemWishlisted, onOpenItemDetails, reviewSummaryMap = {}, getItemReviewKey }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [selectedSizesByItem, setSelectedSizesByItem] = useState({});
@@ -50369,7 +50388,7 @@ const CardGrid = ({ items, focusItems, boundsItems, buttonLabel, secondaryButton
                       }}
                       className="rounded-full border border-[#0f6674] bg-white px-3 py-1.5 text-xs font-semibold text-[#0f6674] shadow transition hover:bg-[#e0f7fa] disabled:cursor-not-allowed disabled:bg-slate-400 sm:px-5 sm:py-2 sm:text-base"
                     >
-                      {isOutOfStock ? 'Out of stock' : 'Buy Now'}
+                      {isOutOfStock ? 'Out of stock' : (buyNowLabel || 'Buy Now')}
                     </button>
                   ) : null}
                 </div>
@@ -50379,7 +50398,7 @@ const CardGrid = ({ items, focusItems, boundsItems, buttonLabel, secondaryButton
                     event.stopPropagation();
                     onOpenItemDetails?.(actionItem);
                   }}
-                  className="hidden w-full rounded-full border border-[#e0e7ef] bg-white px-3 py-2 text-sm font-semibold text-[#0f6674] transition hover:border-[#0f6674] hover:bg-[#e0f7fa] sm:block"
+                  className="w-full rounded-full border border-[#e0e7ef] bg-white px-3 py-2 text-sm font-semibold text-[#0f6674] transition hover:border-[#0f6674] hover:bg-[#e0f7fa]"
                 >
                   {secondaryButtonLabel}
                 </button>
