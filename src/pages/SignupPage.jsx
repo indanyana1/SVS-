@@ -112,7 +112,7 @@ const SignupPage = () => {
 					type="button"
 					onClick={() => navigate(-1)}
 					aria-label="Cancel"
-					className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-700 hover:text-white"
+					className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-rose-500 transition hover:bg-rose-900/30 hover:text-rose-400"
 				>
 					<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
 						<line x1="18" y1="6" x2="6" y2="18" />

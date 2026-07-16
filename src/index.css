@@ -34,7 +34,7 @@ html {
 body {
   margin: 0;
   padding: 0;
-  overflow-x: hidden;            /* never show horizontal scrollbar */
+  overflow-x: hidden;            /* never show horizontal scrollbar on desktop */
   background: #f8fafc;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -42,6 +42,21 @@ body {
   touch-action: manipulation;
   /* Native feel on iOS — disables tap highlight rectangle. */
   -webkit-tap-highlight-color: transparent;
+}
+
+/* On small phones allow horizontal panning so cut-off content is reachable. */
+@media (max-width: 480px) {
+  body {
+    overflow-x: auto;
+  }
+  .container,
+  main,
+  section,
+  article,
+  header,
+  footer {
+    max-width: none;
+  }
 }
 
 /* Images & media should always be fluid on mobile. */

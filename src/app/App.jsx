@@ -85,11 +85,12 @@ import {
   Users,
   BarChart3,
   Settings,
+  BookOpen,
 } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import logo from '../assets/icons/svs-logo.jpeg';
+import logo from '../assets/icons/biznisdil-logo.jpeg';
 import { createAddressLookupSessionToken, lookupAddressDetails, lookupAddressSuggestions } from '../lib/addressLookup';
 import { DEFAULT_LANGUAGE_CODE, getLanguageByCode, isRtlLanguage, SUPPORTED_LANGUAGES } from '../lib/languages';
 import { embeddedCardCheckoutEnabled, getStripeInstance, startCardPayment, stripeCurrency } from '../lib/payments';
@@ -941,32 +942,6 @@ const clearGroceriesListingFields = (formState) => ({
   ...EMPTY_GENERIC_LISTING_FIELDS,
 });
 
-const TRENDING_MARKET_HREFS = [
-  '/e-commerce',
-  '/groceries',
-  '/fast-food',
-  '/fashion-style',
-  '/mobility-vehicles',
-  '/voting-clients',
-  '/betting-lottery-games',
-  '/beverages-liquors',
-  '/home-care',
-  '/tickets',
-  '/building-construction-tools',
-  '/retailer-direct-links',
-  '/general-labour-market',
-  '/informal-market',
-  '/voting-providers',
-  '/livestock-hub',
-  '/natural-resources-minerals',
-  '/wellness',
-  '/property-hub',
-  '/secondhand-central',
-  '/stationery-office',
-  '/safety',
-  '/traditional-medicines-herbs',
-];
-
 const productCards = [
   {
     id: 'p1',
@@ -1571,6 +1546,15 @@ const buildBookingsPrototypeDetails = (item, locale = 'en-US') => {
 
 const homeHeroSlides = [
   {
+    id: 'hero-23',
+    image:
+      'https://images.pexels.com/photos/5480192/pexels-photo-5480192.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'ANCIENT REMEDIES',
+    title: 'Ancient Remedies',
+    subtitle: 'Authentic herbs & natural remedies',
+    route: '/traditional-medicines-herbs',
+  },
+  {
     id: 'hero-1',
     image:
       'https://images.pexels.com/photos/6169668/pexels-photo-6169668.jpeg?auto=compress&cs=tinysrgb&w=1920',
@@ -1580,33 +1564,6 @@ const homeHeroSlides = [
     route: '/fashion-style',
   },
   {
-    id: 'hero-2',
-    image:
-      'https://images.pexels.com/photos/356056/pexels-photo-356056.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'LIFESTYLE TECH',
-    title: 'Lifestyle Tech',
-    subtitle: 'Lifestyle picks, tech & gadgets all in one place',
-    route: '/e-commerce',
-  },
-  {
-    id: 'hero-3',
-    image:
-      'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'GROCERY',
-    title: 'Grocery',
-    subtitle: 'Fresh produce & everyday essentials',
-    route: '/groceries',
-  },
-  {
-    id: 'hero-4',
-    image:
-      'https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'FAST FOOD',
-    title: 'Fast Food',
-    subtitle: 'Hot meals delivered fast & fresh',
-    route: '/fast-food',
-  },
-  {
     id: 'hero-5',
     image:
       'https://images.pexels.com/photos/120049/pexels-photo-120049.jpeg?auto=compress&cs=tinysrgb&w=1920',
@@ -1614,33 +1571,6 @@ const homeHeroSlides = [
     title: 'Automobility',
     subtitle: 'Cars, bikes & mobility solutions',
     route: '/mobility-vehicles',
-  },
-  {
-    id: 'hero-6',
-    image:
-      'https://images.pexels.com/photos/3757376/pexels-photo-3757376.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'WELLNESS',
-    title: 'Wellness',
-    subtitle: 'Beauty, fitness & sports essentials',
-    route: '/voting-clients',
-  },
-  {
-    id: 'hero-7',
-    image:
-      'https://images.pexels.com/photos/6664248/pexels-photo-6664248.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'GAMES',
-    title: 'Games',
-    subtitle: 'Play, predict & win big',
-    route: '/betting-lottery-games',
-  },
-  {
-    id: 'hero-8',
-    image:
-      'https://images.pexels.com/photos/1283219/pexels-photo-1283219.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'DRINKS',
-    title: 'Drinks',
-    subtitle: 'Wines, spirits & refreshing drinks',
-    route: '/beverages-liquors',
   },
   {
     id: 'hero-9',
@@ -1661,6 +1591,60 @@ const homeHeroSlides = [
     route: '/tickets',
   },
   {
+    id: 'hero-12',
+    image:
+      'https://images.pexels.com/photos/230544/pexels-photo-230544.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'COMMERCE LINK',
+    title: 'Commerce Link',
+    subtitle: 'Quick links to top global retailers & brands',
+    route: '/retailer-direct-links',
+  },
+  {
+    id: 'hero-8',
+    image:
+      'https://images.pexels.com/photos/1283219/pexels-photo-1283219.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'DRINKS',
+    title: 'Drinks',
+    subtitle: 'Wines, spirits & refreshing drinks',
+    route: '/beverages-liquors',
+  },
+  {
+    id: 'hero-17',
+    image:
+      'https://images.pexels.com/photos/2101137/pexels-photo-2101137.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'EARTH RESOURCES',
+    title: 'Earth Resources',
+    subtitle: 'Quality raw materials & minerals',
+    route: '/natural-resources-minerals',
+  },
+  {
+    id: 'hero-4',
+    image:
+      'https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'FAST FOOD',
+    title: 'Fast Food',
+    subtitle: 'Hot meals delivered fast & fresh',
+    route: '/fast-food',
+  },
+  {
+    id: 'hero-7',
+    image:
+      'https://images.pexels.com/photos/6664248/pexels-photo-6664248.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'GAMES',
+    title: 'Games',
+    subtitle: 'Play, predict & win big',
+    route: '/betting-lottery-games',
+  },
+  {
+    id: 'hero-3',
+    image:
+      'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'GROCERY',
+    title: 'Grocery',
+    subtitle: 'Fresh produce & everyday essentials',
+    route: '/groceries',
+  },
+  {
     id: 'hero-11',
     image:
       'https://images.pexels.com/photos/1249611/pexels-photo-1249611.jpeg?auto=compress&cs=tinysrgb&w=1920',
@@ -1668,33 +1652,6 @@ const homeHeroSlides = [
     title: 'Hardware',
     subtitle: 'Tools & materials for every build',
     route: '/building-construction-tools',
-  },
-  {
-    id: 'hero-12',
-    image:
-      'https://images.pexels.com/photos/230544/pexels-photo-230544.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'COMMERCE-LINK',
-    title: 'Commerce Link',
-    subtitle: 'Quick links to top global retailers & brands',
-    route: '/retailer-direct-links',
-  },
-  {
-    id: 'hero-13',
-    image:
-      'https://images.pexels.com/photos/1216589/pexels-photo-1216589.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'WORKFORCE',
-    title: 'Workforce',
-    subtitle: 'Skilled & unskilled workers for hire',
-    route: '/general-labour-market',
-  },
-  {
-    id: 'hero-14',
-    image:
-      'https://images.pexels.com/photos/2292953/pexels-photo-2292953.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'VENDORS',
-    title: 'Vendors',
-    subtitle: 'Street traders, spazas & informal seller listings',
-    route: '/informal-market',
   },
   {
     id: 'hero-15',
@@ -1706,6 +1663,15 @@ const homeHeroSlides = [
     route: '/voting-providers',
   },
   {
+    id: 'hero-2',
+    image:
+      'https://images.pexels.com/photos/356056/pexels-photo-356056.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'LIFESTYLE TECH',
+    title: 'Lifestyle Tech',
+    subtitle: 'Lifestyle picks, tech & gadgets all in one place',
+    route: '/e-commerce',
+  },
+  {
     id: 'hero-16',
     image:
       'https://images.pexels.com/photos/422218/pexels-photo-422218.jpeg?auto=compress&cs=tinysrgb&w=1920',
@@ -1713,15 +1679,6 @@ const homeHeroSlides = [
     title: 'Livestock',
     subtitle: 'Buy & sell livestock with confidence',
     route: '/livestock-hub',
-  },
-  {
-    id: 'hero-17',
-    image:
-      'https://images.pexels.com/photos/2101137/pexels-photo-2101137.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'EARTH-RESOURCES',
-    title: 'Earth Resources',
-    subtitle: 'Quality raw materials & minerals',
-    route: '/natural-resources-minerals',
   },
   {
     id: 'hero-18',
@@ -1742,15 +1699,6 @@ const homeHeroSlides = [
     route: '/property-hub',
   },
   {
-    id: 'hero-20',
-    image:
-      'https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'USED ITEMS',
-    title: 'Used Items',
-    subtitle: 'Quality pre-loved goods at great prices',
-    route: '/secondhand-central',
-  },
-  {
     id: 'hero-21',
     image:
       'https://images.pexels.com/photos/6444/pencil-typography-black-design.jpg?auto=compress&cs=tinysrgb&w=1920',
@@ -1769,13 +1717,40 @@ const homeHeroSlides = [
     route: '/safety',
   },
   {
-    id: 'hero-23',
+    id: 'hero-20',
     image:
-      'https://images.pexels.com/photos/5480192/pexels-photo-5480192.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'ANCIENT REMEDIES',
-    title: 'Ancient Remedies',
-    subtitle: 'Authentic herbs & natural remedies',
-    route: '/traditional-medicines-herbs',
+      'https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'USED ITEMS',
+    title: 'Used Items',
+    subtitle: 'Quality pre-loved goods at great prices',
+    route: '/secondhand-central',
+  },
+  {
+    id: 'hero-14',
+    image:
+      'https://images.pexels.com/photos/2292953/pexels-photo-2292953.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'VENDORS',
+    title: 'Vendors',
+    subtitle: 'Street traders, spazas & informal seller listings',
+    route: '/informal-market',
+  },
+  {
+    id: 'hero-6',
+    image:
+      'https://images.pexels.com/photos/3757376/pexels-photo-3757376.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'WELLNESS',
+    title: 'Wellness',
+    subtitle: 'Beauty, fitness & sports essentials',
+    route: '/voting-clients',
+  },
+  {
+    id: 'hero-13',
+    image:
+      'https://images.pexels.com/photos/1216589/pexels-photo-1216589.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'WORKFORCE',
+    title: 'Workforce',
+    subtitle: 'Skilled & unskilled workers for hire',
+    route: '/general-labour-market',
   },
 ];
 
@@ -11489,6 +11464,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
           >
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
+              id="global-search-input"
               type="text"
               inputMode="search"
               enterKeyHint="search"
@@ -11540,7 +11516,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                     type="button"
                     onClick={handleCloseSearchSuggestions}
                     aria-label="Close search suggestions"
-                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--svs-muted)] transition hover:bg-[var(--svs-surface-soft)] hover:text-[var(--svs-primary-strong)]"
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-rose-500 transition hover:bg-rose-50 hover:text-rose-700"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -13598,7 +13574,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
               <button
                 type="button"
                 onClick={() => setCategorySidebarOpen(false)}
-                className="mb-4 self-end rounded-full p-1.5 text-[var(--svs-muted)] transition hover:bg-slate-100 hover:text-[var(--svs-text)] lg:hidden"
+                className="mb-4 self-end rounded-full p-1.5 text-rose-500 transition hover:bg-rose-50 hover:text-rose-700 lg:hidden"
                 aria-label="Close filters"
               >
                 <X className="h-5 w-5" />
@@ -14819,7 +14795,7 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
               <button
                 type="button"
                 onClick={() => setIsConditionSheetOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-50 text-rose-600 transition hover:bg-rose-100"
                 aria-label="Close"
               >
                 <X className="h-4 w-4" />
@@ -14858,7 +14834,7 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
               <button
                 type="button"
                 onClick={() => setIsSortSheetOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-50 text-rose-600 transition hover:bg-rose-100"
                 aria-label="Close"
               >
                 <X className="h-4 w-4" />
@@ -18783,7 +18759,7 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
           <div className="absolute inset-y-0 left-0 w-[min(92vw,320px)] overflow-y-auto bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-[#E5E7EB] px-4 py-3">
               <h3 className="text-base font-semibold text-[#1A1A1A]">Filters</h3>
-              <button type="button" onClick={() => setIsFilterDrawerOpen(false)} className="rounded-md p-1 text-[#4B5563] transition hover:bg-[#F3F4F6]" aria-label="Close filters">
+              <button type="button" onClick={() => setIsFilterDrawerOpen(false)} className="rounded-md p-1 text-rose-600 transition hover:bg-rose-50" aria-label="Close filters">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -19210,7 +19186,7 @@ const HomeCarePage = ({ sellerItems = [] }) => {
           <div className="absolute inset-y-0 left-0 w-[min(92vw,320px)] overflow-y-auto bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-[#E5E7EB] px-4 py-3">
               <h3 className="text-base font-semibold text-[#1A1A1A]">Filters</h3>
-              <button type="button" onClick={() => setIsFilterDrawerOpen(false)} className="rounded-md p-1 text-[#4B5563] transition hover:bg-[#F3F4F6]" aria-label="Close filters">
+              <button type="button" onClick={() => setIsFilterDrawerOpen(false)} className="rounded-md p-1 text-rose-600 transition hover:bg-rose-50" aria-label="Close filters">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -20060,7 +20036,7 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
           ) : null}
 
           <div className={`${isFiltersOpen ? 'fixed left-0 top-0 z-50 flex h-full w-[320px] max-w-[85vw] flex-col overflow-y-auto bg-white p-4 shadow-2xl sm:w-[340px]' : 'hidden'} ${isDesktopFiltersHidden ? 'lg:hidden' : 'lg:block lg:w-[260px] lg:shrink-0 lg:static lg:h-auto lg:p-0 lg:shadow-none'}`}>
-            <button type="button" onClick={() => setIsFiltersOpen(false)} className="mb-3 self-end rounded-full p-1.5 text-[var(--svs-muted)] hover:bg-slate-100 lg:hidden" aria-label="Close filters">
+            <button type="button" onClick={() => setIsFiltersOpen(false)} className="mb-3 self-end rounded-full p-1.5 text-rose-500 hover:bg-rose-50 lg:hidden" aria-label="Close filters">
               <X className="h-5 w-5" />
             </button>
             <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-sm">
@@ -20856,7 +20832,7 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
           <div className="absolute inset-y-0 left-0 w-[min(92vw,320px)] overflow-y-auto bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-[#E5E7EB] px-4 py-3">
               <h3 className="text-base font-semibold text-[#1A1A1A]">Filters</h3>
-              <button type="button" onClick={() => setIsFilterDrawerOpen(false)} className="rounded-md p-1 text-[#4B5563] transition hover:bg-[#F3F4F6]" aria-label="Close filters">
+              <button type="button" onClick={() => setIsFilterDrawerOpen(false)} className="rounded-md p-1 text-rose-600 transition hover:bg-rose-50" aria-label="Close filters">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -22312,7 +22288,7 @@ const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
           ) : null}
 
           <div className={`${isFiltersOpen ? 'fixed left-0 top-0 z-50 flex h-full w-[320px] max-w-[85vw] flex-col overflow-y-auto bg-white p-4 shadow-2xl sm:w-[340px]' : 'hidden'} ${isDesktopFiltersHidden ? 'lg:hidden' : 'lg:block lg:w-[260px] lg:shrink-0 lg:static lg:h-auto lg:p-0 lg:shadow-none'}`}>
-            <button type="button" onClick={() => setIsFiltersOpen(false)} className="mb-3 self-end rounded-full p-1.5 text-[var(--svs-muted)] hover:bg-slate-100 lg:hidden" aria-label="Close filters">
+            <button type="button" onClick={() => setIsFiltersOpen(false)} className="mb-3 self-end rounded-full p-1.5 text-rose-500 hover:bg-rose-50 lg:hidden" aria-label="Close filters">
               <X className="h-5 w-5" />
             </button>
             <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-sm">
@@ -23293,7 +23269,7 @@ const GeneralLabourPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIt
           ) : null}
 
           <div className={`${isFiltersOpen ? 'fixed left-0 top-0 z-50 flex h-full w-[320px] max-w-[85vw] flex-col overflow-y-auto bg-white p-4 shadow-2xl sm:w-[340px]' : 'hidden'} ${isDesktopFiltersHidden ? 'lg:hidden' : 'lg:block lg:w-[260px] lg:shrink-0 lg:static lg:h-auto lg:p-0 lg:shadow-none'}`}>
-            <button type="button" onClick={() => setIsFiltersOpen(false)} className="mb-3 self-end rounded-full p-1.5 text-[var(--svs-muted)] hover:bg-slate-100 lg:hidden" aria-label="Close filters">
+            <button type="button" onClick={() => setIsFiltersOpen(false)} className="mb-3 self-end rounded-full p-1.5 text-rose-500 hover:bg-rose-50 lg:hidden" aria-label="Close filters">
               <X className="h-5 w-5" />
             </button>
             <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-sm">
@@ -28790,7 +28766,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
               <span className="inline-flex items-center gap-2 text-sm font-bold text-[var(--svs-text)]">
                 <LayoutDashboard className="h-4 w-4 text-[var(--svs-primary)]" /> Seller
               </span>
-              <button type="button" onClick={() => setIsMobileSidebarOpen(false)} className="rounded-md p-1.5 text-[var(--svs-muted)] hover:bg-[var(--svs-surface-soft)]" aria-label="Close">
+              <button type="button" onClick={() => setIsMobileSidebarOpen(false)} className="rounded-md p-1.5 text-rose-500 hover:bg-rose-50" aria-label="Close">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -28809,7 +28785,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                 <h3 className="text-lg font-bold text-[var(--svs-text)]">Edit Listing</h3>
                 <p className="mt-0.5 line-clamp-1 text-xs text-[var(--svs-muted)]">{editingItem.title}</p>
               </div>
-              <button type="button" onClick={cancelEdit} className="rounded-md p-1.5 text-[var(--svs-muted)] hover:bg-[var(--svs-surface-soft)]" aria-label="Close">
+              <button type="button" onClick={cancelEdit} className="rounded-md p-1.5 text-rose-500 hover:bg-rose-50" aria-label="Close">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -35025,7 +35001,7 @@ const LivestockHubPage = ({
               type="button"
               onClick={() => setSelectedItem(null)}
               aria-label="Close details"
-              className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white shadow transition hover:bg-black/80"
+              className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-rose-500/80 text-white shadow transition hover:bg-rose-600/90"
             >
               <X className="h-4 w-4" />
             </button>
@@ -35724,16 +35700,7 @@ const MarketsPage = ({ sellerItems = [] }) => {
   }, [hasTrendingItems]);
 
   const orderedMarketLinks = useMemo(
-    () => {
-      const trendingMarkets = TRENDING_MARKET_HREFS
-        .map((href) => marketLinks.find((market) => market.href === href))
-        .filter(Boolean);
-      const remainingMarkets = marketLinks
-        .filter((market) => !TRENDING_MARKET_HREFS.includes(market.href))
-        .sort((a, b) => t(a.labelKey).localeCompare(t(b.labelKey)));
-
-      return [...trendingMarkets, ...remainingMarkets];
-    },
+    () => marketLinks.slice().sort((a, b) => t(a.labelKey).localeCompare(t(b.labelKey))),
     [t],
   );
 
@@ -35921,11 +35888,22 @@ const MarketsPage = ({ sellerItems = [] }) => {
         })}
       </div>
 
-      <div className="mt-7 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 shadow-[0_4px_8px_rgba(0,0,0,0.08)]">
+      <button
+        type="button"
+        onClick={() => {
+          const el = document.getElementById('global-search-input');
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => el.focus(), 350);
+          }
+        }}
+        className="mt-7 w-full rounded-2xl border border-[var(--svs-primary)]/40 bg-[var(--svs-cyan-surface)] p-5 text-left shadow-[0_4px_8px_rgba(0,0,0,0.08)] transition hover:border-[var(--svs-primary)] hover:shadow-md active:scale-[0.98]"
+      >
         <p className="text-sm text-[var(--svs-text)]">
-          <span className="font-bold">Quick tip:</span>{' '}Use the top search to jump directly to selling products and services offered in a single step.
+          <span className="font-bold text-[var(--svs-primary-strong)]">💡 Quick tip:</span>{' '}Use the top search to jump directly to selling products and services offered in a single step.{' '}
+          <span className="font-semibold text-[var(--svs-primary)]">Tap to open →</span>
         </p>
-      </div>
+      </button>
     </div>
     </section>
   );
@@ -37528,6 +37506,7 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
   });
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [selectedSavedAddressId, setSelectedSavedAddressId] = useState('');
+  const [isAddressBookOpen, setIsAddressBookOpen] = useState(false);
   useEffect(() => {
     const buyerEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
     if (!getAuthState() || !buyerEmail || !hasSupabaseEnv || !supabase) return;
@@ -38053,6 +38032,55 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
 
     activeStepContent = (
       <div className="mx-auto w-full max-w-3xl space-y-6">
+        {/* Saved Address Book picker — shown only when the buyer has saved addresses */}
+        {savedAddresses.length > 0 && (
+          <section className={sectionClassName}>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-bold text-[var(--svs-text)]">Saved Address Book</h2>
+                <p className="mt-0.5 text-xs text-[var(--svs-muted)]">
+                  {savedAddresses.length} saved address{savedAddresses.length !== 1 ? 'es' : ''} — tap one to fill the form
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddressBookOpen((prev) => !prev)}
+                className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-[var(--svs-cyan-surface)] px-4 py-2 text-sm font-semibold text-[var(--svs-primary)] transition hover:opacity-80"
+              >
+                <BookOpen className="h-4 w-4" />
+                {isAddressBookOpen ? 'Hide' : 'Choose'}
+              </button>
+            </div>
+            {isAddressBookOpen && (
+              <div className="mt-4 space-y-3">
+                {savedAddresses.map((address) => {
+                  const isSelected = selectedSavedAddressId === String(address.id);
+                  const addressLine = [address.address2, address.address1, address.city, address.province, address.postal_code, address.country].filter(Boolean).join(', ');
+                  return (
+                    <button
+                      key={address.id}
+                      type="button"
+                      onClick={() => { applySavedAddress(String(address.id)); setIsAddressBookOpen(false); }}
+                      className={`w-full rounded-xl border p-4 text-left transition ${isSelected ? 'border-[var(--svs-primary)] bg-[var(--svs-cyan-surface)]' : 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)] hover:border-[var(--svs-primary)]/60'}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-[var(--svs-text)]">
+                            {address.label || address.full_name || 'Saved Address'}
+                            {address.is_default ? <span className="ml-2 text-xs font-normal text-[var(--svs-primary)]">(Default)</span> : null}
+                          </p>
+                          {addressLine ? <p className="mt-1 text-xs text-[var(--svs-muted)] line-clamp-2">{addressLine}</p> : null}
+                          {address.phone ? <p className="mt-1 text-xs text-[var(--svs-muted)]">{address.phone}</p> : null}
+                        </div>
+                        {isSelected ? <CheckCircle2 className="h-5 w-5 shrink-0 text-[var(--svs-primary)]" /> : <span className="h-5 w-5 shrink-0 rounded-full border-2 border-[var(--svs-border)]" />}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
         {/* Contact Details */}
         <section className={sectionClassName}>
           <h2 className="text-xl font-black text-[var(--svs-primary-strong)]">Contact Details</h2>
@@ -38171,24 +38199,6 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
         ) : (
         <section className={sectionClassName}>
           <h2 className="text-xl font-black text-[var(--svs-primary-strong)]">Delivery Address</h2>
-          {savedAddresses.length > 0 ? (
-            <div className="mt-4">
-              <label htmlFor="checkout-saved-address" className={fieldLabelClassName}>Use a saved address</label>
-              <select
-                id="checkout-saved-address"
-                value={selectedSavedAddressId}
-                onChange={(event) => applySavedAddress(event.target.value)}
-                className={inputClassName}
-              >
-                <option value="">Select a saved address…</option>
-                {savedAddresses.map((address) => (
-                  <option key={address.id} value={address.id}>
-                    {address.label || address.full_name} — {address.address1}, {address.city}{address.is_default ? ' (Default)' : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
           <div className="mt-5 space-y-4">
             <div>
               <label htmlFor="checkout-apt" className={fieldLabelClassName}>House / Apartment Number</label>
@@ -39643,6 +39653,11 @@ const VoiceNotePlayer = ({ src, durationSec = 0, mine = false }) => {
     </div>
   );
 };
+
+const CHAT_MESSAGES_BG = (() => {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="500" height="500" viewBox="0 0 500 500"><g transform="translate(120,30) rotate(-18)" stroke="#c8bfaa" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"><path d="M15 20 L50 20 L68 90 H140 L158 48 H60"/><circle cx="88" cy="107" r="12"/><circle cx="128" cy="107" r="12"/><line x1="68" y1="55" x2="153" y2="55"/><line x1="72" y1="72" x2="149" y2="72"/><path d="M0 5 L15 20"/></g><g transform="translate(20,180) rotate(12)" stroke="#c8bfaa" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.5"><rect x="0" y="24" width="44" height="33" rx="7"/><path d="M8 24 V14 C8 2 36 2 36 14 V24"/><circle cx="22" cy="41" r="4" fill="#c8bfaa"/></g><g transform="translate(290,250) rotate(-8)" stroke="#c8bfaa" stroke-width="6" fill="none" opacity="0.52"><rect x="0" y="0" width="110" height="72" rx="20"/><circle cx="28" cy="36" r="5.5" fill="#c8bfaa"/><circle cx="55" cy="36" r="5.5" fill="#c8bfaa"/><circle cx="82" cy="36" r="5.5" fill="#c8bfaa"/></g><g transform="translate(360,310) rotate(8)" stroke="#c8bfaa" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.5"><path d="M8 28 L2 100 H82 L76 28 Z"/><path d="M22 28 V17 C22 5 62 5 62 17 V28"/><line x1="2" y1="44" x2="82" y2="44"/></g><g transform="translate(30,360) rotate(-15)" stroke="#c8bfaa" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.45"><path d="M55 8 A30 30 0 1 1 8 35"/><path d="M55 8 L45 22 L62 22 Z"/></g><g transform="translate(10,20) rotate(8)" stroke="#c8bfaa" stroke-width="5" fill="none" opacity="0.42"><circle cx="32" cy="32" r="30"/><path d="M14 14 L32 32 L50 14"/><line x1="14" y1="22" x2="50" y2="22"/><line x1="32" y1="32" x2="32" y2="50"/></g><g transform="translate(60,270) rotate(35)" stroke="#c8bfaa" stroke-width="5.5" fill="none" stroke-linecap="round" opacity="0.4"><line x1="0" y1="18" x2="44" y2="18"/><path d="M30 6 L44 18 L30 30"/></g><g transform="translate(50,80) rotate(-18)" stroke="#c8bfaa" stroke-width="5" fill="none" opacity="0.4"><path d="M28 44 C12 28 0 18 8 6 C16 -4 28 6 28 6 C28 6 40 -4 48 6 C56 18 44 28 28 44 Z"/></g><g transform="translate(385,20) rotate(8)" stroke="#c8bfaa" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.45"><path d="M16 0 L5 22 H16 L0 44"/></g><g transform="translate(415,38) rotate(5)" stroke="#c8bfaa" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"><path d="M11 0 L3 16 H11 L0 32"/></g><g transform="translate(430,60) rotate(-8)" stroke="#c8bfaa" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.4"><rect x="0" y="18" width="32" height="24" rx="5"/><path d="M6 18 V11 C6 3 26 3 26 11 V18"/></g><circle cx="250" cy="18" r="11" stroke="#c8bfaa" stroke-width="4.5" fill="none" opacity="0.35"/><circle cx="145" cy="220" r="9" stroke="#c8bfaa" stroke-width="4" fill="none" opacity="0.3"/><circle cx="435" cy="200" r="13" stroke="#c8bfaa" stroke-width="4" fill="none" opacity="0.3"/><circle cx="290" cy="460" r="9" stroke="#c8bfaa" stroke-width="3.5" fill="none" opacity="0.28"/><circle cx="180" cy="460" r="7" stroke="#c8bfaa" stroke-width="3" fill="none" opacity="0.25"/><rect x="430" y="275" width="26" height="26" stroke="#c8bfaa" stroke-width="4" fill="none" opacity="0.3" transform="rotate(18 443 288)"/><rect x="220" y="380" width="20" height="20" stroke="#c8bfaa" stroke-width="3.5" fill="none" opacity="0.25" transform="rotate(-12 230 390)"/><g transform="translate(170,380) rotate(12)" stroke="#c8bfaa" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.38"><path d="M8 12 L25 12 L35 50 H70 L78 28 H30"/><circle cx="44" cy="60" r="8"/><circle cx="63" cy="60" r="8"/><line x1="35" y1="32" x2="77" y2="32"/></g><g transform="translate(440,380) rotate(5)" stroke="#c8bfaa" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.4"><path d="M5 0 H55 V85 L45 75 L35 85 L25 75 L15 85 L5 75 Z"/><line x1="15" y1="20" x2="45" y2="20"/><line x1="15" y1="35" x2="45" y2="35"/><line x1="15" y1="50" x2="35" y2="50"/></g></svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+})();
 
 const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatNotifications }) => {
   const location = useLocation();
@@ -42768,7 +42783,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
                   ) : null}
                 </div>
 
-                <div ref={messageListRef} className="flex-1 space-y-3 overflow-y-auto bg-[var(--svs-surface-soft)] px-3 py-3 pb-24 sm:px-6 sm:py-4 sm:pb-6">
+                <div ref={messageListRef} className="flex-1 space-y-3 overflow-y-auto px-3 py-3 pb-24 sm:px-6 sm:py-4 sm:pb-6" style={{ backgroundColor: '#ede9e0', backgroundImage: CHAT_MESSAGES_BG, backgroundSize: '500px 500px', backgroundRepeat: 'repeat' }}>
                   {activeThread?.itemDetails?.itemTitle ? (
                     <div className="flex justify-start">
                       <div className="w-[220px] max-w-[78%] overflow-hidden rounded-2xl rounded-bl-md border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-sm">
@@ -43374,7 +43389,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
                         <button
                           type="button"
                           onClick={() => setForwardingMessage(null)}
-                          className="rounded-full p-1 text-[var(--svs-muted)] transition hover:bg-[var(--svs-surface-soft)]"
+                          className="rounded-full p-1 text-rose-500 transition hover:bg-rose-50"
                           aria-label="Cancel forward"
                         >
                           <X className="h-4 w-4" aria-hidden="true" />
@@ -43680,7 +43695,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
                         onClick={() => setReplyingTo(null)}
                         title="Cancel reply"
                         aria-label="Cancel reply"
-                        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#d6e6f5] bg-white text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-rose-200 bg-white text-rose-500 transition hover:bg-rose-50 hover:text-rose-700"
                       >
                         <X className="h-3.5 w-3.5" aria-hidden="true" />
                       </button>
@@ -48070,7 +48085,7 @@ const ItemDetailsModal = ({
             <button
               type="button"
               onClick={onClose}
-              className="shrink-0 rounded-full border border-white/50 bg-white/20 p-2 text-white shadow-sm transition hover:bg-white/30"
+              className="shrink-0 rounded-full border border-rose-400/60 bg-rose-500/20 p-2 text-rose-400 shadow-sm transition hover:bg-rose-500/30"
               aria-label="Close item details"
             >
               <X className="h-5 w-5" strokeWidth={2.75} />
@@ -48544,7 +48559,7 @@ const ItemDetailsModal = ({
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 rounded-full border border-slate-300 bg-white p-2 text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-900"
+            className="shrink-0 rounded-full border border-rose-200 bg-white p-2 text-rose-600 shadow-sm transition hover:border-rose-400 hover:bg-rose-50 hover:text-rose-700"
             aria-label="Close item details"
           >
             <X className="h-6 w-6" strokeWidth={2.75} />
@@ -50602,7 +50617,7 @@ const SiteFooter = () => {
           </div>
 
           {/* Column 2 – Brand */}
-          <Link to="/markets" aria-label="Go to Markets" className="block transition hover:opacity-80">
+          <Link to="/markets" aria-label="Go to Markets" className="block text-center transition hover:opacity-80">
             <h3 className="text-[10px] font-bold sm:whitespace-nowrap sm:text-xl">Biznisdil</h3>
             <ul className="mt-1.5 space-y-1 text-[9px] leading-snug text-slate-200 sm:mt-3 sm:space-y-2 sm:text-base">
               <li>{t('site.tagline', { defaultValue: 'Your one-stop marketplace for everything you need – from groceries to tickets!' })}</li>
@@ -50610,7 +50625,7 @@ const SiteFooter = () => {
             <img
               src={logo}
               alt="Biznisdil logo"
-              className="mt-3 h-10 w-10 rounded-lg object-contain sm:mt-6 sm:h-16 sm:w-16"
+              className="mx-auto mt-3 h-14 w-auto rounded-lg object-contain sm:mt-6 sm:h-20"
             />
           </Link>
 
@@ -50677,7 +50692,7 @@ const SiteFooter = () => {
               type="button"
               onClick={() => setShowOptIn(false)}
               aria-label="Close"
-              className="absolute right-4 top-4 text-slate-400 transition hover:text-slate-600 dark:hover:text-slate-200"
+              className="absolute right-4 top-4 text-rose-500 transition hover:text-rose-700 dark:hover:text-rose-400"
             >
               <X className="h-5 w-5" />
             </button>
@@ -50727,7 +50742,7 @@ const SiteFooter = () => {
               type="button"
               onClick={() => setShowOptOut(false)}
               aria-label="Close"
-              className="absolute right-4 top-4 text-slate-400 transition hover:text-slate-600 dark:hover:text-slate-200"
+              className="absolute right-4 top-4 text-rose-500 transition hover:text-rose-700 dark:hover:text-rose-400"
             >
               <X className="h-5 w-5" />
             </button>

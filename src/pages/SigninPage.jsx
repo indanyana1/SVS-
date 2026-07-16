@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, X } from 'lucide-react';
 import StandalonePageShell from '../components/layout/StandalonePageShell';
 import { hasSupabaseEnv, supabase } from '../lib/supabase';
 import { hasCompleteSellerProfile } from './SellerOnboardingPage';
@@ -136,7 +136,15 @@ const SigninPage = () => {
 	return (
 		<StandalonePageShell title="Sign In" mainClassName="px-4 py-8 sm:px-6 sm:py-10">
 			<section className="px-0 text-slate-100">
-				<div className="mx-auto w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900/80 p-6 shadow-2xl shadow-black/30 md:p-8">
+				<div className="relative mx-auto w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900/80 p-6 shadow-2xl shadow-black/30 md:p-8">
+				<button
+					type="button"
+					onClick={() => navigate(-1)}
+					aria-label="Close"
+					className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-rose-500 transition hover:bg-rose-900/30 hover:text-rose-400"
+				>
+					<X className="h-5 w-5" />
+				</button>
 				<h1 className="text-2xl font-bold text-white">Sign In</h1>
 				<p className="mt-2 text-sm text-slate-300">Enter your account details to continue.</p>
 
