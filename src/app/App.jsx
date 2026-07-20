@@ -42043,14 +42043,31 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer); // ICE gathering starts — all candidates buffered above
 
+      // Buffer incoming ICE candidates from the callee until setRemoteDescription
+      // (from the answer) has completed — addIceCandidate silently fails if
+      // called with no remote description set.
+      const remoteIceBuf = [];
+      let remoteDescSet = false;
+
       sessionCh
         .on('broadcast', { event: 'call-answer' }, async ({ payload }) => {
-          try { await pc.setRemoteDescription(new RTCSessionDescription(payload.answer)); } catch (_) { /* ignore */ }
+          try {
+            await pc.setRemoteDescription(new RTCSessionDescription(payload.answer));
+            remoteDescSet = true;
+            for (const c of remoteIceBuf.splice(0)) {
+              try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch (_) { /* ignore */ }
+            }
+          } catch (_) { /* ignore */ }
           setCallState('connected');
           callTimerRef.current = setInterval(() => setCallDurationSec((s) => s + 1), 1000);
         })
         .on('broadcast', { event: 'ice-candidate' }, async ({ payload }) => {
-          if (payload.candidate) { try { await pc.addIceCandidate(new RTCIceCandidate(payload.candidate)); } catch (_) { /* ignore */ } }
+          if (!payload.candidate) return;
+          if (remoteDescSet) {
+            try { await pc.addIceCandidate(new RTCIceCandidate(payload.candidate)); } catch (_) { /* ignore */ }
+          } else {
+            remoteIceBuf.push(payload.candidate);
+          }
         })
         .on('broadcast', { event: 'call-end' }, cleanupCall)
         .on('broadcast', { event: 'call-reject' }, cleanupCall)
@@ -42081,7 +42098,10 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     const { fromEmail, fromName, callType: inType, threadId, callId, offer } = incomingCallData;
     const sessionChannelName = `call-session-${threadId}-${callId}`;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: inType === 'video' });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        video: inType === 'video',
+      });
       localStreamRef.current = stream;
       const pc = new RTCPeerConnection({ iceServers: WEBRTC_ICE_SERVERS });
       peerConnectionRef.current = pc;
