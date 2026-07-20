@@ -86,6 +86,9 @@ import {
   BarChart3,
   Settings,
   BookOpen,
+  PhoneOff,
+  MicOff,
+  VideoOff,
 } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -39749,6 +39752,18 @@ const VoiceNotePlayer = ({ src, durationSec = 0, mine = false }) => {
 };
 
 
+const WEBRTC_ICE_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun2.l.google.com:19302' },
+];
+
+const formatCallDuration = (seconds) => {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+};
+
 const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatNotifications }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -39868,6 +39883,26 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
   // the very bottom so the user lands on the first message they haven't
   // seen yet (matches WhatsApp / Slack behaviour).
   const unreadDividerRef = useRef(null);
+
+  // --- WebRTC call state ----------------------------------------------
+  const [callState, setCallState] = useState('idle'); // 'idle'|'outgoing'|'incoming'|'connected'
+  const [callType, setCallType] = useState('audio'); // 'audio'|'video'
+  const [callPeer, setCallPeer] = useState(null); // { email, name }
+  const [remoteStream, setRemoteStream] = useState(null);
+  const [incomingCallData, setIncomingCallData] = useState(null);
+  const [callDurationSec, setCallDurationSec] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isCameraOff, setIsCameraOff] = useState(false);
+  const callStateRef = useRef('idle');
+  const localStreamRef = useRef(null);
+  const peerConnectionRef = useRef(null);
+  const callSessionChannelRef = useRef(null);
+  const callTimerRef = useRef(null);
+  const localVideoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
+
+  // Keep callStateRef in sync so async callbacks don't see stale values.
+  useEffect(() => { callStateRef.current = callState; }, [callState]);
 
   // --- Read receipts (local) ------------------------------------------
   // `readMap` records the ISO of the newest message the user has seen per
@@ -41874,6 +41909,182 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     stopVoiceTracksAndTimer();
   }, [stopVoiceTracksAndTimer]);
 
+  // --- WebRTC Calls ---------------------------------------------------
+
+  const cleanupCall = useCallback(() => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((t) => t.stop());
+      localStreamRef.current = null;
+    }
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
+    }
+    if (callSessionChannelRef.current && supabase) {
+      supabase.removeChannel(callSessionChannelRef.current);
+      callSessionChannelRef.current = null;
+    }
+    if (callTimerRef.current) {
+      clearInterval(callTimerRef.current);
+      callTimerRef.current = null;
+    }
+    setCallState('idle');
+    setCallPeer(null);
+    setRemoteStream(null);
+    setIncomingCallData(null);
+    setCallDurationSec(0);
+    setIsMuted(false);
+    setIsCameraOff(false);
+  }, []);
+
+  // Sync remote stream to video element.
+  useEffect(() => {
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream;
+  }, [remoteStream]);
+
+  // Subscribe to incoming call requests for the current user.
+  useEffect(() => {
+    if (!supabase || !currentUserEmail || !hasSupabaseEnv) return undefined;
+    const myEmail = normalizeEmail(currentUserEmail);
+    const incomingCh = supabase.channel(`incoming-calls-${myEmail}`);
+    incomingCh
+      .on('broadcast', { event: 'call-request' }, ({ payload }) => {
+        if (callStateRef.current !== 'idle') {
+          // Busy — auto-reject
+          const busyCh = supabase.channel(`call-session-${payload.threadId}`);
+          busyCh.subscribe(() => {
+            busyCh.send({ type: 'broadcast', event: 'call-reject', payload: { reason: 'busy' } });
+            setTimeout(() => supabase.removeChannel(busyCh), 1000);
+          });
+          return;
+        }
+        setIncomingCallData(payload);
+        setCallType(payload.callType || 'audio');
+        setCallPeer({ email: payload.fromEmail, name: payload.fromName });
+        setCallState('incoming');
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(incomingCh); };
+  }, [currentUserEmail]);
+
+  const startCall = useCallback(async (type) => {
+    if (!activeThread || callStateRef.current !== 'idle' || !supabase) return;
+    const peer = resolveCounterparty(activeThread);
+    if (!peer.email || peer.email === currentUserEmail) return;
+    setCallType(type);
+    setCallPeer(peer);
+    setCallState('outgoing');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
+      localStreamRef.current = stream;
+      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+      const pc = new RTCPeerConnection({ iceServers: WEBRTC_ICE_SERVERS });
+      peerConnectionRef.current = pc;
+      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+      pc.ontrack = (e) => setRemoteStream(e.streams[0]);
+      const sessionCh = supabase.channel(`call-session-${activeThread.id}`);
+      callSessionChannelRef.current = sessionCh;
+      sessionCh
+        .on('broadcast', { event: 'call-answer' }, async ({ payload }) => {
+          try { await pc.setRemoteDescription(new RTCSessionDescription(payload.answer)); } catch (_) { /* ignore */ }
+          setCallState('connected');
+          callTimerRef.current = setInterval(() => setCallDurationSec((s) => s + 1), 1000);
+        })
+        .on('broadcast', { event: 'ice-candidate' }, async ({ payload }) => {
+          if (payload.candidate) { try { await pc.addIceCandidate(new RTCIceCandidate(payload.candidate)); } catch (_) { /* ignore */ } }
+        })
+        .on('broadcast', { event: 'call-end' }, cleanupCall)
+        .on('broadcast', { event: 'call-reject' }, cleanupCall)
+        .subscribe();
+      pc.onicecandidate = (e) => {
+        if (e.candidate) sessionCh.send({ type: 'broadcast', event: 'ice-candidate', payload: { candidate: e.candidate } });
+      };
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      const calleeCh = supabase.channel(`incoming-calls-${normalizeEmail(peer.email)}`);
+      calleeCh.subscribe(() => {
+        calleeCh.send({ type: 'broadcast', event: 'call-request', payload: { fromEmail: currentUserEmail, fromName: currentUserName, callType: type, threadId: activeThread.id, offer } });
+        setTimeout(() => supabase.removeChannel(calleeCh), 2000);
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('[call] setup failed:', err?.message || err);
+      cleanupCall();
+    }
+  }, [activeThread, currentUserEmail, currentUserName, cleanupCall, resolveCounterparty]);
+
+  const acceptCall = useCallback(async () => {
+    if (!incomingCallData || !supabase) return;
+    const { fromEmail, fromName, callType: inType, threadId, offer } = incomingCallData;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: inType === 'video' });
+      localStreamRef.current = stream;
+      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+      const pc = new RTCPeerConnection({ iceServers: WEBRTC_ICE_SERVERS });
+      peerConnectionRef.current = pc;
+      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+      pc.ontrack = (e) => setRemoteStream(e.streams[0]);
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      const sessionCh = supabase.channel(`call-session-${threadId}`);
+      callSessionChannelRef.current = sessionCh;
+      sessionCh
+        .on('broadcast', { event: 'ice-candidate' }, async ({ payload }) => {
+          if (payload.candidate) { try { await pc.addIceCandidate(new RTCIceCandidate(payload.candidate)); } catch (_) { /* ignore */ } }
+        })
+        .on('broadcast', { event: 'call-end' }, cleanupCall)
+        .subscribe();
+      pc.onicecandidate = (e) => {
+        if (e.candidate) sessionCh.send({ type: 'broadcast', event: 'ice-candidate', payload: { candidate: e.candidate } });
+      };
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      await sessionCh.send({ type: 'broadcast', event: 'call-answer', payload: { answer } });
+      setCallPeer({ email: fromEmail, name: fromName });
+      setCallState('connected');
+      setIncomingCallData(null);
+      callTimerRef.current = setInterval(() => setCallDurationSec((s) => s + 1), 1000);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('[call] accept failed:', err?.message || err);
+      cleanupCall();
+    }
+  }, [incomingCallData, cleanupCall]);
+
+  const endCall = useCallback(() => {
+    if (callSessionChannelRef.current) {
+      callSessionChannelRef.current.send({ type: 'broadcast', event: 'call-end', payload: { fromEmail: currentUserEmail } }).catch(() => {});
+    }
+    cleanupCall();
+  }, [currentUserEmail, cleanupCall]);
+
+  const rejectCall = useCallback(() => {
+    if (incomingCallData?.threadId && supabase) {
+      const rejectCh = supabase.channel(`call-session-${incomingCallData.threadId}`);
+      rejectCh.subscribe(() => {
+        rejectCh.send({ type: 'broadcast', event: 'call-reject', payload: { fromEmail: currentUserEmail } });
+        setTimeout(() => supabase.removeChannel(rejectCh), 800);
+      });
+    }
+    cleanupCall();
+  }, [incomingCallData, currentUserEmail, cleanupCall]);
+
+  const toggleMute = useCallback(() => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getAudioTracks().forEach((t) => { t.enabled = !t.enabled; });
+      setIsMuted((m) => !m);
+    }
+  }, []);
+
+  const toggleCamera = useCallback(() => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getVideoTracks().forEach((t) => { t.enabled = !t.enabled; });
+      setIsCameraOff((c) => !c);
+    }
+  }, []);
+
+  // Cleanup calls on unmount.
+  useEffect(() => () => { cleanupCall(); }, [cleanupCall]);
+
   // --- Document attachments -------------------------------------------
   // PDF / DOC / spec sheet / ID copy etc. Uploaded to Supabase Storage so
   // large files are supported (capped at 50 MB).
@@ -42800,8 +43011,32 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
                       </div>
                     </div>
 
-                    {/* Right-side icon row: search, export, switch contact (lg only). */}
+                    {/* Right-side icon row: call, video, search, export, switch contact (lg only). */}
                     <div className="flex shrink-0 items-center gap-1.5">
+                      {!isAgentThread ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => startCall('audio')}
+                            disabled={callState !== 'idle'}
+                            title="Voice call"
+                            aria-label="Start voice call"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--svs-border)] bg-white text-[var(--svs-primary-strong)] transition hover:border-[var(--svs-primary)] hover:bg-[var(--svs-cyan-surface)] disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            <Phone className="h-4 w-4" aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => startCall('video')}
+                            disabled={callState !== 'idle'}
+                            title="Video call"
+                            aria-label="Start video call"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--svs-border)] bg-white text-[var(--svs-primary-strong)] transition hover:border-[var(--svs-primary)] hover:bg-[var(--svs-cyan-surface)] disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            <Video className="h-4 w-4" aria-hidden="true" />
+                          </button>
+                        </>
+                      ) : null}
                       <button
                         type="button"
                         onClick={() => setChatSearchOpen((v) => !v)}
@@ -44158,6 +44393,115 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
           </div>
         </div>
       ) : null}
+
+      {/* ── Incoming call overlay ── */}
+      {callState === 'incoming' && callPeer ? (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-3xl bg-[#0a1929] p-8 shadow-2xl text-center text-white">
+            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-[var(--svs-primary)] to-[var(--svs-primary-strong)] text-3xl font-black shadow-lg">
+              {(callPeer.name || '?').charAt(0).toUpperCase()}
+            </div>
+            <p className="text-xs font-bold uppercase tracking-widest text-cyan-300 mb-1">
+              {callType === 'video' ? 'Incoming video call' : 'Incoming voice call'}
+            </p>
+            <p className="text-2xl font-black">{callPeer.name}</p>
+            <p className="mt-1 text-sm text-white/60 animate-pulse">Ringing…</p>
+            <div className="mt-8 flex items-center justify-center gap-10">
+              <div className="flex flex-col items-center gap-2">
+                <button
+                  type="button"
+                  onClick={rejectCall}
+                  className="flex h-16 w-16 items-center justify-center rounded-full bg-rose-600 shadow-lg transition hover:bg-rose-700 active:scale-95"
+                  aria-label="Decline call"
+                >
+                  <PhoneOff className="h-7 w-7" />
+                </button>
+                <span className="text-xs text-white/60">Decline</span>
+              </div>
+              <div className="flex flex-col items-center gap-2">
+                <button
+                  type="button"
+                  onClick={acceptCall}
+                  className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500 shadow-lg transition hover:bg-emerald-600 active:scale-95"
+                  aria-label="Accept call"
+                >
+                  <Phone className="h-7 w-7" />
+                </button>
+                <span className="text-xs text-white/60">Accept</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* ── Active / outgoing call overlay ── */}
+      {(callState === 'outgoing' || callState === 'connected') && callPeer ? (
+        <div className="fixed inset-0 z-[300] flex flex-col bg-[#0a1929] text-white">
+          {callType === 'video' ? (
+            <>
+              {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+              <video ref={remoteVideoRef} autoPlay playsInline className="absolute inset-0 h-full w-full object-cover" />
+              {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+              <video ref={localVideoRef} autoPlay playsInline muted className="absolute bottom-28 right-4 h-36 w-28 rounded-2xl border-2 border-white/30 object-cover shadow-xl" />
+            </>
+          ) : (
+            <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6">
+              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-[var(--svs-primary)] to-[var(--svs-primary-strong)] text-4xl font-black shadow-2xl">
+                {(callPeer.name || '?').charAt(0).toUpperCase()}
+              </div>
+              <p className="text-2xl font-black">{callPeer.name}</p>
+              {callState === 'outgoing' ? (
+                <p className="animate-pulse text-sm text-white/60">Calling…</p>
+              ) : (
+                <p className="font-mono text-lg font-bold text-cyan-300">{formatCallDuration(callDurationSec)}</p>
+              )}
+              {isMuted ? (
+                <span className="rounded-full bg-rose-600/30 px-3 py-1 text-xs font-bold text-rose-300">Muted</span>
+              ) : null}
+            </div>
+          )}
+
+          {/* Controls bar */}
+          <div className="relative z-10 flex items-center justify-center gap-6 px-6 pb-12 pt-4 bg-gradient-to-t from-black/80 to-transparent">
+            <div className="flex flex-col items-center gap-1.5">
+              <button
+                type="button"
+                onClick={toggleMute}
+                className={`flex h-14 w-14 items-center justify-center rounded-full transition active:scale-95 ${isMuted ? 'bg-rose-600 hover:bg-rose-700' : 'bg-white/20 hover:bg-white/30'}`}
+                aria-label={isMuted ? 'Unmute' : 'Mute'}
+              >
+                {isMuted ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
+              </button>
+              <span className="text-[11px] text-white/60">{isMuted ? 'Unmute' : 'Mute'}</span>
+            </div>
+            {callType === 'video' ? (
+              <div className="flex flex-col items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={toggleCamera}
+                  className={`flex h-14 w-14 items-center justify-center rounded-full transition active:scale-95 ${isCameraOff ? 'bg-rose-600 hover:bg-rose-700' : 'bg-white/20 hover:bg-white/30'}`}
+                  aria-label={isCameraOff ? 'Turn camera on' : 'Turn camera off'}
+                >
+                  {isCameraOff ? <VideoOff className="h-6 w-6" /> : <Video className="h-6 w-6" />}
+                </button>
+                <span className="text-[11px] text-white/60">Camera</span>
+              </div>
+            ) : null}
+            <div className="flex flex-col items-center gap-1.5">
+              <button
+                type="button"
+                onClick={endCall}
+                className="flex h-14 w-14 items-center justify-center rounded-full bg-rose-600 shadow-lg transition hover:bg-rose-700 active:scale-95"
+                aria-label="End call"
+              >
+                <PhoneOff className="h-6 w-6" />
+              </button>
+              <span className="text-[11px] text-white/60">End</span>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
     </section>
   );
 };
