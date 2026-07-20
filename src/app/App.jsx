@@ -9679,11 +9679,11 @@ const MinimalCheckoutShell = ({ title, badge = null, children }) => {
     <div className={`min-h-screen bg-[var(--svs-bg)] text-[var(--svs-text)] ${isDarkMode ? 'theme-dark' : 'theme-light'}`.trim()}>
       <header className="border-b border-[var(--svs-border)] bg-[var(--svs-surface)]/95 backdrop-blur-sm">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <div className="flex min-w-0 items-center gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
             <h1 className="truncate text-2xl font-black text-[var(--svs-text)]">{title}</h1>
           </div>
 
-          <div className="flex items-center gap-2" ref={languageMenuRef}>
+          <div className="flex shrink-0 items-center gap-2" ref={languageMenuRef}>
             <div className="relative">
               <button
                 type="button"
@@ -9691,9 +9691,10 @@ const MinimalCheckoutShell = ({ title, badge = null, children }) => {
                   setFocusedLanguageIndex(SUPPORTED_LANGUAGES.findIndex((language) => language.code === activeLanguage.code));
                   setIsLanguageModalOpen((prev) => !prev);
                 }}
-                className="inline-flex items-center gap-2 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)]"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2.5 py-2 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] sm:px-3"
               >
-                <span>{activeLanguage.flag ? `${activeLanguage.flag} ` : ''}{activeLanguage.englishName}</span>
+                <span>{activeLanguage.flag || '🌐'}</span>
+                <span className="hidden sm:inline">{activeLanguage.englishName}</span>
                 <ChevronDown className={`h-4 w-4 transition ${isLanguageModalOpen ? 'rotate-180' : ''}`} />
               </button>
               <LanguageSelectorPopover
@@ -9712,11 +9713,11 @@ const MinimalCheckoutShell = ({ title, badge = null, children }) => {
             <button
               type="button"
               onClick={() => setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'))}
-              className="inline-flex items-center gap-2 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)]"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2.5 py-2 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] sm:px-3"
               aria-label={t('theme.toggleAria')}
             >
               {isDarkMode ? <Sun className="h-4 w-4 text-[var(--svs-primary)]" /> : <Moon className="h-4 w-4 text-[var(--svs-primary-strong)]" />}
-              <span>{isDarkMode ? t('theme.light') : t('theme.dark')}</span>
+              <span className="hidden sm:inline">{isDarkMode ? t('theme.light') : t('theme.dark')}</span>
             </button>
           </div>
           {badge}
@@ -11404,7 +11405,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
   };
 
   return (
-    <div className={`min-h-screen bg-[var(--svs-bg)] text-[var(--svs-text)] ${isDarkMode ? 'theme-dark' : 'theme-light'}`.trim()}>
+    <div className={`min-h-screen w-full overflow-x-hidden bg-[var(--svs-bg)] text-[var(--svs-text)] ${isDarkMode ? 'theme-dark' : 'theme-light'}`.trim()}>
       {/* Accessibility: keyboard users can jump straight to the page body */}
       <a
         href="#main-content"
@@ -12001,7 +12002,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
         ) : null}
       </header>
 
-      <main id="main-content" className="pt-20">{children}</main>
+      <main id="main-content" className="w-full pt-20">{children}</main>
       <SiteFooter />
     </div>
   );
@@ -27428,6 +27429,23 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
   const [listingSort, setListingSort] = useState('newest');
   const [orderStatusFilter, setOrderStatusFilter] = useState('all');
 
+  // Subscribe to FX rate updates so converted KPIs re-render when rates arrive.
+  useBuyerCurrency();
+
+  const [sellerDisplayCurrency, setSellerDisplayCurrency] = useState(
+    () => (typeof window !== 'undefined' ? (window.localStorage.getItem('svs-seller-currency') || '') : ''),
+  );
+  const [isCurrencyPickerOpen, setIsCurrencyPickerOpen] = useState(false);
+  const [currencySearch, setCurrencySearch] = useState('');
+
+  const applySellerCurrency = (code) => {
+    setSellerDisplayCurrency(code);
+    if (typeof window !== 'undefined') window.localStorage.setItem('svs-seller-currency', code);
+    setIsCurrencyPickerOpen(false);
+    setCurrencySearch('');
+  };
+  const currencyPickerRef = useRef(null);
+
   // Apply filters carried over from KPI card clicks (via navigate state).
   useEffect(() => {
     const navState = location.state;
@@ -27449,6 +27467,19 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
     // Clear the state so refresh/back doesn't re-apply.
     navigate(location.pathname, { replace: true, state: null });
   }, [location.state, location.pathname, navigate]);
+
+  useEffect(() => {
+    if (!isCurrencyPickerOpen) return undefined;
+    const handlePointerDown = (event) => {
+      if (!currencyPickerRef.current?.contains(event.target)) setIsCurrencyPickerOpen(false);
+    };
+    window.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('touchstart', handlePointerDown);
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('touchstart', handlePointerDown);
+    };
+  }, [isCurrencyPickerOpen]);
 
   useEffect(() => {
     if (!isAuthenticated || !hasSupabaseEnv || !supabase) return;
@@ -27917,6 +27948,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
 
   const recentOrders = useMemo(() => visibleOrders.slice(0, 3), [visibleOrders]);
 
+  // Auto-detect the most-used currency across listings as a fallback.
   const sellerPrimaryCurrency = useMemo(() => {
     const tally = new Map();
     myListings.forEach((listing) => {
@@ -27945,6 +27977,9 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
     });
     return options;
   }, [myListings, t]);
+
+  // The currency actually shown on KPIs: manual override wins, then auto-detect.
+  const kpiCurrency = sellerDisplayCurrency || sellerPrimaryCurrency;
 
   const filteredListings = useMemo(() => {
     const search = listingSearch.trim().toLowerCase();
@@ -28210,14 +28245,67 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                 </p>
               </div>
             </div>
-            {!isOrdersView ? (
-              <Link
-                to="/seller/upload"
-                className={`${cudyBluePrimaryButtonClassName} inline-flex items-center gap-2 rounded-lg bg-[var(--svs-primary)] px-4 py-2.5 text-sm font-semibold text-white`}
-              >
-                <Plus className="h-4 w-4" /> Add Listing
-              </Link>
-            ) : null}
+            <div className="flex items-center gap-2">
+              {/* Currency picker */}
+              <div className="relative" ref={currencyPickerRef}>
+                <button
+                  type="button"
+                  onClick={() => { setIsCurrencyPickerOpen((prev) => !prev); setCurrencySearch(''); }}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2.5 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)]"
+                  aria-label="Choose display currency"
+                  title="Choose display currency for revenue KPIs"
+                >
+                  <DollarSign className="h-4 w-4 text-[var(--svs-primary)]" />
+                  <span>{kpiCurrency}</span>
+                  <ChevronDown className={`h-3.5 w-3.5 text-[var(--svs-muted)] transition ${isCurrencyPickerOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {isCurrencyPickerOpen ? (
+                  <div className="absolute left-0 top-full z-50 mt-1 w-64 overflow-hidden rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-2xl">
+                    <div className="p-2 border-b border-[var(--svs-border)]">
+                      <div className="flex items-center gap-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2">
+                        <Search className="h-3.5 w-3.5 shrink-0 text-[var(--svs-muted)]" />
+                        <input
+                          autoFocus
+                          type="text"
+                          value={currencySearch}
+                          onChange={(e) => setCurrencySearch(e.target.value)}
+                          placeholder="Search currency…"
+                          className="w-full bg-transparent py-1.5 text-sm text-[var(--svs-text)] outline-none"
+                        />
+                      </div>
+                    </div>
+                    <ul className="max-h-56 overflow-y-auto py-1">
+                      {SUPPORTED_CURRENCIES
+                        .filter((c) => {
+                          const q = currencySearch.trim().toLowerCase();
+                          return !q || c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q);
+                        })
+                        .map((c) => (
+                          <li key={c.code}>
+                            <button
+                              type="button"
+                              onClick={() => applySellerCurrency(c.code)}
+                              className={`flex w-full items-center gap-2 px-3 py-2 text-sm transition hover:bg-[var(--svs-cyan-surface)] ${kpiCurrency === c.code ? 'bg-[var(--svs-cyan-surface)] font-semibold text-[var(--svs-primary)]' : 'text-[var(--svs-text)]'}`}
+                            >
+                              <span aria-hidden="true">{c.flag}</span>
+                              <span className="font-mono font-bold">{c.code}</span>
+                              <span className="truncate text-xs text-[var(--svs-muted)]">{c.name}</span>
+                            </button>
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+              {!isOrdersView ? (
+                <Link
+                  to="/seller/upload"
+                  className={`${cudyBluePrimaryButtonClassName} inline-flex items-center gap-2 rounded-lg bg-[var(--svs-primary)] px-4 py-2.5 text-sm font-semibold text-white`}
+                >
+                  <Plus className="h-4 w-4" /> Add Listing
+                </Link>
+              ) : null}
+            </div>
           </header>
 
           {/* KPI strip */}
@@ -28235,8 +28323,11 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Revenue</p>
                 <span className="rounded-lg bg-emerald-50 p-1.5 text-emerald-600"><DollarSign className="h-4 w-4" /></span>
               </div>
-              <p className="mt-2 text-2xl font-bold text-[var(--svs-text)]">{formatSellerAmount(totalRevenue, sellerPrimaryCurrency)}</p>
+              <p className="mt-2 text-2xl font-bold text-[var(--svs-text)]">{formatSellerAmount(convertAmount(totalRevenue, sellerPrimaryCurrency, kpiCurrency), kpiCurrency)}</p>
               <p className="mt-1 text-xs text-[var(--svs-muted)]">{deliveredOrdersCount} delivered order{deliveredOrdersCount === 1 ? '' : 's'}</p>
+              {kpiCurrency !== sellerPrimaryCurrency ? (
+                <p className="mt-0.5 text-[10px] text-[var(--svs-muted)]">≈ from {sellerPrimaryCurrency}</p>
+              ) : null}
             </button>
             <button
               type="button"
@@ -28251,8 +28342,11 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Pending</p>
                 <span className="rounded-lg bg-amber-50 p-1.5 text-amber-600"><Clock className="h-4 w-4" /></span>
               </div>
-              <p className="mt-2 text-2xl font-bold text-[var(--svs-text)]">{formatSellerAmount(pendingRevenue, sellerPrimaryCurrency)}</p>
+              <p className="mt-2 text-2xl font-bold text-[var(--svs-text)]">{formatSellerAmount(convertAmount(pendingRevenue, sellerPrimaryCurrency, kpiCurrency), kpiCurrency)}</p>
               <p className="mt-1 text-xs text-[var(--svs-muted)]">{activeOrdersCount} active order{activeOrdersCount === 1 ? '' : 's'}</p>
+              {kpiCurrency !== sellerPrimaryCurrency ? (
+                <p className="mt-0.5 text-[10px] text-[var(--svs-muted)]">≈ from {sellerPrimaryCurrency}</p>
+              ) : null}
             </button>
             <button
               type="button"
@@ -39654,10 +39748,6 @@ const VoiceNotePlayer = ({ src, durationSec = 0, mine = false }) => {
   );
 };
 
-const CHAT_MESSAGES_BG = (() => {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="500" height="500" viewBox="0 0 500 500"><g transform="translate(120,30) rotate(-18)" stroke="#c8bfaa" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"><path d="M15 20 L50 20 L68 90 H140 L158 48 H60"/><circle cx="88" cy="107" r="12"/><circle cx="128" cy="107" r="12"/><line x1="68" y1="55" x2="153" y2="55"/><line x1="72" y1="72" x2="149" y2="72"/><path d="M0 5 L15 20"/></g><g transform="translate(20,180) rotate(12)" stroke="#c8bfaa" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.5"><rect x="0" y="24" width="44" height="33" rx="7"/><path d="M8 24 V14 C8 2 36 2 36 14 V24"/><circle cx="22" cy="41" r="4" fill="#c8bfaa"/></g><g transform="translate(290,250) rotate(-8)" stroke="#c8bfaa" stroke-width="6" fill="none" opacity="0.52"><rect x="0" y="0" width="110" height="72" rx="20"/><circle cx="28" cy="36" r="5.5" fill="#c8bfaa"/><circle cx="55" cy="36" r="5.5" fill="#c8bfaa"/><circle cx="82" cy="36" r="5.5" fill="#c8bfaa"/></g><g transform="translate(360,310) rotate(8)" stroke="#c8bfaa" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.5"><path d="M8 28 L2 100 H82 L76 28 Z"/><path d="M22 28 V17 C22 5 62 5 62 17 V28"/><line x1="2" y1="44" x2="82" y2="44"/></g><g transform="translate(30,360) rotate(-15)" stroke="#c8bfaa" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.45"><path d="M55 8 A30 30 0 1 1 8 35"/><path d="M55 8 L45 22 L62 22 Z"/></g><g transform="translate(10,20) rotate(8)" stroke="#c8bfaa" stroke-width="5" fill="none" opacity="0.42"><circle cx="32" cy="32" r="30"/><path d="M14 14 L32 32 L50 14"/><line x1="14" y1="22" x2="50" y2="22"/><line x1="32" y1="32" x2="32" y2="50"/></g><g transform="translate(60,270) rotate(35)" stroke="#c8bfaa" stroke-width="5.5" fill="none" stroke-linecap="round" opacity="0.4"><line x1="0" y1="18" x2="44" y2="18"/><path d="M30 6 L44 18 L30 30"/></g><g transform="translate(50,80) rotate(-18)" stroke="#c8bfaa" stroke-width="5" fill="none" opacity="0.4"><path d="M28 44 C12 28 0 18 8 6 C16 -4 28 6 28 6 C28 6 40 -4 48 6 C56 18 44 28 28 44 Z"/></g><g transform="translate(385,20) rotate(8)" stroke="#c8bfaa" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.45"><path d="M16 0 L5 22 H16 L0 44"/></g><g transform="translate(415,38) rotate(5)" stroke="#c8bfaa" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"><path d="M11 0 L3 16 H11 L0 32"/></g><g transform="translate(430,60) rotate(-8)" stroke="#c8bfaa" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.4"><rect x="0" y="18" width="32" height="24" rx="5"/><path d="M6 18 V11 C6 3 26 3 26 11 V18"/></g><circle cx="250" cy="18" r="11" stroke="#c8bfaa" stroke-width="4.5" fill="none" opacity="0.35"/><circle cx="145" cy="220" r="9" stroke="#c8bfaa" stroke-width="4" fill="none" opacity="0.3"/><circle cx="435" cy="200" r="13" stroke="#c8bfaa" stroke-width="4" fill="none" opacity="0.3"/><circle cx="290" cy="460" r="9" stroke="#c8bfaa" stroke-width="3.5" fill="none" opacity="0.28"/><circle cx="180" cy="460" r="7" stroke="#c8bfaa" stroke-width="3" fill="none" opacity="0.25"/><rect x="430" y="275" width="26" height="26" stroke="#c8bfaa" stroke-width="4" fill="none" opacity="0.3" transform="rotate(18 443 288)"/><rect x="220" y="380" width="20" height="20" stroke="#c8bfaa" stroke-width="3.5" fill="none" opacity="0.25" transform="rotate(-12 230 390)"/><g transform="translate(170,380) rotate(12)" stroke="#c8bfaa" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.38"><path d="M8 12 L25 12 L35 50 H70 L78 28 H30"/><circle cx="44" cy="60" r="8"/><circle cx="63" cy="60" r="8"/><line x1="35" y1="32" x2="77" y2="32"/></g><g transform="translate(440,380) rotate(5)" stroke="#c8bfaa" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.4"><path d="M5 0 H55 V85 L45 75 L35 85 L25 75 L15 85 L5 75 Z"/><line x1="15" y1="20" x2="45" y2="20"/><line x1="15" y1="35" x2="45" y2="35"/><line x1="15" y1="50" x2="35" y2="50"/></g></svg>`;
-  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
-})();
 
 const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatNotifications }) => {
   const location = useLocation();
@@ -42418,6 +42508,19 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
                         <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${counterpart.role === 'admin' ? 'bg-[#e8f7fb] text-[#0f6674]' : counterpart.role === 'seller' ? 'bg-[#e9f8ef] text-[#0f7a46]' : 'bg-[#edf1fb] text-[#3356a8]'}`}>
                           {getRecipientRoleLabel(counterpart.role || 'client')}
                         </span>
+                        {isUserOnline(counterpart.email) ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[var(--svs-success)]">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[var(--svs-success)]" aria-hidden="true" />Online
+                          </span>
+                        ) : (() => {
+                          const cpEmail = normalizeEmail(counterpart.email);
+                          const label = formatLastSeen(lastSeenMap.get(cpEmail));
+                          return label ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[var(--svs-muted)]">
+                              <span className="h-1.5 w-1.5 rounded-full bg-[var(--svs-muted)]" aria-hidden="true" />{label}
+                            </span>
+                          ) : null;
+                        })()}
                         {thread.orderReference ? (
                           <span className="truncate text-[10px] font-semibold text-[var(--svs-muted)]">{thread.orderReference}</span>
                         ) : null}
@@ -42783,7 +42886,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
                   ) : null}
                 </div>
 
-                <div ref={messageListRef} className="flex-1 space-y-3 overflow-y-auto px-3 py-3 pb-24 sm:px-6 sm:py-4 sm:pb-6" style={{ backgroundColor: '#ede9e0', backgroundImage: CHAT_MESSAGES_BG, backgroundSize: '500px 500px', backgroundRepeat: 'repeat' }}>
+                <div ref={messageListRef} className="flex-1 space-y-3 overflow-y-auto px-3 py-3 pb-24 sm:px-6 sm:py-4 sm:pb-6" style={{ backgroundColor: '#1a3a5c' }}>
                   {activeThread?.itemDetails?.itemTitle ? (
                     <div className="flex justify-start">
                       <div className="w-[220px] max-w-[78%] overflow-hidden rounded-2xl rounded-bl-md border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-sm">
@@ -48022,9 +48125,7 @@ const ItemDetailsModal = ({
   if (isInformalMarketItem) {
     const heroImage = currentImage || item.image || '';
     const phone = String(item.phone || '').trim();
-    const whatsapp = String(item.whatsapp || phone).trim();
     const phoneTel = phone.replace(/[^\d+]/g, '');
-    const whatsappNumber = whatsapp.replace(/[^\d]/g, '');
     const addressText = String(item.location || '').trim();
     const mapEmbedSrc = addressText
       ? `https://maps.google.com/maps?q=${encodeURIComponent(addressText)}&t=&z=13&ie=UTF8&iwloc=&output=embed`
@@ -48069,18 +48170,18 @@ const ItemDetailsModal = ({
     };
     return (
       <div
-        className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-slate-900/70 p-3 sm:p-6"
+        className="fixed inset-0 z-[80] flex items-start justify-center bg-slate-900/70 p-3 sm:p-6"
         onClick={onClose}
         role="dialog"
         aria-modal="true"
         aria-label={`${item.title} details`}
       >
         <div
-          className="my-2 w-full max-w-5xl overflow-hidden rounded-2xl border border-[#d6e6f5] bg-white shadow-2xl sm:my-6"
+          className="my-2 flex w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-[#d6e6f5] bg-white shadow-2xl max-h-[calc(100dvh-1.5rem)] sm:my-6 sm:max-h-[calc(100dvh-3rem)]"
           onClick={(event) => event.stopPropagation()}
         >
-          {/* Close button — sticky so it stays reachable while scrolling the (potentially long) content below. */}
-          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#e5eef8] bg-gradient-to-r from-[#0f6674] via-[#0f889a] to-[#0f6674] px-4 py-3 text-white">
+          {/* Close button — always visible as the first shrink-0 flex row, never scrolled away. */}
+          <div className="shrink-0 flex items-center justify-between border-b border-[#e5eef8] bg-gradient-to-r from-[#0f6674] via-[#0f889a] to-[#0f6674] px-4 py-3 text-white">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-100">{t('markets.informalMarket')}</p>
             <button
               type="button"
@@ -48091,6 +48192,9 @@ const ItemDetailsModal = ({
               <X className="h-5 w-5" strokeWidth={2.75} />
             </button>
           </div>
+
+          {/* Scrollable body — flex-1 so it fills remaining height; min-h-0 lets it shrink. */}
+          <div className="flex-1 min-h-0 overflow-y-auto">
 
           {/* HERO */}
           <div className="px-4 pt-4 sm:px-8 sm:pt-6">
@@ -48463,6 +48567,8 @@ const ItemDetailsModal = ({
             </section>
           ) : null}
 
+          </div>{/* end scrollable body */}
+
           {/* QUICK CONTACT MODAL */}
           {isQuickContactOpen ? (
             <div
@@ -48494,17 +48600,6 @@ const ItemDetailsModal = ({
                     >
                       <Phone className="h-4 w-4" aria-hidden="true" />
                       Call: {phone}
-                    </a>
-                  ) : null}
-                  {whatsappNumber ? (
-                    <a
-                      href={`https://wa.me/${whatsappNumber}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#0f6674] px-4 py-2.5 text-sm font-bold text-white shadow transition hover:bg-[#0d5762]"
-                    >
-                      <MessageCircle className="h-4 w-4" aria-hidden="true" />
-                      WhatsApp: {whatsapp}
                     </a>
                   ) : null}
                 </div>
@@ -50262,7 +50357,6 @@ const SecondHandProductDetailPage = ({ onAddToCart, onBuyNow, onToggleWishlist, 
 
 const CardGrid = ({ items, focusItems, boundsItems, buttonLabel, secondaryButtonLabel, buyNowLabel, metaRenderer, onPrimaryAction, onBuyNowAction, onToggleWishlist, isItemWishlisted, onOpenItemDetails, reviewSummaryMap = {}, getItemReviewKey }) => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [selectedSizesByItem, setSelectedSizesByItem] = useState({});
   useListingFocusFromQuery(focusItems || items, onOpenItemDetails);
   const {
@@ -50342,7 +50436,6 @@ const CardGrid = ({ items, focusItems, boundsItems, buttonLabel, secondaryButton
           businessName: actionItem?.businessName || item?.businessName || actionItem?.storeName || item?.storeName,
           providerName: actionItem?.provider || item?.provider,
         });
-        const canChatSeller = Boolean(sellerEmail);
         const itemReviewKey = getItemReviewKey?.(item);
         const reviewSummary = getProductReviewSummary(reviewSummaryMap, itemReviewKey);
         const averageRatingLabel = reviewSummary.reviewCount ? reviewSummary.averageRating.toFixed(1) : '0.0';
@@ -50382,34 +50475,10 @@ const CardGrid = ({ items, focusItems, boundsItems, buttonLabel, secondaryButton
             </div>
             <div className="flex flex-1 flex-col p-3 sm:p-5">
               <h3 className="mb-1 text-sm font-bold leading-tight text-[#0f6674] group-hover:text-[#33b9f2] sm:text-xl">{itemTitle}</h3>
-              <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="mb-2">
                 <p className="truncate text-[11px] font-semibold text-[#0f6674]/85 sm:text-xs">
                   Seller: <span className="text-[#0f6674]">{sellerDisplayName}</span>
                 </p>
-                {canChatSeller ? (
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      const itemKey = item.key || item.id;
-                      navigate('/support/chat', {
-                        state: {
-                          recipientEmail: sellerEmail,
-                          recipientName: sellerDisplayName,
-                          recipientRole: 'seller',
-                          issueType: 'Item Enquiry',
-                          itemKey,
-                          itemTitle: itemTitle,
-                          itemImage: item.image || item.images?.[0] || '',
-                          itemLink: `${item.route || '/e-commerce'}?focus=${encodeURIComponent(itemKey)}`,
-                        },
-                      });
-                    }}
-                    className="rounded-full border border-[#0f6674] bg-[#e8f7fb] px-2.5 py-1 text-[10px] font-semibold text-[#0f6674] transition hover:bg-[#d7f0f8] sm:text-[11px]"
-                  >
-                    Chat Seller
-                  </button>
-                ) : null}
               </div>
               {/* Meta (volume, brand, etc.) — hidden on mobile to keep cards compact. */}
               <div className="mb-2 hidden text-base font-medium text-[#374151] sm:block">{metaRenderer(item)}</div>
@@ -50603,7 +50672,7 @@ const SiteFooter = () => {
     <footer className="bg-gradient-to-b from-[#0c2a32] to-[#0f6674] text-white">
       {/* ── Main Footer Grid — compact 4 columns on mobile so it mirrors the desktop layout, then scales up on larger screens ── */}
       <div className="mx-auto w-full max-w-7xl px-3 pt-6 pb-5 sm:px-6 sm:pt-[60px] sm:pb-10 sm:px-8">
-        <div className="grid grid-cols-4 gap-2 sm:gap-10">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-10">
           {/* Column 1 – Support */}
           <div>
             <h4 className="text-[10px] font-bold uppercase tracking-wide sm:whitespace-nowrap sm:text-sm">{t('footer.support')}</h4>

@@ -29,6 +29,9 @@ html {
   scroll-behavior: smooth;
   /* Account for sticky / fixed headers when jumping to anchors. */
   scroll-padding-top: 80px;
+  /* Block horizontal overflow at the root — required on some browsers
+     where overflow-x on body alone doesn't prevent viewport expansion. */
+  overflow-x: hidden;
 }
 
 body {
@@ -44,18 +47,25 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* On small phones allow horizontal panning so cut-off content is reachable. */
+/* ============================================================
+   SMALL-PHONE OVERFLOW HARDENING (< 480 px)
+   Prevent any single element from blowing out the page width.
+   Flex children get min-w-0 so long text can shrink; text nodes
+   wrap instead of running off-screen.
+   ============================================================ */
 @media (max-width: 480px) {
-  body {
-    overflow-x: auto;
+  /* Flex children must be allowed to shrink below their content size.
+     Without min-width: 0, flex children never shrink past their content
+     width, so long text or images force the row wider than the screen. */
+  [class*="flex"] > *,
+  .flex > * {
+    min-width: 0;
   }
-  .container,
-  main,
-  section,
-  article,
-  header,
-  footer {
-    max-width: none;
+
+  /* Long words / emails / URLs break instead of overflowing. */
+  p, span, a, li, td, th, label, h1, h2, h3, h4, h5, h6 {
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
 }
 

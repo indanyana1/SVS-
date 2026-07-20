@@ -48,15 +48,15 @@ const StandalonePageShell = ({ title, brandHref = '/markets', children, mainClas
 		<div className={`min-h-screen bg-[var(--svs-bg)] text-[var(--svs-text)] ${isDarkMode ? 'theme-dark' : 'theme-light'}`.trim()}>
 			<header className="border-b border-[var(--svs-border)] bg-[var(--svs-surface)]/95 backdrop-blur-sm">
 				<div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-					<div className="flex min-w-0 items-center gap-3">
+					<div className="flex min-w-0 flex-1 items-center gap-3">
 						<Link to={brandHref} aria-label="Back to Biznisdil" className="shrink-0">
 							<img src={logo} alt="Biznisdil" className="h-14 w-auto rounded-lg" />
 						</Link>
-						<h1 className="truncate text-2xl font-black text-[var(--svs-text)]">{title}</h1>
+						{title ? <h1 className="truncate text-2xl font-black text-[var(--svs-text)]">{title}</h1> : null}
 					</div>
 
-					<div className="flex items-center gap-2">
-						<label className="inline-flex items-center gap-2 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)]">
+					<div className="flex shrink-0 items-center gap-2">
+						<label className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2.5 py-2 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] sm:px-3">
 							<span className="sr-only">{t('languageModal.title')}</span>
 							<span aria-hidden="true">{activeLanguage.flag}</span>
 							<select
@@ -64,7 +64,7 @@ const StandalonePageShell = ({ title, brandHref = '/markets', children, mainClas
 								onChange={(event) => {
 									void handleLanguageChange(event.target.value);
 								}}
-								className="min-w-0 bg-transparent text-sm font-semibold text-[var(--svs-text)] outline-none"
+								className="hidden bg-transparent text-sm font-semibold text-[var(--svs-text)] outline-none sm:block"
 								aria-label={t('languageModal.title')}
 							>
 								{SUPPORTED_LANGUAGES.map((language) => (
@@ -77,11 +77,11 @@ const StandalonePageShell = ({ title, brandHref = '/markets', children, mainClas
 						<button
 							type="button"
 							onClick={() => setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'))}
-							className="inline-flex items-center gap-2 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)]"
+							className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-2.5 py-2 text-sm font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)] sm:px-3"
 							aria-label={t('theme.toggleAria')}
 						>
 							{isDarkMode ? <Sun className="h-4 w-4 text-[var(--svs-primary)]" /> : <Moon className="h-4 w-4 text-[var(--svs-primary-strong)]" />}
-							<span>{isDarkMode ? t('theme.light') : t('theme.dark')}</span>
+							<span className="hidden sm:inline">{isDarkMode ? t('theme.light') : t('theme.dark')}</span>
 						</button>
 					</div>
 				</div>

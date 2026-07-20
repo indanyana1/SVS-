@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { Calendar, Search, ShoppingCart } from 'lucide-react';
+import { Calendar, Search } from 'lucide-react';
 import {
 	PROPERTY_CATEGORIES,
 	getTrending,
@@ -69,18 +69,13 @@ const PropertyMarketPage = () => {
 
 				{/* EXPLORE BY CATEGORY */}
 				<div className="mt-8">
-					<div className="mb-5 flex items-center gap-3">
-						<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--svs-primary)] text-white">
-							<ShoppingCart className="h-5 w-5" />
-						</div>
-						<div>
-							<h2 className="text-lg font-bold text-[var(--svs-primary-strong)]">
-								Explore By Category
-							</h2>
-							<p className="text-xs text-slate-500">
-								Find the perfect property type that matches your needs
-							</p>
-						</div>
+					<div className="mb-5">
+						<h2 className="text-lg font-bold text-[var(--svs-primary-strong)]">
+							Explore By Category
+						</h2>
+						<p className="text-xs text-slate-500">
+							Find the perfect property type that matches your needs
+						</p>
 					</div>
 					<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
 						{PROPERTY_CATEGORIES.map((category) => (
