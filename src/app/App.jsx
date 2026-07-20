@@ -44459,10 +44459,11 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
       {/* ── Active / outgoing call overlay ── */}
       {(callState === 'outgoing' || callState === 'connected') && callPeer ? (
         <div className="fixed inset-0 z-[300] flex flex-col bg-[#0a1929] text-white">
+          {/* Remote audio/video — always mounted so the stream plays even in audio-only mode */}
+          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+          <video ref={remoteVideoRef} autoPlay playsInline className={callType === 'video' ? 'absolute inset-0 h-full w-full object-cover' : 'hidden'} />
           {callType === 'video' ? (
             <>
-              {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-              <video ref={remoteVideoRef} autoPlay playsInline className="absolute inset-0 h-full w-full object-cover" />
               {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
               <video ref={localVideoRef} autoPlay playsInline muted className="absolute bottom-28 right-4 h-36 w-28 rounded-2xl border-2 border-white/30 object-cover shadow-xl" />
             </>
