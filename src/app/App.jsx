@@ -41939,6 +41939,14 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     if (remoteAudioRef.current) {
       remoteAudioRef.current.srcObject = null;
     }
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.muted = true;
+      remoteVideoRef.current.srcObject = null;
+    }
+    if (localVideoRef.current) {
+      localVideoRef.current.muted = true;
+      localVideoRef.current.srcObject = null;
+    }
     callIdRef.current = '';
     setCallState('idle');
     setCallPeer(null);
@@ -41950,10 +41958,9 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     setIsSpeaker(true);
   }, []);
 
-  // Route remote audio through the always-in-DOM <audio> element.
-  // Using a dedicated <audio> element (never display:none) is the only reliable
-  // cross-browser way to play audio — browsers often suppress display:none media.
-  // callState is a dependency so this re-runs when a call starts/ends.
+  // Route ALL remote audio through the dedicated <audio> element.
+  // React's `muted` JSX prop is not reliably reflected to the DOM (known React bug),
+  // so we never rely on video elements for audio — only remoteAudioRef plays sound.
   useEffect(() => {
     const el = remoteAudioRef.current;
     if (!el) return;
@@ -41961,14 +41968,19 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     if (remoteStream) el.play().catch(() => {});
   }, [remoteStream, callState]);
 
-  // For video calls: sync the visible <video> element (muted — audio handled above).
-  // Also sync local preview once the overlay mounts.
+  // For video calls: sync the remote video element for DISPLAY ONLY (explicitly muted
+  // in JS, not just via JSX prop, because React does not reliably write the muted
+  // attribute to the DOM). Local preview is similarly force-muted.
   useEffect(() => {
     if (remoteVideoRef.current) {
+      remoteVideoRef.current.muted = true;          // force-mute — never plays audio
       remoteVideoRef.current.srcObject = remoteStream ?? null;
     }
-    if (localVideoRef.current && localStreamRef.current) {
-      localVideoRef.current.srcObject = localStreamRef.current;
+    if (localVideoRef.current) {
+      localVideoRef.current.muted = true;           // force-mute — prevent local echo
+      if (localStreamRef.current) {
+        localVideoRef.current.srcObject = localStreamRef.current;
+      }
     }
   }, [callState, remoteStream]);
 
