@@ -42005,9 +42005,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     if (!activeThread || callStateRef.current !== 'idle' || !supabase) return;
     const peer = resolveCounterparty(activeThread);
     if (!peer.email || peer.email === currentUserEmail) return;
-    // Unique ID per attempt — prevents supabase.channel() from returning a stale
-    // object when the same thread is used for a second call after a previous one.
-    const callId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+    const callId = typeof crypto !== 'undefined' && crypto.randomUUID
       ? crypto.randomUUID()
       : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     callIdRef.current = callId;
@@ -42022,10 +42020,26 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
       peerConnectionRef.current = pc;
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
       pc.ontrack = (e) => setRemoteStream(e.streams[0]);
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
+
+      // Create the session channel BEFORE setLocalDescription so the ICE
+      // candidate handler can reference it. Candidates are buffered until
+      // the channel reaches SUBSCRIBED, then flushed all at once.
       const sessionCh = supabase.channel(sessionChannelName);
       callSessionChannelRef.current = sessionCh;
+      const iceBuf = [];
+      let chReady = false;
+      pc.onicecandidate = (e) => {
+        if (!e.candidate) return;
+        if (chReady) {
+          sessionCh.send({ type: 'broadcast', event: 'ice-candidate', payload: { candidate: e.candidate } }).catch(() => {});
+        } else {
+          iceBuf.push(e.candidate);
+        }
+      };
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer); // ICE gathering starts — all candidates buffered above
+
       sessionCh
         .on('broadcast', { event: 'call-answer' }, async ({ payload }) => {
           try { await pc.setRemoteDescription(new RTCSessionDescription(payload.answer)); } catch (_) { /* ignore */ }
@@ -42038,21 +42052,20 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
         .on('broadcast', { event: 'call-end' }, cleanupCall)
         .on('broadcast', { event: 'call-reject' }, cleanupCall)
         .subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            // Ring the callee on the stable base channel — callId travels in the payload
-            // so the callee can reconstruct the unique session channel name on accept.
-            const calleeCh = supabase.channel(`incoming-calls-${normalizeEmail(peer.email)}`);
-            calleeCh.subscribe((s) => {
-              if (s === 'SUBSCRIBED') {
-                calleeCh.send({ type: 'broadcast', event: 'call-request', payload: { fromEmail: currentUserEmail, fromName: currentUserName, callType: type, threadId: activeThread.id, callId, offer } }).catch(() => {});
-                setTimeout(() => supabase.removeChannel(calleeCh), 3000);
-              }
-            });
-          }
+          if (status !== 'SUBSCRIBED') return;
+          chReady = true;
+          // Flush buffered candidates now that the channel is live
+          iceBuf.splice(0).forEach((candidate) => {
+            sessionCh.send({ type: 'broadcast', event: 'ice-candidate', payload: { candidate } }).catch(() => {});
+          });
+          // Ring the callee — callId in payload so they can reconstruct the session channel name
+          const calleeCh = supabase.channel(`incoming-calls-${normalizeEmail(peer.email)}`);
+          calleeCh.subscribe((s) => {
+            if (s !== 'SUBSCRIBED') return;
+            calleeCh.send({ type: 'broadcast', event: 'call-request', payload: { fromEmail: currentUserEmail, fromName: currentUserName, callType: type, threadId: activeThread.id, callId, offer } }).catch(() => {});
+            setTimeout(() => supabase.removeChannel(calleeCh), 3000);
+          });
         });
-      pc.onicecandidate = (e) => {
-        if (e.candidate) sessionCh.send({ type: 'broadcast', event: 'ice-candidate', payload: { candidate: e.candidate } }).catch(() => {});
-      };
     } catch (err) {
       // eslint-disable-next-line no-console
       console.warn('[call] setup failed:', err?.message || err);
@@ -42071,26 +42084,40 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
       peerConnectionRef.current = pc;
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
       pc.ontrack = (e) => setRemoteStream(e.streams[0]);
-      await pc.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      pc.onicecandidate = (e) => {
-        if (e.candidate && callSessionChannelRef.current) {
-          callSessionChannelRef.current.send({ type: 'broadcast', event: 'ice-candidate', payload: { candidate: e.candidate } }).catch(() => {});
-        }
-      };
+
+      // Create session channel BEFORE setLocalDescription so no candidates are missed
       const sessionCh = supabase.channel(sessionChannelName);
       callSessionChannelRef.current = sessionCh;
+      const iceBuf = [];
+      let chReady = false;
+      pc.onicecandidate = (e) => {
+        if (!e.candidate) return;
+        if (chReady) {
+          sessionCh.send({ type: 'broadcast', event: 'ice-candidate', payload: { candidate: e.candidate } }).catch(() => {});
+        } else {
+          iceBuf.push(e.candidate);
+        }
+      };
+
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer); // ICE gathering starts — all candidates buffered above
+
       sessionCh
         .on('broadcast', { event: 'ice-candidate' }, async ({ payload }) => {
           if (payload.candidate) { try { await pc.addIceCandidate(new RTCIceCandidate(payload.candidate)); } catch (_) { /* ignore */ } }
         })
         .on('broadcast', { event: 'call-end' }, cleanupCall)
         .subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            sessionCh.send({ type: 'broadcast', event: 'call-answer', payload: { answer } }).catch(() => {});
-          }
+          if (status !== 'SUBSCRIBED') return;
+          chReady = true;
+          // Send answer first, then flush buffered ICE candidates
+          sessionCh.send({ type: 'broadcast', event: 'call-answer', payload: { answer } }).catch(() => {});
+          iceBuf.splice(0).forEach((candidate) => {
+            sessionCh.send({ type: 'broadcast', event: 'ice-candidate', payload: { candidate } }).catch(() => {});
+          });
         });
+
       setCallPeer({ email: fromEmail, name: fromName });
       setCallState('connected');
       setIncomingCallData(null);
