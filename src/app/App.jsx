@@ -41950,11 +41950,12 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     incomingCh
       .on('broadcast', { event: 'call-request' }, ({ payload }) => {
         if (callStateRef.current !== 'idle') {
-          // Busy — auto-reject
           const busyCh = supabase.channel(`call-session-${payload.threadId}`);
-          busyCh.subscribe(() => {
-            busyCh.send({ type: 'broadcast', event: 'call-reject', payload: { reason: 'busy' } });
-            setTimeout(() => supabase.removeChannel(busyCh), 1000);
+          busyCh.subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+              busyCh.send({ type: 'broadcast', event: 'call-reject', payload: { reason: 'busy' } }).catch(() => {});
+              setTimeout(() => supabase.removeChannel(busyCh), 1000);
+            }
           });
           return;
         }
@@ -41982,6 +41983,8 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
       peerConnectionRef.current = pc;
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
       pc.ontrack = (e) => setRemoteStream(e.streams[0]);
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
       const sessionCh = supabase.channel(`call-session-${activeThread.id}`);
       callSessionChannelRef.current = sessionCh;
       sessionCh
@@ -41995,17 +41998,21 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
         })
         .on('broadcast', { event: 'call-end' }, cleanupCall)
         .on('broadcast', { event: 'call-reject' }, cleanupCall)
-        .subscribe();
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            // Session channel ready — now ring the callee
+            const calleeCh = supabase.channel(`incoming-calls-${normalizeEmail(peer.email)}`);
+            calleeCh.subscribe((s) => {
+              if (s === 'SUBSCRIBED') {
+                calleeCh.send({ type: 'broadcast', event: 'call-request', payload: { fromEmail: currentUserEmail, fromName: currentUserName, callType: type, threadId: activeThread.id, offer } }).catch(() => {});
+                setTimeout(() => supabase.removeChannel(calleeCh), 3000);
+              }
+            });
+          }
+        });
       pc.onicecandidate = (e) => {
-        if (e.candidate) sessionCh.send({ type: 'broadcast', event: 'ice-candidate', payload: { candidate: e.candidate } });
+        if (e.candidate) sessionCh.send({ type: 'broadcast', event: 'ice-candidate', payload: { candidate: e.candidate } }).catch(() => {});
       };
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      const calleeCh = supabase.channel(`incoming-calls-${normalizeEmail(peer.email)}`);
-      calleeCh.subscribe(() => {
-        calleeCh.send({ type: 'broadcast', event: 'call-request', payload: { fromEmail: currentUserEmail, fromName: currentUserName, callType: type, threadId: activeThread.id, offer } });
-        setTimeout(() => supabase.removeChannel(calleeCh), 2000);
-      });
     } catch (err) {
       // eslint-disable-next-line no-console
       console.warn('[call] setup failed:', err?.message || err);
@@ -42025,6 +42032,13 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
       pc.ontrack = (e) => setRemoteStream(e.streams[0]);
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      pc.onicecandidate = (e) => {
+        if (e.candidate && callSessionChannelRef.current) {
+          callSessionChannelRef.current.send({ type: 'broadcast', event: 'ice-candidate', payload: { candidate: e.candidate } }).catch(() => {});
+        }
+      };
       const sessionCh = supabase.channel(`call-session-${threadId}`);
       callSessionChannelRef.current = sessionCh;
       sessionCh
@@ -42032,13 +42046,12 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
           if (payload.candidate) { try { await pc.addIceCandidate(new RTCIceCandidate(payload.candidate)); } catch (_) { /* ignore */ } }
         })
         .on('broadcast', { event: 'call-end' }, cleanupCall)
-        .subscribe();
-      pc.onicecandidate = (e) => {
-        if (e.candidate) sessionCh.send({ type: 'broadcast', event: 'ice-candidate', payload: { candidate: e.candidate } });
-      };
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      await sessionCh.send({ type: 'broadcast', event: 'call-answer', payload: { answer } });
+        // Subscribe callback: send answer only after channel is confirmed SUBSCRIBED
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            sessionCh.send({ type: 'broadcast', event: 'call-answer', payload: { answer } }).catch(() => {});
+          }
+        });
       setCallPeer({ email: fromEmail, name: fromName });
       setCallState('connected');
       setIncomingCallData(null);
@@ -42051,8 +42064,15 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
   }, [incomingCallData, cleanupCall]);
 
   const endCall = useCallback(() => {
-    if (callSessionChannelRef.current) {
-      callSessionChannelRef.current.send({ type: 'broadcast', event: 'call-end', payload: { fromEmail: currentUserEmail } }).catch(() => {});
+    // Grab and null the channel ref first so cleanupCall won't double-remove it.
+    const sessionCh = callSessionChannelRef.current;
+    callSessionChannelRef.current = null;
+    if (sessionCh && supabase) {
+      // Send call-end, then wait a beat before removing so the peer receives it.
+      sessionCh
+        .send({ type: 'broadcast', event: 'call-end', payload: { fromEmail: currentUserEmail } })
+        .catch(() => {})
+        .finally(() => setTimeout(() => supabase.removeChannel(sessionCh), 800));
     }
     cleanupCall();
   }, [currentUserEmail, cleanupCall]);
@@ -42060,9 +42080,11 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
   const rejectCall = useCallback(() => {
     if (incomingCallData?.threadId && supabase) {
       const rejectCh = supabase.channel(`call-session-${incomingCallData.threadId}`);
-      rejectCh.subscribe(() => {
-        rejectCh.send({ type: 'broadcast', event: 'call-reject', payload: { fromEmail: currentUserEmail } });
-        setTimeout(() => supabase.removeChannel(rejectCh), 800);
+      rejectCh.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          rejectCh.send({ type: 'broadcast', event: 'call-reject', payload: { fromEmail: currentUserEmail } }).catch(() => {});
+          setTimeout(() => supabase.removeChannel(rejectCh), 800);
+        }
       });
     }
     cleanupCall();
