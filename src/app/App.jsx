@@ -42014,7 +42014,10 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     setCallPeer(peer);
     setCallState('outgoing');
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        video: type === 'video',
+      });
       localStreamRef.current = stream;
       const pc = new RTCPeerConnection({ iceServers: WEBRTC_ICE_SERVERS });
       peerConnectionRef.current = pc;
