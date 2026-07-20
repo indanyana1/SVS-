@@ -41937,10 +41937,21 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     setIsCameraOff(false);
   }, []);
 
-  // Sync remote stream to video element.
+  // Sync remote stream to the video element whenever the stream or call state changes.
+  // callState is included because the overlay mounts only when callState transitions to
+  // 'connected'/'outgoing' — without it the effect runs while remoteVideoRef.current is
+  // still null and never re-runs when the element appears.
   useEffect(() => {
-    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream;
-  }, [remoteStream]);
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream ?? null;
+  }, [remoteStream, callState]);
+
+  // Same pattern for the local preview — localStreamRef holds the stream but the
+  // video element only exists once the overlay mounts.
+  useEffect(() => {
+    if (localVideoRef.current && localStreamRef.current) {
+      localVideoRef.current.srcObject = localStreamRef.current;
+    }
+  }, [callState]);
 
   // Subscribe to incoming call requests for the current user.
   useEffect(() => {
@@ -41978,7 +41989,6 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
       localStreamRef.current = stream;
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
       const pc = new RTCPeerConnection({ iceServers: WEBRTC_ICE_SERVERS });
       peerConnectionRef.current = pc;
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
@@ -42026,7 +42036,6 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: inType === 'video' });
       localStreamRef.current = stream;
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
       const pc = new RTCPeerConnection({ iceServers: WEBRTC_ICE_SERVERS });
       peerConnectionRef.current = pc;
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
