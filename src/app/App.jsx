@@ -89,6 +89,8 @@ import {
   PhoneOff,
   MicOff,
   VideoOff,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -39893,6 +39895,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
   const [callDurationSec, setCallDurationSec] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOff, setIsCameraOff] = useState(false);
+  const [isSpeaker, setIsSpeaker] = useState(true);
   const callStateRef = useRef('idle');
   const localStreamRef = useRef(null);
   const peerConnectionRef = useRef(null);
@@ -39900,6 +39903,11 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
   const callTimerRef = useRef(null);
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const remoteAudioRef = useRef(null);
+  // Unique ID per call attempt — appended to the session channel name so that
+  // supabase.channel() always returns a fresh object instead of reusing a stale
+  // channel from a previous call on the same thread.
+  const callIdRef = useRef('');
 
   // Keep callStateRef in sync so async callbacks don't see stale values.
   useEffect(() => { callStateRef.current = callState; }, [callState]);
@@ -41928,6 +41936,10 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
       clearInterval(callTimerRef.current);
       callTimerRef.current = null;
     }
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.srcObject = null;
+    }
+    callIdRef.current = '';
     setCallState('idle');
     setCallPeer(null);
     setRemoteStream(null);
@@ -41935,25 +41947,34 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     setCallDurationSec(0);
     setIsMuted(false);
     setIsCameraOff(false);
+    setIsSpeaker(true);
   }, []);
 
-  // Sync remote stream to the video element whenever the stream or call state changes.
-  // callState is included because the overlay mounts only when callState transitions to
-  // 'connected'/'outgoing' — without it the effect runs while remoteVideoRef.current is
-  // still null and never re-runs when the element appears.
+  // Route remote audio through the always-in-DOM <audio> element.
+  // Using a dedicated <audio> element (never display:none) is the only reliable
+  // cross-browser way to play audio — browsers often suppress display:none media.
+  // callState is a dependency so this re-runs when a call starts/ends.
   useEffect(() => {
-    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream ?? null;
+    const el = remoteAudioRef.current;
+    if (!el) return;
+    el.srcObject = remoteStream ?? null;
+    if (remoteStream) el.play().catch(() => {});
   }, [remoteStream, callState]);
 
-  // Same pattern for the local preview — localStreamRef holds the stream but the
-  // video element only exists once the overlay mounts.
+  // For video calls: sync the visible <video> element (muted — audio handled above).
+  // Also sync local preview once the overlay mounts.
   useEffect(() => {
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = remoteStream ?? null;
+    }
     if (localVideoRef.current && localStreamRef.current) {
       localVideoRef.current.srcObject = localStreamRef.current;
     }
-  }, [callState]);
+  }, [callState, remoteStream]);
 
   // Subscribe to incoming call requests for the current user.
+  // Caller sends on the stable `incoming-calls-{email}` channel with callId in the payload.
+  // The callId lets the callee reconstruct the unique session channel name on accept.
   useEffect(() => {
     if (!supabase || !currentUserEmail || !hasSupabaseEnv) return undefined;
     const myEmail = normalizeEmail(currentUserEmail);
@@ -41961,7 +41982,8 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     incomingCh
       .on('broadcast', { event: 'call-request' }, ({ payload }) => {
         if (callStateRef.current !== 'idle') {
-          const busyCh = supabase.channel(`call-session-${payload.threadId}`);
+          const rejectChName = `call-session-${payload.threadId}-${payload.callId || 'x'}`;
+          const busyCh = supabase.channel(rejectChName);
           busyCh.subscribe((status) => {
             if (status === 'SUBSCRIBED') {
               busyCh.send({ type: 'broadcast', event: 'call-reject', payload: { reason: 'busy' } }).catch(() => {});
@@ -41983,6 +42005,13 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     if (!activeThread || callStateRef.current !== 'idle' || !supabase) return;
     const peer = resolveCounterparty(activeThread);
     if (!peer.email || peer.email === currentUserEmail) return;
+    // Unique ID per attempt — prevents supabase.channel() from returning a stale
+    // object when the same thread is used for a second call after a previous one.
+    const callId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    callIdRef.current = callId;
+    const sessionChannelName = `call-session-${activeThread.id}-${callId}`;
     setCallType(type);
     setCallPeer(peer);
     setCallState('outgoing');
@@ -41995,7 +42024,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
       pc.ontrack = (e) => setRemoteStream(e.streams[0]);
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-      const sessionCh = supabase.channel(`call-session-${activeThread.id}`);
+      const sessionCh = supabase.channel(sessionChannelName);
       callSessionChannelRef.current = sessionCh;
       sessionCh
         .on('broadcast', { event: 'call-answer' }, async ({ payload }) => {
@@ -42010,11 +42039,12 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
         .on('broadcast', { event: 'call-reject' }, cleanupCall)
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
-            // Session channel ready — now ring the callee
+            // Ring the callee on the stable base channel — callId travels in the payload
+            // so the callee can reconstruct the unique session channel name on accept.
             const calleeCh = supabase.channel(`incoming-calls-${normalizeEmail(peer.email)}`);
             calleeCh.subscribe((s) => {
               if (s === 'SUBSCRIBED') {
-                calleeCh.send({ type: 'broadcast', event: 'call-request', payload: { fromEmail: currentUserEmail, fromName: currentUserName, callType: type, threadId: activeThread.id, offer } }).catch(() => {});
+                calleeCh.send({ type: 'broadcast', event: 'call-request', payload: { fromEmail: currentUserEmail, fromName: currentUserName, callType: type, threadId: activeThread.id, callId, offer } }).catch(() => {});
                 setTimeout(() => supabase.removeChannel(calleeCh), 3000);
               }
             });
@@ -42032,7 +42062,8 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
 
   const acceptCall = useCallback(async () => {
     if (!incomingCallData || !supabase) return;
-    const { fromEmail, fromName, callType: inType, threadId, offer } = incomingCallData;
+    const { fromEmail, fromName, callType: inType, threadId, callId, offer } = incomingCallData;
+    const sessionChannelName = `call-session-${threadId}-${callId}`;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: inType === 'video' });
       localStreamRef.current = stream;
@@ -42048,14 +42079,13 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
           callSessionChannelRef.current.send({ type: 'broadcast', event: 'ice-candidate', payload: { candidate: e.candidate } }).catch(() => {});
         }
       };
-      const sessionCh = supabase.channel(`call-session-${threadId}`);
+      const sessionCh = supabase.channel(sessionChannelName);
       callSessionChannelRef.current = sessionCh;
       sessionCh
         .on('broadcast', { event: 'ice-candidate' }, async ({ payload }) => {
           if (payload.candidate) { try { await pc.addIceCandidate(new RTCIceCandidate(payload.candidate)); } catch (_) { /* ignore */ } }
         })
         .on('broadcast', { event: 'call-end' }, cleanupCall)
-        // Subscribe callback: send answer only after channel is confirmed SUBSCRIBED
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
             sessionCh.send({ type: 'broadcast', event: 'call-answer', payload: { answer } }).catch(() => {});
@@ -42111,6 +42141,18 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
       localStreamRef.current.getVideoTracks().forEach((t) => { t.enabled = !t.enabled; });
       setIsCameraOff((c) => !c);
     }
+  }, []);
+
+  const toggleSpeaker = useCallback(() => {
+    setIsSpeaker((prev) => {
+      const next = !prev;
+      const el = remoteAudioRef.current;
+      if (el && typeof el.setSinkId === 'function') {
+        // 'default' = system default speaker; '' also maps to default on most browsers
+        el.setSinkId(next ? '' : 'communications').catch(() => {});
+      }
+      return next;
+    });
   }, []);
 
   // Cleanup calls on unmount.
@@ -44465,14 +44507,18 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
         </div>
       ) : null}
 
+      {/* Always-in-DOM audio element — never display:none, browsers reliably play audio through it */}
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+      <audio ref={remoteAudioRef} autoPlay playsInline style={{ position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none' }} />
+
       {/* ── Active / outgoing call overlay ── */}
       {(callState === 'outgoing' || callState === 'connected') && callPeer ? (
         <div className="fixed inset-0 z-[300] flex flex-col bg-[#0a1929] text-white">
-          {/* Remote audio/video — always mounted so the stream plays even in audio-only mode */}
-          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-          <video ref={remoteVideoRef} autoPlay playsInline className={callType === 'video' ? 'absolute inset-0 h-full w-full object-cover' : 'hidden'} />
           {callType === 'video' ? (
             <>
+              {/* Remote video display — muted because audio is handled by remoteAudioRef */}
+              {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+              <video ref={remoteVideoRef} autoPlay playsInline muted className="absolute inset-0 h-full w-full object-cover" />
               {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
               <video ref={localVideoRef} autoPlay playsInline muted className="absolute bottom-28 right-4 h-36 w-28 rounded-2xl border-2 border-white/30 object-cover shadow-xl" />
             </>
@@ -44518,7 +44564,19 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
                 </button>
                 <span className="text-[11px] text-white/60">Camera</span>
               </div>
-            ) : null}
+            ) : (
+              <div className="flex flex-col items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={toggleSpeaker}
+                  className={`flex h-14 w-14 items-center justify-center rounded-full transition active:scale-95 ${isSpeaker ? 'bg-white/20 hover:bg-white/30' : 'bg-rose-600 hover:bg-rose-700'}`}
+                  aria-label={isSpeaker ? 'Switch to earpiece' : 'Switch to speaker'}
+                >
+                  {isSpeaker ? <Volume2 className="h-6 w-6" /> : <VolumeX className="h-6 w-6" />}
+                </button>
+                <span className="text-[11px] text-white/60">Speaker</span>
+              </div>
+            )}
             <div className="flex flex-col items-center gap-1.5">
               <button
                 type="button"
