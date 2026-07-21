@@ -41963,30 +41963,17 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     setIsSpeaker(true);
   }, []);
 
-  // Route remote audio through AudioContext — Chrome's WebRTC AEC uses the
-  // AudioContext.destination output as its echo-cancellation reference signal.
-  // An <audio> element does NOT provide this reference reliably, causing persistent
-  // echo even when echoCancellation:true is set on getUserMedia.
+  // Remote audio is connected directly inside ontrack (see startCall / acceptCall).
+  // AudioContext is created synchronously there, inside the user-gesture callstack,
+  // so it starts in "running" state — no resume() needed. Effects run too late
+  // (after async gaps) and the context would be suspended by then.
+  // This effect only handles the <audio> element fallback for browsers without AudioContext.
   useEffect(() => {
-    // Tear down any previous context first.
-    if (remoteAudioCtxRef.current) {
-      remoteAudioCtxRef.current.close().catch(() => {});
-      remoteAudioCtxRef.current = null;
-    }
-    if (!remoteStream || callState === 'idle') return;
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      remoteAudioCtxRef.current = ctx;
-      const src = ctx.createMediaStreamSource(remoteStream);
-      src.connect(ctx.destination);
-      // Resume immediately (browser may suspend until user gesture, which already
-      // happened when the user clicked Accept / Call).
-      ctx.resume().catch(() => {});
-    } catch (_) {
-      // Fallback: if AudioContext is unavailable, play through the <audio> element.
-      const el = remoteAudioRef.current;
-      if (el) { el.srcObject = remoteStream; el.play().catch(() => {}); }
-    }
+    if (remoteAudioCtxRef.current) return; // AudioContext is handling it
+    const el = remoteAudioRef.current;
+    if (!el) return;
+    el.srcObject = remoteStream ?? null;
+    if (remoteStream) el.play().catch(() => {});
   }, [remoteStream, callState]);
 
   // For video calls: sync the remote video element for DISPLAY ONLY (explicitly muted
@@ -42046,6 +42033,15 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     setCallType(type);
     setCallPeer(peer);
     setCallState('outgoing');
+    // Create AudioContext synchronously here, while we are still inside the
+    // button-click callstack (user-gesture window). If created later (e.g. in
+    // a useEffect after awaits), the browser suspends it and resume() fails silently.
+    if (remoteAudioCtxRef.current) {
+      remoteAudioCtxRef.current.close().catch(() => {});
+      remoteAudioCtxRef.current = null;
+    }
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    remoteAudioCtxRef.current = audioCtx;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
@@ -42055,7 +42051,17 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
       const pc = new RTCPeerConnection({ iceServers: WEBRTC_ICE_SERVERS });
       peerConnectionRef.current = pc;
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
-      pc.ontrack = (e) => setRemoteStream(e.streams[0]);
+      pc.ontrack = (e) => {
+        const remStr = e.streams[0];
+        setRemoteStream(remStr);
+        try {
+          const src = audioCtx.createMediaStreamSource(remStr);
+          src.connect(audioCtx.destination);
+        } catch (_) {
+          const el = remoteAudioRef.current;
+          if (el) { el.srcObject = remStr; el.play().catch(() => {}); }
+        }
+      };
 
       // Create the session channel BEFORE setLocalDescription so the ICE
       // candidate handler can reference it. Candidates are buffered until
@@ -42130,6 +42136,13 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     if (!incomingCallData || !supabase) return;
     const { fromEmail, fromName, callType: inType, threadId, callId, offer } = incomingCallData;
     const sessionChannelName = `call-session-${threadId}-${callId}`;
+    // Create AudioContext synchronously inside the Accept button's click callstack.
+    if (remoteAudioCtxRef.current) {
+      remoteAudioCtxRef.current.close().catch(() => {});
+      remoteAudioCtxRef.current = null;
+    }
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    remoteAudioCtxRef.current = audioCtx;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
@@ -42139,7 +42152,17 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
       const pc = new RTCPeerConnection({ iceServers: WEBRTC_ICE_SERVERS });
       peerConnectionRef.current = pc;
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
-      pc.ontrack = (e) => setRemoteStream(e.streams[0]);
+      pc.ontrack = (e) => {
+        const remStr = e.streams[0];
+        setRemoteStream(remStr);
+        try {
+          const src = audioCtx.createMediaStreamSource(remStr);
+          src.connect(audioCtx.destination);
+        } catch (_) {
+          const el = remoteAudioRef.current;
+          if (el) { el.srcObject = remStr; el.play().catch(() => {}); }
+        }
+      };
 
       // Create session channel BEFORE setLocalDescription so no candidates are missed
       const sessionCh = supabase.channel(sessionChannelName);
