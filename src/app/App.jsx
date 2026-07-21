@@ -39904,9 +39904,10 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const remoteAudioRef = useRef(null);
-  // Unique ID per call attempt — appended to the session channel name so that
-  // supabase.channel() always returns a fresh object instead of reusing a stale
-  // channel from a previous call on the same thread.
+  // AudioContext used for remote audio playback — Chrome's WebRTC AEC uses the
+  // AudioContext output as its cancellation reference, which eliminates echo far
+  // more reliably than playing through an <audio> element.
+  const remoteAudioCtxRef = useRef(null);
   const callIdRef = useRef('');
 
   // Keep callStateRef in sync so async callbacks don't see stale values.
@@ -41936,6 +41937,10 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
       clearInterval(callTimerRef.current);
       callTimerRef.current = null;
     }
+    if (remoteAudioCtxRef.current) {
+      remoteAudioCtxRef.current.close().catch(() => {});
+      remoteAudioCtxRef.current = null;
+    }
     if (remoteAudioRef.current) {
       remoteAudioRef.current.srcObject = null;
     }
@@ -41958,14 +41963,30 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     setIsSpeaker(true);
   }, []);
 
-  // Route ALL remote audio through the dedicated <audio> element.
-  // React's `muted` JSX prop is not reliably reflected to the DOM (known React bug),
-  // so we never rely on video elements for audio — only remoteAudioRef plays sound.
+  // Route remote audio through AudioContext — Chrome's WebRTC AEC uses the
+  // AudioContext.destination output as its echo-cancellation reference signal.
+  // An <audio> element does NOT provide this reference reliably, causing persistent
+  // echo even when echoCancellation:true is set on getUserMedia.
   useEffect(() => {
-    const el = remoteAudioRef.current;
-    if (!el) return;
-    el.srcObject = remoteStream ?? null;
-    if (remoteStream) el.play().catch(() => {});
+    // Tear down any previous context first.
+    if (remoteAudioCtxRef.current) {
+      remoteAudioCtxRef.current.close().catch(() => {});
+      remoteAudioCtxRef.current = null;
+    }
+    if (!remoteStream || callState === 'idle') return;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      remoteAudioCtxRef.current = ctx;
+      const src = ctx.createMediaStreamSource(remoteStream);
+      src.connect(ctx.destination);
+      // Resume immediately (browser may suspend until user gesture, which already
+      // happened when the user clicked Accept / Call).
+      ctx.resume().catch(() => {});
+    } catch (_) {
+      // Fallback: if AudioContext is unavailable, play through the <audio> element.
+      const el = remoteAudioRef.current;
+      if (el) { el.srcObject = remoteStream; el.play().catch(() => {}); }
+    }
   }, [remoteStream, callState]);
 
   // For video calls: sync the remote video element for DISPLAY ONLY (explicitly muted
@@ -42208,10 +42229,14 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
   const toggleSpeaker = useCallback(() => {
     setIsSpeaker((prev) => {
       const next = !prev;
-      const el = remoteAudioRef.current;
-      if (el && typeof el.setSinkId === 'function') {
-        // 'default' = system default speaker; '' also maps to default on most browsers
-        el.setSinkId(next ? '' : 'communications').catch(() => {});
+      const sinkId = next ? '' : 'communications';
+      // Prefer AudioContext.setSinkId (Chrome 110+); fall back to HTMLAudioElement.
+      const ctx = remoteAudioCtxRef.current;
+      if (ctx && typeof ctx.setSinkId === 'function') {
+        ctx.setSinkId(sinkId).catch(() => {});
+      } else {
+        const el = remoteAudioRef.current;
+        if (el && typeof el.setSinkId === 'function') el.setSinkId(sinkId).catch(() => {});
       }
       return next;
     });
