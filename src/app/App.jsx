@@ -61,7 +61,6 @@ import {
   Share2,
   Gift,
   Copy,
-  Mail,
   Send,
   Reply,
   Phone,
@@ -91,6 +90,7 @@ import {
   VideoOff,
   Volume2,
   VolumeX,
+  Camera,
 } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -7438,6 +7438,7 @@ const NOTIFICATIONS_TABLE = 'notifications';
 const SUPPORT_CHAT_THREADS_TABLE = 'support_chat_threads';
 const SUPPORT_CHAT_MESSAGES_TABLE = 'support_chat_messages';
 const SELLER_IMAGES_BUCKET = 'marketplace-items';
+const PROFILE_IMAGES_BUCKET = 'profile-images';
 const HARSH_REVIEW_TERMS = ['idiot', 'stupid', 'trash', 'garbage', 'useless', 'scam'];
 
 const getStoredCollection = (storageKey) => {
@@ -11004,6 +11005,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const notificationsPanelWasOpenRef = useRef(false);
   const [profileName, setProfileName] = useState('Biznisdil User');
+  const [profileImageUrl, setProfileImageUrl] = useState(() => (typeof window !== 'undefined' ? (window.localStorage.getItem('svs-user-avatar') || '') : ''));
   const [theme, setTheme] = useState(getThemePreference);
   // Add default priceRange state to prevent ReferenceError
   const [priceRange] = useState([0, 20]);
@@ -11146,17 +11148,29 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
 
       const { data, error } = await supabase
         .from('account_users')
-        .select('full_name')
+        .select('full_name, profile_image_url')
         .eq('email_address', userEmail)
         .maybeSingle();
 
-      if (!error && data?.full_name) {
-        setProfileName(data.full_name);
-        window.localStorage.setItem('svs-user-name', data.full_name);
+      if (!error && data) {
+        if (data.full_name) {
+          setProfileName(data.full_name);
+          window.localStorage.setItem('svs-user-name', data.full_name);
+        }
+        const avatarUrl = data.profile_image_url || '';
+        setProfileImageUrl(avatarUrl);
+        if (avatarUrl) window.localStorage.setItem('svs-user-avatar', avatarUrl);
+        else window.localStorage.removeItem('svs-user-avatar');
       }
     };
 
     loadProfileName();
+    const handleAvatarChanged = () => {
+      const url = window.localStorage.getItem('svs-user-avatar') || '';
+      setProfileImageUrl(url);
+    };
+    window.addEventListener('svs-avatar-changed', handleAvatarChanged);
+    return () => window.removeEventListener('svs-avatar-changed', handleAvatarChanged);
   }, [isAuthenticated, t]);
 
   useEffect(() => {
@@ -11394,6 +11408,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
     window.localStorage.removeItem('svs-authenticated');
     window.localStorage.removeItem('svs-user-email');
     window.localStorage.removeItem('svs-user-name');
+    window.localStorage.removeItem('svs-user-avatar');
     window.localStorage.removeItem(SELLER_ACCESS_STORAGE_KEY);
     window.localStorage.removeItem(SELLER_HOME_PATH_STORAGE_KEY);
     window.dispatchEvent(new Event('svs-auth-changed'));
@@ -11401,6 +11416,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
     setHasSellerAccess(false);
     setSellerHomePath('/seller/dashboard');
     setProfileName(t('profile.defaultName'));
+    setProfileImageUrl('');
     setProfileOpen(false);
     navigate('/');
   };
@@ -11861,15 +11877,30 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
 
                   setProfileOpen((prev) => !prev);
                 }}
-                className="rounded-full bg-[var(--svs-cyan-surface)] p-2"
+                className={`overflow-hidden rounded-full bg-[var(--svs-cyan-surface)] ${profileImageUrl ? 'h-10 w-10' : 'p-2'}`}
               >
-                <User className="h-6 w-6" />
+                {profileImageUrl ? (
+                  <img src={profileImageUrl} alt="Profile" className="h-full w-full object-cover" />
+                ) : (
+                  <User className="h-6 w-6" />
+                )}
               </button>
 
               {isAuthenticated && profileOpen ? (
                 <div className="absolute right-0 top-[calc(100%+8px)] z-[80] w-56 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3 shadow-xl">
-                  <p className="text-xs uppercase tracking-wide text-[var(--svs-muted)]">{t('profile.signedInAs')}</p>
-                  <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{profileName}</p>
+                  <div className="mb-2 flex items-center gap-2.5">
+                    <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-[var(--svs-cyan-surface)]">
+                      {profileImageUrl ? (
+                        <img src={profileImageUrl} alt="Profile" className="h-full w-full object-cover" />
+                      ) : (
+                        <User className="h-full w-full p-2 text-[var(--svs-muted)]" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs uppercase tracking-wide text-[var(--svs-muted)]">{t('profile.signedInAs')}</p>
+                      <p className="truncate text-sm font-bold text-[var(--svs-text)]">{profileName}</p>
+                    </div>
+                  </div>
                   <Link
                     to="/wallet"
                     onClick={() => setProfileOpen(false)}
@@ -36738,8 +36769,16 @@ const AccountSettingsPage = () => {
   const isAuthenticated = getAuthState();
   const userEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
   const [isLoading, setIsLoading] = useState(false);
+  const [profileImageUrl, setPageProfileImageUrl] = useState(() => (typeof window !== 'undefined' ? (window.localStorage.getItem('svs-user-avatar') || '') : ''));
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef(null);
   const [fullName, setFullName] = useState('');
   const [contactNumber, setContactNumber] = useState('');
+  const [emailField, setEmailField] = useState('');
+  const [savedEmail, setSavedEmail] = useState(userEmail);
+  const [emailConfirmPw, setEmailConfirmPw] = useState('');
+  const [showEmailConfirmPw, setShowEmailConfirmPw] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [memberSince, setMemberSince] = useState('');
   const [notificationPrefs, setNotificationPrefs] = useState({});
   const [addresses, setAddresses] = useState([]);
@@ -36754,11 +36793,6 @@ const AccountSettingsPage = () => {
   const [pwMessage, setPwMessage] = useState('');
   const [pwMessageType, setPwMessageType] = useState('idle');
   const [isSavingPw, setIsSavingPw] = useState(false);
-  const [emailForm, setEmailForm] = useState({ newEmail: '', password: '' });
-  const [showEmailPw, setShowEmailPw] = useState(false);
-  const [emailMessage, setEmailMessage] = useState('');
-  const [emailMessageType, setEmailMessageType] = useState('idle');
-  const [isSavingEmail, setIsSavingEmail] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated || !userEmail || !hasSupabaseEnv || !supabase) return;
@@ -36766,15 +36800,21 @@ const AccountSettingsPage = () => {
     (async () => {
       setIsLoading(true);
       const [userRes, addressesRes] = await Promise.all([
-        supabase.from('account_users').select('full_name, contact_number, notification_prefs, created_at').eq('email_address', userEmail).maybeSingle(),
+        supabase.from('account_users').select('email_address, full_name, contact_number, notification_prefs, created_at, profile_image_url').eq('email_address', userEmail).maybeSingle(),
         supabase.from('buyer_addresses').select('*').eq('user_email', userEmail).order('created_at', { ascending: false }),
       ]);
       if (isCancelled) return;
       if (userRes.data) {
         setFullName(userRes.data.full_name || '');
         setContactNumber(userRes.data.contact_number || '');
+        const dbEmail = normalizeEmail(userRes.data.email_address || userEmail);
+        setEmailField(dbEmail);
+        setSavedEmail(dbEmail);
         setNotificationPrefs(userRes.data.notification_prefs || {});
         setMemberSince(userRes.data.created_at || '');
+        const avatarUrl = userRes.data.profile_image_url || '';
+        setPageProfileImageUrl(avatarUrl);
+        if (avatarUrl) window.localStorage.setItem('svs-user-avatar', avatarUrl);
       }
       setAddresses((addressesRes.data || []).map(mapBuyerAddressRecord));
       setIsLoading(false);
@@ -36782,25 +36822,142 @@ const AccountSettingsPage = () => {
     return () => { isCancelled = true; };
   }, [isAuthenticated, userEmail]);
 
+  const emailChanged = normalizeEmail(emailField) !== savedEmail;
+
   const handleSaveProfile = async (event) => {
     event.preventDefault();
     setMessage('');
     setMessageType('idle');
     const trimmedName = fullName.trim();
     const trimmedContact = contactNumber.trim();
+    const trimmedEmail = normalizeEmail(emailField);
+
+    if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setMessage('Please enter a valid email address.');
+      setMessageType('error');
+      return;
+    }
+
+    setIsSaving(true);
+
+    // If email changed, verify password and do the full cascade update first.
+    if (emailChanged) {
+      if (!emailConfirmPw) {
+        setMessage('Enter your current password to confirm the email change.');
+        setMessageType('error');
+        setIsSaving(false);
+        return;
+      }
+      const { data: hashData, error: fetchError } = await supabase
+        .from('account_users').select('password_hash').eq('email_address', savedEmail).maybeSingle();
+      if (fetchError || !hashData) {
+        setMessage(fetchError?.message || 'Could not verify password.');
+        setMessageType('error');
+        setIsSaving(false);
+        return;
+      }
+      const isValid = await verifyAccountPasswordHash(emailConfirmPw, hashData.password_hash);
+      if (!isValid) {
+        setMessage('Password is incorrect.');
+        setMessageType('error');
+        setIsSaving(false);
+        return;
+      }
+      const escaped = trimmedEmail.replace(/[\\%_]/g, (m) => `\\${m}`);
+      const { data: existing } = await supabase.from('account_users').select('id').ilike('email_address', escaped).maybeSingle();
+      if (existing) {
+        setMessage('An account with that email address already exists.');
+        setMessageType('error');
+        setIsSaving(false);
+        return;
+      }
+      // Cascade email update across all tables.
+      const cascadeResults = await Promise.all([
+        supabase.from('account_users').update({ email_address: trimmedEmail, full_name: trimmedName, contact_number: trimmedContact }).eq('email_address', savedEmail),
+        supabase.from('buyer_addresses').update({ user_email: trimmedEmail }).eq('user_email', savedEmail),
+        supabase.from(CART_ITEMS_TABLE).update({ user_email: trimmedEmail }).eq('user_email', savedEmail),
+        supabase.from(WISHLIST_ITEMS_TABLE).update({ user_email: trimmedEmail }).eq('user_email', savedEmail),
+        supabase.from(ORDERS_TABLE).update({ user_email: trimmedEmail }).eq('user_email', savedEmail),
+        supabase.from('seller_profiles').update({ user_email: trimmedEmail, legal_full_name: trimmedName, phone_number: trimmedContact }).eq('user_email', savedEmail),
+        supabase.from(SELLER_ITEMS_TABLE).update({ seller_email: trimmedEmail }).eq('seller_email', savedEmail),
+        supabase.from('notifications').update({ user_email: trimmedEmail }).eq('user_email', savedEmail),
+      ]);
+      setIsSaving(false);
+      const failed = cascadeResults.find((r) => r.error);
+      if (failed) {
+        setMessage(failed.error.message);
+        setMessageType('error');
+        return;
+      }
+      window.localStorage.setItem('svs-user-email', trimmedEmail);
+      if (trimmedName) window.localStorage.setItem('svs-user-name', trimmedName);
+      setSavedEmail(trimmedEmail);
+      setEmailField(trimmedEmail);
+      setEmailConfirmPw('');
+      window.dispatchEvent(new Event('svs-auth-changed'));
+      setMessage('Profile updated. Email address changed — you are still signed in.');
+      setMessageType('success');
+      return;
+    }
+
+    // Email unchanged — just update name + contact.
     const [buyerRes] = await Promise.all([
-      supabase.from('account_users').update({ full_name: trimmedName, contact_number: trimmedContact }).eq('email_address', userEmail),
-      // If the user also has a seller profile, keep legal_full_name and phone_number in sync.
-      // UPDATE on a non-existent row silently updates 0 rows — safe for buyers without a seller profile.
-      supabase.from('seller_profiles').update({ legal_full_name: trimmedName, phone_number: trimmedContact }).eq('user_email', userEmail),
+      supabase.from('account_users').update({ full_name: trimmedName, contact_number: trimmedContact }).eq('email_address', savedEmail),
+      supabase.from('seller_profiles').update({ legal_full_name: trimmedName, phone_number: trimmedContact }).eq('user_email', savedEmail),
     ]);
+    setIsSaving(false);
     if (buyerRes.error) {
       setMessage(buyerRes.error.message);
       setMessageType('error');
       return;
     }
-    if (typeof window !== 'undefined' && trimmedName) window.localStorage.setItem('svs-user-name', trimmedName);
+    if (trimmedName) window.localStorage.setItem('svs-user-name', trimmedName);
     setMessage('Profile updated.');
+    setMessageType('success');
+  };
+
+  const handleAvatarChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!event.target) return;
+    event.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setMessage('Please select an image file.');
+      setMessageType('error');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setMessage('Image must be under 5 MB.');
+      setMessageType('error');
+      return;
+    }
+    setIsUploadingAvatar(true);
+    setMessage('');
+    setMessageType('idle');
+    const ext = file.name.split('.').pop() || 'jpg';
+    const filePath = `${sanitizeStorageSegment(userEmail)}/${Date.now()}.${ext}`;
+    const { error: uploadError } = await supabase.storage
+      .from(PROFILE_IMAGES_BUCKET)
+      .upload(filePath, file, { cacheControl: '31536000', upsert: true });
+    if (uploadError) {
+      setMessage(`Upload failed: ${uploadError.message}`);
+      setMessageType('error');
+      setIsUploadingAvatar(false);
+      return;
+    }
+    const { data: urlData } = supabase.storage.from(PROFILE_IMAGES_BUCKET).getPublicUrl(filePath);
+    const newUrl = urlData?.publicUrl || '';
+    const { error: dbError } = await supabase.from('account_users').update({ profile_image_url: newUrl }).eq('email_address', userEmail);
+    setIsUploadingAvatar(false);
+    if (dbError) {
+      setMessage(`Could not save photo: ${dbError.message}`);
+      setMessageType('error');
+      return;
+    }
+    setPageProfileImageUrl(newUrl);
+    window.localStorage.setItem('svs-user-avatar', newUrl);
+    window.dispatchEvent(new Event('svs-avatar-changed'));
+    setMessage('Profile photo updated.');
     setMessageType('success');
   };
 
@@ -36930,81 +37087,6 @@ const AccountSettingsPage = () => {
     setPwMessageType('success');
   };
 
-  const handleChangeEmail = async (event) => {
-    event.preventDefault();
-    setEmailMessage('');
-    setEmailMessageType('idle');
-    const trimmedEmail = emailForm.newEmail.trim().toLowerCase();
-    if (!trimmedEmail || !emailForm.password) {
-      setEmailMessage('Please enter both a new email address and your current password.');
-      setEmailMessageType('error');
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      setEmailMessage('Please enter a valid email address.');
-      setEmailMessageType('error');
-      return;
-    }
-    if (trimmedEmail === userEmail) {
-      setEmailMessage('That is already your current email address.');
-      setEmailMessageType('error');
-      return;
-    }
-    setIsSavingEmail(true);
-    const { data: hashData, error: fetchError } = await supabase
-      .from('account_users')
-      .select('password_hash')
-      .eq('email_address', userEmail)
-      .maybeSingle();
-    if (fetchError || !hashData) {
-      setEmailMessage(fetchError?.message || 'Could not verify password.');
-      setEmailMessageType('error');
-      setIsSavingEmail(false);
-      return;
-    }
-    const isValid = await verifyAccountPasswordHash(emailForm.password, hashData.password_hash);
-    if (!isValid) {
-      setEmailMessage('Password is incorrect.');
-      setEmailMessageType('error');
-      setIsSavingEmail(false);
-      return;
-    }
-    const escapedNew = trimmedEmail.replace(/[\\%_]/g, (m) => `\\${m}`);
-    const { data: existing } = await supabase
-      .from('account_users')
-      .select('id')
-      .ilike('email_address', escapedNew)
-      .maybeSingle();
-    if (existing) {
-      setEmailMessage('An account with that email address already exists.');
-      setEmailMessageType('error');
-      setIsSavingEmail(false);
-      return;
-    }
-    const results = await Promise.all([
-      supabase.from('account_users').update({ email_address: trimmedEmail }).eq('email_address', userEmail),
-      supabase.from('buyer_addresses').update({ user_email: trimmedEmail }).eq('user_email', userEmail),
-      supabase.from(CART_ITEMS_TABLE).update({ user_email: trimmedEmail }).eq('user_email', userEmail),
-      supabase.from(WISHLIST_ITEMS_TABLE).update({ user_email: trimmedEmail }).eq('user_email', userEmail),
-      supabase.from(ORDERS_TABLE).update({ user_email: trimmedEmail }).eq('user_email', userEmail),
-      // Seller-side cascade: seller profile identity + all active listings
-      supabase.from('seller_profiles').update({ user_email: trimmedEmail }).eq('user_email', userEmail),
-      supabase.from(SELLER_ITEMS_TABLE).update({ seller_email: trimmedEmail }).eq('seller_email', userEmail),
-      supabase.from('notifications').update({ user_email: trimmedEmail }).eq('user_email', userEmail),
-    ]);
-    setIsSavingEmail(false);
-    const failed = results.find((r) => r.error);
-    if (failed) {
-      setEmailMessage(failed.error.message);
-      setEmailMessageType('error');
-      return;
-    }
-    window.localStorage.setItem('svs-user-email', trimmedEmail);
-    window.dispatchEvent(new Event('svs-auth-changed'));
-    setEmailForm({ newEmail: '', password: '' });
-    setEmailMessage('Email address updated. You are still signed in.');
-    setEmailMessageType('success');
-  };
 
   if (!isAuthenticated) {
     return (
@@ -37032,6 +37114,59 @@ const AccountSettingsPage = () => {
           {/* Profile */}
           <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
             <h2 className="text-base font-bold text-[var(--svs-text)]">Profile</h2>
+
+            {/* Avatar upload */}
+            <div className="mt-4 flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={isUploadingAvatar}
+                className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-dashed border-[var(--svs-border)] bg-[var(--svs-surface-soft)] transition hover:border-[var(--svs-primary)] disabled:opacity-60"
+                aria-label="Change profile photo"
+              >
+                {profileImageUrl ? (
+                  <img src={profileImageUrl} alt="Profile" className="h-full w-full object-cover" />
+                ) : (
+                  <User className="h-8 w-8 text-[var(--svs-muted)] mx-auto mt-5" />
+                )}
+                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition group-hover:opacity-100">
+                  <Camera className="h-5 w-5 text-white" />
+                </div>
+                {isUploadingAvatar ? (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50">
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  </div>
+                ) : null}
+              </button>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarChange}
+              />
+              <div>
+                <p className="text-sm font-semibold text-[var(--svs-text)]">Profile photo</p>
+                <p className="mt-0.5 text-xs text-[var(--svs-muted)]">Click the circle to upload. JPG, PNG or WebP · max 5 MB.</p>
+                {profileImageUrl ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const { error } = await supabase.from('account_users').update({ profile_image_url: null }).eq('email_address', userEmail);
+                      if (!error) {
+                        setPageProfileImageUrl('');
+                        window.localStorage.removeItem('svs-user-avatar');
+                        window.dispatchEvent(new Event('svs-avatar-changed'));
+                      }
+                    }}
+                    className="mt-1.5 text-xs font-semibold text-rose-600 hover:underline"
+                  >
+                    Remove photo
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
             <form onSubmit={handleSaveProfile} className="mt-4 grid gap-3 sm:grid-cols-2">
               <label className="block text-sm">
                 <span className="mb-1 block font-semibold text-[var(--svs-text)]">Full name</span>
@@ -37049,81 +37184,46 @@ const AccountSettingsPage = () => {
                   className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
                 />
               </label>
-              <label className="block text-sm">
+              <label className="block text-sm sm:col-span-2">
                 <span className="mb-1 block font-semibold text-[var(--svs-text)]">Email address</span>
                 <input
-                  value={userEmail}
-                  readOnly
-                  className="w-full cursor-default rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-muted)] outline-none"
+                  type="email"
+                  value={emailField}
+                  onChange={(event) => setEmailField(event.target.value)}
+                  className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
                 />
               </label>
+              {emailChanged ? (
+                <label className="block text-sm sm:col-span-2">
+                  <span className="mb-1 block font-semibold text-[var(--svs-text)]">Current password to confirm email change</span>
+                  <div className="relative">
+                    <input
+                      type={showEmailConfirmPw ? 'text' : 'password'}
+                      value={emailConfirmPw}
+                      onChange={(event) => setEmailConfirmPw(event.target.value)}
+                      placeholder="Enter your current password"
+                      className="w-full rounded-lg border border-amber-300 bg-[var(--svs-surface)] px-3 py-2 pr-10 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowEmailConfirmPw((v) => !v)}
+                      aria-label={showEmailConfirmPw ? 'Hide password' : 'Show password'}
+                      className="absolute inset-y-0 right-0 flex items-center px-3 text-[var(--svs-muted)] transition hover:text-[var(--svs-text)]"
+                    >
+                      {showEmailConfirmPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <p className="mt-1 text-xs text-amber-600">Password required to change your email address.</p>
+                </label>
+              ) : null}
               {memberSince ? (
                 <p className="flex items-end text-xs text-[var(--svs-muted)]">
                   Member since {new Date(memberSince).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
                 </p>
               ) : <span />}
-              <div className="sm:col-span-2">
-                <button type="submit" className={`${cudyBluePrimaryButtonClassName} rounded-lg bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white`}>
-                  Save Profile
-                </button>
-              </div>
-            </form>
-          </section>
-
-          {/* Change Email */}
-          <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-            <div className="flex items-center gap-2">
-              <Mail className="h-4 w-4 text-[var(--svs-primary)]" />
-              <h2 className="text-base font-bold text-[var(--svs-text)]">Change Email Address</h2>
-            </div>
-            <p className="mt-1 text-xs text-[var(--svs-muted)]">
-              Your current email is <span className="font-semibold text-[var(--svs-text)]">{userEmail}</span>. Enter a new address and your password to confirm the change.
-            </p>
-            {emailMessage ? (
-              <div className={`mt-3 rounded-xl px-4 py-3 text-sm ${emailMessageType === 'error' ? 'border border-rose-200 bg-rose-50 text-rose-700' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
-                {emailMessage}
-              </div>
-            ) : null}
-            <form onSubmit={handleChangeEmail} className="mt-4 grid gap-3 sm:grid-cols-2">
-              <label className="block text-sm sm:col-span-2">
-                <span className="mb-1 block font-semibold text-[var(--svs-text)]">New email address</span>
-                <input
-                  type="email"
-                  value={emailForm.newEmail}
-                  onChange={(event) => setEmailForm((f) => ({ ...f, newEmail: event.target.value }))}
-                  required
-                  placeholder="Enter new email address"
-                  className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
-                />
-              </label>
-              <label className="block text-sm sm:col-span-2">
-                <span className="mb-1 block font-semibold text-[var(--svs-text)]">Current password to confirm</span>
-                <div className="relative">
-                  <input
-                    type={showEmailPw ? 'text' : 'password'}
-                    value={emailForm.password}
-                    onChange={(event) => setEmailForm((f) => ({ ...f, password: event.target.value }))}
-                    required
-                    placeholder="Enter your current password"
-                    className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 pr-10 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowEmailPw((v) => !v)}
-                    aria-label={showEmailPw ? 'Hide password' : 'Show password'}
-                    className="absolute inset-y-0 right-0 flex items-center px-3 text-[var(--svs-muted)] transition hover:text-[var(--svs-text)]"
-                  >
-                    {showEmailPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </label>
-              <div className="sm:col-span-2">
-                <button
-                  type="submit"
-                  disabled={isSavingEmail}
-                  className={`${cudyBluePrimaryButtonClassName} rounded-lg bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60`}
-                >
-                  {isSavingEmail ? 'Updating…' : 'Update Email'}
+              <div className={memberSince ? '' : 'sm:col-span-2'}>
+                <button type="submit" disabled={isSaving} className={`${cudyBluePrimaryButtonClassName} rounded-lg bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60`}>
+                  {isSaving ? 'Saving…' : 'Save Profile'}
                 </button>
               </div>
             </form>

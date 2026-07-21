@@ -3222,3 +3222,39 @@ create policy "Public delete buyer addresses"
 on public.buyer_addresses
 for delete
 using (true);
+
+
+-- ------------------------------------------------------------
+-- >>> profile-images-storage.sql
+-- ------------------------------------------------------------
+alter table public.account_users
+  add column if not exists profile_image_url text;
+
+insert into storage.buckets (id, name, public)
+values ('profile-images', 'profile-images', true)
+on conflict (id) do update set public = true;
+
+drop policy if exists "Public read profile images" on storage.objects;
+create policy "Public read profile images"
+on storage.objects
+for select
+using (bucket_id = 'profile-images');
+
+drop policy if exists "Public upload profile images" on storage.objects;
+create policy "Public upload profile images"
+on storage.objects
+for insert
+with check (bucket_id = 'profile-images');
+
+drop policy if exists "Public update profile images" on storage.objects;
+create policy "Public update profile images"
+on storage.objects
+for update
+using (bucket_id = 'profile-images')
+with check (bucket_id = 'profile-images');
+
+drop policy if exists "Public delete profile images" on storage.objects;
+create policy "Public delete profile images"
+on storage.objects
+for delete
+using (bucket_id = 'profile-images');
