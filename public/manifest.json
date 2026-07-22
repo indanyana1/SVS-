@@ -9,15 +9,15 @@
       "type": "image/x-icon"
     },
     {
-      "src": "images/svs-logo.jpeg",
+      "src": "images/biznisdil-icon.png",
       "sizes": "192x192",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "images/svs-logo.jpeg",
+      "src": "images/biznisdil-icon.png",
       "sizes": "512x512",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any"
     }
   ],

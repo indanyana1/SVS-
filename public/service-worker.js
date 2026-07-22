@@ -30,8 +30,8 @@ self.addEventListener('message', (event) => {
       Promise.all([
         self.registration.showNotification(data.title || 'SVS', {
           body: data.body || '',
-          icon: '/images/svs-logo.jpeg',
-          badge: '/images/svs-logo.jpeg',
+          icon: '/images/biznisdil-icon.png',
+          badge: '/images/biznisdil-icon.png',
           tag: data.tag || 'svs-notification',
           renotify: true,
           data: { url: data.url || '/' },
