@@ -51570,7 +51570,7 @@ const InstallAppBanner = () => {
   if (standalone) return null;
   const handleClick = () => {
     if (canPrompt) { promptInstall(); return; }
-    setShowHelp((value) => !value);
+    setShowHelp((v) => !v);
   };
   return (
     <div className="border-b border-[var(--svs-border)] bg-gradient-to-r from-[var(--svs-primary)] via-[var(--svs-primary-strong)] to-[var(--svs-primary)] text-white">
@@ -51590,13 +51590,69 @@ const InstallAppBanner = () => {
           Install App
         </button>
       </div>
-      {showHelp || isIos ? (
+
+      {/* Non-iOS fallback: inline hint only when explicitly opened */}
+      {showHelp && !isIos ? (
         <div className="mx-auto w-full max-w-7xl px-3 pb-2 sm:px-6">
           <p className="rounded-lg bg-white/15 px-3 py-1.5 text-[11px] leading-snug text-cyan-50">
-            {isIos
-              ? 'On iPhone/iPad: tap the Share button in Safari, then choose “Add to Home Screen”.'
-              : 'To install: open your browser menu (⋮) and choose “Install app” / “Add to Home screen”.'}
+            To install: open your browser menu (⋮) and choose &ldquo;Install app&rdquo; / &ldquo;Add to Home screen&rdquo;.
           </p>
+        </div>
+      ) : null}
+
+      {/* iOS bottom-sheet modal — slides up from the bottom on click */}
+      {showHelp && isIos ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Add to Home Screen instructions"
+          className="fixed inset-0 z-[9999] flex flex-col justify-end"
+        >
+          {/* Tap backdrop to dismiss */}
+          <button
+            type="button"
+            aria-label="Close"
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setShowHelp(false)}
+          />
+          <div className="relative flex flex-col rounded-t-2xl bg-white px-5 pb-10 pt-4 text-gray-900 shadow-2xl">
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-gray-300" />
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="text-base font-bold">Add to Home Screen</h2>
+              <button
+                type="button"
+                onClick={() => setShowHelp(false)}
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <ol className="flex flex-col gap-4">
+              <li className="flex items-start gap-3">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--svs-primary)] text-sm font-bold text-white">1</span>
+                <p className="pt-0.5 text-sm leading-snug text-gray-700">
+                  Tap the <span className="inline-flex items-center gap-0.5 font-semibold text-gray-900">Share <Upload className="inline h-3.5 w-3.5" /></span> button at the bottom of Safari.
+                </p>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--svs-primary)] text-sm font-bold text-white">2</span>
+                <p className="pt-0.5 text-sm leading-snug text-gray-700">
+                  Scroll the share sheet and tap <span className="font-semibold text-gray-900">&ldquo;Add to Home Screen&rdquo;</span>.
+                </p>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--svs-primary)] text-sm font-bold text-white">3</span>
+                <p className="pt-0.5 text-sm leading-snug text-gray-700">
+                  Tap <span className="font-semibold text-gray-900">Add</span> in the top-right corner to confirm.
+                </p>
+              </li>
+            </ol>
+            <div className="mt-6 flex flex-col items-center gap-1 text-[var(--svs-primary)]">
+              <p className="text-xs text-gray-400">Safari toolbar is below</p>
+              <ChevronDown className="h-6 w-6 animate-bounce" />
+            </div>
+          </div>
         </div>
       ) : null}
     </div>
