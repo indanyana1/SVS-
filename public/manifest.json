@@ -10,13 +10,7 @@
     },
     {
       "src": "images/svs-logo.jpeg",
-      "sizes": "192x192",
-      "type": "image/jpeg",
-      "purpose": "any"
-    },
-    {
-      "src": "images/svs-logo.jpeg",
-      "sizes": "512x512",
+      "sizes": "603x573",
       "type": "image/jpeg",
       "purpose": "any maskable"
     }
