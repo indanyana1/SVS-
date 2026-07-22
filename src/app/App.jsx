@@ -51496,22 +51496,26 @@ const SiteFooter = () => {
 };
 
 // --- PWA install plumbing -------------------------------------------------
-// Capture the browser's `beforeinstallprompt` once at module scope so the
-// install affordance survives route changes, and fan it out to any mounted
-// banner via a tiny listener set.
-let deferredInstallPromptEvent = null;
+// The inline script in public/index.html captures `beforeinstallprompt` into
+// window.__pwaInstallEvent before any bundle loads. We read that here so the
+// event is never missed even if Chrome fires it during bundle parse time.
+let deferredInstallPromptEvent = (typeof window !== 'undefined' ? window.__pwaInstallEvent : null) || null;
 const installPromptListeners = new Set();
 const notifyInstallListeners = () => {
   installPromptListeners.forEach((listener) => { try { listener(); } catch (_) { /* ignore */ } });
 };
 if (typeof window !== 'undefined') {
-  window.addEventListener('beforeinstallprompt', (event) => {
-    event.preventDefault();
-    deferredInstallPromptEvent = event;
-    notifyInstallListeners();
-  });
+  if (!deferredInstallPromptEvent) {
+    window.addEventListener('beforeinstallprompt', (event) => {
+      event.preventDefault();
+      deferredInstallPromptEvent = event;
+      window.__pwaInstallEvent = event;
+      notifyInstallListeners();
+    });
+  }
   window.addEventListener('appinstalled', () => {
     deferredInstallPromptEvent = null;
+    window.__pwaInstallEvent = null;
     notifyInstallListeners();
   });
 }
@@ -51537,6 +51541,9 @@ const usePwaInstall = () => {
       setStandalone(isRunningStandalone());
     };
     installPromptListeners.add(update);
+    // Sync immediately: catches any event that fired between useState init and
+    // this effect running (the render-to-effect race window).
+    update();
     const mq = (typeof window !== 'undefined' && window.matchMedia)
       ? window.matchMedia('(display-mode: standalone)')
       : null;

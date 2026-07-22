@@ -12,6 +12,15 @@
     <link rel="apple-touch-icon" sizes="192x192" href="%PUBLIC_URL%/images/svs-logo.jpeg" />
     <link rel="apple-touch-icon" sizes="512x512" href="%PUBLIC_URL%/images/svs-logo.jpeg" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <!-- Capture beforeinstallprompt synchronously before any JS bundle loads.
+         The React app reads window.__pwaInstallEvent on mount. -->
+    <script>
+      window.__pwaInstallEvent = null;
+      window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        window.__pwaInstallEvent = e;
+      });
+    </script>
 
     <!-- Primary SEO -->
     <title>Biznisdil — All-in-one marketplace for products, services, tickets, property &amp; more</title>
