@@ -349,6 +349,82 @@ const LiveCameraCapture = ({
   );
 };
 
+// Ordered list of (fieldKey, elementId, label) for scroll-to-first-error.
+// Camera sections use a wrapper div id instead of an input id.
+const FIELD_ORDER = [
+  ['businessName',        'ob-businessName',        'Business name'],
+  ['legalFullName',       'ob-legalFullName',        'Legal full name'],
+  ['idNumber',            'ob-idNumber',             'National ID / passport number'],
+  ['businessType',        'ob-businessType',         'Business type'],
+  ['registrationNumber',  'ob-registrationNumber',   'Company registration number'],
+  ['taxNumber',           'ob-taxNumber',            'Tax number'],
+  ['idDocumentType',      'ob-idDocumentType',       'ID document type'],
+  ['idDocumentPhoto',     'ob-id-document-section',  'ID document photo'],
+  ['selfiePhoto',         'ob-selfie-section',       'Live selfie'],
+  ['phoneNumber',         'ob-phoneNumber',          'Business phone number'],
+  ['businessAddressLine1','ob-businessAddressLine1', 'Street address'],
+  ['city',                'ob-city',                 'City'],
+  ['province',            'ob-province',             'Province / State'],
+  ['postalCode',          'ob-postalCode',           'Postal code'],
+  ['country',             'ob-country',              'Country'],
+  ['payoutAccountHolder', 'ob-payoutAccountHolder',  'Payout account holder'],
+  ['payoutBankName',      'ob-payoutBankName',       'Bank name'],
+  ['payoutAccountNumber', 'ob-payoutAccountNumber',  'Bank account number'],
+  ['payoutBranchCode',    'ob-payoutBranchCode',     'Branch code'],
+  ['returnContactName',   'ob-returnContactName',    'Returns contact name'],
+  ['returnContactPhone',  'ob-returnContactPhone',   'Returns contact phone'],
+];
+
+const buildValidationErrors = (formData, idDocumentType, idDocumentBlob, selfieBlob) => {
+  const errors = {};
+  if (!formData.businessName.trim())        errors.businessName        = 'Business name is required.';
+  if (!formData.legalFullName.trim())       errors.legalFullName       = 'Legal full name is required.';
+  if (!formData.idNumber.trim())            errors.idNumber            = 'National ID or passport number is required.';
+  if (!formData.businessType.trim())        errors.businessType        = 'Business type is required.';
+  if (!formData.registrationNumber.trim())  errors.registrationNumber  = 'Company registration number is required.';
+  if (!formData.taxNumber.trim())           errors.taxNumber           = 'Tax number is required.';
+  if (!idDocumentType)                      errors.idDocumentType      = 'Select your ID document type.';
+  if (!idDocumentBlob)                      errors.idDocumentPhoto     = 'Capture a live photo of your ID or passport.';
+  if (!selfieBlob)                          errors.selfiePhoto         = 'Capture a live selfie to verify your identity.';
+  if (!formData.phoneNumber.trim())         errors.phoneNumber         = 'Business phone number is required.';
+  if (!formData.businessAddressLine1.trim())errors.businessAddressLine1= 'Street address is required.';
+  if (!formData.city.trim())                errors.city                = 'City is required.';
+  if (!formData.province.trim())            errors.province            = 'Province or state is required.';
+  if (!formData.postalCode.trim())          errors.postalCode          = 'Postal code is required.';
+  if (!formData.country.trim())             errors.country             = 'Country is required.';
+  if (!formData.payoutAccountHolder.trim()) errors.payoutAccountHolder = 'Account holder name is required.';
+  if (!formData.payoutBankName.trim())      errors.payoutBankName      = 'Bank name is required.';
+  if (!formData.payoutAccountNumber.trim()) errors.payoutAccountNumber = 'Bank account number is required.';
+  if (!formData.payoutBranchCode.trim())    errors.payoutBranchCode    = 'Branch code is required.';
+  if (!formData.returnContactName.trim())   errors.returnContactName   = 'Returns contact name is required.';
+  if (!formData.returnContactPhone.trim())  errors.returnContactPhone  = 'Returns contact phone is required.';
+  return errors;
+};
+
+const scrollToFirstError = (errors) => {
+  for (const [key, elId] of FIELD_ORDER) {
+    if (errors[key]) {
+      const el = document.getElementById(elId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Camera section wrappers and selects are focusable; inputs always are
+        if (typeof el.focus === 'function') el.focus();
+      }
+      break;
+    }
+  }
+};
+
+const FieldError = ({ id, message }) =>
+  message ? (
+    <p id={id} role="alert" className="mt-1 flex items-center gap-1 text-xs font-medium text-red-600">
+      <svg className="h-3 w-3 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+      </svg>
+      {message}
+    </p>
+  ) : null;
+
 const SellerOnboardingPage = () => {
   const navigate = useNavigate();
   const context = useMemo(() => getUserContext(), []);
@@ -372,6 +448,7 @@ const SellerOnboardingPage = () => {
     returnContactName: '',
     returnContactPhone: '',
   });
+  const [fieldErrors, setFieldErrors] = useState({});
   const [idDocumentType, setIdDocumentType] = useState('');
   const [idDocumentBlob, setIdDocumentBlob] = useState(null);
   const [idDocumentPreviewUrl, setIdDocumentPreviewUrl] = useState('');
@@ -427,11 +504,13 @@ const SellerOnboardingPage = () => {
   const handleIdDocumentCapture = (blob, capturedIsDark) => {
     setIdDocumentBlob(blob);
     setIsIdDocumentDark(Boolean(capturedIsDark));
+    setFieldErrors((prev) => { const next = { ...prev }; delete next.idDocumentPhoto; return next; });
   };
 
   const handleSelfieCapture = (blob, capturedIsDark) => {
     setSelfieBlob(blob);
     setIsSelfieDark(Boolean(capturedIsDark));
+    setFieldErrors((prev) => { const next = { ...prev }; delete next.selfiePhoto; return next; });
   };
 
   useEffect(() => {
@@ -457,6 +536,16 @@ const SellerOnboardingPage = () => {
   const handleChange = (event) => {
     const { name, value } = event.target;
     setFormData((previous) => ({ ...previous, [name]: value }));
+    if (fieldErrors[name]) {
+      setFieldErrors((prev) => { const next = { ...prev }; delete next[name]; return next; });
+    }
+  };
+
+  const handleIdDocumentTypeChange = (event) => {
+    setIdDocumentType(event.target.value);
+    if (fieldErrors.idDocumentType) {
+      setFieldErrors((prev) => { const next = { ...prev }; delete next.idDocumentType; return next; });
+    }
   };
 
   const handleSubmit = async (event) => {
@@ -468,15 +557,11 @@ const SellerOnboardingPage = () => {
       return;
     }
 
-    if (!idDocumentType || !idDocumentBlob) {
-      setMessage('Select your ID document type and capture a live photo of your ID/passport using your camera. Uploaded photos are not accepted.');
-      setMessageType('error');
-      return;
-    }
-
-    if (!selfieBlob) {
-      setMessage('Capture a live selfie using your camera to verify your identity. Uploaded photos are not accepted.');
-      setMessageType('error');
+    // Validate all fields before any network call
+    const errors = buildValidationErrors(formData, idDocumentType, idDocumentBlob, selfieBlob);
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      scrollToFirstError(errors);
       return;
     }
 
@@ -710,6 +795,14 @@ const SellerOnboardingPage = () => {
     }, 500);
   };
 
+  // Returns Tailwind class string for text inputs — red border when errored.
+  const inputClass = (fieldName) =>
+    `w-full rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 ${
+      fieldErrors[fieldName]
+        ? 'border-red-400 bg-red-50 text-red-900 placeholder-red-400 focus:border-red-500 focus:ring-red-200'
+        : 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)] text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:ring-[#33b9f2]/30'
+    }`;
+
   return (
     <StandalonePageShell title="Seller Verification and Compliance" brandHref="/sell" mainClassName="px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto w-full max-w-3xl">
@@ -724,7 +817,7 @@ const SellerOnboardingPage = () => {
         </div>
 
         <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 shadow-sm md:p-8">
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} noValidate className="space-y-5">
             {message ? (
               <div
                 className={`rounded-xl px-4 py-3 text-sm font-medium ${
@@ -749,6 +842,7 @@ const SellerOnboardingPage = () => {
               </div>
             ) : null}
 
+            {/* ── Business Identity ─────────────────────────────────── */}
             <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--svs-muted)]">
               Business Identity
               {isSectionFlagged('business_identity') ? (
@@ -756,14 +850,33 @@ const SellerOnboardingPage = () => {
               ) : null}
             </h2>
             <div className="grid gap-4 md:grid-cols-2">
-              <input name="businessName" value={formData.businessName} onChange={handleChange} required placeholder="Business name" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
-              <input name="legalFullName" value={formData.legalFullName} onChange={handleChange} required placeholder="Legal full name" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
-              <input name="idNumber" value={formData.idNumber} onChange={handleChange} required placeholder="National ID / passport number" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
-              <input name="businessType" value={formData.businessType} onChange={handleChange} required placeholder="Business type (Individual, Pty Ltd, etc.)" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
-              <input name="registrationNumber" value={formData.registrationNumber} onChange={handleChange} required placeholder="Company registration number" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
-              <input name="taxNumber" value={formData.taxNumber} onChange={handleChange} required placeholder="Tax number" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
+              <div>
+                <input id="ob-businessName" name="businessName" value={formData.businessName} onChange={handleChange} placeholder="Business name" className={inputClass('businessName')} aria-invalid={Boolean(fieldErrors.businessName)} aria-describedby={fieldErrors.businessName ? 'err-businessName' : undefined} />
+                <FieldError id="err-businessName" message={fieldErrors.businessName} />
+              </div>
+              <div>
+                <input id="ob-legalFullName" name="legalFullName" value={formData.legalFullName} onChange={handleChange} placeholder="Legal full name" className={inputClass('legalFullName')} aria-invalid={Boolean(fieldErrors.legalFullName)} aria-describedby={fieldErrors.legalFullName ? 'err-legalFullName' : undefined} />
+                <FieldError id="err-legalFullName" message={fieldErrors.legalFullName} />
+              </div>
+              <div>
+                <input id="ob-idNumber" name="idNumber" value={formData.idNumber} onChange={handleChange} placeholder="National ID / passport number" className={inputClass('idNumber')} aria-invalid={Boolean(fieldErrors.idNumber)} aria-describedby={fieldErrors.idNumber ? 'err-idNumber' : undefined} />
+                <FieldError id="err-idNumber" message={fieldErrors.idNumber} />
+              </div>
+              <div>
+                <input id="ob-businessType" name="businessType" value={formData.businessType} onChange={handleChange} placeholder="Business type (Individual, Pty Ltd, etc.)" className={inputClass('businessType')} aria-invalid={Boolean(fieldErrors.businessType)} aria-describedby={fieldErrors.businessType ? 'err-businessType' : undefined} />
+                <FieldError id="err-businessType" message={fieldErrors.businessType} />
+              </div>
+              <div>
+                <input id="ob-registrationNumber" name="registrationNumber" value={formData.registrationNumber} onChange={handleChange} placeholder="Company registration number" className={inputClass('registrationNumber')} aria-invalid={Boolean(fieldErrors.registrationNumber)} aria-describedby={fieldErrors.registrationNumber ? 'err-registrationNumber' : undefined} />
+                <FieldError id="err-registrationNumber" message={fieldErrors.registrationNumber} />
+              </div>
+              <div>
+                <input id="ob-taxNumber" name="taxNumber" value={formData.taxNumber} onChange={handleChange} placeholder="Tax number" className={inputClass('taxNumber')} aria-invalid={Boolean(fieldErrors.taxNumber)} aria-describedby={fieldErrors.taxNumber ? 'err-taxNumber' : undefined} />
+                <FieldError id="err-taxNumber" message={fieldErrors.taxNumber} />
+              </div>
             </div>
 
+            {/* ── Identity Verification ─────────────────────────────── */}
             <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--svs-muted)]">
               Identity Verification
               {isSectionFlagged('identity_verification') ? (
@@ -774,22 +887,38 @@ const SellerOnboardingPage = () => {
               Required to confirm you are who you say you are and to keep fake sellers off the platform. Both photos below
               must be taken live with your camera — file uploads are not accepted for either one.
             </p>
-            <select
-              name="idDocumentType"
-              value={idDocumentType}
-              onChange={(event) => setIdDocumentType(event.target.value)}
-              required
-              className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm text-[var(--svs-text)] md:w-1/2"
-            >
-              <option value="">ID document type</option>
-              <option value="national_id">National ID</option>
-              <option value="passport">Passport</option>
-            </select>
 
             <div>
+              <select
+                id="ob-idDocumentType"
+                name="idDocumentType"
+                value={idDocumentType}
+                onChange={handleIdDocumentTypeChange}
+                className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 md:w-1/2 ${
+                  fieldErrors.idDocumentType
+                    ? 'border-red-400 bg-red-50 text-red-900 focus:border-red-500 focus:ring-red-200'
+                    : 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)] text-[var(--svs-text)] focus:border-[var(--svs-primary)] focus:ring-[#33b9f2]/30'
+                }`}
+                aria-invalid={Boolean(fieldErrors.idDocumentType)}
+                aria-describedby={fieldErrors.idDocumentType ? 'err-idDocumentType' : undefined}
+              >
+                <option value="">ID document type</option>
+                <option value="national_id">National ID</option>
+                <option value="passport">Passport</option>
+              </select>
+              <FieldError id="err-idDocumentType" message={fieldErrors.idDocumentType} />
+            </div>
+
+            <div id="ob-id-document-section">
               <p className="mb-2 text-sm font-medium text-[var(--svs-text)]">
                 {idDocumentType === 'passport' ? 'Passport photo' : 'ID document photo'}
               </p>
+              {fieldErrors.idDocumentPhoto ? (
+                <div className="mb-2 flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+                  <svg className="h-3.5 w-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                  {fieldErrors.idDocumentPhoto}
+                </div>
+              ) : null}
               <LiveCameraCapture
                 previewUrl={idDocumentPreviewUrl}
                 isDark={isIdDocumentDark}
@@ -802,8 +931,14 @@ const SellerOnboardingPage = () => {
               />
             </div>
 
-            <div>
+            <div id="ob-selfie-section">
               <p className="mb-2 text-sm font-medium text-[var(--svs-text)]">Live selfie</p>
+              {fieldErrors.selfiePhoto ? (
+                <div className="mb-2 flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+                  <svg className="h-3.5 w-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                  {fieldErrors.selfiePhoto}
+                </div>
+              ) : null}
               <LiveCameraCapture
                 previewUrl={selfiePreviewUrl}
                 isDark={isSelfieDark}
@@ -816,6 +951,7 @@ const SellerOnboardingPage = () => {
               />
             </div>
 
+            {/* ── Business Contact and Address ──────────────────────── */}
             <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--svs-muted)]">
               Business Contact and Address
               {isSectionFlagged('contact_address') ? (
@@ -823,14 +959,33 @@ const SellerOnboardingPage = () => {
               ) : null}
             </h2>
             <div className="grid gap-4 md:grid-cols-2">
-              <input name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} required placeholder="Business phone number" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
-              <input name="businessAddressLine1" value={formData.businessAddressLine1} onChange={handleChange} required placeholder="Street address" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
-              <input name="city" value={formData.city} onChange={handleChange} required placeholder="City" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
-              <input name="province" value={formData.province} onChange={handleChange} required placeholder="Province/State" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
-              <input name="postalCode" value={formData.postalCode} onChange={handleChange} required placeholder="Postal code" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
-              <input name="country" value={formData.country} onChange={handleChange} required placeholder="Country" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
+              <div>
+                <input id="ob-phoneNumber" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} placeholder="Business phone number" className={inputClass('phoneNumber')} aria-invalid={Boolean(fieldErrors.phoneNumber)} aria-describedby={fieldErrors.phoneNumber ? 'err-phoneNumber' : undefined} />
+                <FieldError id="err-phoneNumber" message={fieldErrors.phoneNumber} />
+              </div>
+              <div>
+                <input id="ob-businessAddressLine1" name="businessAddressLine1" value={formData.businessAddressLine1} onChange={handleChange} placeholder="Street address" className={inputClass('businessAddressLine1')} aria-invalid={Boolean(fieldErrors.businessAddressLine1)} aria-describedby={fieldErrors.businessAddressLine1 ? 'err-businessAddressLine1' : undefined} />
+                <FieldError id="err-businessAddressLine1" message={fieldErrors.businessAddressLine1} />
+              </div>
+              <div>
+                <input id="ob-city" name="city" value={formData.city} onChange={handleChange} placeholder="City" className={inputClass('city')} aria-invalid={Boolean(fieldErrors.city)} aria-describedby={fieldErrors.city ? 'err-city' : undefined} />
+                <FieldError id="err-city" message={fieldErrors.city} />
+              </div>
+              <div>
+                <input id="ob-province" name="province" value={formData.province} onChange={handleChange} placeholder="Province/State" className={inputClass('province')} aria-invalid={Boolean(fieldErrors.province)} aria-describedby={fieldErrors.province ? 'err-province' : undefined} />
+                <FieldError id="err-province" message={fieldErrors.province} />
+              </div>
+              <div>
+                <input id="ob-postalCode" name="postalCode" value={formData.postalCode} onChange={handleChange} placeholder="Postal code" className={inputClass('postalCode')} aria-invalid={Boolean(fieldErrors.postalCode)} aria-describedby={fieldErrors.postalCode ? 'err-postalCode' : undefined} />
+                <FieldError id="err-postalCode" message={fieldErrors.postalCode} />
+              </div>
+              <div>
+                <input id="ob-country" name="country" value={formData.country} onChange={handleChange} placeholder="Country" className={inputClass('country')} aria-invalid={Boolean(fieldErrors.country)} aria-describedby={fieldErrors.country ? 'err-country' : undefined} />
+                <FieldError id="err-country" message={fieldErrors.country} />
+              </div>
             </div>
 
+            {/* ── Payout and Returns ────────────────────────────────── */}
             <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--svs-muted)]">
               Payout and Returns
               {isSectionFlagged('payout_returns') ? (
@@ -838,12 +993,30 @@ const SellerOnboardingPage = () => {
               ) : null}
             </h2>
             <div className="grid gap-4 md:grid-cols-2">
-              <input name="payoutAccountHolder" value={formData.payoutAccountHolder} onChange={handleChange} required placeholder="Payout account holder" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
-              <input name="payoutBankName" value={formData.payoutBankName} onChange={handleChange} required placeholder="Bank name" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
-              <input name="payoutAccountNumber" value={formData.payoutAccountNumber} onChange={handleChange} required placeholder="Bank account number" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
-              <input name="payoutBranchCode" value={formData.payoutBranchCode} onChange={handleChange} required placeholder="Branch code" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
-              <input name="returnContactName" value={formData.returnContactName} onChange={handleChange} required placeholder="Returns contact name" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
-              <input name="returnContactPhone" value={formData.returnContactPhone} onChange={handleChange} required placeholder="Returns contact phone" className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm" />
+              <div>
+                <input id="ob-payoutAccountHolder" name="payoutAccountHolder" value={formData.payoutAccountHolder} onChange={handleChange} placeholder="Payout account holder" className={inputClass('payoutAccountHolder')} aria-invalid={Boolean(fieldErrors.payoutAccountHolder)} aria-describedby={fieldErrors.payoutAccountHolder ? 'err-payoutAccountHolder' : undefined} />
+                <FieldError id="err-payoutAccountHolder" message={fieldErrors.payoutAccountHolder} />
+              </div>
+              <div>
+                <input id="ob-payoutBankName" name="payoutBankName" value={formData.payoutBankName} onChange={handleChange} placeholder="Bank name" className={inputClass('payoutBankName')} aria-invalid={Boolean(fieldErrors.payoutBankName)} aria-describedby={fieldErrors.payoutBankName ? 'err-payoutBankName' : undefined} />
+                <FieldError id="err-payoutBankName" message={fieldErrors.payoutBankName} />
+              </div>
+              <div>
+                <input id="ob-payoutAccountNumber" name="payoutAccountNumber" value={formData.payoutAccountNumber} onChange={handleChange} placeholder="Bank account number" className={inputClass('payoutAccountNumber')} aria-invalid={Boolean(fieldErrors.payoutAccountNumber)} aria-describedby={fieldErrors.payoutAccountNumber ? 'err-payoutAccountNumber' : undefined} />
+                <FieldError id="err-payoutAccountNumber" message={fieldErrors.payoutAccountNumber} />
+              </div>
+              <div>
+                <input id="ob-payoutBranchCode" name="payoutBranchCode" value={formData.payoutBranchCode} onChange={handleChange} placeholder="Branch code" className={inputClass('payoutBranchCode')} aria-invalid={Boolean(fieldErrors.payoutBranchCode)} aria-describedby={fieldErrors.payoutBranchCode ? 'err-payoutBranchCode' : undefined} />
+                <FieldError id="err-payoutBranchCode" message={fieldErrors.payoutBranchCode} />
+              </div>
+              <div>
+                <input id="ob-returnContactName" name="returnContactName" value={formData.returnContactName} onChange={handleChange} placeholder="Returns contact name" className={inputClass('returnContactName')} aria-invalid={Boolean(fieldErrors.returnContactName)} aria-describedby={fieldErrors.returnContactName ? 'err-returnContactName' : undefined} />
+                <FieldError id="err-returnContactName" message={fieldErrors.returnContactName} />
+              </div>
+              <div>
+                <input id="ob-returnContactPhone" name="returnContactPhone" value={formData.returnContactPhone} onChange={handleChange} placeholder="Returns contact phone" className={inputClass('returnContactPhone')} aria-invalid={Boolean(fieldErrors.returnContactPhone)} aria-describedby={fieldErrors.returnContactPhone ? 'err-returnContactPhone' : undefined} />
+                <FieldError id="err-returnContactPhone" message={fieldErrors.returnContactPhone} />
+              </div>
             </div>
 
             <button

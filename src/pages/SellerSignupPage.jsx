@@ -22,6 +22,53 @@ const generatePasswordHash = async (password) => {
 	return `${saltHex}:${hashHex}`;
 };
 
+const FIELD_ORDER = ['name', 'email', 'contact', 'password', 'confirmPassword'];
+
+const validate = ({ name, email, contact, password, confirmPassword }) => {
+	const errors = {};
+	if (!name.trim()) errors.name = 'Full name is required.';
+	if (!email.trim()) {
+		errors.email = 'Email address is required.';
+	} else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+		errors.email = 'Enter a valid email address.';
+	}
+	if (!contact.trim()) errors.contact = 'Contact number is required.';
+	if (!password) {
+		errors.password = 'Password is required.';
+	} else if (password.length < 6) {
+		errors.password = 'Password must be at least 6 characters.';
+	}
+	if (!confirmPassword) {
+		errors.confirmPassword = 'Please confirm your password.';
+	} else if (password && confirmPassword !== password) {
+		errors.confirmPassword = 'Passwords do not match.';
+	}
+	return errors;
+};
+
+const scrollToFirstError = (errors) => {
+	for (const key of FIELD_ORDER) {
+		if (errors[key]) {
+			const el = document.getElementById(`seller-reg-${key === 'confirmPassword' ? 'confirm' : key}`);
+			if (el) {
+				el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+				el.focus();
+			}
+			break;
+		}
+	}
+};
+
+const ErrorMsg = ({ id, message }) =>
+	message ? (
+		<p id={id} className="mt-1 flex items-center gap-1 text-xs font-medium text-red-600">
+			<svg className="h-3 w-3 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+				<path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+			</svg>
+			{message}
+		</p>
+	) : null;
+
 const SellerSignupPage = () => {
 	const navigate = useNavigate();
 	const [formData, setFormData] = useState({
@@ -31,6 +78,7 @@ const SellerSignupPage = () => {
 		password: '',
 		confirmPassword: '',
 	});
+	const [fieldErrors, setFieldErrors] = useState({});
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [message, setMessage] = useState('');
 	const [messageType, setMessageType] = useState('idle');
@@ -38,20 +86,29 @@ const SellerSignupPage = () => {
 	const handleChange = (event) => {
 		const { name, value } = event.target;
 		setFormData((prev) => ({ ...prev, [name]: value }));
+		if (fieldErrors[name]) {
+			setFieldErrors((prev) => { const next = { ...prev }; delete next[name]; return next; });
+		}
+		// When editing password, also clear confirmPassword mismatch error
+		if (name === 'password' && fieldErrors.confirmPassword) {
+			setFieldErrors((prev) => { const next = { ...prev }; delete next.confirmPassword; return next; });
+		}
 	};
 
 	const handleSubmit = async (event) => {
 		event.preventDefault();
 
-		if (formData.password !== formData.confirmPassword) {
-			setMessage('Passwords do not match.');
-			setMessageType('error');
+		const errors = validate(formData);
+		if (Object.keys(errors).length > 0) {
+			setFieldErrors(errors);
+			scrollToFirstError(errors);
 			return;
 		}
 
 		setIsSubmitting(true);
 		setMessage('');
 		setMessageType('idle');
+		setFieldErrors({});
 
 		const { name, email, contact, password } = formData;
 		const passwordHash = await generatePasswordHash(password);
@@ -59,13 +116,6 @@ const SellerSignupPage = () => {
 		const normalizedEmail = email.trim().toLowerCase();
 		const trimmedName = name.trim();
 		const trimmedContact = contact.trim();
-
-		if (!trimmedName || !normalizedEmail || !trimmedContact) {
-			setMessage('Complete your basic account details before continuing.');
-			setMessageType('error');
-			setIsSubmitting(false);
-			return;
-		}
 
 		savePendingSellerSignupDraft({
 			name: trimmedName,
@@ -76,19 +126,20 @@ const SellerSignupPage = () => {
 
 		setMessage('Basic details saved. Continue to business verification…');
 		setMessageType('success');
-		setFormData({
-			name: '',
-			email: '',
-			contact: '',
-			password: '',
-			confirmPassword: '',
-		});
+		setFormData({ name: '', email: '', contact: '', password: '', confirmPassword: '' });
 		setIsSubmitting(false);
 
 		setTimeout(() => {
 			navigate('/sell/onboarding');
 		}, 500);
 	};
+
+	const inputClass = (fieldName) =>
+		`w-full rounded-xl border px-4 py-3 text-sm text-[var(--svs-text)] outline-none transition focus:ring-2 ${
+			fieldErrors[fieldName]
+				? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-red-200'
+				: 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)] focus:border-[var(--svs-primary)] focus:ring-[#33b9f2]/30'
+		}`;
 
 	return (
 		<StandalonePageShell title="Register as a seller" brandHref="/sell" mainClassName="px-4 py-8 sm:px-6 sm:py-10">
@@ -106,7 +157,7 @@ const SellerSignupPage = () => {
 
 				{/* Form Card */}
 				<div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-6 shadow-sm md:p-8">
-					<form onSubmit={handleSubmit} className="space-y-5">
+					<form onSubmit={handleSubmit} noValidate className="space-y-5">
 						{message ? (
 							<div
 								className={`rounded-xl px-4 py-3 text-sm font-medium ${
@@ -120,11 +171,8 @@ const SellerSignupPage = () => {
 						) : null}
 
 						<div>
-							<label
-								htmlFor="seller-reg-name"
-								className="mb-1.5 block text-sm font-semibold"
-							>
-								Full Name
+							<label htmlFor="seller-reg-name" className="mb-1.5 block text-sm font-semibold">
+								Full Name <span className="text-red-500">*</span>
 							</label>
 							<input
 								id="seller-reg-name"
@@ -132,18 +180,18 @@ const SellerSignupPage = () => {
 								name="name"
 								value={formData.name}
 								onChange={handleChange}
-								required
 								placeholder="Your full name"
-								className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30"
+								autoComplete="name"
+								className={inputClass('name')}
+								aria-invalid={Boolean(fieldErrors.name)}
+								aria-describedby={fieldErrors.name ? 'sr-name-error' : undefined}
 							/>
+							<ErrorMsg id="sr-name-error" message={fieldErrors.name} />
 						</div>
 
 						<div>
-							<label
-								htmlFor="seller-reg-email"
-								className="mb-1.5 block text-sm font-semibold"
-							>
-								Email Address
+							<label htmlFor="seller-reg-email" className="mb-1.5 block text-sm font-semibold">
+								Email Address <span className="text-red-500">*</span>
 							</label>
 							<input
 								id="seller-reg-email"
@@ -151,18 +199,18 @@ const SellerSignupPage = () => {
 								name="email"
 								value={formData.email}
 								onChange={handleChange}
-								required
 								placeholder="your@email.com"
-								className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30"
+								autoComplete="email"
+								className={inputClass('email')}
+								aria-invalid={Boolean(fieldErrors.email)}
+								aria-describedby={fieldErrors.email ? 'sr-email-error' : undefined}
 							/>
+							<ErrorMsg id="sr-email-error" message={fieldErrors.email} />
 						</div>
 
 						<div>
-							<label
-								htmlFor="seller-reg-contact"
-								className="mb-1.5 block text-sm font-semibold"
-							>
-								Contact Number
+							<label htmlFor="seller-reg-contact" className="mb-1.5 block text-sm font-semibold">
+								Contact Number <span className="text-red-500">*</span>
 							</label>
 							<input
 								id="seller-reg-contact"
@@ -170,18 +218,18 @@ const SellerSignupPage = () => {
 								name="contact"
 								value={formData.contact}
 								onChange={handleChange}
-								required
 								placeholder="+27 ..."
-								className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30"
+								autoComplete="tel"
+								className={inputClass('contact')}
+								aria-invalid={Boolean(fieldErrors.contact)}
+								aria-describedby={fieldErrors.contact ? 'sr-contact-error' : undefined}
 							/>
+							<ErrorMsg id="sr-contact-error" message={fieldErrors.contact} />
 						</div>
 
 						<div>
-							<label
-								htmlFor="seller-reg-password"
-								className="mb-1.5 block text-sm font-semibold"
-							>
-								Password
+							<label htmlFor="seller-reg-password" className="mb-1.5 block text-sm font-semibold">
+								Password <span className="text-red-500">*</span>
 							</label>
 							<input
 								id="seller-reg-password"
@@ -189,18 +237,18 @@ const SellerSignupPage = () => {
 								name="password"
 								value={formData.password}
 								onChange={handleChange}
-								required
-								placeholder="Create a strong password"
-								className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30"
+								placeholder="Create a strong password (min 6 chars)"
+								autoComplete="new-password"
+								className={inputClass('password')}
+								aria-invalid={Boolean(fieldErrors.password)}
+								aria-describedby={fieldErrors.password ? 'sr-password-error' : undefined}
 							/>
+							<ErrorMsg id="sr-password-error" message={fieldErrors.password} />
 						</div>
 
 						<div>
-							<label
-								htmlFor="seller-reg-confirm"
-								className="mb-1.5 block text-sm font-semibold"
-							>
-								Confirm Password
+							<label htmlFor="seller-reg-confirm" className="mb-1.5 block text-sm font-semibold">
+								Confirm Password <span className="text-red-500">*</span>
 							</label>
 							<input
 								id="seller-reg-confirm"
@@ -208,10 +256,13 @@ const SellerSignupPage = () => {
 								name="confirmPassword"
 								value={formData.confirmPassword}
 								onChange={handleChange}
-								required
 								placeholder="Repeat your password"
-								className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30"
+								autoComplete="new-password"
+								className={inputClass('confirmPassword')}
+								aria-invalid={Boolean(fieldErrors.confirmPassword)}
+								aria-describedby={fieldErrors.confirmPassword ? 'sr-confirm-error' : undefined}
 							/>
+							<ErrorMsg id="sr-confirm-error" message={fieldErrors.confirmPassword} />
 						</div>
 
 						<p className="text-xs text-[var(--svs-muted)]">
