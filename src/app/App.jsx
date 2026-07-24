@@ -91,6 +91,8 @@ import {
   Volume2,
   VolumeX,
   Camera,
+  Leaf,
+  Flower2,
 } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -150,6 +152,13 @@ import {
   searchListings as searchLivestockListings,
   useListingsVersion as useLivestockListingsVersion,
 } from '../features/livestock/data/livestockListings';
+import {
+  getListings as getNurseryListings,
+  hydrateListings as hydrateNurseryListings,
+  remoteSearchListings as remoteSearchNurseryListings,
+  searchListings as searchNurseryListings,
+  useListingsVersion as useNurseryListingsVersion,
+} from '../features/nursery/data/nurseryListings';
 import { formatInBuyerCurrency as formatInBuyerCurrencyLib } from '../lib/buyerCurrency';
 import { searchItems as searchItemsPowerful } from '../lib/powerSearch';
 
@@ -550,6 +559,24 @@ const MARKET_FIELD_SPEC = {
       { name: 'purpose', label: 'Purpose', type: 'select', options: ['Dairy', 'Beef / Meat', 'Breeding', 'Wool', 'Eggs', 'Riding / Racing', 'Mixed Use'] },
     ],
   },
+  // Aligned with NurseryHubPage filter (item.categoryId derived from category title)
+  // and card display (item.species, item.careLevel, item.lightRequirement, item.location).
+  // Field names map onto nursery item attributes via mapSellerItemRecord's rawDetailsJson spread.
+  nursery: {
+    title: 'Nursery Listing Details',
+    helper: 'Tell buyers the plant type, care requirements, size, and location so they can filter and find your listing easily.',
+    fields: [
+      { name: 'category', label: 'Plant type', type: 'select', required: true, options: ['Seeds', 'Seedlings', 'Saplings', 'Small Flowers', 'Vegetable Starts', 'Herbs', 'Shrubs', 'Gardening Supplies', 'Other'] },
+      { name: 'species', label: 'Species / common name', type: 'text', required: true, placeholder: 'e.g. Lavandula angustifolia, African Violet, Tomato Cherry' },
+      { name: 'careLevel', label: 'Care level', type: 'select', required: true, options: ['Easy', 'Moderate', 'Expert'] },
+      { name: 'lightRequirement', label: 'Light requirement', type: 'select', required: true, options: ['Full Sun', 'Partial Shade', 'Full Shade', 'Indoors'] },
+      { name: 'wateringFrequency', label: 'Watering frequency', type: 'select', options: ['Daily', 'Every 2-3 days', 'Weekly', 'Bi-weekly', 'Monthly'] },
+      { name: 'potPlantSize', label: 'Pot / plant size', type: 'text', placeholder: 'e.g. 10cm pot, 1.5m sapling, Tray of 6' },
+      { name: 'suitableFor', label: 'Suitable for', type: 'select', options: ['Indoors', 'Outdoors', 'Both'] },
+      { name: 'petSafe', label: 'Pet-safe', type: 'select', options: ['Yes', 'No', 'Unknown'] },
+      { name: 'location', label: 'Nursery location', type: 'text', required: true, placeholder: 'e.g. Cape Town, Johannesburg North' },
+    ],
+  },
   // Aligned with VotingClientsPage (/voting-clients = "Beauty, Fitness and Sports Products").
   // Static items use category: Beauty, Fitness. Allow sellers to add Sports too so the
   // page label remains accurate.
@@ -823,6 +850,7 @@ const marketLinks = [
   { labelKey: 'markets.informalMarket', href: '/informal-market' },
   { labelKey: 'markets.votingProviders', href: '/voting-providers' },
   { labelKey: 'markets.livestockHub', href: '/livestock-hub' },
+  { labelKey: 'markets.nurseryHub', href: '/nursery-hub' },
   { labelKey: 'markets.naturalResources', href: '/natural-resources-minerals' },
   { labelKey: 'markets.wellness', href: '/wellness' },
   { labelKey: 'markets.propertyHub', href: '/property-hub' },
@@ -850,6 +878,7 @@ const marketShortDescriptions = {
   '/informal-market': 'Street traders, spazas & informal seller listings',
   '/voting-providers': 'Jewellery & accessories from trusted sellers',
   '/livestock-hub': 'Buy & sell livestock with confidence',
+  '/nursery-hub': 'Seeds, plants, herbs & gardening supplies from local nurseries',
   '/natural-resources-minerals': 'Quality raw materials & minerals',
   '/wellness': 'Pharmacy, health & wellness products',
   '/property-hub': 'Homes, rentals & commercial space',
@@ -874,6 +903,7 @@ const sellerMarketOptions = [
   { key: 'generalLabour', labelKey: 'markets.generalLabour', route: '/general-labour-market', externalSellRoute: '/general-labour-market/sell' },
   { key: 'jewelleryAccessories', labelKey: 'markets.votingProviders', route: '/voting-providers' },
   { key: 'livestock', labelKey: 'markets.livestockHub', route: '/livestock-hub' },
+  { key: 'nursery', labelKey: 'markets.nurseryHub', route: '/nursery-hub' },
   { key: 'naturalResources', labelKey: 'markets.naturalResources', route: '/natural-resources-minerals', externalSellRoute: '/natural-resources-minerals/sell' },
   { key: 'wellness', labelKey: 'markets.wellness', route: '/wellness' },
   { key: 'property', labelKey: 'markets.propertyHub', route: '/property-hub', externalSellRoute: '/property-hub/sell' },
@@ -1686,6 +1716,15 @@ const homeHeroSlides = [
     route: '/livestock-hub',
   },
   {
+    id: 'hero-17-nursery',
+    image:
+      'https://images.pexels.com/photos/1005058/pexels-photo-1005058.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    label: 'NURSERY',
+    title: 'Nursery',
+    subtitle: 'Seeds, plants, herbs & gardening supplies from local nurseries',
+    route: '/nursery-hub',
+  },
+  {
     id: 'hero-18',
     image:
       'https://images.pexels.com/photos/3735149/pexels-photo-3735149.jpeg?auto=compress&cs=tinysrgb&w=1920',
@@ -1871,6 +1910,13 @@ const featureSlides = [
     title: 'Livestock',
     subtitle: 'Buy & sell livestock with confidence',
     route: '/livestock-hub',
+  },
+  {
+    id: 'feat-16-nursery',
+    image: 'https://images.pexels.com/photos/1005058/pexels-photo-1005058.jpeg?auto=compress&cs=tinysrgb&w=1600',
+    title: 'Nursery',
+    subtitle: 'Seeds, plants, herbs & gardening supplies',
+    route: '/nursery-hub',
   },
   {
     id: 'feat-17',
@@ -4929,6 +4975,59 @@ const livestockItems = [
   },
 ];
 
+const nurseryCategories = [
+  {
+    id: 'seeds',
+    title: 'Seeds',
+    subtitle: 'Flower, Veg & Herb Seeds',
+    image: 'https://images.pexels.com/photos/7782153/pexels-photo-7782153.jpeg?auto=compress&cs=tinysrgb&w=800',
+  },
+  {
+    id: 'seedlings',
+    title: 'Seedlings',
+    subtitle: 'Young Sprouted Plants',
+    image: 'https://images.pexels.com/photos/7728299/pexels-photo-7728299.jpeg?auto=compress&cs=tinysrgb&w=800',
+  },
+  {
+    id: 'saplings',
+    title: 'Saplings',
+    subtitle: 'Young Trees',
+    image: 'https://images.pexels.com/photos/8543586/pexels-photo-8543586.jpeg?auto=compress&cs=tinysrgb&w=800',
+  },
+  {
+    id: 'flowers',
+    title: 'Small Flowers',
+    subtitle: 'Potted & Cut Flowers',
+    image: 'https://images.pexels.com/photos/5208120/pexels-photo-5208120.jpeg?auto=compress&cs=tinysrgb&w=800',
+  },
+  {
+    id: 'vegetable-starts',
+    title: 'Vegetable Starts',
+    subtitle: 'Ready-to-plant Veggies',
+    image: 'https://images.pexels.com/photos/5277393/pexels-photo-5277393.jpeg?auto=compress&cs=tinysrgb&w=800',
+  },
+  {
+    id: 'herbs',
+    title: 'Herbs',
+    subtitle: 'Culinary & Medicinal',
+    image: 'https://images.pexels.com/photos/4750311/pexels-photo-4750311.jpeg?auto=compress&cs=tinysrgb&w=800',
+  },
+  {
+    id: 'shrubs',
+    title: 'Shrubs',
+    subtitle: 'Ornamental & Hedging',
+    image: 'https://images.pexels.com/photos/24595771/pexels-photo-24595771.jpeg?auto=compress&cs=tinysrgb&w=800',
+  },
+  {
+    id: 'supplies',
+    title: 'Gardening Supplies',
+    subtitle: 'Tools, Soil & Pots',
+    image: 'https://images.pexels.com/photos/4750383/pexels-photo-4750383.jpeg?auto=compress&cs=tinysrgb&w=800',
+  },
+];
+
+const nurseryImageFallback = 'https://images.pexels.com/photos/1005058/pexels-photo-1005058.jpeg?auto=compress&cs=tinysrgb&w=800';
+
 // Fallback stock photos for listings that don't map to a real-world make/
 // model worth sourcing a dedicated photo for (fictional brands, or generic
 // parts where no single product photo applies). Every other listing below
@@ -7198,6 +7297,33 @@ const mapPropertyListingToSearchEntry = (listing) => {
   };
 };
 
+const mapNurseryListingToSearchEntry = (listing) => {
+  if (!listing) return null;
+  const title = String(listing.title || '').trim();
+  if (!title) return null;
+  return {
+    id: listing.id ? `nursery-${listing.id}` : `nursery-${title}`,
+    title,
+    image: listing.image || '',
+    section: 'Nursery — Plants, Seeds & Gardening',
+    route: '/nursery-hub',
+    location: listing.location || '',
+    category: listing.category || '',
+    price: listing.price || '',
+    searchText: buildSearchText([
+      title,
+      listing.category,
+      listing.species,
+      listing.careLevel,
+      listing.lightRequirement,
+      listing.location,
+      listing.summary,
+      listing.description,
+      listing.price,
+    ]),
+  };
+};
+
 const mapLivestockListingToSearchEntry = (listing) => {
   if (!listing) return null;
   const title = String(listing.title || '').trim();
@@ -7243,6 +7369,7 @@ const PROJECT_ROUTE_SEARCH_ENTRIES = [
   { id: 'page-seller-upload', title: 'Seller Upload', section: 'Seller Console', route: '/seller/upload', keywords: 'seller upload create listing product service add item' },
   { id: 'page-property-hub', title: 'Property Hub', section: 'Markets', route: '/property-hub', keywords: 'property real estate homes rentals land commercial' },
   { id: 'page-livestock-hub', title: 'Livestock Hub', section: 'Markets', route: '/livestock-hub', keywords: 'livestock cattle goats sheep poultry farm animals' },
+  { id: 'page-nursery-hub', title: 'Nursery', section: 'Markets', route: '/nursery-hub', keywords: 'nursery plants seeds seedlings saplings herbs shrubs flowers vegetables gardening supplies' },
   { id: 'page-home-care', title: 'Home Care Services', section: 'Markets', route: '/home-care', keywords: 'home care providers nursing elderly baby care cleaner plumber electrician' },
   { id: 'page-informal-market', title: 'Informal Market', section: 'Markets', route: '/informal-market', keywords: 'informal market street trader spaza hawker local seller township vendor' },
 ];
@@ -7366,11 +7493,12 @@ const buildProjectWideStaticSearchCatalog = () => {
   return dedupeSearchCatalogEntries([...routeEntries, ...marketEntries, ...retailerEntries]);
 };
 
-const buildDynamicSearchCatalog = ({ sellerItems = [], propertyItems = [], livestockItems = [] } = {}) => {
+const buildDynamicSearchCatalog = ({ sellerItems = [], propertyItems = [], livestockItems = [], nurseryItems: nurseryListings = [] } = {}) => {
   const sellerEntries = (sellerItems || []).map(mapSellerItemToSearchEntry).filter(Boolean);
   const propertyEntries = (propertyItems || []).map(mapPropertyListingToSearchEntry).filter(Boolean);
   const livestockEntries = (livestockItems || []).map(mapLivestockListingToSearchEntry).filter(Boolean);
-  return dedupeSearchCatalogEntries([...sellerEntries, ...propertyEntries, ...livestockEntries]);
+  const nurseryEntries = (nurseryListings || []).map(mapNurseryListingToSearchEntry).filter(Boolean);
+  return dedupeSearchCatalogEntries([...sellerEntries, ...propertyEntries, ...livestockEntries, ...nurseryEntries]);
 };
 
 const getAuthState = () => {
@@ -30912,6 +31040,15 @@ const SIZE_VARIANT_PRESETS = {
       { label: 'Bundle', options: ['Single', 'Pair (×2)', '×3', '×5', '×10', '×20', '×50'] },
     ],
   },
+  nursery: {
+    required: false,
+    placeholder: 'e.g. 10cm pot, Tray of 6, 1.5m sapling',
+    contextNote: 'Add size or quantity variants so buyers can pick the pot size, pack size, or plant height they need.',
+    groups: [
+      { label: 'Pot size', options: ['7cm pot', '10cm pot', '15cm pot', '20cm pot', '25cm pot', '30cm pot'] },
+      { label: 'Pack / quantity', options: ['Single', 'Pair (×2)', 'Tray of 4', 'Tray of 6', 'Tray of 12', '×10 seeds', '×25 seeds', '×50 seeds'] },
+    ],
+  },
   naturalResources: {
     required: false,
     placeholder: 'e.g. 1t, 5t, 10t or 1m³',
@@ -31541,6 +31678,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
     tickets:                { sizePlaceholder: 'e.g. Standard, VIP, Premium',          sizeRequired: false, sizeOptions: ['Standard', 'VIP', 'Premium', 'Box', 'Standing', 'Lawn'] },
     generalLabour:          { sizePlaceholder: 'e.g. Half day, Full day, Weekly',      sizeRequired: false, sizeOptions: ['2hr', 'Half day (4hr)', 'Full day (8hr)', 'Weekend', 'Weekly'] },
     livestock:              { sizePlaceholder: 'e.g. Single, Pair, ×5',                sizeRequired: false, sizeOptions: ['Single', 'Pair (×2)', '×5', '×10', '×20'] },
+    nursery:                { sizePlaceholder: 'e.g. 10cm pot, Tray of 6, 1.5m sapling', sizeRequired: false, sizeOptions: ['7cm pot', '10cm pot', '15cm pot', '20cm pot', 'Tray of 4', 'Tray of 6', 'Single', 'Pair (×2)'] },
     naturalResources:       { sizePlaceholder: 'e.g. 1t, 5t, 10t or 1m³',             sizeRequired: false, sizeOptions: ['0.5t', '1t', '2t', '5t', '10t', '20t', '50t'] },
     property:               { sizePlaceholder: 'e.g. Studio, 2 Bed, 3 Bed',            sizeRequired: false, sizeOptions: ['Studio', '1 Bed', '2 Bed', '3 Bed', '4 Bed', '5+ Bed'] },
   }), []);
@@ -34621,6 +34759,697 @@ const LotteryConfirmPage = () => {
   );
 };
 
+const NURSERY_TRUST_BG = 'https://images.pexels.com/photos/931177/pexels-photo-931177.jpeg?auto=compress&cs=tinysrgb&w=1600';
+
+const NURSERY_CARE_LEVELS = ['Easy', 'Moderate', 'Expert'];
+const NURSERY_LIGHT_REQS  = ['Full Sun', 'Partial Shade', 'Full Shade', 'Indoors'];
+const NURSERY_SUITABLE    = ['Indoors', 'Outdoors', 'Both'];
+
+const NurseryHubPage = ({
+  onAddToCart,
+  onBuyNow,
+  onToggleWishlist,
+  wishlistItemIds = [],
+  sellerItems = [],
+}) => {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState(null);
+  const [activeCareLevel, setActiveCareLevel] = useState(null);
+  const [activeLightReq, setActiveLightReq] = useState(null);
+  const [activeSuitable, setActiveSuitable] = useState(null);
+  const [subscribeEmail, setSubscribeEmail] = useState('');
+  const [subscribed, setSubscribed] = useState(false);
+  const [sort, setSort] = useState('relevance');
+  const [isSearching, setIsSearching] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const featuredRef = useRef(null);
+
+  const { code: buyerCurrencyCode } = useBuyerCurrency();
+  const listingsVersion = useNurseryListingsVersion();
+  const wishSet = useMemo(() => new Set(wishlistItemIds || []), [wishlistItemIds]);
+
+  useEffect(() => { hydrateNurseryListings(); }, []);
+
+  useEffect(() => {
+    if (!selectedItem) return undefined;
+    const onKey = (event) => { if (event.key === 'Escape') setSelectedItem(null); };
+    const prev = typeof document !== 'undefined' ? document.body.style.overflow : '';
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = 'hidden';
+      document.addEventListener('keydown', onKey);
+    }
+    return () => {
+      if (typeof document !== 'undefined') {
+        document.body.style.overflow = prev;
+        document.removeEventListener('keydown', onKey);
+      }
+    };
+  }, [selectedItem]);
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedQuery(searchQuery.trim()), 250);
+    return () => clearTimeout(id);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (!debouncedQuery) { setIsSearching(false); return undefined; }
+    let cancelled = false;
+    setIsSearching(true);
+    remoteSearchNurseryListings(debouncedQuery).finally(() => { if (!cancelled) setIsSearching(false); });
+    return () => { cancelled = true; };
+  }, [debouncedQuery]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const baseItems = useMemo(() => getNurseryListings(), [listingsVersion]);
+
+  const sellerNurseryItems = useMemo(() => {
+    const nurseryCategoryIdByTitle = nurseryCategories.reduce((acc, entry) => {
+      acc[entry.title] = entry.id;
+      return acc;
+    }, {});
+    return getSellerItemsForMarket(sellerItems, 'nursery').map((item) => {
+      const categoryTitle = item.category || '';
+      const categoryId = item.categoryId || nurseryCategoryIdByTitle[categoryTitle] || '';
+      const summary = item.summary
+        || [item.careLevel ? `Care: ${item.careLevel}` : null, item.lightRequirement ? `Light: ${item.lightRequirement}` : null]
+            .filter(Boolean).join(' • ');
+      return {
+        ...item,
+        category: categoryTitle,
+        categoryId,
+        species: item.species || '',
+        careLevel: item.careLevel || '',
+        lightRequirement: item.lightRequirement || '',
+        wateringFrequency: item.wateringFrequency || '',
+        potPlantSize: item.potPlantSize || '',
+        suitableFor: item.suitableFor || '',
+        petSafe: item.petSafe || '',
+        location: item.location || '',
+        summary,
+        rating: typeof item.rating === 'number' ? item.rating : 0,
+        reviewCount: typeof item.reviewCount === 'number' ? item.reviewCount : 0,
+        quantity: typeof item.availableQuantity === 'number' ? item.availableQuantity : item.quantity,
+        currency: item.currency || 'ZAR',
+      };
+    });
+  }, [sellerItems]);
+
+  const allItems = useMemo(() => [...sellerNurseryItems, ...baseItems], [sellerNurseryItems, baseItems]);
+
+  const filteredItems = useMemo(
+    () => searchNurseryListings(allItems, debouncedQuery, {
+      categoryId: activeCategory,
+      careLevel: activeCareLevel,
+      lightRequirement: activeLightReq,
+      suitableFor: activeSuitable,
+      sort,
+    }),
+    [allItems, debouncedQuery, activeCategory, activeCareLevel, activeLightReq, activeSuitable, sort],
+  );
+
+  const formatPrice = (item) => {
+    const from = item.currency || 'ZAR';
+    void buyerCurrencyCode;
+    const raw = String(item.price ?? '').trim();
+    const cleaned = raw.replace(/[^\d.]/g, '');
+    const numeric = cleaned ? Number(cleaned) : Number(raw);
+    const safe = Number.isFinite(numeric) ? numeric : 0;
+    return formatInBuyerCurrencyLib(safe, from, { decimals: 0 });
+  };
+
+  const isInStock = (item) => item == null || item.quantity == null || Number(item.quantity) > 0;
+
+  const buildSavedPayload = (item) => ({
+    ...item,
+    route: '/nursery-hub',
+    marketName: t('markets.nurseryHub'),
+    details: item.summary || `${item.category || ''} • ${item.location || ''}`.trim(),
+    price: formatPrice(item),
+    unitPrice: Number(item.price) || 0,
+    currency: item.currency || 'ZAR',
+  });
+
+  const handleToggleWishlist = (item) => {
+    if (typeof onToggleWishlist === 'function') {
+      onToggleWishlist(createWishlistItem(buildSavedPayload(item)));
+    }
+  };
+
+  const handleAddToCart = (item) => {
+    if (!isInStock(item)) return;
+    if (typeof onAddToCart === 'function') onAddToCart(createCartItem(buildSavedPayload(item)));
+  };
+
+  const openChat = (item) => {
+    const itemKey = item.key || item.id;
+    navigate('/support/chat', {
+      state: {
+        recipientEmail: normalizeEmail(item.sellerEmail || 'support@svs.app'),
+        recipientName: item.sellerName || item.sellerEmail || 'Biznisdil Support',
+        recipientRole: 'seller',
+        issueType: 'Nursery Enquiry',
+        itemKey,
+        itemTitle: item.title,
+        itemImage: item.image || '',
+        itemLink: `/nursery-hub?focus=${encodeURIComponent(itemKey)}`,
+      },
+    });
+  };
+
+  const handleCategoryClick = (categoryId) => {
+    setActiveCategory((current) => (current === categoryId ? null : categoryId));
+    if (featuredRef.current) featuredRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const handleSubscribe = (event) => {
+    event.preventDefault();
+    if (!subscribeEmail.trim()) return;
+    setSubscribed(true);
+    setSubscribeEmail('');
+    setTimeout(() => setSubscribed(false), 3500);
+  };
+
+  const filterPillClass = (active) =>
+    `rounded-full border px-3 py-1.5 text-xs font-semibold transition cursor-pointer select-none ${
+      active
+        ? 'border-[var(--svs-primary)] bg-[var(--svs-primary)] text-white'
+        : 'border-[var(--svs-border)] bg-white text-slate-600 hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]'
+    }`;
+
+  const hasActiveFilters = activeCategory || activeCareLevel || activeLightReq || activeSuitable;
+
+  return (
+    <section className="bg-white">
+      <MarketHero
+        marketKey="nursery"
+        title="Nursery — Plants, Seeds & Gardening"
+        subtitle="Discover seeds, seedlings, saplings, herbs, shrubs, and gardening supplies from verified local nurseries."
+        eyebrow="Nursery"
+        chips={['Locally grown', 'Verified nurseries', 'Gardening supplies']}
+      />
+      <MarketTrustStrip />
+
+      {/* ── Search + sort ── */}
+      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex flex-1 items-center gap-3 rounded-full border border-[var(--svs-primary)]/40 bg-white px-5 py-3 shadow-sm focus-within:border-[var(--svs-primary)]">
+            <Search className="h-4 w-4 shrink-0 text-[var(--svs-primary)]" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search plants, species, herbs, or location..."
+              className="w-full bg-transparent text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
+              aria-label="Search nursery listings"
+            />
+            {isSearching ? (
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--svs-primary)]">Searching…</span>
+            ) : null}
+            {searchQuery ? (
+              <button type="button" onClick={() => setSearchQuery('')} className="text-xs font-semibold text-[var(--svs-primary)] hover:underline">Clear</button>
+            ) : null}
+          </div>
+          <div className="flex items-center gap-2">
+            <label htmlFor="nursery-sort" className="text-xs font-semibold text-slate-600">Sort:</label>
+            <select
+              id="nursery-sort"
+              value={sort}
+              onChange={(event) => setSort(event.target.value)}
+              className="rounded-full border border-[var(--svs-border)] bg-white px-3 py-2 text-xs text-slate-700 focus:border-[var(--svs-primary)] focus:outline-none"
+            >
+              <option value="relevance">Relevance</option>
+              <option value="price-asc">Price: Low to High</option>
+              <option value="price-desc">Price: High to Low</option>
+              <option value="newest">Newest first</option>
+            </select>
+          </div>
+        </div>
+
+        {/* ── Filter pills ── */}
+        <div className="mt-4 space-y-2">
+          {/* Care level */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold text-slate-500">Care level:</span>
+            {NURSERY_CARE_LEVELS.map((level) => (
+              <button
+                key={level}
+                type="button"
+                onClick={() => setActiveCareLevel((c) => (c === level ? null : level))}
+                className={filterPillClass(activeCareLevel === level)}
+              >
+                {level}
+              </button>
+            ))}
+          </div>
+          {/* Light requirement */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold text-slate-500">Light:</span>
+            {NURSERY_LIGHT_REQS.map((req) => (
+              <button
+                key={req}
+                type="button"
+                onClick={() => setActiveLightReq((r) => (r === req ? null : req))}
+                className={filterPillClass(activeLightReq === req)}
+              >
+                {req}
+              </button>
+            ))}
+          </div>
+          {/* Suitable for */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold text-slate-500">Suitable for:</span>
+            {NURSERY_SUITABLE.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setActiveSuitable((cur) => (cur === s ? null : s))}
+                className={filterPillClass(activeSuitable === s)}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+          {hasActiveFilters ? (
+            <button
+              type="button"
+              onClick={() => { setActiveCategory(null); setActiveCareLevel(null); setActiveLightReq(null); setActiveSuitable(null); }}
+              className="text-xs font-semibold text-rose-500 hover:underline"
+            >
+              Clear all filters
+            </button>
+          ) : null}
+        </div>
+
+        {debouncedQuery ? (
+          <p className="mt-2 text-xs text-slate-500">
+            {filteredItems.length} {filteredItems.length === 1 ? 'result' : 'results'} for
+            {' '}<span className="font-semibold text-[var(--svs-primary-strong)]">&ldquo;{debouncedQuery}&rdquo;</span>
+          </p>
+        ) : null}
+      </div>
+
+      {/* ── Category grid ── */}
+      <div className="mx-auto w-full max-w-6xl px-4 pb-8 sm:px-6">
+        <div className="flex items-center gap-3">
+          <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-[var(--svs-primary)] text-white shadow">
+            <Leaf className="h-6 w-6" />
+          </span>
+          <div>
+            <h2 className="text-xl font-bold text-[var(--svs-primary-strong)] sm:text-2xl">Browse by Plant Type</h2>
+            <p className="text-sm text-[var(--svs-primary-strong)]/80">Select a category to filter the listings below</p>
+          </div>
+        </div>
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4">
+          {nurseryCategories.map((cat) => {
+            const isActive = activeCategory === cat.id;
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => handleCategoryClick(cat.id)}
+                className={`group flex flex-col overflow-hidden rounded-xl bg-white text-left shadow-md transition hover:-translate-y-1 hover:shadow-lg ${isActive ? 'ring-2 ring-[var(--svs-primary)] ring-offset-2' : ''}`}
+              >
+                <div className="aspect-[4/3] w-full overflow-hidden">
+                  <img
+                    src={cat.image}
+                    alt={cat.title}
+                    className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                    loading="lazy"
+                    onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = nurseryImageFallback; }}
+                  />
+                </div>
+                <div className="bg-[var(--svs-primary)] px-3 py-3 text-center text-white">
+                  <p className="text-base font-bold">{cat.title}</p>
+                  <p className="mt-0.5 text-xs text-white/85">{cat.subtitle}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Listings grid ── */}
+      <div ref={featuredRef} className="mx-auto w-full max-w-6xl px-4 pb-8 sm:px-6">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-[var(--svs-primary-strong)] sm:text-3xl">
+            {activeCategory ? (nurseryCategories.find((c) => c.id === activeCategory)?.title || 'Plants') : 'All Nursery Listings'}
+          </h2>
+          <p className="mt-2 text-sm text-[var(--svs-primary-strong)]/85 sm:text-base">
+            Locally grown plants, seeds, and supplies from verified nurseries
+          </p>
+          {activeCategory ? (
+            <button type="button" onClick={() => setActiveCategory(null)} className="mt-2 text-xs font-semibold text-[var(--svs-primary)] hover:underline">
+              View all plant types
+            </button>
+          ) : null}
+        </div>
+
+        <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredItems.length === 0 ? (
+            <div className="col-span-full rounded-xl border border-dashed border-[var(--svs-border)] bg-white px-5 py-10 text-center text-sm text-[var(--svs-muted)]">
+              No listings match your current search or filters. Try adjusting your filters above.
+            </div>
+          ) : (
+            filteredItems.map((item) => {
+              const liked = wishSet.has(item.id);
+              const inStock = isInStock(item);
+              return (
+                <article
+                  key={item.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSelectedItem(item)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelectedItem(item); }
+                  }}
+                  className="cursor-pointer overflow-hidden rounded-xl bg-white shadow-md transition hover:-translate-y-1 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[var(--svs-primary)] focus:ring-offset-2"
+                >
+                  <div className="relative aspect-[4/3] w-full overflow-hidden">
+                    <img
+                      src={item.image}
+                      alt={item.title}
+                      className={`h-full w-full object-cover ${inStock ? '' : 'opacity-70'}`}
+                      loading="lazy"
+                      onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = nurseryImageFallback; }}
+                    />
+                    {!inStock ? (
+                      <span className="absolute left-3 top-3 rounded-full bg-rose-600 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow">Out of Stock</span>
+                    ) : null}
+                    {item.careLevel ? (
+                      <span className={`absolute left-3 ${!inStock ? 'top-10' : 'top-3'} rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide shadow ${
+                        item.careLevel === 'Easy' ? 'bg-emerald-500 text-white' :
+                        item.careLevel === 'Moderate' ? 'bg-amber-500 text-white' : 'bg-rose-600 text-white'
+                      }`}>
+                        {item.careLevel}
+                      </span>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={(event) => { event.stopPropagation(); handleToggleWishlist(item); }}
+                      aria-label={liked ? 'Remove from wishlist' : 'Add to wishlist'}
+                      aria-pressed={liked}
+                      className={`absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full shadow transition ${liked ? 'bg-rose-500 text-white' : 'bg-black/55 text-white hover:bg-black/75'}`}
+                    >
+                      <Heart className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
+                    </button>
+                  </div>
+                  <div className="p-4">
+                    <h3 className="text-base font-bold text-[var(--svs-primary-strong)]">{item.title}</h3>
+                    {item.species ? (
+                      <p className="mt-0.5 text-xs italic text-slate-500">{item.species}</p>
+                    ) : null}
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-[#e6f7fb] px-3 py-1 text-sm font-semibold text-[var(--svs-primary-strong)]">
+                        {formatPrice(item)}
+                      </span>
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">{item.category}</span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600">
+                      {item.lightRequirement ? (
+                        <span className="flex items-center gap-1">
+                          <Sun className="h-3 w-3 text-amber-500" /> {item.lightRequirement}
+                        </span>
+                      ) : null}
+                      {item.suitableFor ? (
+                        <span className="flex items-center gap-1">
+                          <Flower2 className="h-3 w-3 text-[var(--svs-primary)]" /> {item.suitableFor}
+                        </span>
+                      ) : null}
+                      {item.location ? (
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3 text-slate-400" /> {item.location}
+                        </span>
+                      ) : null}
+                    </div>
+                    {item.rating ? (
+                      <p className="mt-1 flex items-center gap-1.5 text-xs text-[var(--svs-primary-strong)]/85">
+                        <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                        <span className="font-semibold">{item.rating}</span>
+                        <span className="text-[var(--svs-muted)]">({item.reviewCount} reviews)</span>
+                      </p>
+                    ) : null}
+                    <div className="mt-4 space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={(event) => { event.stopPropagation(); setSelectedItem(item); }}
+                          className="rounded-md border border-[var(--svs-primary)] bg-white py-2 text-sm font-semibold text-[var(--svs-primary)] transition hover:bg-[var(--svs-primary)]/10"
+                        >
+                          View Details
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!inStock}
+                          onClick={(event) => { event.stopPropagation(); handleAddToCart(item); }}
+                          className={`rounded-md py-2 text-sm font-semibold leading-tight transition ${inStock ? `${cudyBluePrimaryButtonClassName} bg-[var(--svs-primary)] text-white hover:bg-[var(--svs-primary-strong)]` : 'cursor-not-allowed bg-slate-100 text-slate-400'}`}
+                        >
+                          {inStock ? 'Add to Cart' : 'Out of Stock'}
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(event) => { event.stopPropagation(); openChat(item); }}
+                        className="flex w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-white py-2 text-sm font-semibold text-slate-700 transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                        Let&apos;s Chat For More Info
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              );
+            })
+          )}
+        </div>
+
+        {activeCategory || activeCareLevel || activeLightReq || activeSuitable ? (
+          <div className="mt-6 flex justify-center">
+            <button
+              type="button"
+              onClick={() => { setActiveCategory(null); setActiveCareLevel(null); setActiveLightReq(null); setActiveSuitable(null); if (featuredRef.current) featuredRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+              className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-10 py-3 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}
+            >
+              View All Plants & Supplies
+            </button>
+          </div>
+        ) : null}
+      </div>
+
+      {/* ── Why shop with us ── */}
+      <div className="relative mt-2 bg-cover bg-center py-12" style={{ backgroundImage: `url('${NURSERY_TRUST_BG}')` }}>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/25 to-black/45" aria-hidden="true" />
+        <div className="relative mx-auto w-full max-w-6xl px-4 sm:px-6">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-white drop-shadow sm:text-3xl">Why Buy from Our Nursery Market?</h2>
+            <p className="mx-auto mt-2 max-w-3xl text-sm text-white/90 drop-shadow sm:text-base">
+              Every listing comes from verified local nurseries committed to quality, honest plant descriptions, and healthy stock.
+            </p>
+          </div>
+          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { icon: ShieldCheck, title: 'Verified Nurseries', body: 'All sellers are verified local growers with real nursery credentials and quality stock.' },
+              { icon: Leaf, title: 'Care Guides Included', body: 'Every listing shows care level, light requirements, and watering frequency so your plant thrives.' },
+              { icon: Truck, title: 'Safe Packaging', body: 'Sellers pack plants for safe transport so they arrive healthy and ready to grow.' },
+              { icon: HelpCircle, title: '24/7 Support', body: 'Our support team helps with plant care questions, order issues, and seller enquiries.' },
+            ].map(({ icon: Icon, title, body }) => (
+              <div key={title} className="rounded-xl bg-[#eaf6f9] px-4 py-6 text-center shadow-md">
+                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-[var(--svs-primary)] text-white">
+                  <Icon className="h-6 w-6" />
+                </span>
+                <h3 className="mt-3 text-base font-bold text-[var(--svs-primary-strong)]">{title}</h3>
+                <p className="mt-2 text-sm text-[var(--svs-primary-strong)]/85">{body}</p>
+              </div>
+            ))}
+          </div>
+          <form
+            onSubmit={handleSubscribe}
+            className="mx-auto mt-10 flex w-full max-w-xl items-center gap-2 rounded-full bg-white/95 px-2 py-2 shadow-md"
+          >
+            <input
+              type="email"
+              required
+              value={subscribeEmail}
+              onChange={(event) => setSubscribeEmail(event.target.value)}
+              placeholder="Your email for nursery offers & new arrivals"
+              className="min-w-0 flex-1 rounded-full bg-transparent px-4 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
+              aria-label="Email to subscribe for nursery offers"
+            />
+            <button type="submit" className={`${cudyBluePrimaryButtonClassName} rounded-full bg-[var(--svs-primary)] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}>
+              Subscribe
+            </button>
+          </form>
+          {subscribed ? (
+            <p className="mt-3 text-center text-sm font-semibold text-white drop-shadow">Thanks! You'll be first to hear about new plant arrivals and nursery offers.</p>
+          ) : null}
+        </div>
+      </div>
+
+      {/* ── Detail modal ── */}
+      {selectedItem ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="nursery-detail-title"
+          onClick={() => setSelectedItem(null)}
+        >
+          <div
+            className="relative max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setSelectedItem(null)}
+              aria-label="Close details"
+              className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-rose-500/80 text-white shadow transition hover:bg-rose-600/90"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <div className="grid max-h-[92vh] grid-cols-1 overflow-y-auto md:grid-cols-2">
+              <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100 md:aspect-auto md:h-full">
+                <img
+                  src={selectedItem.image}
+                  alt={selectedItem.title}
+                  className="h-full w-full object-cover"
+                  onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = nurseryImageFallback; }}
+                />
+              </div>
+              <div className="flex flex-col p-5 sm:p-6">
+                <h3 id="nursery-detail-title" className="text-xl font-bold text-[var(--svs-primary-strong)] sm:text-2xl">
+                  {selectedItem.title}
+                </h3>
+                {selectedItem.species ? (
+                  <p className="mt-0.5 text-sm italic text-slate-500">{selectedItem.species}</p>
+                ) : null}
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-[#e6f7fb] px-3 py-1 text-base font-semibold text-[var(--svs-primary-strong)]">
+                    {formatPrice(selectedItem)}
+                  </span>
+                  {selectedItem.category ? (
+                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700">{selectedItem.category}</span>
+                  ) : null}
+                  {selectedItem.careLevel ? (
+                    <span className={`rounded-full px-3 py-1 text-xs font-bold text-white ${selectedItem.careLevel === 'Easy' ? 'bg-emerald-500' : selectedItem.careLevel === 'Moderate' ? 'bg-amber-500' : 'bg-rose-600'}`}>
+                      {selectedItem.careLevel} care
+                    </span>
+                  ) : null}
+                </div>
+
+                <dl className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-700">
+                  {selectedItem.lightRequirement ? (
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Light</dt>
+                      <dd className="mt-0.5 font-medium">{selectedItem.lightRequirement}</dd>
+                    </div>
+                  ) : null}
+                  {selectedItem.wateringFrequency ? (
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Watering</dt>
+                      <dd className="mt-0.5 font-medium">{selectedItem.wateringFrequency}</dd>
+                    </div>
+                  ) : null}
+                  {selectedItem.potPlantSize ? (
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Size</dt>
+                      <dd className="mt-0.5 font-medium">{selectedItem.potPlantSize}</dd>
+                    </div>
+                  ) : null}
+                  {selectedItem.suitableFor ? (
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Suitable for</dt>
+                      <dd className="mt-0.5 font-medium">{selectedItem.suitableFor}</dd>
+                    </div>
+                  ) : null}
+                  {selectedItem.petSafe ? (
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Pet-safe</dt>
+                      <dd className={`mt-0.5 font-semibold ${selectedItem.petSafe === 'Yes' ? 'text-emerald-600' : selectedItem.petSafe === 'No' ? 'text-rose-600' : 'text-slate-500'}`}>
+                        {selectedItem.petSafe}
+                      </dd>
+                    </div>
+                  ) : null}
+                  {selectedItem.location ? (
+                    <div className="col-span-2 flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-[var(--svs-primary)]" />
+                      <span>{selectedItem.location}</span>
+                    </div>
+                  ) : null}
+                  {selectedItem.rating ? (
+                    <div className="col-span-2 flex items-center gap-2">
+                      <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                      <span className="font-semibold">{selectedItem.rating}</span>
+                      <span className="text-slate-500">({selectedItem.reviewCount || 0} reviews)</span>
+                    </div>
+                  ) : null}
+                  <div className="col-span-2">
+                    {isInStock(selectedItem) ? (
+                      selectedItem.quantity != null ? (
+                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                          In stock — {selectedItem.quantity} available
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">In stock</span>
+                      )
+                    ) : (
+                      <span className="inline-flex items-center rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">Currently Out of Stock</span>
+                    )}
+                  </div>
+                </dl>
+
+                {selectedItem.description ? (
+                  <div className="mt-4">
+                    <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">About this plant</h4>
+                    <p className="mt-1.5 text-sm leading-relaxed text-slate-700">{selectedItem.description}</p>
+                  </div>
+                ) : selectedItem.summary ? (
+                  <p className="mt-4 text-sm leading-relaxed text-slate-700">{selectedItem.summary}</p>
+                ) : null}
+
+                {selectedItem.sellerEmail ? (
+                  <p className="mt-4 text-xs text-slate-500">
+                    Seller: <span className="font-semibold text-slate-700">{selectedItem.sellerEmail}</span>
+                  </p>
+                ) : null}
+
+                <div className="mt-auto space-y-2 pt-5">
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleWishlist(selectedItem)}
+                      className="rounded-md border border-[var(--svs-primary)] bg-white py-2 text-sm font-semibold text-[var(--svs-primary)] transition hover:bg-[var(--svs-primary)]/10"
+                    >
+                      {wishSet.has(selectedItem.id) ? 'Remove from Wishlist' : 'Add to Wishlist'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!isInStock(selectedItem)}
+                      onClick={() => { setSelectedItem(null); handleAddToCart(selectedItem); }}
+                      className={`rounded-md py-2 text-sm font-semibold transition ${isInStock(selectedItem) ? `${cudyBluePrimaryButtonClassName} bg-[var(--svs-primary)] text-white hover:bg-[var(--svs-primary-strong)]` : 'cursor-not-allowed bg-slate-100 text-slate-400'}`}
+                    >
+                      {isInStock(selectedItem) ? 'Add to Cart' : 'Out of Stock'}
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedItem(null); openChat(selectedItem); }}
+                    className="flex w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-white py-2 text-sm font-semibold text-slate-700 transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Let&apos;s Chat For More Info
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+};
+
 const LIVESTOCK_TRUST_BG = 'https://images.pexels.com/photos/162801/sheep-flock-of-sheep-sheep-cheese-shepherd-162801.jpeg?auto=compress&cs=tinysrgb&w=1600';
 
 const LivestockHubPage = ({
@@ -36134,6 +36963,7 @@ const SearchResultsPage = ({ sellerItems = [] }) => {
       sellerItems,
       propertyItems: getPropertySellerListings(),
       livestockItems: getLivestockListings(),
+      nurseryItems: getNurseryListings(),
     }),
     [sellerItems],
   );
@@ -47938,6 +48768,7 @@ const MARKET_THEMES = {
   naturalResources: 'https://images.pexels.com/photos/2581922/pexels-photo-2581922.jpeg?auto=compress&cs=tinysrgb&w=1600',
   generalLabour: 'https://images.pexels.com/photos/36574302/pexels-photo-36574302.jpeg?auto=compress&cs=tinysrgb&w=1600',
   livestock: 'https://images.pexels.com/photos/422218/pexels-photo-422218.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  nursery: 'https://images.pexels.com/photos/1005058/pexels-photo-1005058.jpeg?auto=compress&cs=tinysrgb&w=1600',
   safety: 'https://images.pexels.com/photos/3661193/pexels-photo-3661193.jpeg?auto=compress&cs=tinysrgb&w=1600',
 };
 
@@ -48054,7 +48885,7 @@ const DIGEST_MARKET_LABELS = {
   bettingLotteryGames: 'Games', beverages: 'Drinks', homeCare: 'Book Service',
   tickets: 'Book Ticket', constructionTools: 'Hardware', directLinks: 'Commerce Link',
   generalLabour: 'Workforce', informalMarket: 'Vendors', votingProviders: 'Jewelry',
-  livestockHub: 'Livestock', naturalResources: 'Earth Resources', wellness: 'Pharmaceutics',
+  livestockHub: 'Livestock', nurseryHub: 'Nursery', naturalResources: 'Earth Resources', wellness: 'Pharmaceutics',
   propertyHub: 'Property', secondhand: 'Used Items', stationery: 'Stationery',
   safety: 'Toys', traditionalMedicines: 'Ancient Remedies',
 };
@@ -48064,7 +48895,7 @@ const DIGEST_MARKET_ROUTES = {
   bettingLotteryGames: '/betting-lottery-games', beverages: '/beverages-liquors', homeCare: '/home-care',
   tickets: '/tickets', constructionTools: '/building-construction-tools', directLinks: '/retailer-direct-links',
   generalLabour: '/general-labour-market', informalMarket: '/informal-market', votingProviders: '/voting-providers',
-  livestockHub: '/livestock-hub', naturalResources: '/natural-resources-minerals', wellness: '/wellness',
+  livestockHub: '/livestock-hub', nurseryHub: '/nursery-hub', naturalResources: '/natural-resources-minerals', wellness: '/wellness',
   propertyHub: '/property-hub', secondhand: '/secondhand-central', stationery: '/stationery-office',
   safety: '/safety', traditionalMedicines: '/traditional-medicines-herbs',
 };
@@ -51759,6 +52590,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/betting-lottery-games/confirm" element={<LotteryConfirmPage onBuyNow={onBuyNow} />} />
     <Route path="/international-lottery-games" element={<Navigate to="/betting-lottery-games" replace />} />
     <Route path="/livestock-hub" element={<LivestockHubPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} />} />
+    <Route path="/nursery-hub" element={<NurseryHubPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} />} />
     <Route path="/betting-hub" element={<Navigate to="/betting-lottery-games" replace />} />
     <Route path="/betting-voting" element={<Navigate to="/betting-lottery-games" replace />} />
     <Route path="/safety" element={<SafetyPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
@@ -51864,6 +52696,7 @@ const App = () => {
       sellerItems,
       propertyItems: getPropertySellerListings(),
       livestockItems: getLivestockListings(),
+      nurseryItems: getNurseryListings(),
     }),
     [sellerItems],
   );
