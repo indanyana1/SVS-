@@ -52161,7 +52161,7 @@ const SiteFooter = () => {
     <footer className="bg-gradient-to-b from-[#0c2a32] to-[#0f6674] text-white">
       {/* ── Main Footer Grid — compact 4 columns on mobile so it mirrors the desktop layout, then scales up on larger screens ── */}
       <div className="mx-auto w-full max-w-7xl px-3 pt-6 pb-5 sm:px-6 sm:pt-[60px] sm:pb-10 sm:px-8">
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-10">
+        <div className="grid grid-cols-1 gap-6 xs:grid-cols-2 sm:grid-cols-4 sm:gap-10">
           {/* Column 1 – Support */}
           <div>
             <h4 className="text-[10px] font-bold uppercase tracking-wide sm:whitespace-nowrap sm:text-sm">{t('footer.support')}</h4>
@@ -52221,8 +52221,8 @@ const SiteFooter = () => {
 
           {/* Column 4 – Quick Links */}
           <div>
-            <h4 className="ml-4 text-[10px] font-bold uppercase tracking-wide sm:ml-8 sm:whitespace-nowrap sm:text-sm">{t('footer.quickLinks')}</h4>
-            <ul className="ml-4 mt-1.5 space-y-1 text-[9px] sm:ml-8 sm:mt-4 sm:space-y-2 sm:text-sm">
+            <h4 className="text-[10px] font-bold uppercase tracking-wide sm:whitespace-nowrap sm:text-sm">{t('footer.quickLinks')}</h4>
+            <ul className="mt-1.5 space-y-1 text-[9px] sm:mt-4 sm:space-y-2 sm:text-sm">
               {footerLinks.quick.map((item) => (
                 <li key={item.href}>
                   <Link to={item.href} className="text-slate-200 transition hover:text-white hover:underline">{t(item.labelKey)}</Link>
