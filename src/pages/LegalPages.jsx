@@ -15,7 +15,7 @@ import { formatInBuyerCurrency, useBuyerCurrency } from '../lib/buyerCurrency';
  */
 
 const LAST_UPDATED = 'June 2026';
-const CONTACT_EMAIL = 'support@svs-ecommerce.com';
+const CONTACT_EMAIL = 'support@biznisdil.com';
 const COMPANY_NAME = 'Biznisdil';
 
 const Section = ({ id, title, children }) => (

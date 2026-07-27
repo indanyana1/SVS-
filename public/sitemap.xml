@@ -1,51 +1,51 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://svs-ecommerce.com/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
-  <url><loc>https://svs-ecommerce.com/markets</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
-  <url><loc>https://svs-ecommerce.com/offers</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
-  <url><loc>https://svs-ecommerce.com/search</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://biznisdil.com/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
+  <url><loc>https://biznisdil.com/markets</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://biznisdil.com/offers</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://biznisdil.com/search</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
 
   <!-- Marketplaces -->
-  <url><loc>https://svs-ecommerce.com/e-commerce</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
-  <url><loc>https://svs-ecommerce.com/tickets</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
-  <url><loc>https://svs-ecommerce.com/bookings-tickets</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
-  <url><loc>https://svs-ecommerce.com/groceries</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
-  <url><loc>https://svs-ecommerce.com/fast-food</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
-  <url><loc>https://svs-ecommerce.com/beverages-liquors</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
-  <url><loc>https://svs-ecommerce.com/building-construction-tools</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://svs-ecommerce.com/fashion-style</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
-  <url><loc>https://svs-ecommerce.com/traditional-medicines-herbs</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://svs-ecommerce.com/wellness</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://svs-ecommerce.com/stationery-office</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://svs-ecommerce.com/retailer-direct-links</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://svs-ecommerce.com/informal-market</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
-  <url><loc>https://svs-ecommerce.com/secondhand-central</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
-  <url><loc>https://svs-ecommerce.com/home-care</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://svs-ecommerce.com/hardware-software</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://svs-ecommerce.com/mobility-vehicles</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://svs-ecommerce.com/natural-resources-minerals</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://svs-ecommerce.com/safety</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://svs-ecommerce.com/property-hub</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
-  <url><loc>https://svs-ecommerce.com/livestock-hub</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
-  <url><loc>https://svs-ecommerce.com/betting-lottery-games</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
-  <url><loc>https://svs-ecommerce.com/voting-clients</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://svs-ecommerce.com/voting-providers</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://biznisdil.com/e-commerce</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://biznisdil.com/tickets</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://biznisdil.com/bookings-tickets</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://biznisdil.com/groceries</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://biznisdil.com/fast-food</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://biznisdil.com/beverages-liquors</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://biznisdil.com/building-construction-tools</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://biznisdil.com/fashion-style</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://biznisdil.com/traditional-medicines-herbs</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://biznisdil.com/wellness</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://biznisdil.com/stationery-office</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://biznisdil.com/retailer-direct-links</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://biznisdil.com/informal-market</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://biznisdil.com/secondhand-central</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://biznisdil.com/home-care</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://biznisdil.com/hardware-software</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://biznisdil.com/mobility-vehicles</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://biznisdil.com/natural-resources-minerals</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://biznisdil.com/safety</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://biznisdil.com/property-hub</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://biznisdil.com/livestock-hub</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://biznisdil.com/betting-lottery-games</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://biznisdil.com/voting-clients</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://biznisdil.com/voting-providers</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
 
   <!-- Selling -->
-  <url><loc>https://svs-ecommerce.com/sell</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://svs-ecommerce.com/sell/signup</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://svs-ecommerce.com/sell/signin</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://biznisdil.com/sell</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://biznisdil.com/sell/signup</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://biznisdil.com/sell/signin</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
 
   <!-- Account -->
-  <url><loc>https://svs-ecommerce.com/signin</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://svs-ecommerce.com/signup</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://biznisdil.com/signin</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://biznisdil.com/signup</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
 
   <!-- Information -->
-  <url><loc>https://svs-ecommerce.com/about</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://svs-ecommerce.com/blog</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://svs-ecommerce.com/careers</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
-  <url><loc>https://svs-ecommerce.com/help</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://svs-ecommerce.com/contact</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://svs-ecommerce.com/terms</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
-  <url><loc>https://svs-ecommerce.com/privacy</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://biznisdil.com/about</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://biznisdil.com/blog</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://biznisdil.com/careers</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://biznisdil.com/help</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://biznisdil.com/contact</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://biznisdil.com/terms</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://biznisdil.com/privacy</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
 </urlset>

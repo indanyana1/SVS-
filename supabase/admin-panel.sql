@@ -9,7 +9,7 @@
 --
 -- Seed the first admin manually after applying this migration:
 --   insert into admin_users (email, password_hash, full_name)
---   values ('owner@svs.app', crypt('REPLACE_ME', gen_salt('bf')), 'Site Owner');
+--   values ('owner@biznisdil.com', crypt('REPLACE_ME', gen_salt('bf')), 'Site Owner');
 
 create extension if not exists pgcrypto;
 

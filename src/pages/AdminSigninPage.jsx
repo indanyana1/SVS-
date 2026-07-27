@@ -270,7 +270,7 @@ const AdminSigninPage = () => {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  placeholder="admin@svs.app"
+                  placeholder="admin@biznisdil.com"
                   className="w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3 text-sm text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30"
                 />
               </div>

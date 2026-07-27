@@ -1581,222 +1581,194 @@ const buildBookingsPrototypeDetails = (item, locale = 'en-US') => {
 
 const homeHeroSlides = [
   {
-    id: 'hero-23',
-    image:
-      'https://images.pexels.com/photos/5480192/pexels-photo-5480192.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'ANCIENT REMEDIES',
-    title: 'Ancient Remedies',
-    subtitle: 'Authentic herbs & natural remedies',
-    route: '/traditional-medicines-herbs',
-  },
-  {
-    id: 'hero-1',
-    image:
-      'https://images.pexels.com/photos/6169668/pexels-photo-6169668.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'APPAREL',
-    title: 'Apparel',
-    subtitle: 'Trending clothing, shoes & accessories',
-    route: '/fashion-style',
-  },
-  {
-    id: 'hero-5',
-    image:
-      'https://images.pexels.com/photos/120049/pexels-photo-120049.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'AUTOMOBILITY',
-    title: 'Automobility',
-    subtitle: 'Cars, bikes & mobility solutions',
-    route: '/mobility-vehicles',
-  },
-  {
-    id: 'hero-9',
-    image:
-      'https://images.pexels.com/photos/3846022/pexels-photo-3846022.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'BOOK SERVICE',
-    title: 'Book Service',
-    subtitle: 'Cleaning, laundry & home essentials',
-    route: '/home-care',
-  },
-  {
-    id: 'hero-10',
-    image:
-      'https://images.pexels.com/photos/2747449/pexels-photo-2747449.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'BOOK TICKET',
-    title: 'Book Ticket',
-    subtitle: 'Events, travel & experience bookings',
-    route: '/tickets',
-  },
-  {
-    id: 'hero-12',
-    image:
-      'https://images.pexels.com/photos/230544/pexels-photo-230544.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'COMMERCE LINK',
-    title: 'Commerce Link',
-    subtitle: 'Quick links to top global retailers & brands',
-    route: '/retailer-direct-links',
-  },
-  {
-    id: 'hero-8',
-    image:
-      'https://images.pexels.com/photos/1283219/pexels-photo-1283219.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'DRINKS',
-    title: 'Drinks',
-    subtitle: 'Wines, spirits & refreshing drinks',
-    route: '/beverages-liquors',
-  },
-  {
-    id: 'hero-17',
-    image:
-      'https://images.pexels.com/photos/2101137/pexels-photo-2101137.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'EARTH RESOURCES',
-    title: 'Earth Resources',
-    subtitle: 'Quality raw materials & minerals',
-    route: '/natural-resources-minerals',
-  },
-  {
-    id: 'hero-4',
-    image:
-      'https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'FAST FOOD',
-    title: 'Fast Food',
-    subtitle: 'Hot meals delivered fast & fresh',
+    id: 'ad-1',
+    image: 'https://images.pexels.com/photos/825661/pexels-photo-825661.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    badge: 'SPONSORED',
+    market: 'Fast Food',
+    advertiser: "Mario's Pizzeria",
+    title: 'Hot & Fresh Pizzas',
+    tagline: 'Wood-fired crusts • 30-min delivery • Order now',
+    cta: 'Order Now',
     route: '/fast-food',
   },
   {
-    id: 'hero-7',
-    image:
-      'https://images.pexels.com/photos/6664248/pexels-photo-6664248.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'GAMES',
-    title: 'Games',
-    subtitle: 'Play, predict & win big',
-    route: '/betting-lottery-games',
-  },
-  {
-    id: 'hero-3',
-    image:
-      'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'GROCERY',
-    title: 'Grocery',
-    subtitle: 'Fresh produce & everyday essentials',
-    route: '/groceries',
-  },
-  {
-    id: 'hero-11',
-    image:
-      'https://images.pexels.com/photos/1249611/pexels-photo-1249611.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'HARDWARE',
-    title: 'Hardware',
-    subtitle: 'Tools & materials for every build',
-    route: '/building-construction-tools',
-  },
-  {
-    id: 'hero-15',
-    image:
-      'https://images.pexels.com/photos/1191531/pexels-photo-1191531.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'JEWELRY',
-    title: 'Jewelry',
-    subtitle: 'Jewellery & accessories from trusted sellers',
-    route: '/voting-providers',
-  },
-  {
-    id: 'hero-2',
-    image:
-      'https://images.pexels.com/photos/356056/pexels-photo-356056.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'LIFESTYLE TECH',
-    title: 'Lifestyle Tech',
-    subtitle: 'Lifestyle picks, tech & gadgets all in one place',
-    route: '/e-commerce',
-  },
-  {
-    id: 'hero-16',
-    image:
-      'https://images.pexels.com/photos/422218/pexels-photo-422218.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'LIVESTOCK',
-    title: 'Livestock',
-    subtitle: 'Buy & sell livestock with confidence',
+    id: 'ad-2',
+    image: 'https://images.pexels.com/photos/422218/pexels-photo-422218.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    badge: 'FEATURED',
+    market: 'Livestock',
+    advertiser: 'Ndlovu Game Farm',
+    title: 'Cape Buffalo & Nguni Bulls',
+    tagline: 'Disease-free • Farm-certified • Bulk pricing available',
+    cta: 'View Livestock',
     route: '/livestock-hub',
   },
   {
-    id: 'hero-17-nursery',
-    image:
-      'https://images.pexels.com/photos/1005058/pexels-photo-1005058.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'NURSERY',
-    title: 'Nursery',
-    subtitle: 'Seeds, plants, herbs & gardening supplies from local nurseries',
-    route: '/nursery-hub',
+    id: 'ad-3',
+    image: 'https://images.pexels.com/photos/3680094/pexels-photo-3680094.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    badge: 'SPONSORED',
+    market: 'Lifestyle Tech',
+    advertiser: 'PrintPro Industrial',
+    title: 'Industrial Printing Machines',
+    tagline: 'Offset, digital & large-format • Bulk orders • Nationwide delivery',
+    cta: 'Get a Quote',
+    route: '/e-commerce',
   },
   {
-    id: 'hero-18',
-    image:
-      'https://images.pexels.com/photos/3735149/pexels-photo-3735149.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'PHARMACEUTICS',
-    title: 'Pharmaceutics',
-    subtitle: 'Pharmacy, health & wellness products',
-    route: '/wellness',
-  },
-  {
-    id: 'hero-19',
-    image:
-      'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'PROPERTY',
-    title: 'Property',
-    subtitle: 'Homes, rentals & commercial space',
+    id: 'ad-4',
+    image: 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    badge: 'FEATURED',
+    market: 'Property',
+    advertiser: 'SA Premier Properties',
+    title: 'Prime Properties Available',
+    tagline: 'Homes, apartments & commercial spaces across South Africa',
+    cta: 'View Properties',
     route: '/property-hub',
   },
   {
-    id: 'hero-21',
-    image:
-      'https://images.pexels.com/photos/6444/pencil-typography-black-design.jpg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'STATIONERY',
-    title: 'Stationery',
-    subtitle: 'Office, school & creative supplies',
-    route: '/stationery-office',
+    id: 'ad-5',
+    image: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    badge: 'SPONSORED',
+    market: 'Grocery',
+    advertiser: 'Farm Fresh Direct',
+    title: 'Farm-Fresh Groceries',
+    tagline: 'Delivered daily from local farms • Fresh stock every morning',
+    cta: 'Shop Now',
+    route: '/groceries',
   },
   {
-    id: 'hero-22',
-    image:
-      'https://images.pexels.com/photos/163064/play-stone-network-networked-163064.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'TOYS',
-    title: 'Toys',
-    subtitle: 'Toys, games & kids essentials',
-    route: '/safety',
+    id: 'ad-6',
+    image: 'https://images.pexels.com/photos/2101137/pexels-photo-2101137.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    badge: 'FEATURED',
+    market: 'Earth Resources',
+    advertiser: 'Rand Minerals Exchange',
+    title: 'Premium Gold & Minerals',
+    tagline: 'Raw gold, platinum & aggregates • Verified suppliers only',
+    cta: 'Browse Minerals',
+    route: '/natural-resources-minerals',
   },
   {
-    id: 'hero-20',
-    image:
-      'https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'USED ITEMS',
-    title: 'Used Items',
-    subtitle: 'Quality pre-loved goods at great prices',
-    route: '/secondhand-central',
+    id: 'ad-7',
+    image: 'https://images.pexels.com/photos/120049/pexels-photo-120049.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    badge: 'SPONSORED',
+    market: 'Automobility',
+    advertiser: 'AutoNation Motors',
+    title: 'Quality Vehicles — New & Used',
+    tagline: 'Competitive pricing • Test drives available • Finance options',
+    cta: 'View Cars',
+    route: '/mobility-vehicles',
   },
   {
-    id: 'hero-14',
-    image:
-      'https://images.pexels.com/photos/2292953/pexels-photo-2292953.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'VENDORS',
-    title: 'Vendors',
-    subtitle: 'Street traders, spazas & informal seller listings',
-    route: '/informal-market',
-  },
-  {
-    id: 'hero-6',
-    image:
-      'https://images.pexels.com/photos/3757376/pexels-photo-3757376.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'WELLNESS',
-    title: 'Wellness',
-    subtitle: 'Beauty, fitness & sports essentials',
+    id: 'ad-8',
+    image: 'https://images.pexels.com/photos/3757376/pexels-photo-3757376.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    badge: 'FEATURED',
+    market: 'Wellness',
+    advertiser: 'Glam Studio Sandton',
+    title: 'Premium Hair & Beauty',
+    tagline: 'Cuts, colour, braids & extensions • Walk-ins welcome',
+    cta: 'Book Now',
     route: '/voting-clients',
   },
   {
-    id: 'hero-13',
-    image:
-      'https://images.pexels.com/photos/1216589/pexels-photo-1216589.jpeg?auto=compress&cs=tinysrgb&w=1920',
-    label: 'WORKFORCE',
-    title: 'Workforce',
-    subtitle: 'Skilled & unskilled workers for hire',
-    route: '/general-labour-market',
+    id: 'ad-9',
+    image: 'https://images.pexels.com/photos/6169668/pexels-photo-6169668.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    badge: 'SPONSORED',
+    market: 'Apparel',
+    advertiser: 'Style House SA',
+    title: 'Latest Fashion Arrivals',
+    tagline: 'Clothing, shoes & accessories • New stock every week',
+    cta: 'Shop Fashion',
+    route: '/fashion-style',
+  },
+  {
+    id: 'ad-10',
+    image: 'https://images.pexels.com/photos/1249611/pexels-photo-1249611.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    badge: 'FEATURED',
+    market: 'Hardware',
+    advertiser: 'BuildMart Hardware',
+    title: 'Construction & Hardware',
+    tagline: 'Tools, cement, steel & materials • Contractor & retail pricing',
+    cta: 'Shop Hardware',
+    route: '/building-construction-tools',
+  },
+  {
+    id: 'ad-11',
+    image: 'https://images.pexels.com/photos/5480192/pexels-photo-5480192.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    badge: 'SPONSORED',
+    market: 'Ancient Remedies',
+    advertiser: 'Ubuntu Herbal Wellness',
+    title: 'Authentic African Herbs',
+    tagline: 'Traditional remedies, teas & plant medicine from trusted suppliers',
+    cta: 'Explore Herbs',
+    route: '/traditional-medicines-herbs',
+  },
+  {
+    id: 'ad-12',
+    image: 'https://images.pexels.com/photos/931177/pexels-photo-931177.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    badge: 'FEATURED',
+    market: 'Nursery',
+    advertiser: 'Green Thumb Nurseries',
+    title: 'Plants, Seeds & Seedlings',
+    tagline: 'Locally grown • Herbs, saplings, flowers & gardening supplies',
+    cta: 'Browse Plants',
+    route: '/nursery-hub',
   },
 ];
+
+const MARKET_DISPLAY_NAMES = {
+  ecommerce: 'Lifestyle Tech',
+  groceries: 'Grocery',
+  fastFood: 'Fast Food',
+  fashionStyle: 'Apparel',
+  mobilityVehicles: 'Automobility',
+  beautyFitnessSports: 'Wellness',
+  beverages: 'Drinks',
+  homeCare: 'Home Care',
+  tickets: 'Tickets',
+  constructionTools: 'Hardware',
+  informalMarket: 'Vendors',
+  generalLabour: 'Workforce',
+  jewelleryAccessories: 'Jewelry',
+  livestock: 'Livestock',
+  nursery: 'Nursery',
+  naturalResources: 'Earth Resources',
+  wellness: 'Pharmaceutics',
+  property: 'Property',
+  secondhand: 'Used Items',
+  stationery: 'Stationery',
+  toysKids: 'Toys',
+  traditionalMedicines: 'Ancient Remedies',
+  hardwareSoftware: 'Electronics',
+};
+
+const buildSellerAdSlides = (sellerItems) => {
+  const slides = (sellerItems || [])
+    .filter((item) => item.image && item.title && !item.isPaused)
+    .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
+    .slice(0, 12)
+    .map((item, idx) => {
+      const marketName = MARKET_DISPLAY_NAMES[item.marketKey] || item.marketKey || 'Marketplace';
+      const rawDesc = item.description || '';
+      const tagline = rawDesc
+        ? rawDesc.slice(0, 100) + (rawDesc.length > 100 ? '…' : '')
+        : [item.category, item.location].filter(Boolean).join(' • ') || `Available now in ${marketName}`;
+      const advertiser = item.sellerName || item.sellerEmail || 'Verified Seller';
+      const itemId = item.id || item.key || String(idx);
+      const baseRoute = item.route || '/';
+      const itemRoute = `${baseRoute}?focus=${encodeURIComponent(itemId)}`;
+      return {
+        id: `ad-seller-${itemId}`,
+        image: item.image,
+        badge: idx % 2 === 0 ? 'FEATURED' : 'SPONSORED',
+        market: marketName,
+        advertiser,
+        title: item.title,
+        tagline,
+        cta: 'View Item',
+        route: itemRoute,
+      };
+    });
+  return slides.length > 0 ? slides : homeHeroSlides;
+};
 
 const featureSlides = [
   {
@@ -6928,7 +6900,7 @@ const footerLinks = {
     { labelKey: 'footer.blog', href: '/blog' },
   ],
   support: [
-    { labelKey: 'footer.help', href: '/support/chat', state: { recipientEmail: 'support@svs.app', recipientName: 'Biznisdil Agent' } },
+    { labelKey: 'footer.help', href: '/support/chat', state: { recipientEmail: 'support@biznisdil.com', recipientName: 'Biznisdil Agent' } },
     { labelKey: 'footer.terms', href: '/terms' },
     { labelKey: 'footer.privacy', href: '/privacy' },
     { labelKey: 'footer.refunds', href: '/refunds' },
@@ -9408,8 +9380,8 @@ const getCartSubtotal = (cartItems) => cartItems.reduce((total, item) => {
   return total + convertAmount(lineTotal, fromCurrency, _fxState.buyerCurrency);
 }, 0);
 const getServiceFee = (subtotal) => subtotal * 0.03;
-const GUEST_ORDER_EMAIL = 'guest@svs.app';
-const SUPPORT_ADMIN_EMAIL = 'support@svs.app';
+const GUEST_ORDER_EMAIL = 'guest@biznisdil.com';
+const SUPPORT_ADMIN_EMAIL = 'support@biznisdil.com';
 const SUPPORT_ADMIN_NAME = 'Biznisdil Agent';
 const STANDARD_SHIPPING_FEE = 150;
 const SOUTH_AFRICA_PROVINCES = [
@@ -12172,10 +12144,11 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
   );
 };
 
-const HomePage = () => {
+const HomePage = ({ sellerItems = [] }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const isAuthenticated = getAuthState();
+  const adSlides = useMemo(() => buildSellerAdSlides(sellerItems), [sellerItems]);
   const [activeSlide, setActiveSlide] = useState(0);
   const touchStartX = useRef(null);
 
@@ -12222,17 +12195,17 @@ const HomePage = () => {
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      setActiveSlide((prev) => (prev + 1) % homeHeroSlides.length);
+      setActiveSlide((prev) => (prev + 1) % adSlides.length);
     }, 5000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [adSlides]);
 
   const goToSlide = (index) => {
-    const normalized = (index + homeHeroSlides.length) % homeHeroSlides.length;
+    const normalized = (index + adSlides.length) % adSlides.length;
     setActiveSlide(normalized);
   };
 
-  const slide = homeHeroSlides[activeSlide];
+  const slide = adSlides[activeSlide];
 
   // Map slide id or route to a more relevant page if needed
   const getLearnMoreRoute = (slide) => {
@@ -12259,22 +12232,45 @@ const HomePage = () => {
             <img
               src={slide.image}
               alt={slide.title}
-              className="h-[140px] w-full object-cover sm:h-[420px] md:h-[520px]"
+              className="h-[200px] w-full object-cover sm:h-[420px] md:h-[520px]"
               loading="eager"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/20" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10" />
 
-            <div className="absolute inset-0 flex flex-col items-center justify-center px-2 text-center sm:px-4">
-              <p className="rounded-full bg-[var(--svs-primary)] px-1.5 py-[1px] text-[8px] font-semibold text-white sm:px-4 sm:py-1 sm:text-sm">{slide.label}</p>
-              <h1 className="mt-1 text-[13px] font-bold leading-tight text-white sm:mt-4 sm:text-4xl md:text-5xl lg:text-6xl">{slide.title}</h1>
-              <p className="mt-0.5 text-[8px] leading-snug text-slate-100 sm:mt-3 sm:text-lg md:text-2xl">{slide.subtitle}</p>
-              <button
-                type="button"
-                onClick={() => navigate(getLearnMoreRoute(slide))}
-                className={`${cudyBluePrimaryButtonClassName} mt-1.5 rounded-full bg-[var(--svs-primary)] px-2.5 py-1 text-[9px] font-semibold text-white shadow-lg transition hover:scale-105 hover:bg-[#33b9f2] sm:mt-6 sm:px-8 sm:py-3 sm:text-base`}
-              >
-                {t('common.learnMore')}
-              </button>
+            {/* Mobile: badge top-left · market top-right · content + CTA anchored bottom */}
+            {/* Desktop (sm+): everything centred as before */}
+            <div className="absolute inset-0 flex flex-col justify-between p-3 pb-8 sm:items-center sm:justify-center sm:p-6 sm:pb-6 sm:text-center">
+              {/* Top row */}
+              <div className="flex w-full items-start justify-between sm:justify-center sm:gap-2">
+                <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest sm:px-3 sm:py-1 sm:text-[11px] ${slide.badge === 'SPONSORED' ? 'bg-amber-400 text-black' : 'bg-emerald-400 text-black'}`}>
+                  {slide.badge}
+                </span>
+                {slide.market ? (
+                  <span className="rounded-full border border-white/40 bg-white/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white sm:px-2.5 sm:py-1 sm:text-[10px]">
+                    {slide.market}
+                  </span>
+                ) : null}
+              </div>
+
+              {/* Bottom content block */}
+              <div className="sm:flex sm:flex-col sm:items-center">
+                <p className="text-[9px] font-semibold text-white/75 sm:text-sm">
+                  {slide.advertiser}
+                </p>
+                <h1 className="mt-0.5 text-[15px] font-bold leading-tight text-white drop-shadow sm:mt-1 sm:text-4xl md:text-5xl lg:text-6xl">
+                  {slide.title}
+                </h1>
+                <p className="mt-0.5 line-clamp-1 text-[9px] leading-snug text-slate-200 sm:mt-3 sm:line-clamp-none sm:max-w-2xl sm:text-base md:text-xl">
+                  {slide.tagline}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => navigate(getLearnMoreRoute(slide))}
+                  className="mt-2 w-full rounded-full bg-[var(--svs-primary)] px-3 py-1.5 text-[10px] font-semibold text-white shadow-lg transition hover:scale-105 hover:bg-[#33b9f2] sm:mt-6 sm:w-auto sm:px-8 sm:py-3 sm:text-base"
+                >
+                  {slide.cta}
+                </button>
+              </div>
             </div>
 
             <button
@@ -12295,7 +12291,7 @@ const HomePage = () => {
             </button>
 
             <div className="absolute bottom-1.5 left-1/2 flex -translate-x-1/2 items-center gap-1.5 sm:bottom-4 sm:gap-2">
-              {homeHeroSlides.map((hero, index) => (
+              {adSlides.map((hero, index) => (
                 <button
                   key={hero.id}
                   type="button"
@@ -15844,7 +15840,7 @@ const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
             const sellerEmail = normalizeEmail(item.sellerEmail || '');
             navigate('/support/chat', {
               state: {
-                recipientEmail: sellerEmail || 'support@svs.app',
+                recipientEmail: sellerEmail || 'support@biznisdil.com',
                 recipientName: item.sellerName || item.sellerEmail || 'Biznisdil Support',
                 recipientRole: 'seller',
                 issueType: 'Pharmaceutics Enquiry',
@@ -34590,7 +34586,7 @@ const LotteryConfirmPage = () => {
     const fullName = String(player?.name || '').trim();
     const [firstName = '', ...lastNameParts] = fullName.split(/\s+/).filter(Boolean);
     const lastName = lastNameParts.join(' ');
-    const normalizedEmail = normalizeEmail(String(player?.email || '').trim()) || 'guest@svs.app';
+    const normalizedEmail = normalizeEmail(String(player?.email || '').trim()) || 'guest@biznisdil.com';
     const composedPhone = String(player?.phone || '').trim();
     const feeTotal = Number((processingFee + taxAmount).toFixed(2));
 
@@ -34907,7 +34903,7 @@ const NurseryHubPage = ({
     const itemKey = item.key || item.id;
     navigate('/support/chat', {
       state: {
-        recipientEmail: normalizeEmail(item.sellerEmail || 'support@svs.app'),
+        recipientEmail: normalizeEmail(item.sellerEmail || 'support@biznisdil.com'),
         recipientName: item.sellerName || item.sellerEmail || 'Biznisdil Support',
         recipientRole: 'seller',
         issueType: 'Nursery Enquiry',
@@ -35843,7 +35839,7 @@ const LivestockHubPage = ({
                           const itemKey = item.key || item.id;
                           navigate('/support/chat', {
                             state: {
-                              recipientEmail: normalizeEmail(item.sellerEmail || 'support@svs.app'),
+                              recipientEmail: normalizeEmail(item.sellerEmail || 'support@biznisdil.com'),
                               recipientName: item.sellerName || item.sellerEmail || 'Biznisdil Support',
                               recipientRole: 'seller',
                               issueType: 'Livestock Enquiry',
@@ -36082,7 +36078,7 @@ const LivestockHubPage = ({
                       setSelectedItem(null);
                       navigate('/support/chat', {
                         state: {
-                          recipientEmail: normalizeEmail(selectedItem.sellerEmail || 'support@svs.app'),
+                          recipientEmail: normalizeEmail(selectedItem.sellerEmail || 'support@biznisdil.com'),
                           recipientName: selectedItem.sellerName || selectedItem.sellerEmail || 'Biznisdil Support',
                           recipientRole: 'seller',
                           issueType: 'Livestock Enquiry',
@@ -36671,6 +36667,12 @@ const MarketsPage = ({ sellerItems = [] }) => {
   return (
     <section className="bg-[var(--svs-bg)] px-4 py-10">
     <div className="mx-auto w-full max-w-7xl">
+      {/* Sticky brand banner — stays in view on scroll */}
+      <div className="sticky top-[64px] z-30 -mx-4 mb-3 flex items-center justify-center bg-[var(--svs-bg)]/95 py-2 backdrop-blur-sm sm:top-[68px]">
+        <Link to="/" className="text-xl font-extrabold tracking-tight text-[var(--svs-primary)] sm:text-2xl">
+          Biznisdil
+        </Link>
+      </div>
       <div className="mb-5 text-center sm:mb-6">
         <h1 className="text-2xl font-extrabold tracking-tight text-[var(--svs-primary-strong)] sm:text-3xl">
           Global, National &amp; Local Markets
@@ -36679,7 +36681,7 @@ const MarketsPage = ({ sellerItems = [] }) => {
       {hasTrendingItems ? (
         <TrendingSellerHero items={trendingSellerItems} />
       ) : (
-        <div className="relative overflow-hidden rounded-2xl border border-[var(--svs-border)] p-6 pb-10 shadow-[0_4px_8px_rgba(0,0,0,0.1)] sm:p-8 sm:pb-12">
+        <div className="relative min-h-[180px] overflow-hidden rounded-2xl border border-[var(--svs-border)] shadow-[0_4px_8px_rgba(0,0,0,0.1)] sm:min-h-[240px]">
           {MARKETS_HERO_SLIDES.map((slideUrl, slideIndex) => (
             <div
               key={slideUrl}
@@ -36692,26 +36694,38 @@ const MarketsPage = ({ sellerItems = [] }) => {
             />
           ))}
           <div
-            className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/55 to-black/30"
+            className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/40 to-black/20"
             aria-hidden="true"
           />
-          <div className="relative z-10">
-            <div className="mt-6 flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-white/30 bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">{t('marketsPage.tags.superService')}</span>
-              <span className="rounded-full border border-white/30 bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">{t('marketsPage.tags.superShopping')}</span>
-              <span className="rounded-full border border-white/30 bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">{t('marketsPage.tags.intelligentPlatform')}</span>
-            </div>
-            <div className="mt-5 flex gap-1.5" aria-hidden="true">
-              {MARKETS_HERO_SLIDES.map((slideUrl, slideIndex) => (
-                <span
-                  key={`indicator-${slideUrl}`}
-                  className={`h-1.5 rounded-full transition-all duration-500 ${
-                    slideIndex === activeHeroSlide ? 'w-6 bg-white' : 'w-1.5 bg-white/50'
-                  }`}
-                />
-              ))}
+
+          {/* Overlay: SuperService top-left · SuperShopping top-right · button bottom-center */}
+          <div className="absolute inset-0 z-10 flex flex-col justify-between p-4 sm:p-6">
+            {/* Top row */}
+            <div className="flex items-start justify-between">
+              <span className="rounded-full border border-white/30 bg-white/15 px-2.5 py-1 text-[10px] font-semibold text-white backdrop-blur-sm sm:px-3 sm:text-xs">
+                {t('marketsPage.tags.superService')}
+              </span>
+              <span className="rounded-full border border-white/30 bg-white/15 px-2.5 py-1 text-[10px] font-semibold text-white backdrop-blur-sm sm:px-3 sm:text-xs">
+                {t('marketsPage.tags.superShopping')}
+              </span>
             </div>
 
+            {/* Bottom: slide dots + "One Intelligent Platform" button */}
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex gap-1.5" aria-hidden="true">
+                {MARKETS_HERO_SLIDES.map((slideUrl, slideIndex) => (
+                  <span
+                    key={`indicator-${slideUrl}`}
+                    className={`h-1.5 rounded-full transition-all duration-500 ${
+                      slideIndex === activeHeroSlide ? 'w-6 bg-white' : 'w-1.5 bg-white/50'
+                    }`}
+                  />
+                ))}
+              </div>
+              <span className="rounded-full border border-white/40 bg-white/20 px-5 py-1.5 text-[11px] font-bold tracking-wide text-white backdrop-blur-sm sm:px-7 sm:py-2 sm:text-sm">
+                {t('marketsPage.tags.intelligentPlatform')}
+              </span>
+            </div>
           </div>
         </div>
       )}
@@ -37140,7 +37154,7 @@ const buildWishlistShareUrl = ({ items = [], senderName = '', note = '', occasio
   };
   const encoded = toUrlSafeBase64(JSON.stringify(payload));
   if (!encoded) return '';
-  const origin = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : 'https://svs-ecommerce.com';
+  const origin = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : 'https://biznisdil.com';
   return `${origin}${WISHLIST_SHARE_PATH}?d=${encoded}`;
 };
 
@@ -38884,7 +38898,7 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
       },
       prefillCheckout: formState,
       totals,
-      contactEmail: normalizedContactEmail || 'guest@svs.app',
+      contactEmail: normalizedContactEmail || 'guest@biznisdil.com',
     };
     writePendingPayfastSession(payfastSession);
     setIsSubmitting(false);
@@ -38991,7 +39005,7 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
                       <button
                         type="button"
                         onClick={() => handleRemove(item)}
-                        className="ml-auto text-xs font-semibold text-[var(--svs-muted)] underline-offset-2 transition hover:text-[#d94d4d] hover:underline"
+                        className="ml-auto whitespace-nowrap text-xs font-semibold text-[var(--svs-muted)] underline-offset-2 transition hover:text-[#d94d4d] hover:underline"
                       >
                         Remove
                       </button>
@@ -52513,7 +52527,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
 
   return (
   <Routes>
-    <Route path="/" element={<HomePage />} />
+    <Route path="/" element={<HomePage sellerItems={sellerItems} />} />
     <Route path="/logo" element={<LogoFullscreenPage />} />
     <Route path="/markets" element={<MarketsPage sellerItems={sellerItems} />} />
     <Route path="/offers" element={<OffersPage />} />

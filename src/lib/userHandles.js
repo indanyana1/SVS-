@@ -90,7 +90,7 @@ export const buildShareLink = (handle) => {
   if (!cleaned) return '';
   const origin = (typeof window !== 'undefined' && window.location?.origin)
     ? window.location.origin
-    : 'https://svs-ecommerce.com';
+    : 'https://biznisdil.com';
   return `${origin}/u/${encodeURIComponent(cleaned)}`;
 };
 

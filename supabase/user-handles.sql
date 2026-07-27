@@ -3,7 +3,7 @@
 -- ------------------------------------------------------------
 -- Adds a public, URL-friendly `user_handle` to `account_users`
 -- so every registered person gets a profile link they can share
--- (e.g. https://svs-ecommerce.com/u/jane-doe-4f2a).  Anyone who
+-- (e.g. https://biznisdil.com/u/jane-doe-4f2a).  Anyone who
 -- opens that link can start a 1-to-1 chat with the owner.
 --
 -- Run once against your Supabase project (idempotent).

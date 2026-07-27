@@ -8,4 +8,4 @@ Disallow: /orders
 Disallow: /checkout
 Disallow: /reset-password
 
-Sitemap: https://svs-ecommerce.com/sitemap.xml
+Sitemap: https://biznisdil.com/sitemap.xml
