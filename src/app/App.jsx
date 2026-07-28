@@ -11598,7 +11598,7 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
               onChange={(event) => setQuery(event.target.value)}
               onFocus={() => setIsSearchFocused(true)}
               placeholder={t('search.placeholder')}
-              className="w-full rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] py-2 pl-9 pr-28 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/40"
+              className="w-full rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] py-2 pl-9 pr-9 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/40"
               aria-label={t('search.globalAria')}
             />
             <div className="absolute right-1.5 top-1/2 flex -translate-y-1/2 items-center gap-1">
@@ -11615,16 +11615,9 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
                   <X className="h-4 w-4" />
                 </button>
               ) : null}
-              <button
-                type="submit"
-                className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[var(--svs-primary)] px-3 text-xs font-bold text-white shadow-sm transition hover:bg-[var(--svs-primary-strong)]"
-              >
-                <Search className="h-3.5 w-3.5" />
-                Search
-              </button>
             </div>
             {isSearchFocused || query.trim() ? (
-              <div className="fixed inset-x-2 top-[68px] z-[85] max-h-[80vh] overflow-y-auto rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3 shadow-2xl sm:absolute sm:inset-x-auto sm:left-0 sm:right-0 sm:top-[calc(100%+8px)] sm:max-h-none sm:w-auto sm:overflow-visible">
+              <div className="fixed inset-x-2 top-[68px] z-[85] max-h-[80vh] overflow-y-auto rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3 shadow-2xl sm:absolute sm:inset-x-auto sm:left-0 sm:top-[calc(100%+8px)] sm:max-h-[80vh] sm:min-w-[480px] sm:overflow-y-auto">
                 <div className="mb-3 flex items-start justify-between gap-2 px-1">
                   <p className="flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--svs-muted)]">
                     <Sparkles className="h-3.5 w-3.5 text-[var(--svs-primary)]" />
