@@ -29718,7 +29718,7 @@ const WalletStripeTopUpForm = ({ amountLabel, onSuccess, onCancel }) => {
 
   return (
     <div className="mt-4 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4">
-      <p className="text-xs font-semibold text-[var(--svs-text)]">Pay securely with Stripe</p>
+      <p className="text-xs font-semibold text-[var(--svs-text)]">Pay securely</p>
       <div className="mt-3 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3">
         <PaymentElement options={{ layout: 'tabs' }} />
       </div>
@@ -39424,7 +39424,7 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
                 <div className="min-w-0">
                   <h3 className="text-base font-bold text-[var(--svs-text)]">Card Details</h3>
                   <p className="mt-1 text-xs text-[var(--svs-muted)]">
-                    For your security, your card number, expiry, and CVV are entered on the next step inside Stripe&apos;s encrypted form. We never see or store your raw card data.
+                    For your security, your card number, expiry, and CVV are entered on the next step inside an encrypted form. We never see or store your raw card data.
                   </p>
                 </div>
               </div>
@@ -39561,7 +39561,7 @@ const StripeCardPaymentPanel = ({
     <>
       <div className="rounded-[24px] border border-[#e2dbd0] bg-[#fbfaf7] p-5">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8a7967]">Card payment</p>
-        <p className="mt-2 text-sm text-[#4d463d]">Your card payment is processed securely with Stripe using the existing payment integration.</p>
+        <p className="mt-2 text-sm text-[#4d463d]">Your card payment is processed securely using our encrypted payment integration.</p>
         <div className="mt-4 rounded-[20px] border border-[#e2dbd0] bg-white p-4">
           <PaymentElement options={{ layout: 'tabs' }} />
         </div>
@@ -40062,7 +40062,7 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
           ) : isCardPaymentMethod ? (
             isPreparingStripe ? (
               <div className="rounded-2xl border border-[#e2dbd0] bg-[#fbfaf7] px-5 py-4 text-sm text-[#4d463d]">
-                Preparing secure Stripe card payment...
+                Preparing secure card payment...
               </div>
             ) : stripeClientSecret ? (
               <Elements stripe={stripePromise} options={{ clientSecret: stripeClientSecret }}>

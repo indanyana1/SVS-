@@ -528,7 +528,7 @@ export const CookiePolicyPage = () => {
 
       <Section id="cookie-3p" title="3. Third-party cookies">
         <p>
-          Some services we use (such as Stripe for payments or address autocomplete providers) may set their own
+          Some services we use (such as our payment processor or address autocomplete providers) may set their own
           cookies when their components load. We do not control these cookies — please see those providers&rsquo;
           privacy policies for details.
         </p>
