@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 import StandalonePageShell from '../components/layout/StandalonePageShell';
 import { hasSupabaseEnv, supabase } from '../lib/supabase';
 
@@ -54,6 +55,7 @@ const SignupPage = () => {
 	const navigate = useNavigate();
 	const [formData, setFormData] = useState({ name: '', email: '', contact: '', password: '' });
 	const [fieldErrors, setFieldErrors] = useState({});
+	const [showPassword, setShowPassword] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [message, setMessage] = useState('');
 	const [messageType, setMessageType] = useState('idle');
@@ -236,18 +238,28 @@ const SignupPage = () => {
 							<label htmlFor="signup-password" className="mb-1 block text-sm font-medium text-slate-200">
 								Password <span className="text-red-400">*</span>
 							</label>
-							<input
-								id="signup-password"
-								type="password"
-								name="password"
-								value={formData.password}
-								onChange={handleChange}
-								placeholder="Create your password (min 6 chars)"
-								autoComplete="new-password"
-								className={fieldClass('password')}
-								aria-invalid={Boolean(fieldErrors.password)}
-								aria-describedby={fieldErrors.password ? 'signup-password-error' : undefined}
-							/>
+							<div className="relative">
+								<input
+									id="signup-password"
+									type={showPassword ? 'text' : 'password'}
+									name="password"
+									value={formData.password}
+									onChange={handleChange}
+									placeholder="Create your password (min 6 chars)"
+									autoComplete="new-password"
+									className={fieldClass('password') + ' pr-10'}
+									aria-invalid={Boolean(fieldErrors.password)}
+									aria-describedby={fieldErrors.password ? 'signup-password-error' : undefined}
+								/>
+								<button
+									type="button"
+									onClick={() => setShowPassword((v) => !v)}
+									className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+									aria-label={showPassword ? 'Hide password' : 'Show password'}
+								>
+									{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+								</button>
+							</div>
 							{fieldErrors.password && (
 								<p id="signup-password-error" className="mt-1 flex items-center gap-1 text-xs font-medium text-red-400">
 									<svg className="h-3 w-3 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>

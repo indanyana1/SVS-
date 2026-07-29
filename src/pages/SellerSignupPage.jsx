@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Store } from 'lucide-react';
+import { ArrowLeft, Store, Eye, EyeOff } from 'lucide-react';
 import StandalonePageShell from '../components/layout/StandalonePageShell';
 import { savePendingSellerSignupDraft } from './sellerSignupDraft';
 
@@ -79,6 +79,8 @@ const SellerSignupPage = () => {
 		confirmPassword: '',
 	});
 	const [fieldErrors, setFieldErrors] = useState({});
+	const [showPassword, setShowPassword] = useState(false);
+	const [showConfirm, setShowConfirm] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [message, setMessage] = useState('');
 	const [messageType, setMessageType] = useState('idle');
@@ -231,18 +233,28 @@ const SellerSignupPage = () => {
 							<label htmlFor="seller-reg-password" className="mb-1.5 block text-sm font-semibold">
 								Password <span className="text-red-500">*</span>
 							</label>
-							<input
-								id="seller-reg-password"
-								type="password"
-								name="password"
-								value={formData.password}
-								onChange={handleChange}
-								placeholder="Create a strong password (min 6 chars)"
-								autoComplete="new-password"
-								className={inputClass('password')}
-								aria-invalid={Boolean(fieldErrors.password)}
-								aria-describedby={fieldErrors.password ? 'sr-password-error' : undefined}
-							/>
+							<div className="relative">
+								<input
+									id="seller-reg-password"
+									type={showPassword ? 'text' : 'password'}
+									name="password"
+									value={formData.password}
+									onChange={handleChange}
+									placeholder="Create a strong password (min 6 chars)"
+									autoComplete="new-password"
+									className={inputClass('password') + ' pr-10'}
+									aria-invalid={Boolean(fieldErrors.password)}
+									aria-describedby={fieldErrors.password ? 'sr-password-error' : undefined}
+								/>
+								<button
+									type="button"
+									onClick={() => setShowPassword((v) => !v)}
+									className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--svs-muted)] hover:text-[var(--svs-text)]"
+									aria-label={showPassword ? 'Hide password' : 'Show password'}
+								>
+									{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+								</button>
+							</div>
 							<ErrorMsg id="sr-password-error" message={fieldErrors.password} />
 						</div>
 
@@ -250,18 +262,28 @@ const SellerSignupPage = () => {
 							<label htmlFor="seller-reg-confirm" className="mb-1.5 block text-sm font-semibold">
 								Confirm Password <span className="text-red-500">*</span>
 							</label>
-							<input
-								id="seller-reg-confirm"
-								type="password"
-								name="confirmPassword"
-								value={formData.confirmPassword}
-								onChange={handleChange}
-								placeholder="Repeat your password"
-								autoComplete="new-password"
-								className={inputClass('confirmPassword')}
-								aria-invalid={Boolean(fieldErrors.confirmPassword)}
-								aria-describedby={fieldErrors.confirmPassword ? 'sr-confirm-error' : undefined}
-							/>
+							<div className="relative">
+								<input
+									id="seller-reg-confirm"
+									type={showConfirm ? 'text' : 'password'}
+									name="confirmPassword"
+									value={formData.confirmPassword}
+									onChange={handleChange}
+									placeholder="Repeat your password"
+									autoComplete="new-password"
+									className={inputClass('confirmPassword') + ' pr-10'}
+									aria-invalid={Boolean(fieldErrors.confirmPassword)}
+									aria-describedby={fieldErrors.confirmPassword ? 'sr-confirm-error' : undefined}
+								/>
+								<button
+									type="button"
+									onClick={() => setShowConfirm((v) => !v)}
+									className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--svs-muted)] hover:text-[var(--svs-text)]"
+									aria-label={showConfirm ? 'Hide password' : 'Show password'}
+								>
+									{showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+								</button>
+							</div>
 							<ErrorMsg id="sr-confirm-error" message={fieldErrors.confirmPassword} />
 						</div>
 
