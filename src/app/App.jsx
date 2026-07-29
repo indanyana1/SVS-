@@ -4311,7 +4311,7 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
               </div>
               <div className="mt-6 flex flex-wrap gap-3">
                 <button type="button" onClick={() => openBookingModal(defaultServiceOption?.label || 'Service', defaultServiceOption?.price)} className="h-12 rounded-lg border border-[#0f9fb2] bg-white px-5 text-sm font-bold text-[#0f9fb2] transition hover:bg-[#f0fdff]">Book Service</button>
-                <button type="button" onClick={goToProviderChat} className="inline-flex h-12 items-center gap-2 rounded-lg border border-[#D1D5DB] bg-white px-5 text-sm font-bold text-[#1F2937] transition hover:bg-[#F8FAFC]"><MessageCircle className="h-4 w-4" /> Let&rsquo;s Talk For More Info</button>
+                <button type="button" onClick={goToProviderChat} className="inline-flex h-12 items-center gap-2 rounded-lg border border-[#D1D5DB] bg-white px-5 text-sm font-bold text-[#1F2937] transition hover:bg-[#F8FAFC]">Let&rsquo;s Talk For More Info</button>
                 {providerPhoneTel ? (
                   <a href={`tel:${providerPhoneTel}`} className="inline-flex h-12 items-center gap-2 rounded-lg border border-[#D1D5DB] bg-white px-5 text-sm font-bold text-[#1F2937] transition hover:bg-[#F8FAFC]"><Phone className="h-4 w-4" /> Call</a>
                 ) : null}
@@ -25097,7 +25097,7 @@ const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onPushNotificationToU
                   onClick={goToWorkerChat}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--svs-primary)] px-4 py-2 text-sm font-semibold text-white hover:brightness-110"
                 >
-                  <MessageCircle className="h-4 w-4" /> Let&rsquo;s Talk For More Info
+                  Let&rsquo;s Talk For More Info
                 </button>
                 {workerPhoneTel ? (
                   <a
@@ -49896,7 +49896,7 @@ const ItemDetailsModal = ({
                 disabled={!canChatSeller}
                 className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#0f6674] px-4 py-2.5 text-sm font-bold text-white shadow transition hover:bg-[#0d5762] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <MessageCircle className="h-4 w-4" aria-hidden="true" /> Let&rsquo;s Talk For More Info
+                Let&rsquo;s Talk For More Info
               </button>
             </div>
           </section>
@@ -50374,7 +50374,7 @@ const ItemDetailsModal = ({
                 }}
                 className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#0f6674] bg-[#e8f7fb] px-4 py-2.5 text-sm font-semibold text-[#0f6674] transition hover:bg-[#d7f0f8]"
               >
-                <MessageCircle className="h-4 w-4" aria-hidden="true" /> Let&rsquo;s Talk For More Info
+                Let&rsquo;s Talk For More Info
               </button>
             ) : null}
           </div>
@@ -50500,7 +50500,7 @@ const ItemDetailsModal = ({
                       }}
                       className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-[var(--svs-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-[var(--svs-primary-strong)] sm:w-auto"
                     >
-                      <MessageCircle className="h-4 w-4" aria-hidden="true" /> Let&rsquo;s Talk For More Info
+                      Let&rsquo;s Talk For More Info
                     </button>
                   ) : null}
                 </div>
