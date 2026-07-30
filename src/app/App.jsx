@@ -27282,17 +27282,20 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                     <tr>
                       <th className="px-4 py-3">Name</th>
                       <th className="px-4 py-3">Email</th>
-                      <th className="px-4 py-3">Contact</th>
-                      <th className="px-4 py-3">Joined</th>
+                      <th className="hidden px-4 py-3 sm:table-cell">Contact</th>
+                      <th className="hidden px-4 py-3 sm:table-cell">Joined</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--svs-border)]">
                     {visibleBuyers.map((buyer) => (
                       <tr key={buyer.id}>
-                        <td className="px-4 py-3 font-semibold text-[var(--svs-text)]">{buyer.full_name}</td>
+                        <td className="px-4 py-3 font-semibold text-[var(--svs-text)]">
+                          {buyer.full_name}
+                          {buyer.contact_number ? <div className="text-xs font-normal text-[var(--svs-muted)] sm:hidden">{buyer.contact_number}</div> : null}
+                        </td>
                         <td className="px-4 py-3 text-[var(--svs-muted)]">{buyer.email_address}</td>
-                        <td className="px-4 py-3 text-[var(--svs-muted)]">{buyer.contact_number || '—'}</td>
-                        <td className="px-4 py-3 text-[var(--svs-muted)]">{formatTimestampWithSeconds(buyer.created_at)}</td>
+                        <td className="hidden px-4 py-3 text-[var(--svs-muted)] sm:table-cell">{buyer.contact_number || '—'}</td>
+                        <td className="hidden px-4 py-3 text-[var(--svs-muted)] sm:table-cell">{formatTimestampWithSeconds(buyer.created_at)}</td>
                       </tr>
                     ))}
                     {visibleBuyers.length === 0 ? (
@@ -27543,13 +27546,13 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                   <thead className="bg-[var(--svs-surface-soft)] text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
                     <tr>
                       <th className="px-4 py-3">Business</th>
-                      <th className="px-4 py-3">Full Name</th>
-                      <th className="px-4 py-3">Email</th>
-                      <th className="px-4 py-3">Phone</th>
-                      <th className="px-4 py-3">ID Number</th>
-                      <th className="px-4 py-3">Tax Number</th>
+                      <th className="hidden px-4 py-3 sm:table-cell">Full Name</th>
+                      <th className="hidden px-4 py-3 sm:table-cell">Email</th>
+                      <th className="hidden px-4 py-3 md:table-cell">Phone</th>
+                      <th className="hidden px-4 py-3 lg:table-cell">ID Number</th>
+                      <th className="hidden px-4 py-3 lg:table-cell">Tax Number</th>
                       <th className="px-4 py-3">Status</th>
-                      <th className="px-4 py-3">Submitted</th>
+                      <th className="hidden px-4 py-3 md:table-cell">Submitted</th>
                       <th className="px-4 py-3" />
                     </tr>
                   </thead>
@@ -27563,18 +27566,19 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                               <AlertTriangle className="h-3.5 w-3.5 text-amber-500" aria-label="A submitted photo was flagged as too dark" />
                             ) : null}
                           </span>
+                          <div className="text-xs font-normal text-[var(--svs-muted)] sm:hidden">{seller.user_email}</div>
                         </td>
-                        <td className="px-4 py-3 text-[var(--svs-muted)]">{seller.legal_full_name || '—'}</td>
-                        <td className="px-4 py-3 text-[var(--svs-muted)]">{seller.user_email}</td>
-                        <td className="px-4 py-3 text-[var(--svs-muted)]">{seller.phone_number || '—'}</td>
-                        <td className="px-4 py-3 text-[var(--svs-muted)]">{seller.id_number || '—'}</td>
-                        <td className="px-4 py-3 text-[var(--svs-muted)]">{seller.tax_number || '—'}</td>
+                        <td className="hidden px-4 py-3 text-[var(--svs-muted)] sm:table-cell">{seller.legal_full_name || '—'}</td>
+                        <td className="hidden px-4 py-3 text-[var(--svs-muted)] sm:table-cell">{seller.user_email}</td>
+                        <td className="hidden px-4 py-3 text-[var(--svs-muted)] md:table-cell">{seller.phone_number || '—'}</td>
+                        <td className="hidden px-4 py-3 text-[var(--svs-muted)] lg:table-cell">{seller.id_number || '—'}</td>
+                        <td className="hidden px-4 py-3 text-[var(--svs-muted)] lg:table-cell">{seller.tax_number || '—'}</td>
                         <td className="px-4 py-3">
                           <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase ${getComplianceStatusBadgeClass(seller.compliance_status)}`}>
                             {seller.compliance_status?.replace(/_/g, ' ')}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-[var(--svs-muted)]">{formatTimestampWithSeconds(seller.created_at)}</td>
+                        <td className="hidden px-4 py-3 text-[var(--svs-muted)] md:table-cell">{formatTimestampWithSeconds(seller.created_at)}</td>
                         <td className="px-4 py-3 text-right">
                           <button type="button" onClick={() => setSelectedSellerEmail(seller.user_email)} className="text-sm font-semibold text-[var(--svs-primary)] hover:underline">Review</button>
                         </td>
@@ -27605,21 +27609,24 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                     <tr>
                       <th className="px-4 py-3">Order</th>
                       <th className="px-4 py-3">Item</th>
-                      <th className="px-4 py-3">Buyer</th>
-                      <th className="px-4 py-3">Seller</th>
+                      <th className="hidden px-4 py-3 sm:table-cell">Buyer</th>
+                      <th className="hidden px-4 py-3 md:table-cell">Seller</th>
                       <th className="px-4 py-3">Status</th>
-                      <th className="px-4 py-3">Date</th>
+                      <th className="hidden px-4 py-3 sm:table-cell">Date</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--svs-border)]">
                     {visibleOrderLineItems.map((line) => (
                       <tr key={line.key}>
-                        <td className="px-4 py-3 font-semibold text-[var(--svs-text)]">{line.reference || line.orderKey}</td>
+                        <td className="px-4 py-3 font-semibold text-[var(--svs-text)]">
+                          {line.reference || line.orderKey}
+                          <div className="text-xs font-normal text-[var(--svs-muted)] sm:hidden">{line.buyerEmail}</div>
+                        </td>
                         <td className="px-4 py-3 text-[var(--svs-muted)]">{line.title} ×{line.quantity}</td>
-                        <td className="px-4 py-3 text-[var(--svs-muted)]">{line.buyerEmail}</td>
-                        <td className="px-4 py-3 text-[var(--svs-muted)]">{line.sellerEmail}</td>
+                        <td className="hidden px-4 py-3 text-[var(--svs-muted)] sm:table-cell">{line.buyerEmail}</td>
+                        <td className="hidden px-4 py-3 text-[var(--svs-muted)] md:table-cell">{line.sellerEmail}</td>
                         <td className="px-4 py-3 text-[var(--svs-muted)]">{line.status}</td>
-                        <td className="px-4 py-3 text-[var(--svs-muted)]">{formatTimestampWithSeconds(line.createdAt)}</td>
+                        <td className="hidden px-4 py-3 text-[var(--svs-muted)] sm:table-cell">{formatTimestampWithSeconds(line.createdAt)}</td>
                       </tr>
                     ))}
                     {visibleOrderLineItems.length === 0 ? (
@@ -27666,9 +27673,9 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                       <th className="px-4 py-3">Buyer</th>
                       <th className="px-4 py-3">Amount</th>
                       <th className="px-4 py-3">Status</th>
-                      <th className="px-4 py-3">Payment</th>
-                      <th className="px-4 py-3">Bank Details</th>
-                      <th className="px-4 py-3">Date</th>
+                      <th className="hidden px-4 py-3 md:table-cell">Payment</th>
+                      <th className="hidden px-4 py-3 md:table-cell">Bank Details</th>
+                      <th className="hidden px-4 py-3 sm:table-cell">Date</th>
                       <th className="px-4 py-3">Actions</th>
                     </tr>
                   </thead>
@@ -27693,14 +27700,14 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                               {order.status}
                             </span>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="hidden px-4 py-3 md:table-cell">
                             {isWallet ? (
                               <span className="rounded-full bg-cyan-50 px-2 py-0.5 text-[11px] font-bold text-cyan-700 ring-1 ring-cyan-200">Biznisdil Wallet</span>
                             ) : (
                               <span className="text-xs text-[var(--svs-muted)]">{order.payment_method || '—'}</span>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-xs text-[var(--svs-muted)]">
+                          <td className="hidden px-4 py-3 text-xs text-[var(--svs-muted)] md:table-cell">
                             {isWallet ? (
                               <span className="text-cyan-600">Auto-refunded</span>
                             ) : bd ? (
@@ -27726,7 +27733,7 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                               <span className="italic">—</span>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-[var(--svs-muted)]">{order.order_created_at ? formatTimestampWithSeconds(order.order_created_at) : '—'}</td>
+                          <td className="hidden px-4 py-3 text-[var(--svs-muted)] sm:table-cell">{order.order_created_at ? formatTimestampWithSeconds(order.order_created_at) : '—'}</td>
                           <td className="px-4 py-3">
                             {nextStatus ? (
                               <button
@@ -27778,9 +27785,9 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                     <thead className="bg-[var(--svs-surface-soft)] text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
                       <tr>
                         <th className="px-4 py-3">User</th>
-                        <th className="px-4 py-3">Phone</th>
+                        <th className="hidden px-4 py-3 sm:table-cell">Phone</th>
                         <th className="px-4 py-3">Amount</th>
-                        <th className="px-4 py-3">Bank Account</th>
+                        <th className="hidden px-4 py-3 md:table-cell">Bank Account</th>
                         <th className="px-4 py-3">Status</th>
                         <th className="px-4 py-3" />
                       </tr>
@@ -27788,10 +27795,13 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                     <tbody className="divide-y divide-[var(--svs-border)]">
                       {visibleWithdrawalRequests.map((request) => (
                         <tr key={request.id}>
-                          <td className="px-4 py-3 text-[var(--svs-muted)]">{request.user_email}</td>
-                          <td className="px-4 py-3 text-[var(--svs-muted)]">{accountByEmail[normalizeEmail(request.user_email)]?.contact_number || '—'}</td>
+                          <td className="px-4 py-3 text-[var(--svs-muted)]">
+                            {request.user_email}
+                            <div className="text-xs sm:hidden">{accountByEmail[normalizeEmail(request.user_email)]?.contact_number || ''}</div>
+                          </td>
+                          <td className="hidden px-4 py-3 text-[var(--svs-muted)] sm:table-cell">{accountByEmail[normalizeEmail(request.user_email)]?.contact_number || '—'}</td>
                           <td className="px-4 py-3 font-semibold text-[var(--svs-text)]">{formatAmountInCurrency(request.amount, request.currency)}</td>
-                          <td className="px-4 py-3 text-[var(--svs-muted)]">{request.wallet_bank_accounts ? `${request.wallet_bank_accounts.bank_name} ${maskAccountNumber(request.wallet_bank_accounts.account_number)}` : (request.destination_label || '—')}</td>
+                          <td className="hidden px-4 py-3 text-[var(--svs-muted)] md:table-cell">{request.wallet_bank_accounts ? `${request.wallet_bank_accounts.bank_name} ${maskAccountNumber(request.wallet_bank_accounts.account_number)}` : (request.destination_label || '—')}</td>
                           <td className="px-4 py-3">
                             <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase ${request.status === 'paid' ? 'bg-emerald-50 text-emerald-700' : request.status === 'rejected' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'}`}>{request.status}</span>
                           </td>
@@ -27820,22 +27830,25 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                     <thead className="bg-[var(--svs-surface-soft)] text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
                       <tr>
                         <th className="px-4 py-3">User</th>
-                        <th className="px-4 py-3">Phone</th>
-                        <th className="px-4 py-3">Kind</th>
+                        <th className="hidden px-4 py-3 sm:table-cell">Phone</th>
+                        <th className="hidden px-4 py-3 sm:table-cell">Kind</th>
                         <th className="px-4 py-3">Amount</th>
                         <th className="px-4 py-3">Status</th>
-                        <th className="px-4 py-3">Date</th>
+                        <th className="hidden px-4 py-3 md:table-cell">Date</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--svs-border)]">
                       {visibleWalletTransactions.map((txn) => (
                         <tr key={txn.id}>
-                          <td className="px-4 py-3 text-[var(--svs-muted)]">{txn.user_email}</td>
-                          <td className="px-4 py-3 text-[var(--svs-muted)]">{accountByEmail[normalizeEmail(txn.user_email)]?.contact_number || '—'}</td>
-                          <td className="px-4 py-3 text-[var(--svs-muted)] capitalize">{txn.kind}</td>
+                          <td className="px-4 py-3 text-[var(--svs-muted)]">
+                            {txn.user_email}
+                            <div className="text-xs capitalize sm:hidden">{txn.kind}</div>
+                          </td>
+                          <td className="hidden px-4 py-3 text-[var(--svs-muted)] sm:table-cell">{accountByEmail[normalizeEmail(txn.user_email)]?.contact_number || '—'}</td>
+                          <td className="hidden px-4 py-3 text-[var(--svs-muted)] capitalize sm:table-cell">{txn.kind}</td>
                           <td className={`px-4 py-3 font-semibold ${txn.direction === 'credit' ? 'text-emerald-600' : 'text-rose-600'}`}>{txn.direction === 'credit' ? '+' : '-'}{formatAmountInCurrency(txn.amount, txn.currency)}</td>
                           <td className="px-4 py-3 text-[var(--svs-muted)] capitalize">{txn.status}</td>
-                          <td className="px-4 py-3 text-[var(--svs-muted)]">{formatTimestampWithSeconds(txn.created_at)}</td>
+                          <td className="hidden px-4 py-3 text-[var(--svs-muted)] md:table-cell">{formatTimestampWithSeconds(txn.created_at)}</td>
                         </tr>
                       ))}
                       {visibleWalletTransactions.length === 0 ? (
