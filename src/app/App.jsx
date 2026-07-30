@@ -547,16 +547,16 @@ const MARKET_FIELD_SPEC = {
   // mapSellerItemRecord's rawDetailsJson spread.
   livestock: {
     title: 'Livestock Listing Details',
-    helper: 'Tell buyers the livestock type, breed, age, weight, and farm location so they can filter and find your animal quickly.',
+    helper: 'Select the correct livestock type so buyers can find your animal in the right category. Then add breed, age, weight, health status, and purpose to help buyers filter and compare listings quickly.',
     fields: [
-      { name: 'category', label: 'Livestock type', type: 'select', required: true, options: ['Cattles', 'Buffalos', 'Goats', 'Sheeps', 'Poultry', 'Horses', 'Camels', 'Exotic Livestock', 'Other'] },
-      { name: 'breed', label: 'Breed', type: 'text', required: true, placeholder: 'e.g. Holstein Friesian, Boer, Murrah' },
-      { name: 'age', label: 'Age', type: 'text', required: true, placeholder: 'e.g. 3 years, 6 months' },
-      { name: 'weight', label: 'Weight', type: 'text', required: true, placeholder: 'e.g. 550 kg, 45 kg' },
-      { name: 'location', label: 'Farm location', type: 'text', required: true, placeholder: 'e.g. Gauteng, Limpopo Farm Belt' },
-      { name: 'gender', label: 'Gender', type: 'select', options: ['Male', 'Female', 'Mixed Herd'] },
-      { name: 'healthStatus', label: 'Health status', type: 'select', options: ['Vaccinated', 'Health Certificate Available', 'Pending Vet Check', 'Other'] },
-      { name: 'purpose', label: 'Purpose', type: 'select', options: ['Dairy', 'Beef / Meat', 'Breeding', 'Wool', 'Eggs', 'Riding / Racing', 'Mixed Use'] },
+      { name: 'category', label: 'Livestock type / category', type: 'select', required: true, options: ['Cattle', 'Sheep & Lambs', 'Goats', 'Pigs & Swine', 'Birds & Poultry', 'Horses & Donkeys', 'Game & Ostriches', 'Rabbits & Small Stock', 'Other'] },
+      { name: 'breed', label: 'Breed / variety', type: 'text', required: true, placeholder: 'e.g. Holstein Friesian, Dorper, Boer, Landrace, Broiler, Arabian' },
+      { name: 'gender', label: 'Gender', type: 'select', required: true, options: ['Male', 'Female', 'Mixed Herd'] },
+      { name: 'age', label: 'Age', type: 'text', required: true, placeholder: 'e.g. 3 years, 6 months, 8 weeks' },
+      { name: 'weight', label: 'Weight / size', type: 'text', required: true, placeholder: 'e.g. 550 kg, 45 kg, 2 kg per bird' },
+      { name: 'purpose', label: 'Purpose', type: 'select', required: true, options: ['Dairy', 'Beef / Meat', 'Eggs', 'Wool', 'Riding / Racing', 'Breeding', 'Mixed Use'] },
+      { name: 'healthStatus', label: 'Health status', type: 'select', required: true, options: ['Vaccinated', 'Health Certificate Available', 'Pending Vet Check', 'Other'] },
+      { name: 'location', label: 'Farm / pickup location', type: 'text', required: true, placeholder: 'e.g. Gauteng, Limpopo Farm Belt, Free State' },
     ],
   },
   // Aligned with NurseryHubPage filter (item.categoryId derived from category title)
@@ -4802,52 +4802,52 @@ const lotteryGames = [
 
 const livestockCategories = [
   {
-    id: 'cattles',
-    title: 'Cattles',
-    subtitle: 'Dairy & Beef',
+    id: 'cattle',
+    title: 'Cattle',
+    subtitle: 'Dairy, Beef & Breeding',
     image: 'https://images.pexels.com/photos/735968/pexels-photo-735968.jpeg?auto=compress&cs=tinysrgb&w=800',
   },
   {
-    id: 'buffalos',
-    title: 'Buffalos',
-    subtitle: 'Dairy & Farm',
-    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Murrah_buffalo.JPG/960px-Murrah_buffalo.JPG',
+    id: 'sheep',
+    title: 'Sheep & Lambs',
+    subtitle: 'Wool, Meat & Breeding',
+    image: 'https://images.pexels.com/photos/288621/pexels-photo-288621.jpeg?auto=compress&cs=tinysrgb&w=800',
   },
   {
     id: 'goats',
     title: 'Goats',
-    subtitle: 'Dairy & Breeding',
+    subtitle: 'Dairy, Meat & Fiber',
     image: 'https://images.pexels.com/photos/144240/goat-lamb-little-grass-144240.jpeg?auto=compress&cs=tinysrgb&w=800',
   },
   {
-    id: 'sheeps',
-    title: 'Sheeps',
-    subtitle: 'Wool & Meat',
-    image: 'https://images.pexels.com/photos/288621/pexels-photo-288621.jpeg?auto=compress&cs=tinysrgb&w=800',
+    id: 'pigs',
+    title: 'Pigs & Swine',
+    subtitle: 'Breeding & Meat',
+    image: 'https://images.pexels.com/photos/2226449/pexels-photo-2226449.jpeg?auto=compress&cs=tinysrgb&w=800',
   },
   {
-    id: 'poultry',
-    title: 'Poultry',
-    subtitle: 'Chicken & Ducks',
+    id: 'birds',
+    title: 'Birds & Poultry',
+    subtitle: 'Layers, Broilers & More',
     image: 'https://images.pexels.com/photos/1300355/pexels-photo-1300355.jpeg?auto=compress&cs=tinysrgb&w=800',
   },
   {
     id: 'horses',
-    title: 'Horses',
-    subtitle: 'Racing & Farm',
+    title: 'Horses & Donkeys',
+    subtitle: 'Riding, Working & Breeding',
     image: 'https://images.pexels.com/photos/52500/horse-herd-fog-nature-52500.jpeg?auto=compress&cs=tinysrgb&w=800',
   },
   {
-    id: 'camels',
-    title: 'Camels',
-    subtitle: 'Dairy & Farming',
-    image: 'https://images.pexels.com/photos/110820/pexels-photo-110820.jpeg?auto=compress&cs=tinysrgb&w=800',
+    id: 'game',
+    title: 'Game & Ostriches',
+    subtitle: 'Game Farming & Wildlife',
+    image: 'https://images.pexels.com/photos/1319515/pexels-photo-1319515.jpeg?auto=compress&cs=tinysrgb&w=800',
   },
   {
-    id: 'exotic',
-    title: 'Exotic Livestock',
-    subtitle: 'Mixed Livestock',
-    image: 'https://images.pexels.com/photos/45911/peacock-plumage-bird-peafowl-45911.jpeg?auto=compress&cs=tinysrgb&w=800',
+    id: 'rabbits',
+    title: 'Rabbits & Small Stock',
+    subtitle: 'Small-Scale & Specialty',
+    image: 'https://images.pexels.com/photos/326012/pexels-photo-326012.jpeg?auto=compress&cs=tinysrgb&w=800',
   },
 ];
 
@@ -4856,8 +4856,9 @@ const livestockItems = [
     id: 'ls1',
     title: 'Holstein Friesian Cow',
     titleKey: 'livestockHub.items.ls1.title',
-    categoryId: 'cattles',
+    categoryId: 'cattle',
     category: 'Cattle',
+    breed: 'Holstein Friesian',
     age: '3 years',
     weight: '550 kg',
     location: 'Gauteng',
@@ -4871,32 +4872,31 @@ const livestockItems = [
   },
   {
     id: 'ls2',
-    title: 'Murrah Buffalo',
-    titleKey: 'livestockHub.items.ls2.title',
-    categoryId: 'buffalos',
-    category: 'Buffalo',
-    age: '4 years',
-    weight: '650 kg',
-    location: 'Northern Cape',
-    locationKey: 'livestockHub.items.ls2.location',
-    summary: 'Age: 4 years • Weight: 650 kg',
-    summaryKey: 'livestockHub.items.ls2.summary',
-    price: '95,000',
-    rating: 4.8,
-    reviewCount: 145,
-    image: 'https://images.pexels.com/photos/4577392/pexels-photo-4577392.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    title: 'Large White Breeding Sow',
+    categoryId: 'pigs',
+    category: 'Pigs & Swine',
+    breed: 'Large White',
+    age: '18 months',
+    weight: '180 kg',
+    location: 'North West Province',
+    summary: 'Age: 18 months • Weight: 180 kg',
+    price: '18,500',
+    rating: 4.7,
+    reviewCount: 58,
+    image: 'https://images.pexels.com/photos/2226449/pexels-photo-2226449.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
   {
     id: 'ls3',
-    title: 'Deccani Sheep',
+    title: 'Dorper Sheep Breeding Ewe',
     titleKey: 'livestockHub.items.ls3.title',
-    categoryId: 'sheeps',
-    category: 'Sheep',
-    age: '1.5 years',
-    weight: '35 kg',
+    categoryId: 'sheep',
+    category: 'Sheep & Lambs',
+    breed: 'Dorper',
+    age: '2 years',
+    weight: '55 kg',
     location: 'KwaZulu-Natal',
     locationKey: 'livestockHub.items.ls3.location',
-    summary: 'Age: 1.5 years • Weight: 35 kg',
+    summary: 'Age: 2 years • Weight: 55 kg',
     summaryKey: 'livestockHub.items.ls3.summary',
     price: '12,000',
     rating: 4.8,
@@ -4907,7 +4907,8 @@ const livestockItems = [
     id: 'ls4',
     title: 'Boer Goat Starter Herd',
     categoryId: 'goats',
-    category: 'Goat',
+    category: 'Goats',
+    breed: 'Boer',
     age: '2 years',
     weight: '45 kg',
     location: 'Limpopo Farm Belt',
@@ -4920,8 +4921,9 @@ const livestockItems = [
   {
     id: 'ls5',
     title: 'Free-Range Layer Hens',
-    categoryId: 'poultry',
-    category: 'Poultry',
+    categoryId: 'birds',
+    category: 'Birds & Poultry',
+    breed: 'Layer Hen',
     age: '6 months',
     weight: '2 kg',
     location: 'Western Cape',
@@ -4935,7 +4937,8 @@ const livestockItems = [
     id: 'ls6',
     title: 'Arabian Riding Horse',
     categoryId: 'horses',
-    category: 'Horse',
+    category: 'Horses & Donkeys',
+    breed: 'Arabian',
     age: '5 years',
     weight: '450 kg',
     location: 'Mpumalanga',
@@ -7080,7 +7083,7 @@ const searchableCatalog = [
       item.location,
       item.summary,
       item.price,
-      'livestock cattle goats sheep farm buying selling agriculture hub',
+      'livestock cattle sheep lambs goats pigs swine birds poultry chickens ducks horses donkeys game ostriches rabbits small stock farm buying selling agriculture hub',
     ]),
   })),
   ...mobilityVehiclesItems.map((item) => ({
@@ -14128,12 +14131,69 @@ const VotingClientsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIt
   );
 };
 
+const jaBaseCategories = ['All', 'Necklaces', 'Pendants', 'Rings', 'Engagement Rings', 'Wedding Bands', 'Bracelets', 'Bangles', 'Anklets', 'Earrings', 'Watches', 'Smart Watches', 'Sunglasses', 'Handbags', 'Clutches', 'Wallets', 'Belts', 'Scarves', 'Hats & Caps', 'Hair Accessories'];
+const jaBaseMaterials = ['18K Gold', '14K Gold', '9K Gold', 'Sterling Silver', 'Platinum', 'Rose Gold', 'White Gold', 'Stainless Steel', 'Titanium', 'Genuine Leather', 'PU Leather', 'Beaded', 'Pearl', 'Diamond', 'Gemstone'];
+const jaBaseConditions = ['Brand New', 'Like New', 'Pre-Owned', 'Vintage / Antique'];
+const jaGenderOptions = ['All', 'Women', 'Men', 'Unisex', 'Kids'];
+
 const VotingProvidersPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(
     () => [...getSellerItemsForMarket(sellerItems, 'jewelleryAccessories'), ...jewelleryAccessoriesItems],
     [sellerItems],
   );
+
+  const categoryOptions = useMemo(() => {
+    const seen = new Set(jaBaseCategories.slice(1));
+    marketItems.forEach((item) => { const v = String(item.category || '').trim(); if (v && v.toLowerCase() !== 'other') seen.add(v); });
+    return ['All', ...Array.from(seen)];
+  }, [marketItems]);
+
+  const materialOptions = useMemo(() => {
+    const seen = new Set(jaBaseMaterials);
+    marketItems.forEach((item) => { const v = String(item.material || '').trim(); if (v && v.toLowerCase() !== 'other') seen.add(v); });
+    return Array.from(seen);
+  }, [marketItems]);
+
+  const conditionOptions = useMemo(() => {
+    const seen = new Set(jaBaseConditions);
+    marketItems.forEach((item) => { const v = String(item.condition || '').trim(); if (v && v.toLowerCase() !== 'other') seen.add(v); });
+    return Array.from(seen);
+  }, [marketItems]);
+
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedMaterials, setSelectedMaterials] = useState([]);
+  const [selectedConditions, setSelectedConditions] = useState([]);
+  const [selectedGender, setSelectedGender] = useState('All');
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(true);
+
+  const activeFilterCount = (
+    (selectedCategory !== 'All' ? 1 : 0)
+    + selectedMaterials.length
+    + selectedConditions.length
+    + (selectedGender !== 'All' ? 1 : 0)
+  );
+
+  const clearAllFilters = () => {
+    setSelectedCategory('All');
+    setSelectedMaterials([]);
+    setSelectedConditions([]);
+    setSelectedGender('All');
+  };
+
+  const toggleMultiFilter = (value, list, setter) => {
+    setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
+  };
+
+  const filteredItems = useMemo(() => marketItems.filter((item) => {
+    const catMatch = selectedCategory === 'All' || (item.category || '') === selectedCategory;
+    const matMatch = !selectedMaterials.length || !item.material || selectedMaterials.some((m) => String(item.material || '').toLowerCase() === m.toLowerCase());
+    const condMatch = !selectedConditions.length || !item.condition || selectedConditions.some((c) => String(item.condition || '').toLowerCase() === c.toLowerCase());
+    const genderMatch = selectedGender === 'All' || !item.gender || String(item.gender || '').toLowerCase() === selectedGender.toLowerCase();
+    return catMatch && matMatch && condMatch && genderMatch;
+  }), [marketItems, selectedCategory, selectedMaterials, selectedConditions, selectedGender]);
+
   const buildCartItem = (item) => createCartItem({
     ...item,
     route: '/voting-providers',
@@ -14147,6 +14207,79 @@ const VotingProvidersPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
     details: `${item.category || 'Seller item'} • ${item.sellerName || 'Jewellery & accessories'}`,
   });
 
+  const FilterPanel = (
+    <div className="flex h-full flex-col">
+      <div className="space-y-6 px-5 py-6">
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-semibold text-[#1A1A1A]">Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}</h3>
+          {activeFilterCount ? (
+            <button type="button" onClick={clearAllFilters} className="text-xs font-medium text-[#7c6004] hover:underline">
+              Clear all
+            </button>
+          ) : null}
+        </div>
+
+        <div>
+          <h4 className="mb-2.5 text-sm font-semibold text-[#1A1A1A]">Category</h4>
+          <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+            {categoryOptions.map((option) => (
+              <label key={option} className="flex cursor-pointer items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input type="radio" name="ja-category" checked={selectedCategory === option} onChange={() => setSelectedCategory(option)} className="h-4 w-4 border-[#D1D5DB] accent-[#7c6004]" />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="mb-2.5 text-sm font-semibold text-[#1A1A1A]">Gender / Audience</h4>
+          <div className="space-y-2">
+            {jaGenderOptions.map((option) => (
+              <label key={option} className="flex cursor-pointer items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input type="radio" name="ja-gender" checked={selectedGender === option} onChange={() => setSelectedGender(option)} className="h-4 w-4 border-[#D1D5DB] accent-[#7c6004]" />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="mb-2.5 text-sm font-semibold text-[#1A1A1A]">Material</h4>
+          <div className="max-h-52 space-y-2 overflow-y-auto pr-1">
+            {materialOptions.map((option) => (
+              <label key={option} className="flex cursor-pointer items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input type="checkbox" checked={selectedMaterials.includes(option)} onChange={() => toggleMultiFilter(option, selectedMaterials, setSelectedMaterials)} className="h-4 w-4 rounded border-[#D1D5DB] accent-[#7c6004]" />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="mb-2.5 text-sm font-semibold text-[#1A1A1A]">Condition</h4>
+          <div className="space-y-2">
+            {conditionOptions.map((option) => (
+              <label key={option} className="flex cursor-pointer items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input type="checkbox" checked={selectedConditions.includes(option)} onChange={() => toggleMultiFilter(option, selectedConditions, setSelectedConditions)} className="h-4 w-4 rounded border-[#D1D5DB] accent-[#7c6004]" />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-auto border-t border-[#e8d89a] p-5">
+        <button
+          type="button"
+          onClick={() => setIsFilterDrawerOpen(false)}
+          className="h-12 w-full rounded-lg bg-[#7c6004] text-sm font-semibold text-white transition hover:bg-[#5e4803]"
+        >
+          Apply Filters
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <MarketShowcase
       marketKey="votingProviders"
@@ -14155,33 +14288,126 @@ const VotingProvidersPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
       eyebrow={t('markets.votingProviders')}
       chips={['Jewellery', 'Watches', 'Accessories']}
     >
-      <CardGrid
-        items={marketItems}
-        buttonLabel={t('common.addToCart')}
-        secondaryButtonLabel={t('common.viewDetails')}
-        reviewSummaryMap={productReviewSummaryMap}
-        getItemReviewKey={(item) => getCollectionItemId('/voting-providers', item.id)}
-        onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-        onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
-        onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
-        onOpenItemDetails={(item) => {
-          const wishlistItem = buildWishlistItem(item);
-          onOpenItemDetails?.({
-            title: getTranslatedValue(t, item.titleKey, item.title),
-            image: item.image,
-            images: item.images || (item.image ? [item.image] : []),
-            ...getItemDetailSizeProps(item),
-            availableQuantity: getSellerListingStock(sellerItems, item),
-            marketName: t('markets.votingProviders'),
-            details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Jewellery & accessories'}`,
-            priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
-            cartItem: buildCartItem(item),
-            wishlistItem,
-          });
-        }}
-        isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/voting-providers', item.id))}
-        metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • <SalePrice price={item.price} currency={item.currency} /></p>}
-      />
+      <div className="mb-5 flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-[var(--svs-text)]">
+          Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}
+        </h2>
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+              setIsDesktopFiltersHidden((prev) => !prev);
+            } else {
+              setIsFilterDrawerOpen(true);
+            }
+          }}
+          className="inline-flex items-center gap-2 rounded-lg border border-[#e8d89a] bg-[#fdf8e8] px-4 py-2 text-sm font-medium text-[#7c6004] transition hover:bg-[#f5e8a0]"
+        >
+          <Menu className="h-4 w-4" />
+          <span className="lg:hidden">Filter</span>
+          <span className="hidden lg:inline">{isDesktopFiltersHidden ? 'Show Filters' : 'Hide Filters'}</span>
+        </button>
+      </div>
+
+      <div className={`flex items-start gap-8 ${isDesktopFiltersHidden ? '' : 'lg:grid lg:grid-cols-[260px_minmax(0,1fr)]'}`}>
+        {!isDesktopFiltersHidden ? (
+          <aside className="hidden min-h-[400px] rounded-2xl border border-[#e8d89a] bg-white shadow-sm lg:block">
+            {FilterPanel}
+          </aside>
+        ) : null}
+
+        <main className="min-w-0 flex-1">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-[var(--svs-muted)]">
+              Showing <span className="font-semibold text-[var(--svs-text)]">{filteredItems.length}</span> {filteredItems.length === 1 ? 'item' : 'items'}
+            </p>
+            {activeFilterCount ? (
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                className="rounded-full border border-[#e8d89a] bg-white px-4 py-2 text-xs font-semibold text-[#7c6004] transition hover:bg-[#fdf8e8]"
+              >
+                Clear filters
+              </button>
+            ) : null}
+          </div>
+
+          {filteredItems.length ? (
+            <CardGrid
+              items={filteredItems}
+              buttonLabel={t('common.addToCart')}
+              secondaryButtonLabel={t('common.viewDetails')}
+              reviewSummaryMap={productReviewSummaryMap}
+              getItemReviewKey={(item) => getCollectionItemId('/voting-providers', item.id)}
+              onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+              onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
+              onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+              onOpenItemDetails={(item) => {
+                const wishlistItem = buildWishlistItem(item);
+                const similar = marketItems
+                  .filter((other) => other.id !== item.id && other.category === item.category)
+                  .slice(0, 6)
+                  .map((other) => ({
+                    id: other.id,
+                    title: other.title,
+                    image: other.image,
+                    price: getSalePrices(other.price, getItemSaleDiscountRate(other), other.currency || null).nowPrice,
+                    category: other.category,
+                    sellerName: other.sellerName,
+                  }));
+                onOpenItemDetails?.({
+                  title: getTranslatedValue(t, item.titleKey, item.title),
+                  image: item.image,
+                  images: item.images || (item.image ? [item.image] : []),
+                  ...getItemDetailSizeProps(item),
+                  availableQuantity: getSellerListingStock(sellerItems, item),
+                  marketName: t('markets.votingProviders'),
+                  details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Jewellery & accessories'}`,
+                  priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
+                  detailsTable: {
+                    Category: item.category || 'Jewellery & Accessories',
+                    Material: item.material || 'Not specified',
+                    Condition: item.condition || 'Not specified',
+                    Brand: item.brand || 'Not specified',
+                    Audience: item.gender || 'Unisex',
+                  },
+                  similarProducts: similar,
+                  cartItem: buildCartItem(item),
+                  wishlistItem,
+                });
+              }}
+              isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/voting-providers', item.id))}
+              metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • <SalePrice price={item.price} currency={item.currency} /></p>}
+            />
+          ) : (
+            <div className="rounded-2xl border border-dashed border-[#e8d89a] bg-[#fdf8e8] p-12 text-center">
+              <h3 className="text-lg font-semibold text-[#7c6004]">No items match your filters</h3>
+              <p className="mt-2 text-sm text-[#7c6004]/70">Try clearing some filters to see more products.</p>
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                className="mt-4 inline-flex h-11 items-center rounded-lg bg-[#7c6004] px-6 text-sm font-medium text-white transition hover:bg-[#5e4803]"
+              >
+                Clear all filters
+              </button>
+            </div>
+          )}
+        </main>
+      </div>
+
+      {isFilterDrawerOpen ? (
+        <div className="fixed inset-0 z-[90] bg-black/45 lg:hidden" role="dialog" aria-modal="true" aria-label="Filter jewellery and accessories">
+          <div className="absolute inset-y-0 left-0 w-[min(92vw,320px)] overflow-y-auto bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#e8d89a] px-4 py-3">
+              <h3 className="text-base font-semibold text-[#1A1A1A]">Filters</h3>
+              <button type="button" onClick={() => setIsFilterDrawerOpen(false)} className="rounded-md p-1 text-[#7c6004] transition hover:bg-[#fdf8e8]" aria-label="Close filters">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {FilterPanel}
+          </div>
+        </div>
+      ) : null}
     </MarketShowcase>
   );
 };
@@ -15902,20 +16128,70 @@ const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
   );
 };
 
+const tmBaseCategories = ['All', 'Herbs', 'Medicinal Herbs', 'Traditional Supplements', 'Traditional Remedies', 'Botanical Remedies', 'Tonics', 'Tinctures', 'Powders', 'Teas', 'Roots', 'Oils', 'Capsules'];
+const tmBaseForms = ['Powder', 'Oil', 'Tea', 'Capsule', 'Liquid', 'Raw / Dried', 'Cream', 'Bark', 'Root'];
+const tmBaseParts = ['Root', 'Leaf', 'Bark', 'Seed', 'Flower', 'Stem', 'Whole Plant'];
+
 const TraditionalMedicinesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'traditionalMedicines'), ...traditionalMedicinesItems], [sellerItems]);
 
-  const dynamicCategories = useMemo(() => {
-    const set = new Set();
-    marketItems.forEach((item) => { if (item.category) set.add(item.category); });
-    return ['All', ...Array.from(set)];
+  const categoryOptions = useMemo(() => {
+    const seen = new Set(tmBaseCategories.slice(1));
+    marketItems.forEach((item) => { const v = String(item.category || '').trim(); if (v && v.toLowerCase() !== 'other') seen.add(v); });
+    return ['All', ...Array.from(seen)];
   }, [marketItems]);
-  const [selectedCategory, setSelectedCategory] = useState('All');
 
-  const filteredItems = useMemo(() => (
-    selectedCategory === 'All' ? marketItems : marketItems.filter((item) => item.category === selectedCategory)
-  ), [marketItems, selectedCategory]);
+  const formOptions = useMemo(() => {
+    const seen = new Set(tmBaseForms);
+    marketItems.forEach((item) => { const v = String(item.formType || '').trim(); if (v && v.toLowerCase() !== 'other') seen.add(v); });
+    return Array.from(seen);
+  }, [marketItems]);
+
+  const partOptions = useMemo(() => {
+    const seen = new Set(tmBaseParts);
+    marketItems.forEach((item) => { const v = String(item.partUsed || '').trim(); if (v && v.toLowerCase() !== 'other') seen.add(v); });
+    return Array.from(seen);
+  }, [marketItems]);
+
+  const originOptions = useMemo(() => {
+    const seen = new Set();
+    marketItems.forEach((item) => { const v = String(item.origin || '').trim(); if (v) seen.add(v); });
+    return ['All', ...Array.from(seen)];
+  }, [marketItems]);
+
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedForms, setSelectedForms] = useState([]);
+  const [selectedPartsUsed, setSelectedPartsUsed] = useState([]);
+  const [selectedOrigin, setSelectedOrigin] = useState('All');
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(true);
+
+  const activeFilterCount = (
+    (selectedCategory !== 'All' ? 1 : 0)
+    + selectedForms.length
+    + selectedPartsUsed.length
+    + (selectedOrigin !== 'All' ? 1 : 0)
+  );
+
+  const clearAllFilters = () => {
+    setSelectedCategory('All');
+    setSelectedForms([]);
+    setSelectedPartsUsed([]);
+    setSelectedOrigin('All');
+  };
+
+  const toggleMultiFilter = (value, list, setter) => {
+    setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
+  };
+
+  const filteredItems = useMemo(() => marketItems.filter((item) => {
+    const catMatch = selectedCategory === 'All' || (item.category || '') === selectedCategory;
+    const formMatch = !selectedForms.length || selectedForms.some((f) => String(item.formType || '').toLowerCase() === f.toLowerCase());
+    const partMatch = !selectedPartsUsed.length || selectedPartsUsed.some((p) => String(item.partUsed || '').toLowerCase() === p.toLowerCase());
+    const originMatch = selectedOrigin === 'All' || String(item.origin || '').toLowerCase().includes(selectedOrigin.toLowerCase());
+    return catMatch && formMatch && partMatch && originMatch;
+  }), [marketItems, selectedCategory, selectedForms, selectedPartsUsed, selectedOrigin]);
 
   const buildCartItem = (item) => createCartItem({
     ...item,
@@ -15930,77 +16206,215 @@ const TraditionalMedicinesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wis
     details: `${item.category || 'Seller item'} • ${item.sellerName || 'Traditional herbal listing'}`,
   });
 
-  return (
-  <MarketShowcase
-    marketKey="traditionalMedicines"
-    title={t('markets.traditionalMedicines')}
-    subtitle={t('pageSubtitles.traditionalMedicines')}
-    eyebrow={t('markets.traditionalMedicines')}
-    chips={['Herbal remedies', 'Practitioner verified', 'Heritage botanicals']}
-  >
-    <div className="mb-5 rounded-xl border border-[#d6c8a3] bg-[#fff9ec] p-3 text-sm text-[#7b5b12]">
-      Traditional remedies should be used responsibly. Buyers should follow local guidance and consult qualified practitioners when needed.
-    </div>
-    <div className="mb-5 flex flex-wrap gap-2">
-      {dynamicCategories.map((category) => (
+  const FilterPanel = (
+    <div className="flex h-full flex-col">
+      <div className="space-y-6 px-5 py-6">
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-semibold text-[#1A1A1A]">Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}</h3>
+          {activeFilterCount ? (
+            <button type="button" onClick={clearAllFilters} className="text-xs font-medium text-[#7b5b12] hover:underline">
+              Clear all
+            </button>
+          ) : null}
+        </div>
+
+        <div>
+          <h4 className="mb-2.5 text-sm font-semibold text-[#1A1A1A]">Category</h4>
+          <div className="max-h-52 space-y-2 overflow-y-auto pr-1">
+            {categoryOptions.map((option) => (
+              <label key={option} className="flex cursor-pointer items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input type="radio" name="tm-category" checked={selectedCategory === option} onChange={() => setSelectedCategory(option)} className="h-4 w-4 border-[#D1D5DB] accent-[#7b5b12]" />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="mb-2.5 text-sm font-semibold text-[#1A1A1A]">Form</h4>
+          <div className="max-h-52 space-y-2 overflow-y-auto pr-1">
+            {formOptions.map((option) => (
+              <label key={option} className="flex cursor-pointer items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input type="checkbox" checked={selectedForms.includes(option)} onChange={() => toggleMultiFilter(option, selectedForms, setSelectedForms)} className="h-4 w-4 rounded border-[#D1D5DB] accent-[#7b5b12]" />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="mb-2.5 text-sm font-semibold text-[#1A1A1A]">Part Used</h4>
+          <div className="space-y-2">
+            {partOptions.map((option) => (
+              <label key={option} className="flex cursor-pointer items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input type="checkbox" checked={selectedPartsUsed.includes(option)} onChange={() => toggleMultiFilter(option, selectedPartsUsed, setSelectedPartsUsed)} className="h-4 w-4 rounded border-[#D1D5DB] accent-[#7b5b12]" />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {originOptions.length > 1 ? (
+          <div>
+            <h4 className="mb-2.5 text-sm font-semibold text-[#1A1A1A]">Origin</h4>
+            <div className="max-h-44 space-y-2 overflow-y-auto pr-1">
+              {originOptions.map((option) => (
+                <label key={option} className="flex cursor-pointer items-center gap-2.5 text-sm text-[#1A1A1A]">
+                  <input type="radio" name="tm-origin" checked={selectedOrigin === option} onChange={() => setSelectedOrigin(option)} className="h-4 w-4 border-[#D1D5DB] accent-[#7b5b12]" />
+                  <span>{option}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mt-auto border-t border-[#d6c8a3] p-5">
         <button
-          key={category}
           type="button"
-          onClick={() => setSelectedCategory(category)}
-          className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition ${selectedCategory === category ? 'border-[#7b5b12] bg-[#7b5b12] text-white' : 'border-[#d6c8a3] bg-white text-[#7b5b12] hover:bg-[#fff9ec]'}`}
+          onClick={() => setIsFilterDrawerOpen(false)}
+          className="h-12 w-full rounded-lg bg-[#7b5b12] text-sm font-semibold text-white transition hover:bg-[#5e4510]"
         >
-          {category}
+          Apply Filters
         </button>
-      ))}
+      </div>
     </div>
-    <CardGrid
-      items={filteredItems}
-      buttonLabel={t('common.addToCart')}
-      secondaryButtonLabel={t('common.viewDetails')}
-      reviewSummaryMap={productReviewSummaryMap}
-      getItemReviewKey={(item) => getCollectionItemId('/traditional-medicines-herbs', item.id)}
-      onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-      onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
-      onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
-      onOpenItemDetails={(item) => {
-        const wishlistItem = buildWishlistItem(item);
-        const similar = marketItems
-          .filter((other) => other.id !== item.id && other.category === item.category)
-          .slice(0, 6)
-          .map((other) => ({
-            id: other.id,
-            title: other.title,
-            image: other.image,
-            price: getSalePrices(other.price, getItemSaleDiscountRate(other), other.currency || null).nowPrice,
-            category: other.category,
-            sellerName: other.sellerName,
-          }));
-        onOpenItemDetails?.({
-          title: getTranslatedValue(t, item.titleKey, item.title),
-          image: item.image,
-          images: item.images || (item.image ? [item.image] : []),
-          ...getItemDetailSizeProps(item),
-          availableQuantity: getSellerListingStock(sellerItems, item),
-          marketName: t('markets.traditionalMedicines'),
-          details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Traditional herbal listing'}`,
-          priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
-          highlights: [item.traditionalUses, item.preparationMethod].filter(Boolean),
-          detailsTable: {
-            Category: item.category || 'Traditional Medicine',
-            'Scientific / Botanical Name': item.scientificName || 'Not specified',
-            'Part Used': item.partUsed || 'Not specified',
-            Form: item.formType || 'Not specified',
-            Origin: item.origin || 'Not specified',
-          },
-          similarProducts: similar,
-          cartItem: buildCartItem(item),
-          wishlistItem,
-        });
-      }}
-      isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/traditional-medicines-herbs', item.id))}
-      metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • <SalePrice price={item.price} currency={item.currency} /></p>}
-    />
-  </MarketShowcase>
+  );
+
+  return (
+    <MarketShowcase
+      marketKey="traditionalMedicines"
+      title={t('markets.traditionalMedicines')}
+      subtitle={t('pageSubtitles.traditionalMedicines')}
+      eyebrow={t('markets.traditionalMedicines')}
+      chips={['Herbal remedies', 'Practitioner verified', 'Heritage botanicals']}
+    >
+      <div className="mb-5 rounded-xl border border-[#d6c8a3] bg-[#fff9ec] p-3 text-sm text-[#7b5b12]">
+        Traditional remedies should be used responsibly. Buyers should follow local guidance and consult qualified practitioners when needed.
+      </div>
+
+      <div className="mb-5 flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-[var(--svs-text)]">
+          Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}
+        </h2>
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+              setIsDesktopFiltersHidden((prev) => !prev);
+            } else {
+              setIsFilterDrawerOpen(true);
+            }
+          }}
+          className="inline-flex items-center gap-2 rounded-lg border border-[#d6c8a3] bg-[#fff9ec] px-4 py-2 text-sm font-medium text-[#7b5b12] transition hover:bg-[#f5e8c5]"
+        >
+          <Menu className="h-4 w-4" />
+          <span className="lg:hidden">Filter</span>
+          <span className="hidden lg:inline">{isDesktopFiltersHidden ? 'Show Filters' : 'Hide Filters'}</span>
+        </button>
+      </div>
+
+      <div className={`flex items-start gap-8 ${isDesktopFiltersHidden ? '' : 'lg:grid lg:grid-cols-[260px_minmax(0,1fr)]'}`}>
+        {!isDesktopFiltersHidden ? (
+          <aside className="hidden min-h-[400px] rounded-2xl border border-[#d6c8a3] bg-white shadow-sm lg:block">
+            {FilterPanel}
+          </aside>
+        ) : null}
+
+        <main className="min-w-0 flex-1">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-[var(--svs-muted)]">
+              Showing <span className="font-semibold text-[var(--svs-text)]">{filteredItems.length}</span> {filteredItems.length === 1 ? 'item' : 'items'}
+            </p>
+            {activeFilterCount ? (
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                className="rounded-full border border-[#d6c8a3] bg-white px-4 py-2 text-xs font-semibold text-[#7b5b12] transition hover:bg-[#fff9ec]"
+              >
+                Clear filters
+              </button>
+            ) : null}
+          </div>
+
+          {filteredItems.length ? (
+            <CardGrid
+              items={filteredItems}
+              buttonLabel={t('common.addToCart')}
+              secondaryButtonLabel={t('common.viewDetails')}
+              reviewSummaryMap={productReviewSummaryMap}
+              getItemReviewKey={(item) => getCollectionItemId('/traditional-medicines-herbs', item.id)}
+              onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+              onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
+              onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+              onOpenItemDetails={(item) => {
+                const wishlistItem = buildWishlistItem(item);
+                const similar = marketItems
+                  .filter((other) => other.id !== item.id && other.category === item.category)
+                  .slice(0, 6)
+                  .map((other) => ({
+                    id: other.id,
+                    title: other.title,
+                    image: other.image,
+                    price: getSalePrices(other.price, getItemSaleDiscountRate(other), other.currency || null).nowPrice,
+                    category: other.category,
+                    sellerName: other.sellerName,
+                  }));
+                onOpenItemDetails?.({
+                  title: getTranslatedValue(t, item.titleKey, item.title),
+                  image: item.image,
+                  images: item.images || (item.image ? [item.image] : []),
+                  ...getItemDetailSizeProps(item),
+                  availableQuantity: getSellerListingStock(sellerItems, item),
+                  marketName: t('markets.traditionalMedicines'),
+                  details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Traditional herbal listing'}`,
+                  priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
+                  highlights: [item.traditionalUses, item.preparationMethod].filter(Boolean),
+                  detailsTable: {
+                    Category: item.category || 'Traditional Medicine',
+                    'Scientific / Botanical Name': item.scientificName || 'Not specified',
+                    'Part Used': item.partUsed || 'Not specified',
+                    Form: item.formType || 'Not specified',
+                    Origin: item.origin || 'Not specified',
+                  },
+                  similarProducts: similar,
+                  cartItem: buildCartItem(item),
+                  wishlistItem,
+                });
+              }}
+              isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/traditional-medicines-herbs', item.id))}
+              metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • <SalePrice price={item.price} currency={item.currency} /></p>}
+            />
+          ) : (
+            <div className="rounded-2xl border border-dashed border-[#d6c8a3] bg-[#fff9ec] p-12 text-center">
+              <h3 className="text-lg font-semibold text-[#7b5b12]">No items match your filters</h3>
+              <p className="mt-2 text-sm text-[#7b5b12]/70">Try clearing some filters to see more products.</p>
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                className="mt-4 inline-flex h-11 items-center rounded-lg bg-[#7b5b12] px-6 text-sm font-medium text-white transition hover:bg-[#5e4510]"
+              >
+                Clear all filters
+              </button>
+            </div>
+          )}
+        </main>
+      </div>
+
+      {isFilterDrawerOpen ? (
+        <div className="fixed inset-0 z-[90] bg-black/45 lg:hidden" role="dialog" aria-modal="true" aria-label="Filter traditional medicines">
+          <div className="absolute inset-y-0 left-0 w-[min(92vw,320px)] overflow-y-auto bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#d6c8a3] px-4 py-3">
+              <h3 className="text-base font-semibold text-[#1A1A1A]">Filters</h3>
+              <button type="button" onClick={() => setIsFilterDrawerOpen(false)} className="rounded-md p-1 text-[#7b5b12] transition hover:bg-[#fff9ec]" aria-label="Close filters">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {FilterPanel}
+          </div>
+        </div>
+      ) : null}
+    </MarketShowcase>
   );
 };
 
@@ -35441,6 +35855,59 @@ const NurseryHubPage = ({
 
 const LIVESTOCK_TRUST_BG = 'https://images.pexels.com/photos/162801/sheep-flock-of-sheep-sheep-cheese-shepherd-162801.jpeg?auto=compress&cs=tinysrgb&w=1600';
 
+// Gender values match the seller form options exactly so filter selections
+// always align with what sellers can save: 'Male', 'Female', 'Mixed Herd'.
+const LIVESTOCK_CATEGORY_FILTERS = {
+  cattle: {
+    breeds: ['Holstein Friesian', 'Nguni', 'Brahman', 'Hereford', 'Angus', 'Simmental', 'Bonsmara', 'Drakensberger', 'Limousin', 'Jersey'],
+    genders: ['Male', 'Female', 'Mixed Herd'],
+    purposes: ['Dairy', 'Beef / Meat', 'Breeding'],
+    healthStatuses: ['Vaccinated', 'Health Certificate Available', 'Pending Vet Check'],
+  },
+  sheep: {
+    breeds: ['Merino', 'Dorper', 'Dohne Merino', 'Meatmaster', 'Van Rooy', 'Namaqua Afrikaner', 'SA Mutton Merino', 'Romanov', 'Damara'],
+    genders: ['Male', 'Female', 'Mixed Herd'],
+    purposes: ['Wool', 'Beef / Meat', 'Breeding'],
+    healthStatuses: ['Vaccinated', 'Health Certificate Available', 'Pending Vet Check'],
+  },
+  goats: {
+    breeds: ['Boer', 'Kalahari Red', 'Saanen', 'Toggenburg', 'Nubian', 'Indigenous', 'Angora', 'Savanna', 'Tankwa'],
+    genders: ['Male', 'Female', 'Mixed Herd'],
+    purposes: ['Dairy', 'Beef / Meat', 'Breeding'],
+    healthStatuses: ['Vaccinated', 'Health Certificate Available', 'Pending Vet Check'],
+  },
+  pigs: {
+    breeds: ['Large White', 'Landrace', 'Duroc', 'Berkshire', 'Kolbroek', 'Pietrain', 'Hampshire', 'Saddleback', 'Indigenous'],
+    genders: ['Male', 'Female', 'Mixed Herd'],
+    purposes: ['Beef / Meat', 'Breeding', 'Mixed Use'],
+    healthStatuses: ['Vaccinated', 'Health Certificate Available', 'Pending Vet Check'],
+  },
+  birds: {
+    breeds: ['Broiler', 'Layer Hen', 'Koekoek', 'Ross 308', 'Potchefstroom Koekoek', 'Guinea Fowl', 'Muscovy Duck', 'Turkey', 'Quail', 'Geese', 'Pekin Duck', 'Pigeons'],
+    genders: ['Male', 'Female', 'Mixed Herd'],
+    purposes: ['Eggs', 'Beef / Meat', 'Breeding'],
+    healthStatuses: ['Vaccinated', 'Health Certificate Available', 'Pending Vet Check'],
+  },
+  horses: {
+    breeds: ['Arabian', 'Thoroughbred', 'Quarter Horse', 'Warmblood', 'Boerperd', 'Friesian', 'Appaloosa', 'Andalusian', 'Donkey', 'Mule', 'Pony'],
+    genders: ['Male', 'Female', 'Mixed Herd'],
+    purposes: ['Riding / Racing', 'Breeding', 'Mixed Use'],
+    healthStatuses: ['Vaccinated', 'Health Certificate Available', 'Pending Vet Check'],
+  },
+  game: {
+    breeds: ['Springbok', 'Impala', 'Kudu', 'Eland', 'Blesbuck', 'Wildebeest', 'Ostrich', 'Waterbuck', 'Gemsbok', 'Nyala', 'Warthog'],
+    genders: ['Male', 'Female', 'Mixed Herd'],
+    purposes: ['Beef / Meat', 'Breeding', 'Mixed Use'],
+    healthStatuses: ['Vaccinated', 'Health Certificate Available', 'Pending Vet Check'],
+  },
+  rabbits: {
+    breeds: ['New Zealand White', 'Californian', 'Angora', 'Flemish Giant', 'Rex', 'Dutch', 'Chinchilla', 'Satin', 'Indigenous'],
+    genders: ['Male', 'Female', 'Mixed Herd'],
+    purposes: ['Beef / Meat', 'Breeding', 'Mixed Use'],
+    healthStatuses: ['Vaccinated', 'Health Certificate Available', 'Pending Vet Check'],
+  },
+};
+
 const LivestockHubPage = ({
   onAddToCart,
   onBuyNow,
@@ -35458,6 +35925,13 @@ const LivestockHubPage = ({
   const [sort, setSort] = useState('relevance');
   const [isSearching, setIsSearching] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedBreeds, setSelectedBreeds] = useState([]);
+  const [selectedGenders, setSelectedGenders] = useState([]);
+  const [selectedHealthStatuses, setSelectedHealthStatuses] = useState([]);
+  const [selectedPurposes, setSelectedPurposes] = useState([]);
+  const [priceRange, setPriceRange] = useState([0, 0]);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(false);
   const featuredRef = useRef(null);
 
   // Re-render whenever the buyer changes currency (header dropdown) or when
@@ -35538,6 +36012,9 @@ const LivestockHubPage = ({
         category: categoryTitle,
         categoryId,
         breed: item.breed || '',
+        gender: item.gender || '',
+        healthStatus: item.healthStatus || '',
+        purpose: item.purpose || '',
         age: item.age || '',
         weight: item.weight || '',
         location: item.location || '',
@@ -35558,6 +36035,74 @@ const LivestockHubPage = ({
     () => searchLivestockListings(allItems, debouncedQuery, { categoryId: activeCategory, sort }),
     [allItems, debouncedQuery, activeCategory, sort],
   );
+
+  const catPreset = activeCategory ? (LIVESTOCK_CATEGORY_FILTERS[activeCategory] || {}) : {};
+
+  const breedOptions = useMemo(() => {
+    const seen = new Set(catPreset.breeds || []);
+    filteredItems.forEach((item) => { const v = String(item.breed || '').trim(); if (v && v.toLowerCase() !== 'other') seen.add(v); });
+    return Array.from(seen);
+  }, [filteredItems, catPreset.breeds]);
+
+  const genderOptions = useMemo(() => {
+    const seen = new Set(catPreset.genders || []);
+    filteredItems.forEach((item) => { const v = String(item.gender || '').trim(); if (v && v.toLowerCase() !== 'other') seen.add(v); });
+    return Array.from(seen);
+  }, [filteredItems, catPreset.genders]);
+
+  const healthStatusOptions = useMemo(() => {
+    const seen = new Set(catPreset.healthStatuses || []);
+    filteredItems.forEach((item) => { const v = String(item.healthStatus || '').trim(); if (v && v.toLowerCase() !== 'other') seen.add(v); });
+    return Array.from(seen);
+  }, [filteredItems, catPreset.healthStatuses]);
+
+  const purposeOptions = useMemo(() => {
+    const seen = new Set(catPreset.purposes || []);
+    filteredItems.forEach((item) => { const v = String(item.purpose || '').trim(); if (v && v.toLowerCase() !== 'other') seen.add(v); });
+    return Array.from(seen);
+  }, [filteredItems, catPreset.purposes]);
+
+  const livestockPriceMax = useMemo(() => {
+    const max = filteredItems.reduce((highest, item) => Math.max(highest, getNumericPriceValue(item.price, 0, item.currency || null)), 0);
+    return Math.max(100, Math.ceil(max));
+  }, [filteredItems]);
+
+  useEffect(() => {
+    setPriceRange((prev) => (prev[1] !== livestockPriceMax ? [Math.min(prev[0], livestockPriceMax), livestockPriceMax] : prev));
+  }, [livestockPriceMax]);
+
+  // Clear sidebar filters whenever the category tile or search changes so
+  // previous selections don't carry over to a different animal group.
+  useEffect(() => {
+    setSelectedBreeds([]);
+    setSelectedGenders([]);
+    setSelectedHealthStatuses([]);
+    setSelectedPurposes([]);
+  }, [activeCategory, debouncedQuery]);
+
+  const activeFilterCount = selectedBreeds.length + selectedGenders.length + selectedHealthStatuses.length + selectedPurposes.length;
+
+  const clearSidebarFilters = () => {
+    setSelectedBreeds([]);
+    setSelectedGenders([]);
+    setSelectedHealthStatuses([]);
+    setSelectedPurposes([]);
+    setPriceRange([0, livestockPriceMax]);
+  };
+
+  const toggleSidebarFilter = (value, list, setter) => {
+    setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
+  };
+
+  const displayedItems = useMemo(() => filteredItems.filter((item) => {
+    const breedMatch = !selectedBreeds.length || !item.breed || selectedBreeds.some((b) => String(item.breed || '').toLowerCase() === b.toLowerCase());
+    const genderMatch = !selectedGenders.length || !item.gender || selectedGenders.some((g) => String(item.gender || '').toLowerCase() === g.toLowerCase());
+    const healthMatch = !selectedHealthStatuses.length || !item.healthStatus || selectedHealthStatuses.some((h) => String(item.healthStatus || '').toLowerCase() === h.toLowerCase());
+    const purposeMatch = !selectedPurposes.length || !item.purpose || selectedPurposes.some((p) => String(item.purpose || '').toLowerCase() === p.toLowerCase());
+    const price = getNumericPriceValue(item.price, 0, item.currency || null);
+    if (price < priceRange[0] || price > priceRange[1]) return false;
+    return breedMatch && genderMatch && healthMatch && purposeMatch;
+  }), [filteredItems, selectedBreeds, selectedGenders, selectedHealthStatuses, selectedPurposes, priceRange]);
 
   // Format a price expressed in the listing's source currency into the
   // buyer's currently-selected currency (falls back to ZAR if none on the
@@ -35724,153 +36269,269 @@ const LivestockHubPage = ({
 
       {/* ── Featured Livestock ── */}
       <div ref={featuredRef} className="mx-auto w-full max-w-6xl px-4 pb-8 sm:px-6">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-[var(--svs-primary-strong)] sm:text-3xl">Featured Livestock</h2>
-          <p className="mt-2 text-sm text-[var(--svs-primary-strong)]/85 sm:text-base">
-            Explore popular and recently added livestock from verified sellers
-          </p>
-          {activeCategory ? (
-            <button
-              type="button"
-              onClick={() => setActiveCategory(null)}
-              className="mt-2 text-xs font-semibold text-[var(--svs-primary)] hover:underline"
-            >
-              Clear category filter
-            </button>
-          ) : null}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-bold text-[var(--svs-primary-strong)] sm:text-3xl">Featured Livestock</h2>
+            <p className="mt-1 text-sm text-[var(--svs-primary-strong)]/85 sm:text-base">
+              Explore popular and recently added livestock from verified sellers
+            </p>
+            {activeCategory ? (
+              <button type="button" onClick={() => setActiveCategory(null)} className="mt-1 text-xs font-semibold text-[var(--svs-primary)] hover:underline">
+                Clear category filter
+              </button>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+                setIsDesktopFiltersHidden((prev) => !prev);
+              } else {
+                setIsFiltersOpen(true);
+              }
+            }}
+            className="inline-flex items-center gap-2 rounded-lg border border-[var(--svs-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--svs-primary)] transition hover:border-[var(--svs-primary)] hover:bg-[var(--svs-primary)]/5"
+          >
+            <Menu className="h-4 w-4" />
+            <span className="lg:hidden">Filter</span>
+            <span className="hidden lg:inline">{isDesktopFiltersHidden ? 'Show Filters' : 'Hide Filters'}</span>
+            {activeFilterCount ? <span className="rounded-full bg-[var(--svs-primary)] px-2 py-0.5 text-xs text-white">{activeFilterCount}</span> : null}
+          </button>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredItems.length === 0 ? (
-            <div className="col-span-full rounded-xl border border-dashed border-[var(--svs-border)] bg-white px-5 py-10 text-center text-sm text-[var(--svs-muted)]">
-              No livestock matches your current search or filter. Try adjusting your search.
+        <div className="flex flex-col gap-4 lg:flex-row lg:gap-8">
+          {isFiltersOpen ? (
+            <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setIsFiltersOpen(false)} role="presentation" />
+          ) : null}
+
+          <div className={`${isFiltersOpen ? 'fixed left-0 top-0 z-50 flex h-full w-[320px] max-w-[85vw] flex-col overflow-y-auto bg-white p-4 shadow-2xl sm:w-[340px]' : 'hidden'} ${isDesktopFiltersHidden ? 'lg:hidden' : 'lg:block lg:w-[260px] lg:shrink-0 lg:static lg:h-auto lg:p-0 lg:shadow-none'}`}>
+            <button type="button" onClick={() => setIsFiltersOpen(false)} className="mb-3 self-end rounded-full p-1.5 text-rose-500 hover:bg-rose-50 lg:hidden" aria-label="Close filters">
+              <X className="h-5 w-5" />
+            </button>
+            <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-sm font-bold text-[var(--svs-primary-strong)]">Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}</h3>
+                {activeFilterCount ? (
+                  <button type="button" onClick={clearSidebarFilters} className="text-xs font-medium text-[var(--svs-primary)] hover:underline">Clear all</button>
+                ) : null}
+              </div>
+              {breedOptions.length ? (
+                <div className="mb-5">
+                  <h4 className="mb-2 text-sm font-semibold text-[var(--svs-primary-strong)]">Breed</h4>
+                  <div className="flex flex-col gap-2">
+                    {breedOptions.map((option) => (
+                      <label key={option} className="flex cursor-pointer items-center gap-2 text-sm text-[var(--svs-text)]">
+                        <input type="checkbox" checked={selectedBreeds.includes(option)} onChange={() => toggleSidebarFilter(option, selectedBreeds, setSelectedBreeds)} className="h-4 w-4 rounded border-[var(--svs-border)] accent-[var(--svs-primary)]" />
+                        {option}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {genderOptions.length ? (
+                <div className="mb-5">
+                  <h4 className="mb-2 text-sm font-semibold text-[var(--svs-primary-strong)]">Gender</h4>
+                  <div className="flex flex-col gap-2">
+                    {genderOptions.map((option) => (
+                      <label key={option} className="flex cursor-pointer items-center gap-2 text-sm text-[var(--svs-text)]">
+                        <input type="checkbox" checked={selectedGenders.includes(option)} onChange={() => toggleSidebarFilter(option, selectedGenders, setSelectedGenders)} className="h-4 w-4 rounded border-[var(--svs-border)] accent-[var(--svs-primary)]" />
+                        {option}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {healthStatusOptions.length ? (
+                <div className="mb-5">
+                  <h4 className="mb-2 text-sm font-semibold text-[var(--svs-primary-strong)]">Health Status</h4>
+                  <div className="flex flex-col gap-2">
+                    {healthStatusOptions.map((option) => (
+                      <label key={option} className="flex cursor-pointer items-center gap-2 text-sm text-[var(--svs-text)]">
+                        <input type="checkbox" checked={selectedHealthStatuses.includes(option)} onChange={() => toggleSidebarFilter(option, selectedHealthStatuses, setSelectedHealthStatuses)} className="h-4 w-4 rounded border-[var(--svs-border)] accent-[var(--svs-primary)]" />
+                        {option}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {purposeOptions.length ? (
+                <div className="mb-5">
+                  <h4 className="mb-2 text-sm font-semibold text-[var(--svs-primary-strong)]">Purpose</h4>
+                  <div className="flex flex-col gap-2">
+                    {purposeOptions.map((option) => (
+                      <label key={option} className="flex cursor-pointer items-center gap-2 text-sm text-[var(--svs-text)]">
+                        <input type="checkbox" checked={selectedPurposes.includes(option)} onChange={() => toggleSidebarFilter(option, selectedPurposes, setSelectedPurposes)} className="h-4 w-4 rounded border-[var(--svs-border)] accent-[var(--svs-primary)]" />
+                        {option}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              <div className="mb-5">
+                <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Price Range</h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[0], _fxState.buyerCurrency)}</span>
+                  <input type="range" min={0} max={livestockPriceMax} value={priceRange[0]} onChange={(event) => setPriceRange([Number(event.target.value), priceRange[1]])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
+                  <input type="range" min={0} max={livestockPriceMax} value={priceRange[1]} onChange={(event) => setPriceRange([priceRange[0], Number(event.target.value)])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
+                  <span className="text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[1], _fxState.buyerCurrency)}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsFiltersOpen(false)}
+                className="w-full rounded-xl bg-[var(--svs-primary)] py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]"
+              >
+                Apply Filters
+              </button>
             </div>
-          ) : (
-            filteredItems.map((item) => {
-              const liked = wishSet.has(item.id);
-              const inStock = isInStock(item);
-              return (
-                <article
-                  key={item.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setSelectedItem(item)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      setSelectedItem(item);
+          </div>
+
+          {/* Listings column */}
+          <div className="min-w-0 flex-1">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-[var(--svs-muted)]">
+                Showing <span className="font-semibold text-[var(--svs-text)]">{displayedItems.length}</span> {displayedItems.length === 1 ? 'listing' : 'listings'}
+              </p>
+              {activeFilterCount ? (
+                <button type="button" onClick={clearSidebarFilters} className="rounded-full border border-[var(--svs-border)] bg-white px-3 py-1 text-xs font-semibold text-[var(--svs-primary)] hover:bg-[var(--svs-primary)]/5">
+                  Clear filters
+                </button>
+              ) : null}
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {displayedItems.length === 0 ? (
+                <div className="col-span-full rounded-xl border border-dashed border-[var(--svs-border)] bg-white px-5 py-10 text-center text-sm text-[var(--svs-muted)]">
+                  No livestock matches your current search or filters. Try adjusting your search or clearing filters.
+                </div>
+              ) : (
+                displayedItems.map((item) => {
+                  const liked = wishSet.has(item.id);
+                  const inStock = isInStock(item);
+                  return (
+                    <article
+                      key={item.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setSelectedItem(item)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          setSelectedItem(item);
+                        }
+                      }}
+                      className="cursor-pointer overflow-hidden rounded-xl bg-white shadow-md transition hover:-translate-y-1 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[var(--svs-primary)] focus:ring-offset-2"
+                    >
+                      <div className="relative aspect-[4/3] w-full overflow-hidden">
+                        <img
+                          src={item.image}
+                          alt={item.title}
+                          className={`h-full w-full object-cover ${inStock ? '' : 'opacity-70'}`}
+                          loading="lazy"
+                          onError={(event) => {
+                            event.currentTarget.onerror = null;
+                            event.currentTarget.src = livestockImageFallback;
+                          }}
+                        />
+                        {!inStock ? (
+                          <span className="absolute left-3 top-3 rounded-full bg-rose-600 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow">
+                            Out of Stock
+                          </span>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleToggleWishlist(item);
+                          }}
+                          aria-label={liked ? 'Remove from wishlist' : 'Add to wishlist'}
+                          aria-pressed={liked}
+                          className={`absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full shadow transition ${
+                            liked ? 'bg-rose-500 text-white' : 'bg-black/55 text-white hover:bg-black/75'
+                          }`}
+                        >
+                          <Heart className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
+                        </button>
+                      </div>
+                      <div className="p-4">
+                        <h3 className="text-base font-bold text-[var(--svs-primary-strong)]">{item.title}</h3>
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className="rounded-full bg-[#e6f7fb] px-3 py-1 text-sm font-semibold text-[var(--svs-primary-strong)]">
+                            {formatPrice(item)}
+                          </span>
+                          <span className="text-sm font-semibold text-[var(--svs-primary-strong)]">{item.category}</span>
+                        </div>
+                        <p className="mt-2 flex items-center gap-2 text-sm text-[var(--svs-primary-strong)]/85">
+                          <DollarSign className="h-4 w-4" />
+                          Age: {item.age} • Weight: {item.weight}
+                        </p>
+                        <p className="mt-1 flex items-center gap-2 text-sm text-[var(--svs-primary-strong)]/85">
+                          <MapPin className="h-4 w-4" /> {item.location}
+                        </p>
+                        <p className="mt-1 flex items-center gap-2 text-sm text-[var(--svs-primary-strong)]/85">
+                          <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                          <span className="font-semibold">{item.rating}</span>
+                          <span className="text-[var(--svs-muted)]">({item.reviewCount} reviews)</span>
+                        </p>
+                        <div className="mt-4 grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setSelectedItem(item);
+                            }}
+                            className="rounded-md border border-[var(--svs-primary)] bg-white py-2 text-sm font-semibold text-[var(--svs-primary)] transition hover:bg-[var(--svs-primary)]/10"
+                          >
+                            View Details
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              const itemKey = item.key || item.id;
+                              navigate('/support/chat', {
+                                state: {
+                                  recipientEmail: normalizeEmail(item.sellerEmail || 'support@biznisdil.com'),
+                                  recipientName: item.sellerName || item.sellerEmail || 'Biznisdil Support',
+                                  recipientRole: 'seller',
+                                  issueType: 'Livestock Enquiry',
+                                  itemKey,
+                                  itemTitle: item.title,
+                                  itemImage: item.image || item.images?.[0] || '',
+                                  itemLink: `/livestock-hub?focus=${encodeURIComponent(itemKey)}`,
+                                },
+                              });
+                            }}
+                            className={`rounded-md py-2 text-sm font-semibold leading-tight transition ${cudyBluePrimaryButtonClassName} bg-[var(--svs-primary)] text-white hover:bg-[var(--svs-primary-strong)]`}
+                          >
+                            Let's Talk For More Info
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })
+              )}
+            </div>
+
+            {activeCategory ? (
+              <div className="mt-6 flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveCategory(null);
+                    if (featuredRef.current) {
+                      featuredRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }
                   }}
-                  className="cursor-pointer overflow-hidden rounded-xl bg-white shadow-md transition hover:-translate-y-1 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[var(--svs-primary)] focus:ring-offset-2"
+                  className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-10 py-3 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}
                 >
-                  <div className="relative aspect-[4/3] w-full overflow-hidden">
-                    <img
-                      src={item.image}
-                      alt={item.title}
-                      className={`h-full w-full object-cover ${inStock ? '' : 'opacity-70'}`}
-                      loading="lazy"
-                      onError={(event) => {
-                        event.currentTarget.onerror = null;
-                        event.currentTarget.src = livestockImageFallback;
-                      }}
-                    />
-                    {!inStock ? (
-                      <span className="absolute left-3 top-3 rounded-full bg-rose-600 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow">
-                        Out of Stock
-                      </span>
-                    ) : null}
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        handleToggleWishlist(item);
-                      }}
-                      aria-label={liked ? 'Remove from wishlist' : 'Add to wishlist'}
-                      aria-pressed={liked}
-                      className={`absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full shadow transition ${
-                        liked ? 'bg-rose-500 text-white' : 'bg-black/55 text-white hover:bg-black/75'
-                      }`}
-                    >
-                      <Heart className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
-                    </button>
-                  </div>
-                  <div className="p-4">
-                    <h3 className="text-base font-bold text-[var(--svs-primary-strong)]">{item.title}</h3>
-                    <div className="mt-2 flex items-center gap-2">
-                      <span className="rounded-full bg-[#e6f7fb] px-3 py-1 text-sm font-semibold text-[var(--svs-primary-strong)]">
-                        {formatPrice(item)}
-                      </span>
-                      <span className="text-sm font-semibold text-[var(--svs-primary-strong)]">{item.category}</span>
-                    </div>
-                    <p className="mt-2 flex items-center gap-2 text-sm text-[var(--svs-primary-strong)]/85">
-                      <DollarSign className="h-4 w-4" />
-                      Age: {item.age} • Weight: {item.weight}
-                    </p>
-                    <p className="mt-1 flex items-center gap-2 text-sm text-[var(--svs-primary-strong)]/85">
-                      <MapPin className="h-4 w-4" /> {item.location}
-                    </p>
-                    <p className="mt-1 flex items-center gap-2 text-sm text-[var(--svs-primary-strong)]/85">
-                      <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                      <span className="font-semibold">{item.rating}</span>
-                      <span className="text-[var(--svs-muted)]">({item.reviewCount} reviews)</span>
-                    </p>
-                    <div className="mt-4 grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setSelectedItem(item);
-                        }}
-                        className="rounded-md border border-[var(--svs-primary)] bg-white py-2 text-sm font-semibold text-[var(--svs-primary)] transition hover:bg-[var(--svs-primary)]/10"
-                      >
-                        View Details
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          const itemKey = item.key || item.id;
-                          navigate('/support/chat', {
-                            state: {
-                              recipientEmail: normalizeEmail(item.sellerEmail || 'support@biznisdil.com'),
-                              recipientName: item.sellerName || item.sellerEmail || 'Biznisdil Support',
-                              recipientRole: 'seller',
-                              issueType: 'Livestock Enquiry',
-                              itemKey,
-                              itemTitle: item.title,
-                              itemImage: item.image || item.images?.[0] || '',
-                              itemLink: `/livestock-hub?focus=${encodeURIComponent(itemKey)}`,
-                            },
-                          });
-                        }}
-                        className={`rounded-md py-2 text-sm font-semibold leading-tight transition ${cudyBluePrimaryButtonClassName} bg-[var(--svs-primary)] text-white hover:bg-[var(--svs-primary-strong)]`}
-                      >
-                        Let's Talk For More Info
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              );
-            })
-          )}
-        </div>
-
-        {activeCategory ? (
-          <div className="mt-6 flex justify-center">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveCategory(null);
-                if (featuredRef.current) {
-                  featuredRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-              }}
-              className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-10 py-3 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}
-            >
-              View All Livestock
-            </button>
+                  View All Livestock
+                </button>
+              </div>
+            ) : null}
           </div>
-        ) : null}
+        </div>
       </div>
 
       {/* ── Why Shop With Us? — trust badges over grass background ── */}
