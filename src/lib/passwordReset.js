@@ -32,8 +32,10 @@ export const getResetTokenExpiry = () =>
 export const RESET_TOKEN_TTL_MINUTES = TOKEN_TTL_MINUTES;
 
 export const buildResetLink = (token) => {
-	if (typeof window === 'undefined') return `/reset-password?token=${token}`;
-	return `${window.location.origin}/reset-password?token=${token}`;
+	const origin =
+		process.env.REACT_APP_APP_URL ||
+		(typeof window !== 'undefined' ? window.location.origin : '');
+	return `${origin}/reset-password?token=${token}`;
 };
 
 // Best-effort email delivery via EmailJS (https://www.emailjs.com).

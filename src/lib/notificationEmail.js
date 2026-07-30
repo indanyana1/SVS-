@@ -34,12 +34,23 @@ export const sendNotificationEmail = async ({ email, name, title, message, link 
 	}
 
 	const displayName = name || 'there';
-	const actionUrl = link || (typeof window !== 'undefined' ? window.location.origin : '');
+	// Prefer the explicit app URL from env so links always point to production,
+	// even when the notification is triggered from a localhost admin session.
+	const appOrigin =
+		process.env.REACT_APP_APP_URL ||
+		(typeof window !== 'undefined' ? window.location.origin : '');
+	const actionUrl = link
+		? link.startsWith('http')
+			? link
+			: `${appOrigin}${link}`
+		: appOrigin;
 
 	// Same alias strategy as passwordReset.js / walletOtp.js: populate every
 	// variable name a template might use, plus the password-reset template's
 	// own variables (reset_link/link/role_label) so this still reads
 	// sensibly if a dedicated notification template hasn't been configured.
+	// role_label is always "Biznisdil" here — never the notification title —
+	// so the password-reset template subject stays readable as a fallback.
 	const templateParams = {
 		to_email: normalizedEmail,
 		user_email: normalizedEmail,
@@ -54,7 +65,7 @@ export const sendNotificationEmail = async ({ email, name, title, message, link 
 		action_url: actionUrl,
 		reset_link: actionUrl,
 		link: actionUrl,
-		role_label: title || 'Biznisdil',
+		role_label: 'Biznisdil',
 	};
 
 	try {
