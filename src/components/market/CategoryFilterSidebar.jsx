@@ -107,9 +107,9 @@ export default function CategoryFilterSidebar({
             max={maxPrice}
             value={price[0]}
             onChange={(e) => handlePriceChange(e, 0)}
-            className="w-1/2 accent-[#0f6674]"
+            className="w-full accent-[#0f6674]"
           />
-          <span className="text-sm">{price[0]}</span>
+          <span className="shrink-0 whitespace-nowrap text-sm">{price[0]}</span>
         </div>
         <div className="flex items-center gap-2 mt-2">
           <input
@@ -118,9 +118,9 @@ export default function CategoryFilterSidebar({
             max={maxPrice}
             value={price[1]}
             onChange={(e) => handlePriceChange(e, 1)}
-            className="w-1/2 accent-[#0f6674]"
+            className="w-full accent-[#0f6674]"
           />
-          <span className="text-sm">{price[1]}</span>
+          <span className="shrink-0 whitespace-nowrap text-sm">{price[1]}</span>
         </div>
       </div>
       <div>

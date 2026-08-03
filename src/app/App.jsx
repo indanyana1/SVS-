@@ -15471,10 +15471,10 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
             <div>
               <h3 className="text-lg font-bold mb-3 text-[var(--svs-primary)] tracking-tight">Price</h3>
               <div className="flex items-center gap-3">
-                <span className="text-sm text-[var(--svs-muted)]">{priceRange[0]}</span>
+                <span className="shrink-0 whitespace-nowrap text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[0], _fxState.buyerCurrency)}</span>
                 <input type="range" min={0} max={priceMax} step={1} value={priceRange[0]} onChange={e => setPriceRange([Number(e.target.value), priceRange[1]])} className="accent-[var(--svs-primary)] w-full svs-range-slider" />
                 <input type="range" min={0} max={priceMax} step={1} value={priceRange[1]} onChange={e => setPriceRange([priceRange[0], Number(e.target.value)])} className="accent-[var(--svs-primary)] w-full svs-range-slider" />
-                <span className="text-sm text-[var(--svs-muted)]">{priceRange[1]}</span>
+                <span className="shrink-0 whitespace-nowrap text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[1], _fxState.buyerCurrency)}</span>
               </div>
             </div>
             {/* Availability */}
@@ -20663,10 +20663,10 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
               <div className="mb-5">
                 <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Price Range</h3>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[0], _fxState.buyerCurrency)}</span>
+                  <span className="shrink-0 whitespace-nowrap text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[0], _fxState.buyerCurrency)}</span>
                   <input type="range" min={0} max={categoryPriceMax} value={priceRange[0]} onChange={(event) => setPriceRange([Number(event.target.value), priceRange[1]])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
                   <input type="range" min={0} max={categoryPriceMax} value={priceRange[1]} onChange={(event) => setPriceRange([priceRange[0], Number(event.target.value)])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
-                  <span className="text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[1], _fxState.buyerCurrency)}</span>
+                  <span className="shrink-0 whitespace-nowrap text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[1], _fxState.buyerCurrency)}</span>
                 </div>
               </div>
               {modelYearOptions.length ? (
@@ -22915,10 +22915,10 @@ const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
               <div className="mb-5">
                 <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Price Range</h3>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[0], _fxState.buyerCurrency)}</span>
+                  <span className="shrink-0 whitespace-nowrap text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[0], _fxState.buyerCurrency)}</span>
                   <input type="range" min={0} max={categoryPriceMax} value={priceRange[0]} onChange={(event) => setPriceRange([Number(event.target.value), priceRange[1]])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
                   <input type="range" min={0} max={categoryPriceMax} value={priceRange[1]} onChange={(event) => setPriceRange([priceRange[0], Number(event.target.value)])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
-                  <span className="text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[1], _fxState.buyerCurrency)}</span>
+                  <span className="shrink-0 whitespace-nowrap text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[1], _fxState.buyerCurrency)}</span>
                 </div>
               </div>
               <button
@@ -23953,10 +23953,10 @@ const GeneralLabourPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIt
               <div className="mb-5">
                 <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Price Range</h3>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[0], _fxState.buyerCurrency)}</span>
+                  <span className="shrink-0 whitespace-nowrap text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[0], _fxState.buyerCurrency)}</span>
                   <input type="range" min={0} max={categoryPriceMax} value={priceRange[0]} onChange={(event) => setPriceRange([Number(event.target.value), priceRange[1]])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
                   <input type="range" min={0} max={categoryPriceMax} value={priceRange[1]} onChange={(event) => setPriceRange([priceRange[0], Number(event.target.value)])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
-                  <span className="text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[1], _fxState.buyerCurrency)}</span>
+                  <span className="shrink-0 whitespace-nowrap text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[1], _fxState.buyerCurrency)}</span>
                 </div>
               </div>
               <button
@@ -36383,10 +36383,10 @@ const LivestockHubPage = ({
               <div className="mb-5">
                 <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Price Range</h3>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[0], _fxState.buyerCurrency)}</span>
+                  <span className="shrink-0 whitespace-nowrap text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[0], _fxState.buyerCurrency)}</span>
                   <input type="range" min={0} max={livestockPriceMax} value={priceRange[0]} onChange={(event) => setPriceRange([Number(event.target.value), priceRange[1]])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
                   <input type="range" min={0} max={livestockPriceMax} value={priceRange[1]} onChange={(event) => setPriceRange([priceRange[0], Number(event.target.value)])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
-                  <span className="text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[1], _fxState.buyerCurrency)}</span>
+                  <span className="shrink-0 whitespace-nowrap text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[1], _fxState.buyerCurrency)}</span>
                 </div>
               </div>
               <button
