@@ -14507,6 +14507,7 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
   const [isFiltersOpen, setIsFiltersOpen] = useState(false); // mobile drawer
   const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(true);
   const { t } = useTranslation();
+  const { code: buyerCurrencyCode } = useBuyerCurrency();
   const { categoryKey = '' } = useParams();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'groceries'), ...groceries], [sellerItems]);
   const activeCategory = groceriesCategoryCards.find((category) => category.key === categoryKey) || null;
@@ -14535,7 +14536,8 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
       return Math.max(maxValue, nextPrice);
     }, 0);
     return Math.max(1000, Math.ceil(highest));
-  }, [categoryItems]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryItems, buyerCurrencyCode]);
 
   const filteredMarketItems = useMemo(() => {
     return marketItems.filter((item) => {
@@ -14551,7 +14553,8 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
       if (filters.availability.length > 0 && item.availability && !filters.availability.some((a) => item.availability === a)) return false;
       return true;
     });
-  }, [marketItems, activeCategory, filters]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [marketItems, activeCategory, filters, buyerCurrencyCode]);
   useListingFocusFromQuery(filteredMarketItems, onOpenItemDetails);
   const buildCartItem = (item) => {
     const itemCategoryKey = resolveGroceriesCategoryKey(item);
@@ -14622,6 +14625,7 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
               brandOptions={brandOptions}
               productTypeOptions={productTypeOptions}
               categoryTitle={activeCategory?.title || ''}
+              buyerCurrencyCode={buyerCurrencyCode}
             />
           </div>
 
@@ -15375,10 +15379,19 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [marketItems, buyerCurrencyCode]);
 
+  // eslint-disable-next-line no-unused-vars
+  const fastFoodPriceStep = priceMax <= 20 ? 0.1 : priceMax <= 200 ? 1 : 5;
+
   const [priceRange, setPriceRange] = useState([0, priceMax]);
+  const prevFastFoodCurrencyRef = useRef(buyerCurrencyCode);
   useEffect(() => {
-    setPriceRange((prev) => (prev[1] !== priceMax ? [Math.min(prev[0], priceMax), priceMax] : prev));
-  }, [priceMax]);
+    if (prevFastFoodCurrencyRef.current !== buyerCurrencyCode) {
+      prevFastFoodCurrencyRef.current = buyerCurrencyCode;
+      setPriceRange([0, priceMax]);
+    } else {
+      setPriceRange((prev) => [Math.min(prev[0], priceMax), priceMax]);
+    }
+  }, [priceMax, buyerCurrencyCode]);
 
   // Dynamic filter option lists — only options that actually exist in items
   const categoryOptions = useMemo(() => {
@@ -15452,7 +15465,8 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
     const n = getNumericPriceValue(item?.price, getItemSaleDiscountRate(item), item?.currency || null);
     if (Number.isFinite(n) && (n < priceRange[0] || n > priceRange[1])) return false;
     return true;
-  }), [marketItems, selectedCategories, selectedCuisines, selectedTypes, selectedDietary, selectedSpiceLevel, selectedDrinkTypes, selectedBrands, selectedAvailability, search, priceRange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [marketItems, selectedCategories, selectedCuisines, selectedTypes, selectedDietary, selectedSpiceLevel, selectedDrinkTypes, selectedBrands, selectedAvailability, search, priceRange, buyerCurrencyCode]);
 
   const activeFilterCount = selectedCategories.length + selectedCuisines.length + selectedTypes.length + selectedDietary.length + selectedSpiceLevel.length + selectedDrinkTypes.length + selectedBrands.length + selectedAvailability.length;
 
@@ -15560,13 +15574,15 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
 
             {/* Price range */}
             <div className="border-t border-[var(--svs-border)] py-4">
-              <h3 className="mb-3 text-[11px] font-bold uppercase tracking-widest text-[var(--svs-primary-strong)]">Price Range</h3>
+              <h3 className="mb-3 text-[11px] font-bold uppercase tracking-widest text-[var(--svs-primary-strong)]">
+                Price Range <span className="font-normal normal-case tracking-normal opacity-60">({buyerCurrencyCode})</span>
+              </h3>
               <div className="flex items-center justify-between text-xs text-[var(--svs-muted)] mb-2">
                 <span>{formatAmountInCurrency(priceRange[0], _fxState.buyerCurrency)}</span>
                 <span>{formatAmountInCurrency(priceRange[1], _fxState.buyerCurrency)}</span>
               </div>
-              <input type="range" min={0} max={priceMax} step={1} value={priceRange[0]} onChange={(e) => setPriceRange([Math.min(Number(e.target.value), priceRange[1]), priceRange[1]])} className="svs-range-slider mb-1 w-full accent-[var(--svs-primary)]" />
-              <input type="range" min={0} max={priceMax} step={1} value={priceRange[1]} onChange={(e) => setPriceRange([priceRange[0], Math.max(Number(e.target.value), priceRange[0])])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
+              <input type="range" min={0} max={priceMax} step={fastFoodPriceStep} value={priceRange[0]} onChange={(e) => setPriceRange([Math.min(Number(e.target.value), priceRange[1]), priceRange[1]])} className="svs-range-slider mb-1 w-full accent-[var(--svs-primary)]" />
+              <input type="range" min={0} max={priceMax} step={fastFoodPriceStep} value={priceRange[1]} onChange={(e) => setPriceRange([priceRange[0], Math.max(Number(e.target.value), priceRange[0])])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
             </div>
 
             {/* Mobile apply */}
@@ -15773,6 +15789,7 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allBeverageItems, buyerCurrencyCode]);
 
+  // eslint-disable-next-line no-unused-vars
   const priceStep = priceMax <= 20 ? 0.1 : priceMax <= 200 ? 1 : 5;
 
   const [priceRange, setPriceRange] = useState([0, priceMax]);
@@ -15838,6 +15855,7 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       if (Number.isFinite(n) && (n < priceRange[0] || n > priceRange[1])) return false;
       return true;
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allBeverageItems, selectedCategories, selectedAlcoholContent, selectedTypes, selectedBrands, selectedOrigins, search, priceRange, buyerCurrencyCode]);
 
   const isPriceFiltered = priceRange[0] > 0 || priceRange[1] < priceMax;
@@ -20665,6 +20683,7 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(false);
   const featuredScrollRef = useRef(null);
+  const { code: buyerCurrencyCode } = useBuyerCurrency();
 
   // Reset category-specific filters whenever the category changes (the
   // route param changes without unmounting this component).
@@ -20697,11 +20716,21 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
   const categoryPriceMax = useMemo(() => {
     const max = categoryItems.reduce((highest, item) => Math.max(highest, getNumericPriceValue(item.price, 0, item.currency || null)), 0);
     return Math.max(100, Math.ceil(max));
-  }, [categoryItems]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryItems, buyerCurrencyCode]);
 
+  // eslint-disable-next-line no-unused-vars
+  const mobilityPriceStep = categoryPriceMax <= 20 ? 0.1 : categoryPriceMax <= 200 ? 1 : 5;
+
+  const prevMobilityCurrencyRef = useRef(buyerCurrencyCode);
   useEffect(() => {
-    setPriceRange((prev) => (prev[1] !== categoryPriceMax ? [Math.min(prev[0], categoryPriceMax), categoryPriceMax] : prev));
-  }, [categoryPriceMax]);
+    if (prevMobilityCurrencyRef.current !== buyerCurrencyCode) {
+      prevMobilityCurrencyRef.current = buyerCurrencyCode;
+      setPriceRange([0, categoryPriceMax]);
+    } else {
+      setPriceRange((prev) => [Math.min(prev[0], categoryPriceMax), categoryPriceMax]);
+    }
+  }, [categoryPriceMax, buyerCurrencyCode]);
 
   const toggleArrayValue = (setter, value) => {
     setter((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
@@ -20729,7 +20758,8 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       if (q && !String(item.title || '').toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [categoryItems, selectedVehicleTypes, selectedBrands, selectedFuelTypes, selectedTransmissions, selectedModelYears, priceRange, categorySearchQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryItems, selectedVehicleTypes, selectedBrands, selectedFuelTypes, selectedTransmissions, selectedModelYears, priceRange, categorySearchQuery, buyerCurrencyCode]);
 
   const visibleCategoryListings = showAllCategoryListings ? filteredCategoryItems : filteredCategoryItems.slice(0, 6);
   const featuredItems = categoryItems.slice(0, 6);
@@ -20950,11 +20980,13 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
                 </div>
               ) : null}
               <div className="mb-5">
-                <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Price Range</h3>
+                <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">
+                  Price Range <span className="font-normal opacity-60">({buyerCurrencyCode})</span>
+                </h3>
                 <div className="flex items-center gap-2">
                   <span className="shrink-0 whitespace-nowrap text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[0], _fxState.buyerCurrency)}</span>
-                  <input type="range" min={0} max={categoryPriceMax} value={priceRange[0]} onChange={(event) => setPriceRange([Number(event.target.value), priceRange[1]])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
-                  <input type="range" min={0} max={categoryPriceMax} value={priceRange[1]} onChange={(event) => setPriceRange([priceRange[0], Number(event.target.value)])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
+                  <input type="range" min={0} max={categoryPriceMax} step={mobilityPriceStep} value={priceRange[0]} onChange={(event) => setPriceRange([Number(event.target.value), priceRange[1]])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
+                  <input type="range" min={0} max={categoryPriceMax} step={mobilityPriceStep} value={priceRange[1]} onChange={(event) => setPriceRange([priceRange[0], Number(event.target.value)])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
                   <span className="shrink-0 whitespace-nowrap text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[1], _fxState.buyerCurrency)}</span>
                 </div>
               </div>
@@ -22908,6 +22940,7 @@ const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(false);
   const featuredScrollRef = useRef(null);
+  const { code: buyerCurrencyCode } = useBuyerCurrency();
 
   // Reset category-specific filters whenever the category changes (the
   // route param changes without unmounting this component).
@@ -22937,11 +22970,21 @@ const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
   const categoryPriceMax = useMemo(() => {
     const max = categoryItems.reduce((highest, item) => Math.max(highest, getNumericPriceValue(item.price, 0, item.currency || null)), 0);
     return Math.max(100, Math.ceil(max));
-  }, [categoryItems]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryItems, buyerCurrencyCode]);
 
+  // eslint-disable-next-line no-unused-vars
+  const naturalResPriceStep = categoryPriceMax <= 20 ? 0.1 : categoryPriceMax <= 200 ? 1 : 5;
+
+  const prevNaturalResCurrencyRef = useRef(buyerCurrencyCode);
   useEffect(() => {
-    setPriceRange((prev) => (prev[1] !== categoryPriceMax ? [Math.min(prev[0], categoryPriceMax), categoryPriceMax] : prev));
-  }, [categoryPriceMax]);
+    if (prevNaturalResCurrencyRef.current !== buyerCurrencyCode) {
+      prevNaturalResCurrencyRef.current = buyerCurrencyCode;
+      setPriceRange([0, categoryPriceMax]);
+    } else {
+      setPriceRange((prev) => [Math.min(prev[0], categoryPriceMax), categoryPriceMax]);
+    }
+  }, [categoryPriceMax, buyerCurrencyCode]);
 
   const toggleArrayValue = (setter, value) => {
     setter((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
@@ -22959,7 +23002,8 @@ const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       if (q && !String(item.title || '').toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [categoryItems, selectedTypes, selectedPurities, selectedForms, selectedSuppliers, priceRange, categorySearchQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryItems, selectedTypes, selectedPurities, selectedForms, selectedSuppliers, priceRange, categorySearchQuery, buyerCurrencyCode]);
 
   const visibleCategoryListings = showAllCategoryListings ? filteredCategoryItems : filteredCategoryItems.slice(0, 6);
   const featuredItems = categoryItems.slice(0, 6);
@@ -23202,11 +23246,13 @@ const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
                 </div>
               ) : null}
               <div className="mb-5">
-                <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Price Range</h3>
+                <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">
+                  Price Range <span className="font-normal opacity-60">({buyerCurrencyCode})</span>
+                </h3>
                 <div className="flex items-center gap-2">
                   <span className="shrink-0 whitespace-nowrap text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[0], _fxState.buyerCurrency)}</span>
-                  <input type="range" min={0} max={categoryPriceMax} value={priceRange[0]} onChange={(event) => setPriceRange([Number(event.target.value), priceRange[1]])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
-                  <input type="range" min={0} max={categoryPriceMax} value={priceRange[1]} onChange={(event) => setPriceRange([priceRange[0], Number(event.target.value)])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
+                  <input type="range" min={0} max={categoryPriceMax} step={naturalResPriceStep} value={priceRange[0]} onChange={(event) => setPriceRange([Number(event.target.value), priceRange[1]])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
+                  <input type="range" min={0} max={categoryPriceMax} step={naturalResPriceStep} value={priceRange[1]} onChange={(event) => setPriceRange([priceRange[0], Number(event.target.value)])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
                   <span className="shrink-0 whitespace-nowrap text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[1], _fxState.buyerCurrency)}</span>
                 </div>
               </div>
@@ -23897,6 +23943,7 @@ const GeneralLabourPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIt
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(false);
   const featuredScrollRef = useRef(null);
+  const { code: buyerCurrencyCode } = useBuyerCurrency();
 
   // Reset category-specific filters whenever the category changes (the
   // route param changes without unmounting this component).
@@ -23938,11 +23985,21 @@ const GeneralLabourPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIt
   const categoryPriceMax = useMemo(() => {
     const max = categoryItems.reduce((highest, item) => Math.max(highest, getNumericPriceValue(item.rate, 0, item.currency || null)), 0);
     return Math.max(100, Math.ceil(max));
-  }, [categoryItems]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryItems, buyerCurrencyCode]);
 
+  // eslint-disable-next-line no-unused-vars
+  const labourPriceStep = categoryPriceMax <= 20 ? 0.1 : categoryPriceMax <= 200 ? 1 : 5;
+
+  const prevLabourCurrencyRef = useRef(buyerCurrencyCode);
   useEffect(() => {
-    setPriceRange((prev) => (prev[1] !== categoryPriceMax ? [Math.min(prev[0], categoryPriceMax), categoryPriceMax] : prev));
-  }, [categoryPriceMax]);
+    if (prevLabourCurrencyRef.current !== buyerCurrencyCode) {
+      prevLabourCurrencyRef.current = buyerCurrencyCode;
+      setPriceRange([0, categoryPriceMax]);
+    } else {
+      setPriceRange((prev) => [Math.min(prev[0], categoryPriceMax), categoryPriceMax]);
+    }
+  }, [categoryPriceMax, buyerCurrencyCode]);
 
   // The City select depends on Country — if the city picked is no longer
   // valid for the newly selected country, clear it instead of silently
@@ -23971,7 +24028,8 @@ const GeneralLabourPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIt
       if (q && !`${item.name || ''} ${item.title || ''} ${item.location || ''}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [categoryItems, selectedRoles, selectedServiceTypes, selectedGender, selectedExperienceLevels, selectedSkillLevels, selectedCountry, selectedCity, selectedSchedules, priceRange, categorySearchQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryItems, selectedRoles, selectedServiceTypes, selectedGender, selectedExperienceLevels, selectedSkillLevels, selectedCountry, selectedCity, selectedSchedules, priceRange, categorySearchQuery, buyerCurrencyCode]);
 
   const visibleCategoryListings = showAllCategoryListings ? filteredCategoryItems : filteredCategoryItems.slice(0, 6);
   const featuredItems = categoryItems.slice(0, 6);
@@ -24240,11 +24298,13 @@ const GeneralLabourPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIt
                 </div>
               ) : null}
               <div className="mb-5">
-                <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Price Range</h3>
+                <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">
+                  Price Range <span className="font-normal opacity-60">({buyerCurrencyCode})</span>
+                </h3>
                 <div className="flex items-center gap-2">
                   <span className="shrink-0 whitespace-nowrap text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[0], _fxState.buyerCurrency)}</span>
-                  <input type="range" min={0} max={categoryPriceMax} value={priceRange[0]} onChange={(event) => setPriceRange([Number(event.target.value), priceRange[1]])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
-                  <input type="range" min={0} max={categoryPriceMax} value={priceRange[1]} onChange={(event) => setPriceRange([priceRange[0], Number(event.target.value)])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
+                  <input type="range" min={0} max={categoryPriceMax} step={labourPriceStep} value={priceRange[0]} onChange={(event) => setPriceRange([Number(event.target.value), priceRange[1]])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
+                  <input type="range" min={0} max={categoryPriceMax} step={labourPriceStep} value={priceRange[1]} onChange={(event) => setPriceRange([priceRange[0], Number(event.target.value)])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
                   <span className="shrink-0 whitespace-nowrap text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[1], _fxState.buyerCurrency)}</span>
                 </div>
               </div>
@@ -36368,11 +36428,21 @@ const LivestockHubPage = ({
   const livestockPriceMax = useMemo(() => {
     const max = filteredItems.reduce((highest, item) => Math.max(highest, getNumericPriceValue(item.price, 0, item.currency || null)), 0);
     return Math.max(100, Math.ceil(max));
-  }, [filteredItems]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredItems, buyerCurrencyCode]);
 
+  // eslint-disable-next-line no-unused-vars
+  const livestockPriceStep = livestockPriceMax <= 20 ? 0.1 : livestockPriceMax <= 200 ? 1 : 5;
+
+  const prevLivestockCurrencyRef = useRef(buyerCurrencyCode);
   useEffect(() => {
-    setPriceRange((prev) => (prev[1] !== livestockPriceMax ? [Math.min(prev[0], livestockPriceMax), livestockPriceMax] : prev));
-  }, [livestockPriceMax]);
+    if (prevLivestockCurrencyRef.current !== buyerCurrencyCode) {
+      prevLivestockCurrencyRef.current = buyerCurrencyCode;
+      setPriceRange([0, livestockPriceMax]);
+    } else {
+      setPriceRange((prev) => [Math.min(prev[0], livestockPriceMax), livestockPriceMax]);
+    }
+  }, [livestockPriceMax, buyerCurrencyCode]);
 
   // Clear sidebar filters whenever the category tile or search changes so
   // previous selections don't carry over to a different animal group.
@@ -36405,7 +36475,8 @@ const LivestockHubPage = ({
     const price = getNumericPriceValue(item.price, 0, item.currency || null);
     if (price < priceRange[0] || price > priceRange[1]) return false;
     return breedMatch && genderMatch && healthMatch && purposeMatch;
-  }), [filteredItems, selectedBreeds, selectedGenders, selectedHealthStatuses, selectedPurposes, priceRange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [filteredItems, selectedBreeds, selectedGenders, selectedHealthStatuses, selectedPurposes, priceRange, buyerCurrencyCode]);
 
   // Format a price expressed in the listing's source currency into the
   // buyer's currently-selected currency (falls back to ZAR if none on the
@@ -36671,11 +36742,13 @@ const LivestockHubPage = ({
                 </div>
               ) : null}
               <div className="mb-5">
-                <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">Price Range</h3>
+                <h3 className="mb-2 text-sm font-bold text-[var(--svs-primary-strong)]">
+                  Price Range <span className="font-normal opacity-60">({buyerCurrencyCode})</span>
+                </h3>
                 <div className="flex items-center gap-2">
                   <span className="shrink-0 whitespace-nowrap text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[0], _fxState.buyerCurrency)}</span>
-                  <input type="range" min={0} max={livestockPriceMax} value={priceRange[0]} onChange={(event) => setPriceRange([Number(event.target.value), priceRange[1]])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
-                  <input type="range" min={0} max={livestockPriceMax} value={priceRange[1]} onChange={(event) => setPriceRange([priceRange[0], Number(event.target.value)])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
+                  <input type="range" min={0} max={livestockPriceMax} step={livestockPriceStep} value={priceRange[0]} onChange={(event) => setPriceRange([Number(event.target.value), priceRange[1]])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
+                  <input type="range" min={0} max={livestockPriceMax} step={livestockPriceStep} value={priceRange[1]} onChange={(event) => setPriceRange([priceRange[0], Number(event.target.value)])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
                   <span className="shrink-0 whitespace-nowrap text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[1], _fxState.buyerCurrency)}</span>
                 </div>
               </div>

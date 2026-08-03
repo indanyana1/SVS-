@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 const AVAILABILITY_OPTIONS = [
   'Available Now',
@@ -13,12 +13,20 @@ export default function CategoryFilterSidebar({
   brandOptions = [],
   productTypeOptions = [],
   categoryTitle = '',
+  buyerCurrencyCode = '',
 }) {
   const [price, setPrice] = useState([minPrice, maxPrice]);
+  const prevCurrencyRef = useRef(buyerCurrencyCode);
 
-  // Resync internal slider state when the bounds change (e.g. when seller
-  // listings raise the maximum price for the active category).
+  // Reset fully when buyer currency changes; otherwise clamp/expand to new bounds.
   useEffect(() => {
+    if (prevCurrencyRef.current !== buyerCurrencyCode) {
+      prevCurrencyRef.current = buyerCurrencyCode;
+      const fresh = [minPrice, maxPrice];
+      setPrice(fresh);
+      setFilters((prev) => ({ ...prev, price: fresh }));
+      return;
+    }
     setPrice(([prevMin, prevMax]) => {
       const nextMin = Math.max(minPrice, Math.min(prevMin, maxPrice));
       const nextMax = Math.min(maxPrice, Math.max(prevMax, minPrice));
@@ -26,7 +34,7 @@ export default function CategoryFilterSidebar({
       const adjustedMax = prevMax >= maxPrice ? maxPrice : Math.max(nextMax, prevMax);
       return [nextMin, Math.min(adjustedMax, maxPrice)];
     });
-  }, [minPrice, maxPrice]);
+  }, [buyerCurrencyCode, minPrice, maxPrice, setFilters]);
 
   const handleCheckbox = (group, value) => {
     setFilters((prev) => {
