@@ -166,15 +166,57 @@ import { searchItems as searchItemsPowerful } from '../lib/powerSearch';
 const EMPTY_BEVERAGES_LISTING_FIELDS = {
   beverageCategory: '',
   beverageType: '',
+  alcoholContent: '',
   brand: '',
   volume: '',
   origin: '',
   description: '',
 };
 
-const BEVERAGE_CATEGORIES = [
-  'Wine', 'Beer', 'Whisky', 'Vodka', 'Rum', 'Gin', 'Brandy', 'Tequila', 'Sake', 'Scotch', 'Red Wine', 'Dark Rum',
+// Grouped for optgroup rendering in the seller form; flat list used for filter seeding.
+const BEVERAGE_CATEGORY_GROUPS = [
+  {
+    label: 'Wine',
+    options: ['Wine', 'Red Wine', 'White Wine', 'Rosé', 'Sparkling Wine', 'Champagne'],
+  },
+  {
+    label: 'Beer & Cider',
+    options: ['Beer', 'Lager', 'Ale', 'Stout', 'IPA', 'Pale Ale', 'Cider'],
+  },
+  {
+    label: 'Whisky & Whiskey',
+    options: ['Whisky', 'Scotch', 'Bourbon', 'Irish Whiskey', 'Japanese Whisky'],
+  },
+  {
+    label: 'Spirits',
+    options: ['Vodka', 'Rum', 'Dark Rum', 'White Rum', 'Spiced Rum', 'Gin', 'Brandy', 'Cognac', 'Tequila', 'Mezcal', 'Sake', 'Liqueur', 'Shooter'],
+  },
+  {
+    label: 'Non-Alcoholic',
+    options: [
+      'Soft Drink', 'Cola', 'Soda', 'Lemonade',
+      'Juice', 'Orange Juice', 'Apple Juice', 'Mango Juice',
+      'Water', 'Sparkling Water', 'Flavoured Water',
+      'Energy Drink', 'Sports Drink',
+      'Coffee', 'Iced Coffee',
+      'Tea', 'Iced Tea', 'Herbal Tea',
+      'Smoothie', 'Milkshake',
+      'Mocktail', 'Kombucha', 'Coconut Water',
+    ],
+  },
 ];
+
+const BEVERAGE_CATEGORIES = BEVERAGE_CATEGORY_GROUPS.flatMap((g) => g.options);
+
+// Categories that are inherently alcoholic — used to auto-tag items missing an explicit alcoholContent value.
+const ALCOHOLIC_BEVERAGE_CATEGORIES = new Set([
+  'Wine', 'Red Wine', 'White Wine', 'Rosé', 'Sparkling Wine', 'Champagne',
+  'Beer', 'Lager', 'Ale', 'Stout', 'IPA', 'Pale Ale', 'Cider',
+  'Whisky', 'Scotch', 'Bourbon', 'Irish Whiskey', 'Japanese Whisky',
+  'Vodka', 'Rum', 'Dark Rum', 'White Rum', 'Spiced Rum',
+  'Gin', 'Brandy', 'Cognac', 'Tequila', 'Mezcal', 'Sake',
+  'Liqueur', 'Shooter', 'Liquors',
+]);
 
 const BeveragesSellerFields = ({ formData, onFieldChange, prefix = 'seller-beverage', isCompact = false }) => {
   const containerClassName = isCompact
@@ -195,12 +237,13 @@ const BeveragesSellerFields = ({ formData, onFieldChange, prefix = 'seller-bever
       <div className="mb-3">
         <h3 className={`${isCompact ? 'text-sm' : 'text-base'} font-bold text-[var(--svs-text)]`}>Beverages & Liquors Listing Details</h3>
         <p className={`${helperClassName} mt-1`}>
-          Select the beverage category, type, brand, and volume. Add origin and a short description for best results.
+          Fill in every field accurately — buyers filter by category, type, brand, and origin, so complete info gets your listing found faster.
         </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
+        {/* Beverage category — optgroup select */}
         <div>
-          <label htmlFor={`${prefix}-category`} className={labelClassName}>Beverage Category</label>
+          <label htmlFor={`${prefix}-category`} className={labelClassName}>Beverage Category <span className="text-rose-500">*</span></label>
           <select
             id={`${prefix}-category`}
             name="beverageCategory"
@@ -209,61 +252,97 @@ const BeveragesSellerFields = ({ formData, onFieldChange, prefix = 'seller-bever
             required
             className={inputClassName}
           >
-            <option value="">Select beverage category</option>
-            {BEVERAGE_CATEGORIES.map((cat) => (
-              <option key={cat} value={cat}>{cat}</option>
+            <option value="">Select category</option>
+            {BEVERAGE_CATEGORY_GROUPS.map((group) => (
+              <optgroup key={group.label} label={group.label}>
+                {group.options.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </optgroup>
             ))}
           </select>
+          <p className={helperClassName}>Drives the Category filter buyers see.</p>
         </div>
+
+        {/* Alcoholic content */}
         <div>
-          <label htmlFor={`${prefix}-type`} className={labelClassName}>Type / Subtype</label>
+          <label htmlFor={`${prefix}-alcohol`} className={labelClassName}>Alcoholic Content <span className="text-rose-500">*</span></label>
+          <select
+            id={`${prefix}-alcohol`}
+            name="alcoholContent"
+            value={formData.alcoholContent}
+            onChange={onFieldChange}
+            required
+            className={inputClassName}
+          >
+            <option value="">Select</option>
+            <option value="Alcoholic">Alcoholic</option>
+            <option value="Non-alcoholic">Non-alcoholic</option>
+          </select>
+          <p className={helperClassName}>Drives the Alcoholic / Non-alcoholic filter.</p>
+        </div>
+
+        {/* Type / subtype */}
+        <div>
+          <label htmlFor={`${prefix}-type`} className={labelClassName}>Type / Subtype <span className="text-rose-500">*</span></label>
           <input
             id={`${prefix}-type`}
             name="beverageType"
             value={formData.beverageType}
             onChange={onFieldChange}
             required
-            placeholder="e.g. Merlot, Lager, Single Malt"
+            placeholder="e.g. Merlot, Lager, Single Malt, Freshly Squeezed"
             className={inputClassName}
           />
+          <p className={helperClassName}>Drives the Type filter buyers see.</p>
         </div>
+
+        {/* Brand */}
         <div>
-          <label htmlFor={`${prefix}-brand`} className={labelClassName}>Brand</label>
+          <label htmlFor={`${prefix}-brand`} className={labelClassName}>Brand <span className="text-rose-500">*</span></label>
           <input
             id={`${prefix}-brand`}
             name="brand"
             value={formData.brand}
             onChange={onFieldChange}
             required
-            placeholder="e.g. Moët, Heineken, Jameson"
+            placeholder="e.g. Moët, Heineken, Jameson, Ceres"
             className={inputClassName}
           />
+          <p className={helperClassName}>Drives the Brand filter buyers see.</p>
         </div>
+
+        {/* Volume */}
         <div>
-          <label htmlFor={`${prefix}-volume`} className={labelClassName}>Volume / Pack Size</label>
+          <label htmlFor={`${prefix}-volume`} className={labelClassName}>Volume / Pack Size <span className="text-rose-500">*</span></label>
           <input
             id={`${prefix}-volume`}
             name="volume"
             value={formData.volume}
             onChange={onFieldChange}
             required
-            placeholder="e.g. 750ml, 6 x 330ml"
+            placeholder="e.g. 750ml, 6 x 330ml, 1L"
             className={inputClassName}
           />
         </div>
+
+        {/* Origin */}
         <div>
-          <label htmlFor={`${prefix}-origin`} className={labelClassName}>Origin</label>
+          <label htmlFor={`${prefix}-origin`} className={labelClassName}>Country of Origin</label>
           <input
             id={`${prefix}-origin`}
             name="origin"
             value={formData.origin}
             onChange={onFieldChange}
-            placeholder="e.g. South Africa, Scotland"
+            placeholder="e.g. South Africa, Scotland, France"
             className={inputClassName}
           />
+          <p className={helperClassName}>Drives the Origin filter buyers see.</p>
         </div>
+
+        {/* Description */}
         <div className="sm:col-span-2">
-          <label htmlFor={`${prefix}-description`} className={labelClassName}>Short Description</label>
+          <label htmlFor={`${prefix}-description`} className={labelClassName}>Short Description <span className="text-rose-500">*</span></label>
           <textarea
             id={`${prefix}-description`}
             name="description"
@@ -271,7 +350,7 @@ const BeveragesSellerFields = ({ formData, onFieldChange, prefix = 'seller-bever
             onChange={onFieldChange}
             rows={2}
             required
-            placeholder="e.g. Full-bodied red wine with notes of cherry and oak."
+            placeholder="e.g. Full-bodied red wine with notes of cherry and oak. Best served at room temperature."
             className={inputClassName}
           />
         </div>
@@ -433,6 +512,7 @@ const MARKET_FIELD_SPEC = {
     helper: 'Pick a meal category, cuisine, outlet type and any dietary tags so hungry buyers can filter.',
     fields: [
       { name: 'category', label: 'Meal category', type: 'select', required: true, options: ['Burgers', 'Chicken', 'Pizza', 'Wraps', 'Sides', 'Tacos', 'Noodles', 'Drinks', 'Desserts', 'Snacks', 'Combo Meals', 'Other'] },
+      { name: 'drinkType', label: 'Drink type (if Drinks)', type: 'select', options: ['Soft Drink', 'Juice', 'Water', 'Milkshake', 'Smoothie', 'Energy Drink', 'Coffee', 'Tea', 'Alcohol', 'Other'] },
       { name: 'cuisine', label: 'Cuisine', type: 'select', options: ['American', 'Italian', 'Mexican', 'Asian', 'African', 'Middle-Eastern', 'Other'] },
       { name: 'outletType', label: 'Outlet type', type: 'select', options: ['Restaurant', 'Takeaway', 'Street Vendor', 'Food Truck'] },
       { name: 'availability', label: 'Availability', type: 'select', options: ['Available Now', 'Pre-Order'] },
@@ -8390,14 +8470,23 @@ const formatListingDateLabel = (value) => {
 const getSellerListingValidationMessage = (formState) => {
   if (formState.marketKey === 'beverages') {
     const hasCategory = String(formState.beverageCategory || '').trim();
+    const hasAlcohol = String(formState.alcoholContent || '').trim();
     const hasType = String(formState.beverageType || '').trim();
     const hasBrand = String(formState.brand || '').trim();
     const hasVolume = String(formState.volume || '').trim();
     const hasDescription = String(formState.description || '').trim();
-    if (hasCategory && hasType && hasBrand && hasVolume && hasDescription) {
+    if (hasCategory && hasAlcohol && hasType && hasBrand && hasVolume && hasDescription) {
       return '';
     }
-    return 'For beverage listings, select the beverage category, type, brand, volume, and add a short description before publishing.';
+    const missing = [
+      !hasCategory && 'beverage category',
+      !hasAlcohol && 'alcoholic content',
+      !hasType && 'type/subtype',
+      !hasBrand && 'brand',
+      !hasVolume && 'volume',
+      !hasDescription && 'description',
+    ].filter(Boolean);
+    return `Please complete: ${missing.join(', ')}.`;
   }
   if (formState.marketKey !== 'groceries') {
     if (formState.marketKey !== 'tickets') {
@@ -8532,6 +8621,7 @@ const buildSellerItemBaseDetailsJson = (formState) => {
         ...sharedFields,
         beverageCategory: String(formState.beverageCategory || '').trim(),
         beverageType: String(formState.beverageType || '').trim(),
+        alcoholContent: String(formState.alcoholContent || '').trim(),
         brand: String(formState.brand || '').trim(),
         volume: String(formState.volume || '').trim(),
         origin: String(formState.origin || '').trim(),
@@ -15242,69 +15332,40 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
 };
 
 const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
-    const { t } = useTranslation();
+  const { t } = useTranslation();
 
-    // Helper to create cart/wishlist item — delegate to global helpers so
-    // unitPrice/unitPriceLabel/currency are populated (otherwise checkout sees price 0).
-    const buildSavedPayload = (item) => ({
-      ...item,
-      route: item.route || '/fast-food',
-      marketName: item.marketName || t('markets.fastFood'),
-      details: item.details || item.subtitle || item.description || item.prepTime || item.sellerName || '',
-    });
-    const handleAddToCart = (item) => {
-      if (onAddToCart) onAddToCart(createCartItem(buildSavedPayload(item)));
-    };
+  const buildSavedPayload = (item) => ({
+    ...item,
+    route: item.route || '/fast-food',
+    marketName: item.marketName || t('markets.fastFood'),
+    details: item.details || item.subtitle || item.description || item.prepTime || item.sellerName || '',
+  });
+  const handleAddToCart = (item) => { if (onAddToCart) onAddToCart(createCartItem(buildSavedPayload(item))); };
+  const handleBuyNow = (item) => { if (onBuyNow) onBuyNow(createCartItem(buildSavedPayload(item))); };
+  const handleToggleWishlist = (item) => { if (onToggleWishlist) onToggleWishlist(createWishlistItem(buildSavedPayload(item))); };
+  const handleOpenDetails = (item) => { if (onOpenItemDetails) onOpenItemDetails(item); };
+  const gridRef = useRef(null);
 
-    // Handler: Buy Now
-    const handleBuyNow = (item) => {
-      if (onBuyNow) onBuyNow(createCartItem(buildSavedPayload(item)));
-    };
-
-    // Handler: Wishlist
-    const handleToggleWishlist = (item) => {
-      if (onToggleWishlist) onToggleWishlist(createWishlistItem(buildSavedPayload(item)));
-    };
-
-    // Handler: Open Details Modal (use global modal)
-    const handleOpenDetails = (item) => {
-      if (onOpenItemDetails) onOpenItemDetails(item);
-    };
-
-    // Handler: Hero Order Now scrolls to grid
-    const gridRef = useRef(null);
-
-    // Handler: View All (scroll to grid)
-    const handleViewAll = () => {
-      if (gridRef.current) gridRef.current.scrollIntoView({ behavior: 'smooth' });
-    };
-
-    // Handler: Apply Filters (no-op, filters are live, but could debounce or trigger here)
-    const handleApplyFilters = (e) => {
-      e.preventDefault();
-      // Filters are already applied live
-    };
-  // --- PIXEL-PERFECT FAST FOOD PAGE ---
-  const [search, setSearch] = useState("");
+  // Filter state
+  const [search, setSearch] = useState('');
   const [selectedCategories, setSelectedCategories] = useState([]);
-  const [selectedAvailability, setSelectedAvailability] = useState([]);
-  const [selectedBrands, setSelectedBrands] = useState([]);
   const [selectedCuisines, setSelectedCuisines] = useState([]);
   const [selectedTypes, setSelectedTypes] = useState([]);
-  const [showFilters, setShowFilters] = useState(false);
+  const [selectedDietary, setSelectedDietary] = useState([]);
+  const [selectedSpiceLevel, setSelectedSpiceLevel] = useState([]);
+  const [selectedDrinkTypes, setSelectedDrinkTypes] = useState([]);
+  const [selectedBrands, setSelectedBrands] = useState([]);
+  const [selectedAvailability, setSelectedAvailability] = useState([]);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(false);
 
-  // Currency: re-derive bounds whenever the buyer changes their currency so
-  // the slider and computed prices reflect the active currency.
   const { code: buyerCurrencyCode } = useBuyerCurrency();
-  // Unique categories, brands, cuisines, types from merged seller + static items
-  // so seller-listed brands and cuisines appear as filter options.
+
   const marketItems = useMemo(
     () => [...getSellerItemsForMarket(sellerItems, 'fastFood'), ...fastFoodItems],
     [sellerItems],
   );
-  // Compute max price dynamically (in the buyer's currency) so seller items
-  // priced above the static catalog still appear within the slider range,
-  // and so the slider scale matches the displayed prices.
+
   const priceMax = useMemo(() => {
     const max = marketItems.reduce((m, i) => {
       const n = getNumericPriceValue(i?.price, getItemSaleDiscountRate(i), i?.currency || null);
@@ -15313,59 +15374,138 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
     return Math.max(20, Math.ceil(max));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [marketItems, buyerCurrencyCode]);
+
   const [priceRange, setPriceRange] = useState([0, priceMax]);
-  // Expand the upper bound when new seller items raise the max, or when the
-  // buyer's currency changes (so the slider top stays aligned with prices).
   useEffect(() => {
     setPriceRange((prev) => (prev[1] !== priceMax ? [Math.min(prev[0], priceMax), priceMax] : prev));
   }, [priceMax]);
-  const categories = Array.from(new Set(marketItems.map(i => i.category).filter(Boolean)));
-  // Cuisines / outlet types / availability include seller-supplied values.
-  const cuisines = Array.from(new Set([
-    'American', 'Italian', 'Mexican', 'Asian', 'African',
-    ...marketItems.map(i => i.cuisine).filter(Boolean),
-  ]));
-  const types = Array.from(new Set([
-    'Restaurant', 'Takeaway', 'Street Vendor',
-    ...marketItems.map(i => i.outletType).filter(Boolean),
-  ]));
-  const brands = Array.from(new Set([
-    'Biznisdil Burger', 'Pizza Palace', 'Chicken Hub', 'Taco Town',
-    ...marketItems.map(i => i.brand).filter(Boolean),
-  ]));
-  const availabilities = ['Available Now', 'Preorder'];
 
-  // Filter logic — applies to merged seller + static items so seller listings
-  // also appear (and respect the active filters).
-  const filteredItems = marketItems.filter(item => {
-    const matchCategory = !selectedCategories.length || selectedCategories.includes(item.category);
-    const matchBrand = !selectedBrands.length || (
-      // Match against item.brand directly OR fall back to the legacy
-      // title-includes heuristic used for static items.
-      selectedBrands.includes(item.brand)
-      || brands.some(b => selectedBrands.includes(b) && (item.title || '').includes(b))
+  // Dynamic filter option lists — only options that actually exist in items
+  const categoryOptions = useMemo(() => {
+    const seed = ['Burgers', 'Chicken', 'Pizza', 'Wraps', 'Sides', 'Tacos', 'Noodles', 'Drinks', 'Desserts', 'Snacks', 'Combo Meals', 'Other'];
+    const fromItems = marketItems.map((i) => i.category).filter(Boolean);
+    return Array.from(new Set([...seed, ...fromItems])).filter((v) =>
+      marketItems.some((i) => i.category === v),
     );
-    const matchCuisine = !selectedCuisines.length || (
-      selectedCuisines.includes(item.cuisine)
-      || cuisines.some(c => selectedCuisines.includes(c) && (item.title || '').includes(c))
+  }, [marketItems]);
+
+  const cuisineOptions = useMemo(() => {
+    const seed = ['American', 'Italian', 'Mexican', 'Asian', 'African', 'Middle-Eastern', 'Other'];
+    const fromItems = marketItems.map((i) => i.cuisine).filter(Boolean);
+    return Array.from(new Set([...seed, ...fromItems])).filter((v) =>
+      marketItems.some((i) => i.cuisine === v),
     );
-    const matchType = !selectedTypes.length || (
-      selectedTypes.includes(item.outletType)
-      || types.some(tp => selectedTypes.includes(tp) && (item.title || '').includes(tp))
+  }, [marketItems]);
+
+  const outletTypeOptions = useMemo(() => {
+    const seed = ['Restaurant', 'Takeaway', 'Street Vendor', 'Food Truck'];
+    const fromItems = marketItems.map((i) => i.outletType).filter(Boolean);
+    return Array.from(new Set([...seed, ...fromItems])).filter((v) =>
+      marketItems.some((i) => i.outletType === v),
     );
-    const matchAvailability = !selectedAvailability.length || (
-      selectedAvailability.includes(item.availability)
-      || availabilities.some(a => selectedAvailability.includes(a))
-    );
-    const matchPrice = (() => {
-      const n = getNumericPriceValue(item?.price, getItemSaleDiscountRate(item), item?.currency || null);
-      return Number.isFinite(n) && n >= priceRange[0] && n <= priceRange[1];
-    })();
-    const matchSearch = !search || item.title.toLowerCase().includes(search.toLowerCase());
-    return matchCategory && matchBrand && matchCuisine && matchType && matchAvailability && matchPrice && matchSearch;
-  });
+  }, [marketItems]);
+
+  const dietaryOptions = useMemo(() =>
+    Array.from(new Set(marketItems.map((i) => i.dietary).filter((v) => v && v !== 'None'))),
+    [marketItems],
+  );
+
+  const spiceLevelOptions = useMemo(() => {
+    const order = ['Mild', 'Medium', 'Hot', 'Extra Hot'];
+    const fromItems = new Set(marketItems.map((i) => i.spiceLevel).filter(Boolean));
+    return order.filter((v) => fromItems.has(v));
+  }, [marketItems]);
+
+  // Drink type — only appears when at least one item is category Drinks with a drinkType
+  const drinkTypeOptions = useMemo(() =>
+    Array.from(new Set(
+      marketItems.filter((i) => i.category === 'Drinks').map((i) => i.drinkType).filter(Boolean),
+    )),
+    [marketItems],
+  );
+  const hasDrinks = useMemo(() => marketItems.some((i) => i.category === 'Drinks'), [marketItems]);
+
+  const brandOptions = useMemo(() =>
+    Array.from(new Set(marketItems.map((i) => i.brand).filter(Boolean))).sort(),
+    [marketItems],
+  );
+
+  const availabilityOptions = ['Available Now', 'Pre-Order'];
+
+  // Filtered items
+  const filteredItems = useMemo(() => marketItems.filter((item) => {
+    if (selectedCategories.length && !selectedCategories.includes(item.category)) return false;
+    if (selectedCuisines.length && !selectedCuisines.includes(item.cuisine)) return false;
+    if (selectedTypes.length && !selectedTypes.includes(item.outletType)) return false;
+    if (selectedDietary.length && !selectedDietary.includes(item.dietary)) return false;
+    if (selectedSpiceLevel.length && !selectedSpiceLevel.includes(item.spiceLevel)) return false;
+    if (selectedDrinkTypes.length && !(item.category === 'Drinks' && selectedDrinkTypes.includes(item.drinkType))) return false;
+    if (selectedBrands.length && !selectedBrands.includes(item.brand)) return false;
+    if (selectedAvailability.length && !selectedAvailability.includes(item.availability)) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      const hit = [item.title, item.category, item.cuisine, item.brand, item.dietary, item.drinkType].some(
+        (v) => String(v || '').toLowerCase().includes(q),
+      );
+      if (!hit) return false;
+    }
+    const n = getNumericPriceValue(item?.price, getItemSaleDiscountRate(item), item?.currency || null);
+    if (Number.isFinite(n) && (n < priceRange[0] || n > priceRange[1])) return false;
+    return true;
+  }), [marketItems, selectedCategories, selectedCuisines, selectedTypes, selectedDietary, selectedSpiceLevel, selectedDrinkTypes, selectedBrands, selectedAvailability, search, priceRange]);
+
+  const activeFilterCount = selectedCategories.length + selectedCuisines.length + selectedTypes.length + selectedDietary.length + selectedSpiceLevel.length + selectedDrinkTypes.length + selectedBrands.length + selectedAvailability.length;
+
+  const clearFilters = () => {
+    setSelectedCategories([]);
+    setSelectedCuisines([]);
+    setSelectedTypes([]);
+    setSelectedDietary([]);
+    setSelectedSpiceLevel([]);
+    setSelectedDrinkTypes([]);
+    setSelectedBrands([]);
+    setSelectedAvailability([]);
+    setPriceRange([0, priceMax]);
+  };
+
+  // Remove a single active chip
+  const removeChip = (chip) => {
+    setSelectedCategories((p) => p.filter((v) => v !== chip));
+    setSelectedCuisines((p) => p.filter((v) => v !== chip));
+    setSelectedTypes((p) => p.filter((v) => v !== chip));
+    setSelectedDietary((p) => p.filter((v) => v !== chip));
+    setSelectedSpiceLevel((p) => p.filter((v) => v !== chip));
+    setSelectedDrinkTypes((p) => p.filter((v) => v !== chip));
+    setSelectedBrands((p) => p.filter((v) => v !== chip));
+    setSelectedAvailability((p) => p.filter((v) => v !== chip));
+  };
 
   useListingFocusFromQuery(filteredItems, handleOpenDetails);
+
+  const allActiveChips = [...selectedCategories, ...selectedDrinkTypes, ...selectedCuisines, ...selectedTypes, ...selectedDietary, ...selectedSpiceLevel, ...selectedBrands, ...selectedAvailability];
+
+  // Reusable checkbox section for the sidebar
+  const mkSection = (title, options, selected, setSelected) => {
+    if (!options.length) return null;
+    return (
+      <div key={title} className="border-t border-[var(--svs-border)] py-4">
+        <h3 className="mb-3 text-[11px] font-bold uppercase tracking-widest text-[var(--svs-primary-strong)]">{title}</h3>
+        <div className="flex flex-col gap-2">
+          {options.map((opt) => (
+            <label key={opt} className="flex cursor-pointer items-center gap-2 text-sm text-[var(--svs-text)]">
+              <input
+                type="checkbox"
+                checked={selected.includes(opt)}
+                onChange={(e) => setSelected((prev) => e.target.checked ? [...prev, opt] : prev.filter((v) => v !== opt))}
+                className="h-4 w-4 rounded accent-[var(--svs-primary)]"
+              />
+              <span className="leading-tight">{opt}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="bg-[var(--svs-bg)] min-h-screen font-sans">
@@ -15378,298 +15518,353 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
       />
       <MarketTrustStrip />
 
-      {/* Informational Section */}
-      <section className="py-14 bg-[var(--svs-surface)] flex flex-col items-center">
-        <h2 className="font-extrabold text-[28px] text-[var(--svs-text)] mb-6" style={{letterSpacing:'-0.02em'}}>Why Choose Biznisdil Fast Food?</h2>
-        <div className="flex flex-col md:flex-row gap-8 md:gap-16 justify-center">
-          <div className="flex flex-col items-center text-center max-w-xs">
-            <img src="https://img.icons8.com/fluency/96/000000/hamburger.png" alt="Burger" className="mb-3 w-20 h-20" />
-            <span className="font-semibold text-lg text-[var(--svs-text)]">Wide Variety</span>
-            <span className="text-[var(--svs-muted)] text-base mt-2">Burgers, pizza, chicken, sides, and more</span>
-          </div>
-          <div className="flex flex-col items-center text-center max-w-xs">
-            <img src="https://img.icons8.com/fluency/96/000000/fast-food.png" alt="Fast" className="mb-3 w-20 h-20" />
-            <span className="font-semibold text-lg text-[var(--svs-text)]">Super Fast Delivery</span>
-            <span className="text-[var(--svs-muted)] text-base mt-2">Hot and fresh at your doorstep</span>
-          </div>
-          <div className="flex flex-col items-center text-center max-w-xs">
-            <img src="https://img.icons8.com/fluency/96/000000/discount.png" alt="Deals" className="mb-3 w-20 h-20" />
-            <span className="font-semibold text-lg text-[var(--svs-text)]">Best Deals</span>
-            <span className="text-[var(--svs-muted)] text-base mt-2">Exclusive offers and combos</span>
-          </div>
-        </div>
-      </section>
+      <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
 
-      {/* Main Content: Sidebar + Product Grid */}
-      <div className="w-full max-w-7xl mx-auto px-2 md:px-8">
-        <div className="mt-8 mb-4 flex items-center justify-between rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-2.5">
-          <h2 className="text-base font-semibold text-[var(--svs-text)]">Filters</h2>
-          <button
-            type="button"
-            onClick={() => setShowFilters((prev) => !prev)}
-            className="inline-flex items-center gap-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-4 py-2 text-sm font-medium text-[#0f9fb2]"
-          >
-            <Menu className="h-4 w-4" />
-            {showFilters ? 'Hide Filters' : 'Show Filters'}
-          </button>
-        </div>
-      </div>
-      <div className="flex flex-col lg:flex-row w-full max-w-7xl mx-auto px-2 md:px-8 gap-12">
-        {/* Sidebar Filters */}
-        {showFilters ? (
-        <aside className="w-full max-w-[340px] mx-auto lg:mx-0 lg:w-[340px] flex-shrink-0 mb-10 lg:mb-0">
-          <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-8 shadow-lg flex flex-col gap-8">
-            {/* Category */}
-            <div>
-              <h3 className="text-lg font-bold mb-3 text-[var(--svs-primary)] tracking-tight">Category</h3>
-              <div className="flex flex-col gap-3">
-                {categories.map(cat => (
-                  <label key={cat} className="flex items-center gap-3 cursor-pointer text-[var(--svs-text)] text-base font-medium">
-                    <input type="checkbox" checked={selectedCategories.includes(cat)} onChange={e => setSelectedCategories(val => e.target.checked ? [...val, cat] : val.filter(c => c !== cat))} className="accent-[var(--svs-primary)] w-5 h-5 rounded-[6px] border-2 border-[var(--svs-border)]" />
-                    {cat}
-                  </label>
+          {/* Mobile overlay */}
+          {isFiltersOpen ? (
+            <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setIsFiltersOpen(false)} role="presentation" />
+          ) : null}
+
+          {/* Sidebar */}
+          <aside className={[
+            isFiltersOpen
+              ? 'fixed left-0 top-0 z-50 flex h-full w-[300px] max-w-[85vw] flex-col overflow-y-auto border-r border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 pb-8 pt-4 shadow-2xl sm:w-[320px]'
+              : 'hidden',
+            isDesktopFiltersHidden
+              ? 'lg:hidden'
+              : 'lg:sticky lg:top-4 lg:z-auto lg:flex lg:h-auto lg:max-h-[calc(100vh-2rem)] lg:w-[260px] lg:shrink-0 lg:flex-col lg:overflow-y-auto lg:rounded-2xl lg:border lg:border-[var(--svs-border)] lg:bg-[var(--svs-surface)] lg:px-5 lg:pb-8 lg:pt-4 lg:shadow-sm',
+          ].join(' ')}>
+            {/* Mobile close */}
+            <button type="button" onClick={() => setIsFiltersOpen(false)} className="mb-2 self-end rounded-full p-1.5 text-[var(--svs-muted)] transition hover:bg-slate-100 hover:text-[var(--svs-text)] lg:hidden" aria-label="Close filters">
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="flex items-center justify-between pb-2">
+              <span className="text-sm font-bold text-[var(--svs-primary-strong)]">Filters</span>
+              {activeFilterCount > 0 ? (
+                <button type="button" onClick={clearFilters} className="text-xs font-semibold text-rose-500 transition hover:underline">
+                  Clear all ({activeFilterCount})
+                </button>
+              ) : null}
+            </div>
+
+            {mkSection('Category', categoryOptions, selectedCategories, setSelectedCategories)}
+            {hasDrinks && drinkTypeOptions.length > 0 ? mkSection('Drink Type', drinkTypeOptions, selectedDrinkTypes, setSelectedDrinkTypes) : null}
+            {mkSection('Cuisine', cuisineOptions, selectedCuisines, setSelectedCuisines)}
+            {mkSection('Outlet Type', outletTypeOptions, selectedTypes, setSelectedTypes)}
+            {dietaryOptions.length > 0 ? mkSection('Dietary', dietaryOptions, selectedDietary, setSelectedDietary) : null}
+            {spiceLevelOptions.length > 0 ? mkSection('Spice Level', spiceLevelOptions, selectedSpiceLevel, setSelectedSpiceLevel) : null}
+            {brandOptions.length > 0 ? mkSection('Outlet / Brand', brandOptions, selectedBrands, setSelectedBrands) : null}
+            {mkSection('Availability', availabilityOptions, selectedAvailability, setSelectedAvailability)}
+
+            {/* Price range */}
+            <div className="border-t border-[var(--svs-border)] py-4">
+              <h3 className="mb-3 text-[11px] font-bold uppercase tracking-widest text-[var(--svs-primary-strong)]">Price Range</h3>
+              <div className="flex items-center justify-between text-xs text-[var(--svs-muted)] mb-2">
+                <span>{formatAmountInCurrency(priceRange[0], _fxState.buyerCurrency)}</span>
+                <span>{formatAmountInCurrency(priceRange[1], _fxState.buyerCurrency)}</span>
+              </div>
+              <input type="range" min={0} max={priceMax} step={1} value={priceRange[0]} onChange={(e) => setPriceRange([Math.min(Number(e.target.value), priceRange[1]), priceRange[1]])} className="svs-range-slider mb-1 w-full accent-[var(--svs-primary)]" />
+              <input type="range" min={0} max={priceMax} step={1} value={priceRange[1]} onChange={(e) => setPriceRange([priceRange[0], Math.max(Number(e.target.value), priceRange[0])])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
+            </div>
+
+            {/* Mobile apply */}
+            <button type="button" onClick={() => setIsFiltersOpen(false)} className="mt-3 w-full rounded-xl bg-[var(--svs-primary)] py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)] lg:hidden">
+              Show {filteredItems.length} result{filteredItems.length !== 1 ? 's' : ''}
+            </button>
+          </aside>
+
+          {/* Main content */}
+          <div className="min-w-0 flex-1">
+            {/* Search + filter toggle */}
+            <div className="mb-4 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+                    setIsDesktopFiltersHidden((prev) => !prev);
+                  } else {
+                    setIsFiltersOpen(true);
+                  }
+                }}
+                className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 text-sm font-semibold text-[var(--svs-text)] shadow-sm transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
+              >
+                <Filter className="h-4 w-4" />
+                <span className="hidden sm:inline">{isDesktopFiltersHidden ? 'Show Filters' : 'Hide Filters'}</span>
+                {activeFilterCount > 0 ? (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--svs-primary)] text-[10px] font-bold text-white">{activeFilterCount}</span>
+                ) : null}
+              </button>
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search meals, cuisines, brands..."
+                className="h-10 w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 text-sm text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[var(--svs-primary)]/20"
+              />
+              <span className="hidden shrink-0 text-xs text-[var(--svs-muted)] sm:inline">{filteredItems.length} item{filteredItems.length !== 1 ? 's' : ''}</span>
+            </div>
+
+            {/* Active filter chips */}
+            {allActiveChips.length > 0 ? (
+              <div className="mb-4 flex flex-wrap gap-2">
+                {allActiveChips.map((chip) => (
+                  <span key={chip} className="inline-flex items-center gap-1 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-1 text-xs font-medium text-[var(--svs-text)]">
+                    {chip}
+                    <button type="button" onClick={() => removeChip(chip)} aria-label={`Remove ${chip}`} className="text-[var(--svs-muted)] transition hover:text-rose-500">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
                 ))}
               </div>
-            </div>
-            {/* Cuisine */}
-            <div>
-              <h3 className="text-lg font-bold mb-3 text-[var(--svs-primary)] tracking-tight">Cuisine</h3>
-              <div className="flex flex-col gap-3">
-                {cuisines.map(cuisine => (
-                  <label key={cuisine} className="flex items-center gap-3 cursor-pointer text-[var(--svs-text)] text-base font-medium">
-                    <input type="checkbox" checked={selectedCuisines.includes(cuisine)} onChange={e => setSelectedCuisines(val => e.target.checked ? [...val, cuisine] : val.filter(c => c !== cuisine))} className="accent-[var(--svs-primary)] w-5 h-5 rounded-[6px] border-2 border-[var(--svs-border)]" />
-                    {cuisine}
-                  </label>
-                ))}
-              </div>
-            </div>
-            {/* Restaurant Type */}
-            <div>
-              <h3 className="text-lg font-bold mb-3 text-[var(--svs-primary)] tracking-tight">Type</h3>
-              <div className="flex flex-col gap-3">
-                {types.map(type => (
-                  <label key={type} className="flex items-center gap-3 cursor-pointer text-[var(--svs-text)] text-base font-medium">
-                    <input type="checkbox" checked={selectedTypes.includes(type)} onChange={e => setSelectedTypes(val => e.target.checked ? [...val, type] : val.filter(c => c !== type))} className="accent-[var(--svs-primary)] w-5 h-5 rounded-[6px] border-2 border-[var(--svs-border)]" />
-                    {type}
-                  </label>
-                ))}
-              </div>
-            </div>
-            {/* Brands */}
-            <div>
-              <h3 className="text-lg font-bold mb-3 text-[var(--svs-primary)] tracking-tight">Brands</h3>
-              <div className="flex flex-col gap-3">
-                {brands.map(brand => (
-                  <label key={brand} className="flex items-center gap-3 cursor-pointer text-[var(--svs-text)] text-base font-medium">
-                    <input type="checkbox" checked={selectedBrands.includes(brand)} onChange={e => setSelectedBrands(val => e.target.checked ? [...val, brand] : val.filter(c => c !== brand))} className="accent-[var(--svs-primary)] w-5 h-5 rounded-[6px] border-2 border-[var(--svs-border)]" />
-                    {brand}
-                  </label>
-                ))}
-              </div>
-            </div>
-            {/* Price Range */}
-            <div>
-              <h3 className="text-lg font-bold mb-3 text-[var(--svs-primary)] tracking-tight">Price</h3>
-              <div className="flex items-center gap-3">
-                <span className="shrink-0 whitespace-nowrap text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[0], _fxState.buyerCurrency)}</span>
-                <input type="range" min={0} max={priceMax} step={1} value={priceRange[0]} onChange={e => setPriceRange([Number(e.target.value), priceRange[1]])} className="accent-[var(--svs-primary)] w-full svs-range-slider" />
-                <input type="range" min={0} max={priceMax} step={1} value={priceRange[1]} onChange={e => setPriceRange([priceRange[0], Number(e.target.value)])} className="accent-[var(--svs-primary)] w-full svs-range-slider" />
-                <span className="shrink-0 whitespace-nowrap text-xs text-[var(--svs-muted)]">{formatAmountInCurrency(priceRange[1], _fxState.buyerCurrency)}</span>
-              </div>
-            </div>
-            {/* Availability */}
-            <div>
-              <h3 className="text-lg font-bold mb-3 text-[var(--svs-primary)] tracking-tight">Availability</h3>
-              <div className="flex flex-col gap-3">
-                {availabilities.map(a => (
-                  <label key={a} className="flex items-center gap-3 cursor-pointer text-[var(--svs-text)] text-base font-medium">
-                    <input type="checkbox" checked={selectedAvailability.includes(a)} onChange={e => setSelectedAvailability(val => e.target.checked ? [...val, a] : val.filter(c => c !== a))} className="accent-[var(--svs-primary)] w-5 h-5 rounded-[6px] border-2 border-[var(--svs-border)]" />
-                    {a}
-                  </label>
-                ))}
-              </div>
-            </div>
-            <button className="w-full mt-6 rounded-[14px] bg-[var(--svs-primary)] text-white font-bold py-3 text-lg shadow hover:bg-[var(--svs-primary-strong)] transition" onClick={handleApplyFilters}>Apply Filters</button>
-          </div>
-        </aside>
-        ) : null}
-        {/* Product Grid */}
-        <main className="flex-1">
-          {/* Search Bar */}
-          <div className="mb-10">
-            <input
-              type="search"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search for meals, restaurants, or cuisines..."
-              className="h-[54px] w-full rounded-[16px] border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-7 text-lg font-medium text-[var(--svs-text)] shadow outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[var(--svs-primary)]/20"
-            />
-          </div>
-          {/* Product Cards Grid */}
-          <div ref={gridRef} className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-10">
-            {filteredItems.map(item => {
-              const hasStockValue = item.availableQuantity !== null && item.availableQuantity !== undefined;
-              const availableQuantity = hasStockValue ? normalizeListingQuantity(item.availableQuantity, 0) : null;
-              const isOutOfStock = availableQuantity !== null && availableQuantity <= 0;
-              return (
-              <div key={item.id} id={`listing-${item.id}`} className="bg-white rounded-3xl shadow-lg flex flex-col overflow-hidden hover:scale-[1.02] transition group border border-[#e0e7ef]">
-                <div className="relative aspect-[4/3] sm:aspect-auto sm:h-48 w-full overflow-hidden cursor-pointer rounded-t-3xl" onClick={() => handleOpenDetails(item)}>
-                  <img src={item.image} alt={item.title} className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" />
-                  <span className="absolute top-2 left-2 sm:top-4 sm:left-4 bg-[#0f6674] text-white text-[10px] sm:text-sm font-bold px-2 py-0.5 sm:px-4 sm:py-1.5 rounded-full shadow">{item.category}</span>
-                  {/* Wishlist icon */}
-                  <button
-                    className={`absolute top-2 right-2 sm:top-4 sm:right-4 w-7 h-7 sm:w-9 sm:h-9 flex items-center justify-center rounded-full bg-white/90 border border-[#e0e7ef] shadow text-[#e11d48] ${wishlistItemIds.includes(item.id) ? 'bg-rose-50' : 'hover:bg-[#e0f7fa]'}`}
-                    style={{zIndex:2}}
-                    onClick={e => { e.stopPropagation(); handleToggleWishlist(item); }}
-                    aria-label="Toggle Wishlist"
+            ) : null}
+
+            {/* Product grid */}
+            <div ref={gridRef} className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+              {filteredItems.map((item) => {
+                const hasStockValue = item.availableQuantity !== null && item.availableQuantity !== undefined;
+                const availableQuantity = hasStockValue ? normalizeListingQuantity(item.availableQuantity, 0) : null;
+                const isOutOfStock = availableQuantity !== null && availableQuantity <= 0;
+                return (
+                  <article
+                    key={item.id}
+                    id={`listing-${item.id}`}
+                    className="group flex flex-col overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-sm transition hover:shadow-md"
                   >
-                    <Heart className={`h-3.5 w-3.5 sm:h-5 sm:w-5 ${wishlistItemIds.includes(item.id) ? 'fill-current' : ''}`} />
-                  </button>
-                </div>
-                <div className="flex flex-col flex-1 p-3 sm:p-5">
-                  <h3 className="mb-1 text-sm font-bold leading-tight text-[#0f6674] group-hover:text-[#33b9f2] sm:text-xl truncate">{item.title}</h3>
-                  <span className="hidden sm:inline-block text-base font-medium text-[#374151] mb-2">{item.prepTime}</span>
-                  <span className="sm:hidden text-[#374151] text-xs mb-1 font-medium">{item.prepTime}</span>
-                  <div className="mb-2 text-base sm:text-lg font-bold text-[#0f6674]"><SalePrice price={item.price} currency={item.currency} /></div>
-                  {availableQuantity !== null ? (
-                    <p className="mb-2 text-xs text-[#0f6674]/70">
-                      Quantity: {availableQuantity}
-                      {isOutOfStock ? ' (Out of stock)' : ''}
-                    </p>
-                  ) : null}
-                  <div className="mt-auto flex flex-col gap-2 sm:flex-row">
-                    <button
-                      type="button"
-                      disabled={isOutOfStock}
-                      onClick={() => handleAddToCart(item)}
-                      className="rounded-full bg-[#0f6674] px-3 py-1.5 text-xs font-semibold text-white shadow transition hover:bg-[#33b9f2] disabled:cursor-not-allowed disabled:bg-slate-400 sm:px-5 sm:py-2 sm:text-base"
+                    <div
+                      className="relative aspect-[4/3] w-full cursor-pointer overflow-hidden"
+                      onClick={() => handleOpenDetails(item)}
                     >
-                      {isOutOfStock ? 'Out of stock' : 'Add to Cart'}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={isOutOfStock}
-                      onClick={() => handleBuyNow(item)}
-                      className="rounded-full border border-[#0f6674] bg-white px-3 py-1.5 text-xs font-semibold text-[#0f6674] shadow transition hover:bg-[#e0f7fa] disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400 sm:px-5 sm:py-2 sm:text-base"
-                    >
-                      {isOutOfStock ? 'Out of stock' : 'Buy Now'}
-                    </button>
-                  </div>
+                      <img src={item.image} alt={item.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
+                      {item.category ? (
+                        <span className="absolute left-2 top-2 rounded-full bg-[var(--svs-primary)] px-2 py-0.5 text-[10px] font-bold text-white shadow">{item.category}</span>
+                      ) : null}
+                      {item.dietary && item.dietary !== 'None' ? (
+                        <span className="absolute bottom-2 left-2 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white shadow">{item.dietary}</span>
+                      ) : null}
+                      <button
+                        type="button"
+                        className={`absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border border-[var(--svs-border)] shadow ${wishlistItemIds.includes(item.id) ? 'bg-rose-50 text-rose-500' : 'bg-white/90 text-rose-400 hover:bg-rose-50'}`}
+                        onClick={(e) => { e.stopPropagation(); handleToggleWishlist(item); }}
+                        aria-label={wishlistItemIds.includes(item.id) ? 'Remove from wishlist' : 'Add to wishlist'}
+                      >
+                        <Heart className={`h-3.5 w-3.5 ${wishlistItemIds.includes(item.id) ? 'fill-current' : ''}`} />
+                      </button>
+                    </div>
+                    <div className="flex flex-1 flex-col p-3">
+                      <h3
+                        className="mb-0.5 cursor-pointer text-sm font-bold leading-tight text-[var(--svs-text)] group-hover:text-[var(--svs-primary)] line-clamp-2"
+                        onClick={() => handleOpenDetails(item)}
+                      >{item.title}</h3>
+                      {item.cuisine || item.prepTime ? (
+                        <p className="mb-1 text-xs text-[var(--svs-muted)]">{[item.cuisine, item.prepTime].filter(Boolean).join(' · ')}</p>
+                      ) : null}
+                      {item.drinkType ? (
+                        <p className="mb-1 text-xs font-medium text-[var(--svs-primary)]">{item.drinkType}</p>
+                      ) : null}
+                      {item.spiceLevel ? (
+                        <p className="mb-1 text-xs font-medium text-orange-500">{item.spiceLevel}</p>
+                      ) : null}
+                      <div className="mb-2 text-sm font-bold text-[var(--svs-primary)]">
+                        <SalePrice price={item.price} currency={item.currency} />
+                      </div>
+                      {availableQuantity !== null ? (
+                        <p className="mb-2 text-xs text-[var(--svs-muted)]">{isOutOfStock ? 'Out of stock' : `${availableQuantity} available`}</p>
+                      ) : null}
+                      <div className="mt-auto flex gap-2">
+                        <button
+                          type="button"
+                          disabled={isOutOfStock}
+                          onClick={() => handleAddToCart(item)}
+                          className="flex-1 rounded-xl bg-[var(--svs-primary)] px-2 py-1.5 text-xs font-semibold text-white transition hover:bg-[var(--svs-primary-strong)] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {isOutOfStock ? 'Out of stock' : 'Add to Cart'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isOutOfStock}
+                          onClick={() => handleBuyNow(item)}
+                          className="flex-1 rounded-xl border border-[var(--svs-primary)] px-2 py-1.5 text-xs font-semibold text-[var(--svs-primary)] transition hover:bg-[var(--svs-cyan-surface)] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Buy Now
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+              {filteredItems.length === 0 ? (
+                <div className="col-span-full rounded-2xl border border-dashed border-[var(--svs-border)] py-16 text-center text-[var(--svs-muted)]">
+                  No items match your filters.
                 </div>
-              </div>
-              );
-            })}
+              ) : null}
+            </div>
           </div>
-          <button className="w-full mt-8 rounded-lg bg-[var(--svs-primary)] text-white font-bold py-2 text-base shadow hover:bg-[var(--svs-primary-strong)] transition" onClick={handleViewAll}>View All</button>
 
-        </main>
+        </div>
       </div>
     </div>
   );
 };
 
 const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
-  // --- BookingsTicketsPage-inspired UI ---
   const { t } = useTranslation();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [sortOrder, setSortOrder] = useState('Newest');
-  const [sectionVisibleCounts, setSectionVisibleCounts] = useState({});
 
-  const beveragesCategoryTabs = [
-    'All',
-    'Wine',
-    'Beer',
-    'Whisky',
-    'Vodka',
-    'Rum',
-    'Gin',
-    'Brandy',
-    'Tequila',
-    'Sake',
-    'Scotch',
-    'Red Wine',
-    'Dark Rum',
-  ];
+  // Filter state
+  const [search, setSearch] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [selectedAlcoholContent, setSelectedAlcoholContent] = useState([]);
+  const [selectedTypes, setSelectedTypes] = useState([]);
+  const [selectedBrands, setSelectedBrands] = useState([]);
+  const [selectedOrigins, setSelectedOrigins] = useState([]);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(false);
 
-  // Map category tab to item category keywords for matching
-  const beveragesCategoryMap = {
-    Wine: ['wine', 'red wine', 'white wine', 'sparkling'],
-    Beer: ['beer', 'lager', 'ale', 'stout', 'pilsner'],
-    Whisky: ['whisky', 'whiskey', 'bourbon', 'scotch'],
-    Vodka: ['vodka'],
-    Rum: ['rum', 'dark rum', 'white rum'],
-    Gin: ['gin'],
-    Brandy: ['brandy'],
-    Tequila: ['tequila'],
-    Sake: ['sake'],
-    Scotch: ['scotch'],
-    'Red Wine': ['red wine'],
-    'Dark Rum': ['dark rum'],
-  };
+  const { code: buyerCurrencyCode } = useBuyerCurrency();
 
+  // Merge seller + static items, normalising to a flat shape the filters can use.
+  // Every field the seller fills in maps to a display* property that the filter reads.
   const allBeverageItems = useMemo(() => [
-    ...getSellerItemsForMarket(sellerItems, 'beverages').map((item) => ({
-      ...item,
-      category: item.category || '',
-      title: item.title || 'Seller Beverage',
-      subtitle: item.subtitle || item.description || 'Seller listing',
-      provider: item.provider || item.sellerName || 'Biznisdil Seller',
-      volume: item.volume || '',
-      availableQuantity: normalizeListingQuantity(item.availableQuantity, 0),
-      price: item.price || '0.00',
-      image: item.image || 'https://images.pexels.com/photos/434311/pexels-photo-434311.jpeg?auto=compress&cs=tinysrgb&w=1200',
-      images: item.images || (item.image ? [item.image] : []),
-      isSellerListing: true,
-    })),
-    ...beveragesLiquorItems.map((item) => ({
-      ...item,
-      category: item.category || '',
-      subtitle: item.description || '',
-      provider: item.sellerName || '',
-      availableQuantity: item.availableQuantity ?? 20,
-      isSellerListing: false,
-    })),
+    ...getSellerItemsForMarket(sellerItems, 'beverages').map((item) => {
+      const cat = item.beverageCategory || item.category || '';
+      // Derive alcoholic content from explicit field or from the known-alcoholic category set
+      const alcohol = item.alcoholContent || (ALCOHOLIC_BEVERAGE_CATEGORIES.has(cat) ? 'Alcoholic' : 'Non-alcoholic');
+      return {
+        ...item,
+        displayCategory: cat,
+        displayAlcoholContent: alcohol,
+        displayType: item.beverageType || '',
+        displayBrand: item.brand || item.provider || item.sellerName || '',
+        displayOrigin: item.origin || '',
+        title: item.title || 'Seller Beverage',
+        subtitle: item.subtitle || item.description || '',
+        volume: item.volume || '',
+        availableQuantity: normalizeListingQuantity(item.availableQuantity, 0),
+        price: item.price || '0.00',
+        image: item.image || 'https://images.pexels.com/photos/434311/pexels-photo-434311.jpeg?auto=compress&cs=tinysrgb&w=1200',
+        images: item.images || (item.image ? [item.image] : []),
+        isSellerListing: true,
+      };
+    }),
+    ...beveragesLiquorItems.map((item) => {
+      const cat = item.category || '';
+      const alcohol = ALCOHOLIC_BEVERAGE_CATEGORIES.has(cat) ? 'Alcoholic' : 'Non-alcoholic';
+      return {
+        ...item,
+        displayCategory: cat,
+        displayAlcoholContent: alcohol,
+        displayType: '',
+        displayBrand: item.sellerName || '',
+        displayOrigin: '',
+        subtitle: item.description || '',
+        availableQuantity: item.availableQuantity ?? 20,
+        isSellerListing: false,
+      };
+    }),
   ], [sellerItems]);
 
-  const filteredBeverageItems = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
-    return allBeverageItems.filter((item) => {
-      // Category filter logic
-      let matchesCategory = false;
-      if (activeCategory === 'All') {
-        matchesCategory = true;
-      } else if (beveragesCategoryMap[activeCategory]) {
-        const itemCat = (item.category || '').toLowerCase();
-        const itemTitle = (item.title || '').toLowerCase();
-        matchesCategory = beveragesCategoryMap[activeCategory].some((cat) => itemCat.includes(cat) || itemTitle.includes(cat));
-      } else {
-        matchesCategory = (item.category || '').toLowerCase() === activeCategory.toLowerCase();
-      }
-
-      // Search filter logic
-      const matchesQuery = !normalizedQuery || [item.title, item.subtitle, item.provider, item.category, item.volume]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(normalizedQuery));
-      return matchesCategory && matchesQuery;
-    });
+  const priceMax = useMemo(() => {
+    const max = allBeverageItems.reduce((m, i) => {
+      const n = getNumericPriceValue(i?.price, 0, i?.currency || null);
+      return Number.isFinite(n) && n > m ? n : m;
+    }, 0);
+    return Math.max(20, Math.ceil(max));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allBeverageItems, activeCategory, searchQuery]);
+  }, [allBeverageItems, buyerCurrencyCode]);
+
+  const priceStep = priceMax <= 20 ? 0.1 : priceMax <= 200 ? 1 : 5;
+
+  const [priceRange, setPriceRange] = useState([0, priceMax]);
+  const prevBeverageCurrencyRef = useRef(buyerCurrencyCode);
+  useEffect(() => {
+    if (prevBeverageCurrencyRef.current !== buyerCurrencyCode) {
+      // Currency changed — reset full range so stale ZAR min doesn't survive into USD
+      prevBeverageCurrencyRef.current = buyerCurrencyCode;
+      setPriceRange([0, priceMax]);
+    } else {
+      // Items changed — expand upper bound if a new listing exceeds it; clamp lower if needed
+      setPriceRange((prev) => [Math.min(prev[0], priceMax), priceMax]);
+    }
+  }, [priceMax, buyerCurrencyCode]);
+
+  // Derive sidebar options from actual items — only show options that have at least one item.
+  // The BEVERAGE_CATEGORIES seed preserves the canonical order; extra seller-entered values
+  // are appended alphabetically so new listings surface automatically.
+  const categoryOptions = useMemo(() => {
+    const fromItems = new Set(allBeverageItems.map((i) => i.displayCategory).filter(Boolean));
+    const seeded = BEVERAGE_CATEGORIES.filter((v) => fromItems.has(v));
+    const extra = Array.from(fromItems).filter((v) => !BEVERAGE_CATEGORIES.includes(v)).sort();
+    return [...seeded, ...extra];
+  }, [allBeverageItems]);
+
+  const alcoholContentOptions = useMemo(() =>
+    ['Alcoholic', 'Non-alcoholic'].filter((v) =>
+      allBeverageItems.some((i) => i.displayAlcoholContent === v),
+    ),
+    [allBeverageItems],
+  );
+
+  const typeOptions = useMemo(() =>
+    Array.from(new Set(allBeverageItems.map((i) => i.displayType).filter(Boolean))).sort(),
+    [allBeverageItems],
+  );
+
+  const brandOptions = useMemo(() =>
+    Array.from(new Set(allBeverageItems.map((i) => i.displayBrand).filter(Boolean))).sort(),
+    [allBeverageItems],
+  );
+
+  const originOptions = useMemo(() =>
+    Array.from(new Set(allBeverageItems.map((i) => i.displayOrigin).filter(Boolean))).sort(),
+    [allBeverageItems],
+  );
+
+  // Filtered items — every active filter dimension must match
+  const filteredBeverageItems = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return allBeverageItems.filter((item) => {
+      if (selectedCategories.length && !selectedCategories.includes(item.displayCategory)) return false;
+      if (selectedAlcoholContent.length && !selectedAlcoholContent.includes(item.displayAlcoholContent)) return false;
+      if (selectedTypes.length && !selectedTypes.includes(item.displayType)) return false;
+      if (selectedBrands.length && !selectedBrands.includes(item.displayBrand)) return false;
+      if (selectedOrigins.length && !selectedOrigins.includes(item.displayOrigin)) return false;
+      if (q) {
+        const hit = [item.title, item.displayCategory, item.displayType, item.displayBrand, item.displayOrigin, item.subtitle, item.volume]
+          .some((v) => String(v || '').toLowerCase().includes(q));
+        if (!hit) return false;
+      }
+      const n = getNumericPriceValue(item?.price, 0, item?.currency || null);
+      if (Number.isFinite(n) && (n < priceRange[0] || n > priceRange[1])) return false;
+      return true;
+    });
+  }, [allBeverageItems, selectedCategories, selectedAlcoholContent, selectedTypes, selectedBrands, selectedOrigins, search, priceRange, buyerCurrencyCode]);
+
+  const isPriceFiltered = priceRange[0] > 0 || priceRange[1] < priceMax;
+  const activeFilterCount = selectedCategories.length + selectedAlcoholContent.length + selectedTypes.length + selectedBrands.length + selectedOrigins.length + (isPriceFiltered ? 1 : 0);
+
+  const clearFilters = () => {
+    setSelectedCategories([]);
+    setSelectedAlcoholContent([]);
+    setSelectedTypes([]);
+    setSelectedBrands([]);
+    setSelectedOrigins([]);
+    setPriceRange([0, priceMax]);
+  };
+
+  const removeChip = (chip) => {
+    setSelectedCategories((p) => p.filter((v) => v !== chip));
+    setSelectedAlcoholContent((p) => p.filter((v) => v !== chip));
+    setSelectedTypes((p) => p.filter((v) => v !== chip));
+    setSelectedBrands((p) => p.filter((v) => v !== chip));
+    setSelectedOrigins((p) => p.filter((v) => v !== chip));
+  };
 
   const openBeverageItemDetails = (item) => {
-    const details = `${item.category || 'Beverage'}${item.volume ? ' • ' + item.volume : ''}${item.subtitle ? ' • ' + item.subtitle : ''}`;
-    const cartItem = createCartItem({
-      ...item,
-      route: '/beverages-liquors',
-      marketName: 'Beverages & Liquors',
-      details,
-    });
-    const wishlistItem = createWishlistItem({
-      ...item,
-      route: '/beverages-liquors',
-      marketName: 'Beverages & Liquors',
-      details,
-    });
+    const details = [item.displayCategory, item.displayType, item.volume, item.subtitle].filter(Boolean).join(' • ');
+    const payload = { ...item, route: '/beverages-liquors', marketName: 'Beverages & Liquors', details };
+    const cartItem = createCartItem(payload);
+    const wishlistItem = createWishlistItem(payload);
     onOpenItemDetails?.({
       title: item.title,
       image: item.image,
@@ -15686,6 +15881,31 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
 
   useListingFocusFromQuery(filteredBeverageItems, openBeverageItemDetails);
 
+  const allActiveChips = [...selectedCategories, ...selectedAlcoholContent, ...selectedTypes, ...selectedBrands, ...selectedOrigins];
+
+  // Reusable sidebar section
+  const mkSection = (title, options, selected, setSelected) => {
+    if (!options.length) return null;
+    return (
+      <div key={title} className="border-t border-[var(--svs-border)] py-4">
+        <h3 className="mb-3 text-[11px] font-bold uppercase tracking-widest text-[var(--svs-primary-strong)]">{title}</h3>
+        <div className="flex flex-col gap-2">
+          {options.map((opt) => (
+            <label key={opt} className="flex cursor-pointer items-center gap-2 text-sm text-[var(--svs-text)]">
+              <input
+                type="checkbox"
+                checked={selected.includes(opt)}
+                onChange={(e) => setSelected((prev) => e.target.checked ? [...prev, opt] : prev.filter((v) => v !== opt))}
+                className="h-4 w-4 rounded accent-[var(--svs-primary)]"
+              />
+              <span className="leading-tight">{opt}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <MarketShowcase
       marketKey="beveragesLiquors"
@@ -15694,134 +15914,203 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       eyebrow={t('markets.beverages')}
       chips={['Wine', 'Beer', 'Spirits', 'Soft drinks']}
     >
-      {/* Search + Filter Bar */}
-      <div className="mt-8 sm:mt-10">
-        <div className="mx-auto max-w-[700px]">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search beverages, brands, or categories"
-              className="h-10 w-full rounded-full border border-[var(--svs-border)] bg-white pl-11 pr-4 text-xs font-medium text-[var(--svs-text)] shadow-sm outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30"
-            />
-          </div>
-        </div>
-        <div className="mt-4 rounded-xl border border-[var(--svs-border)] bg-white/80 px-4 py-3 shadow-[0_2px_8px_rgba(15,23,42,0.06)] backdrop-blur sm:px-5">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-              <div className="flex flex-wrap gap-1.5 sm:flex-nowrap sm:gap-2 sm:overflow-x-auto sm:pb-0">
-                {beveragesCategoryTabs.map((tab) => (
-                  <button
-                    key={tab}
-                    type="button"
-                    onClick={() => setActiveCategory(tab)}
-                    className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition ${activeCategory === tab ? 'bg-[#0f9fb2] text-white shadow-[0_4px_14px_rgba(15,159,178,0.30)]' : 'border border-[var(--svs-border)] bg-white text-[var(--svs-text)] hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]'}`}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="relative shrink-0">
-              <select
-                value={sortOrder}
-                onChange={(event) => setSortOrder(event.target.value)}
-                className="h-9 w-full appearance-none rounded-full border border-[var(--svs-border)] bg-white px-4 pr-8 text-xs font-semibold text-[var(--svs-text)] outline-none transition hover:border-[var(--svs-primary)] focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[#33b9f2]/30 sm:w-[130px]"
-              >
-                <option value="Newest">Newest</option>
-                <option value="Oldest">Oldest</option>
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--svs-primary-strong)]" />
-            </div>
-          </div>
-        </div>
-      </div>
+      <div className="mt-8 flex flex-col gap-6 sm:mt-10 lg:flex-row lg:items-start lg:gap-8">
 
+        {/* Mobile overlay */}
+        {isFiltersOpen ? (
+          <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setIsFiltersOpen(false)} role="presentation" />
+        ) : null}
 
-      {/* Main content area */}
-      <div className="mt-10 sm:mt-12">
-        <div className="mx-auto grid max-w-[1280px] grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-3">
-          {filteredBeverageItems.slice(0, sectionVisibleCounts[activeCategory] || 6).map((item) => {
-            const isOutOfStock = item.isSellerListing && item.availableQuantity === 0;
-            return (
-              <article
-                key={item.id}
-                id={`listing-${item.id}`}
-                role="button"
-                tabIndex={0}
-                onClick={() => openBeverageItemDetails(item)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    openBeverageItemDetails(item);
-                  }
-                }}
-                className="flex cursor-pointer flex-col overflow-hidden rounded-3xl border border-[#e0e7ef] bg-white shadow-lg transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_8px_28px_rgba(15,23,42,0.14)] sm:rounded-xl sm:border-0 sm:shadow-[0_2px_12px_rgba(15,23,42,0.08)]"
-              >
-                <img src={item.image} alt={item.title} className="aspect-[4/3] w-full bg-[#f3f4f6] object-cover text-transparent sm:aspect-auto sm:h-[180px]" loading="lazy" />
-                <div className="flex flex-1 flex-col p-2.5 sm:p-4">
-                  <h3 className="line-clamp-2 text-sm font-bold leading-tight text-[#0f6674] sm:text-base sm:text-[var(--svs-text)]">{item.title}</h3>
-                  {item.subtitle ? (
-                    <p className="mt-0.5 hidden text-xs text-[var(--svs-muted)] sm:block">{item.subtitle}</p>
-                  ) : null}
-                  <div className="mt-2 hidden space-y-1 text-xs text-[var(--svs-muted)] sm:block">
-                    {item.volume ? (
-                      <p>Volume: {item.volume}</p>
-                    ) : null}
-                    {item.provider ? (
-                      <p>Brand: {item.provider}</p>
-                    ) : null}
-                    {item.isSellerListing ? (
-                      <p className={`text-xs font-semibold ${isOutOfStock ? 'text-rose-600' : 'text-emerald-700'}`}>
-                        Quantity in stock: {item.availableQuantity}
-                      </p>
-                    ) : null}
-                  </div>
-                  <p className="mt-2 text-sm font-bold text-[var(--svs-text)] sm:mt-3 sm:text-base"><SalePrice price={item.price} currency={item.currency} /></p>
-                  <div className="mt-2 sm:mt-3">
-                    <button
-                      type="button"
-                      disabled={isOutOfStock}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        if (isOutOfStock) return;
-                        const details = `${item.category || 'Beverage'}${item.volume ? ' • ' + item.volume : ''}${item.subtitle ? ' • ' + item.subtitle : ''}`;
-                        const cartItem = createCartItem({
-                          ...item,
-                          route: '/beverages-liquors',
-                          marketName: 'Beverages & Liquors',
-                          details,
-                        });
-                        onAddToCart(cartItem);
-                      }}
-                      className={`${cudyBluePrimaryButtonClassName} w-full rounded-full px-3 py-1.5 text-xs font-semibold text-white transition sm:w-auto sm:px-4 sm:py-2 ${isOutOfStock ? 'cursor-not-allowed bg-slate-400' : 'bg-[#0f6674] hover:bg-[#0d8a9c] sm:bg-[#0f9fb2]'}`}
-                    >
-                      {isOutOfStock ? 'Sold Out' : '+ Add to Basket'}
-                    </button>
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-        {(sectionVisibleCounts[activeCategory] || 6) < filteredBeverageItems.length ? (
-          <div className="mt-6 flex justify-center">
+        {/* Sidebar */}
+        <aside className={[
+          isFiltersOpen
+            ? 'fixed left-0 top-0 z-50 flex h-full w-[300px] max-w-[85vw] flex-col overflow-y-auto border-r border-[var(--svs-border)] bg-[var(--svs-surface)] px-5 pb-8 pt-4 shadow-2xl sm:w-[320px]'
+            : 'hidden',
+          isDesktopFiltersHidden
+            ? 'lg:hidden'
+            : 'lg:sticky lg:top-4 lg:z-auto lg:flex lg:h-auto lg:max-h-[calc(100vh-2rem)] lg:w-[240px] lg:shrink-0 lg:flex-col lg:overflow-y-auto lg:rounded-2xl lg:border lg:border-[var(--svs-border)] lg:bg-[var(--svs-surface)] lg:px-5 lg:pb-8 lg:pt-4 lg:shadow-sm',
+        ].join(' ')}>
+          <button type="button" onClick={() => setIsFiltersOpen(false)} className="mb-2 self-end rounded-full p-1.5 text-[var(--svs-muted)] transition hover:bg-slate-100 lg:hidden" aria-label="Close filters">
+            <X className="h-5 w-5" />
+          </button>
+
+          <div className="flex items-center justify-between pb-2">
+            <span className="text-sm font-bold text-[var(--svs-primary-strong)]">Filters</span>
+            {activeFilterCount > 0 ? (
+              <button type="button" onClick={clearFilters} className="text-xs font-semibold text-rose-500 transition hover:underline">
+                Clear all ({activeFilterCount})
+              </button>
+            ) : null}
+          </div>
+
+          {mkSection('Category', categoryOptions, selectedCategories, setSelectedCategories)}
+          {alcoholContentOptions.length > 0 ? mkSection('Alcoholic Content', alcoholContentOptions, selectedAlcoholContent, setSelectedAlcoholContent) : null}
+          {typeOptions.length > 0 ? mkSection('Type / Subtype', typeOptions, selectedTypes, setSelectedTypes) : null}
+          {brandOptions.length > 0 ? mkSection('Brand', brandOptions, selectedBrands, setSelectedBrands) : null}
+          {originOptions.length > 0 ? mkSection('Origin / Country', originOptions, selectedOrigins, setSelectedOrigins) : null}
+
+          {/* Price range */}
+          <div className="border-t border-[var(--svs-border)] py-4">
+            <h3 className="mb-3 text-[11px] font-bold uppercase tracking-widest text-[var(--svs-primary-strong)]">
+              Price Range <span className="font-normal normal-case tracking-normal opacity-60">({buyerCurrencyCode})</span>
+            </h3>
+            <div className="mb-2 flex items-center justify-between text-xs text-[var(--svs-muted)]">
+              <span>{formatAmountInCurrency(priceRange[0], _fxState.buyerCurrency)}</span>
+              <span>{formatAmountInCurrency(priceRange[1], _fxState.buyerCurrency)}</span>
+            </div>
+            <input type="range" min={0} max={priceMax} step={priceStep} value={priceRange[0]} onChange={(e) => setPriceRange([Math.min(Number(e.target.value), priceRange[1]), priceRange[1]])} className="svs-range-slider mb-1 w-full accent-[var(--svs-primary)]" />
+            <input type="range" min={0} max={priceMax} step={priceStep} value={priceRange[1]} onChange={(e) => setPriceRange([priceRange[0], Math.max(Number(e.target.value), priceRange[0])])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
+          </div>
+
+          <button type="button" onClick={() => setIsFiltersOpen(false)} className="mt-3 w-full rounded-xl bg-[var(--svs-primary)] py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)] lg:hidden">
+            Show {filteredBeverageItems.length} result{filteredBeverageItems.length !== 1 ? 's' : ''}
+          </button>
+        </aside>
+
+        {/* Main content */}
+        <div className="min-w-0 flex-1">
+          {/* Search + toggle row */}
+          <div className="mb-4 flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setSectionVisibleCounts((prev) => ({ ...prev, [activeCategory]: (prev[activeCategory] || 6) + 6 }))}
-              className="rounded-full bg-[#0f9fb2] px-6 py-2 text-xs font-semibold text-white transition hover:bg-[#0d8a9c]"
+              onClick={() => {
+                if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+                  setIsDesktopFiltersHidden((prev) => !prev);
+                } else {
+                  setIsFiltersOpen(true);
+                }
+              }}
+              className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 text-sm font-semibold text-[var(--svs-text)] shadow-sm transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
             >
-              View More
+              <Filter className="h-4 w-4" />
+              <span className="hidden sm:inline">{isDesktopFiltersHidden ? 'Show Filters' : 'Hide Filters'}</span>
+              {activeFilterCount > 0 ? (
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--svs-primary)] text-[10px] font-bold text-white">{activeFilterCount}</span>
+              ) : null}
             </button>
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--svs-muted)]" />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search beverages, brands, types..."
+                className="h-10 w-full rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] pl-9 pr-4 text-sm text-[var(--svs-text)] outline-none transition focus:border-[var(--svs-primary)] focus:ring-2 focus:ring-[var(--svs-primary)]/20"
+              />
+            </div>
+            <span className="hidden shrink-0 text-xs text-[var(--svs-muted)] sm:inline">{filteredBeverageItems.length} item{filteredBeverageItems.length !== 1 ? 's' : ''}</span>
           </div>
-        ) : null}
-        {filteredBeverageItems.length === 0 && (
-          <div className="mt-10 rounded-xl border border-dashed border-[var(--svs-border)] bg-white px-5 py-10 text-center text-xs text-[var(--svs-muted)]">
-            No beverages match your current search and filters. Adjust the category or search to see more options.
+
+          {/* Active filter chips */}
+          {allActiveChips.length > 0 ? (
+            <div className="mb-4 flex flex-wrap gap-2">
+              {allActiveChips.map((chip) => (
+                <span key={chip} className="inline-flex items-center gap-1 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-1 text-xs font-medium text-[var(--svs-text)]">
+                  {chip}
+                  <button type="button" onClick={() => removeChip(chip)} aria-label={`Remove ${chip}`} className="text-[var(--svs-muted)] transition hover:text-rose-500">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : null}
+
+          {/* Grid */}
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredBeverageItems.map((item) => {
+              const isOutOfStock = item.isSellerListing && item.availableQuantity === 0;
+              const isWishlisted = wishlistItemIds.includes(item.id);
+              return (
+                <article
+                  key={item.id}
+                  id={`listing-${item.id}`}
+                  className="group flex flex-col overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-sm transition hover:shadow-md"
+                >
+                  <div
+                    className="relative aspect-[4/3] w-full cursor-pointer overflow-hidden"
+                    onClick={() => openBeverageItemDetails(item)}
+                  >
+                    <img src={item.image} alt={item.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
+                    {item.displayCategory ? (
+                      <span className="absolute left-2 top-2 rounded-full bg-[var(--svs-primary)] px-2 py-0.5 text-[10px] font-bold text-white shadow">{item.displayCategory}</span>
+                    ) : null}
+                    {onToggleWishlist ? (
+                      <button
+                        type="button"
+                        className={`absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border border-[var(--svs-border)] shadow transition ${isWishlisted ? 'bg-rose-50 text-rose-500' : 'bg-white/90 text-rose-400 hover:bg-rose-50'}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const payload = { ...item, route: '/beverages-liquors', marketName: 'Beverages & Liquors' };
+                          onToggleWishlist(createWishlistItem(payload));
+                        }}
+                        aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+                      >
+                        <Heart className={`h-3.5 w-3.5 ${isWishlisted ? 'fill-current' : ''}`} />
+                      </button>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-1 flex-col p-3">
+                    <h3
+                      className="mb-0.5 cursor-pointer text-sm font-bold leading-tight text-[var(--svs-text)] group-hover:text-[var(--svs-primary)] line-clamp-2"
+                      onClick={() => openBeverageItemDetails(item)}
+                    >{item.title}</h3>
+                    {item.displayType ? (
+                      <p className="mb-0.5 text-xs font-medium text-[var(--svs-primary)]">{item.displayType}</p>
+                    ) : null}
+                    {item.displayBrand || item.volume ? (
+                      <p className="mb-1 text-xs text-[var(--svs-muted)]">{[item.displayBrand, item.volume].filter(Boolean).join(' · ')}</p>
+                    ) : null}
+                    {item.displayOrigin ? (
+                      <p className="mb-1 text-xs text-[var(--svs-muted)]">{item.displayOrigin}</p>
+                    ) : null}
+                    {item.isSellerListing ? (
+                      <p className={`mb-1 text-xs font-semibold ${isOutOfStock ? 'text-rose-600' : 'text-emerald-700'}`}>
+                        {isOutOfStock ? 'Out of stock' : `${item.availableQuantity} in stock`}
+                      </p>
+                    ) : null}
+                    <div className="mb-2 text-sm font-bold text-[var(--svs-primary)]">
+                      <SalePrice price={item.price} currency={item.currency} />
+                    </div>
+                    <div className="mt-auto flex gap-2">
+                      <button
+                        type="button"
+                        disabled={isOutOfStock}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isOutOfStock) return;
+                          const details = [item.displayCategory, item.displayType, item.volume].filter(Boolean).join(' • ');
+                          onAddToCart(createCartItem({ ...item, route: '/beverages-liquors', marketName: 'Beverages & Liquors', details }));
+                        }}
+                        className="flex-1 rounded-xl bg-[var(--svs-primary)] px-2 py-1.5 text-xs font-semibold text-white transition hover:bg-[var(--svs-primary-strong)] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isOutOfStock ? 'Out of stock' : 'Add to Basket'}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isOutOfStock}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isOutOfStock) return;
+                          const details = [item.displayCategory, item.displayType, item.volume].filter(Boolean).join(' • ');
+                          onBuyNow?.(createCartItem({ ...item, route: '/beverages-liquors', marketName: 'Beverages & Liquors', details }));
+                        }}
+                        className="flex-1 rounded-xl border border-[var(--svs-primary)] px-2 py-1.5 text-xs font-semibold text-[var(--svs-primary)] transition hover:bg-[var(--svs-cyan-surface)] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Buy Now
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+            {filteredBeverageItems.length === 0 ? (
+              <div className="col-span-full rounded-2xl border border-dashed border-[var(--svs-border)] py-16 text-center text-sm text-[var(--svs-muted)]">
+                No beverages match your filters.
+              </div>
+            ) : null}
           </div>
-        )}
+        </div>
+
       </div>
     </MarketShowcase>
   );
@@ -28245,6 +28534,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
       // Beverages
       beverageCategory: item.beverageCategory || '',
       beverageType: item.beverageType || '',
+      alcoholContent: item.alcoholContent || '',
       ticketCategory: item.category || '',
       ticketDate: item.date || '',
       ticketCountry: item.country || '',
