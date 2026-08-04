@@ -712,7 +712,7 @@ app.post('/api/transcribe-voice', limits.ai, express.json({ limit: '8mb' }), asy
 // Uses a Groq vision model and returns strict JSON the seller upload
 // page can map straight into listing fields.
 // ---------------------------------------------------------------------
-const DEFAULT_VISION_MODEL = process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct';
+const DEFAULT_VISION_MODEL = process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-maverick-17b-128e-instruct';
 
 const SUPPORTED_LISTING_MARKET_KEYS = [
   'beverages', 'homeCare', 'tickets', 'constructionTools', 'hardwareSoftware',
