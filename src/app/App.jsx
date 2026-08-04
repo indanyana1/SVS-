@@ -32522,60 +32522,64 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
     setBulkSizeInput('');
   }, []);
 
-  // Downscale a photo for the AI vision call. Phone cameras often
-  // produce 5-10MB images which blow past our /api/ai-listing 4.5MB
-  // limit. The vision model doesn't need anything larger than ~1024px
-  // on the long edge to read what the product is. The seller's
-  // original full-resolution file is still uploaded to Supabase when
-  // they hit Publish, so listing quality on the marketplace is not
-  // affected.
-  const fileToBase64ForAi = (file) => new Promise((resolve, reject) => {
-    const MAX_DIMENSION = 1024;
-    const JPEG_QUALITY = 0.82;
+  // Downscale + compress a photo for the AI vision call. Phone cameras
+  // often produce 5-10MB images; the vision model reads brands, labels,
+  // and condition just as well at 640-800px as at full resolution.
+  // We try progressively smaller sizes until the base64 fits in ~350 KB
+  // (≈ 260 KB decoded), which keeps 4 photos safely under 2 MB total.
+  // The original full-resolution file is uploaded to Supabase on Publish.
+  const fileToBase64ForAi = async (file) => {
+    const STEPS = [
+      { maxDim: 1024, quality: 0.80 },
+      { maxDim: 800, quality: 0.72 },
+      { maxDim: 640, quality: 0.62 },
+    ];
+    const MAX_B64_PER_IMAGE = 350_000;
 
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Failed to read image file'));
-    reader.onload = () => {
-      const dataUrl = String(reader.result || '');
-      if (!dataUrl) {
-        reject(new Error('Empty image data'));
-        return;
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Failed to read image file'));
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.readAsDataURL(file);
+    });
+
+    if (!dataUrl) throw new Error('Empty image data');
+
+    const img = await new Promise((resolve) => {
+      const el = new Image();
+      el.onerror = () => resolve(null);
+      el.onload = () => resolve(el);
+      el.src = dataUrl;
+    });
+
+    if (!img) {
+      const raw = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+      return { base64: raw, mimeType: file.type || 'image/jpeg' };
+    }
+
+    for (const [i, { maxDim, quality }] of STEPS.entries()) {
+      const longEdge = Math.max(img.width, img.height);
+      const scale = longEdge > maxDim ? maxDim / longEdge : 1;
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) break;
+
+      ctx.drawImage(img, 0, 0, w, h);
+      const compressed = canvas.toDataURL('image/jpeg', quality);
+      const base64 = compressed.includes(',') ? compressed.split(',')[1] : compressed;
+      if (base64.length <= MAX_B64_PER_IMAGE || i === STEPS.length - 1) {
+        return { base64, mimeType: 'image/jpeg' };
       }
+    }
 
-      const img = new Image();
-      img.onerror = () => {
-        const raw = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
-        resolve({ base64: raw, mimeType: file.type || 'image/jpeg' });
-      };
-      img.onload = () => {
-        try {
-          const { width, height } = img;
-          const longEdge = Math.max(width, height);
-          const scale = longEdge > MAX_DIMENSION ? MAX_DIMENSION / longEdge : 1;
-          const targetWidth = Math.max(1, Math.round(width * scale));
-          const targetHeight = Math.max(1, Math.round(height * scale));
-
-          const canvas = document.createElement('canvas');
-          canvas.width = targetWidth;
-          canvas.height = targetHeight;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            const raw = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
-            resolve({ base64: raw, mimeType: file.type || 'image/jpeg' });
-            return;
-          }
-          ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
-          const compressedDataUrl = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
-          const base64 = compressedDataUrl.includes(',') ? compressedDataUrl.split(',')[1] : compressedDataUrl;
-          resolve({ base64, mimeType: 'image/jpeg' });
-        } catch (err) {
-          reject(err);
-        }
-      };
-      img.src = dataUrl;
-    };
-    reader.readAsDataURL(file);
-  });
+    const raw = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+    return { base64: raw, mimeType: file.type || 'image/jpeg' };
+  };
 
   // Send every photo in the current draft to the AI vision endpoint in
   // a SINGLE request. The model fuses what it sees across all photos
@@ -32597,6 +32601,12 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
         const { base64, mimeType } = await fileToBase64ForAi(file);
         return { imageBase64: base64, mimeType: mimeType || file.type || 'image/jpeg' };
       }));
+
+      const totalB64 = encoded.reduce((sum, img) => sum + img.imageBase64.length, 0);
+      if (totalB64 > 5_000_000) {
+        throw new Error('Photos are too large to analyze. Try using fewer photos or choose smaller images.');
+      }
+
       const listing = await requestAiListingFromImage({ images: encoded, marketKeys });
 
       // Build a richer description that weaves in the size/material/condition

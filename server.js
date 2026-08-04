@@ -36,7 +36,7 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json());
+app.use(express.json({ limit: '8mb' }));
 
 // ────────────────────────────────────────────────────────────────────
 //  Rate limits per route family.
@@ -707,12 +707,75 @@ app.post('/api/transcribe-voice', limits.ai, express.json({ limit: '8mb' }), asy
   }
 });
 
+// ── Vision model helper ───────────────────────────────────────────────
+// Prefers Gemini (free, reliable image understanding) when GEMINI_API_KEY
+// is set. Falls back to Groq when GROQ_VISION_MODEL is explicitly set to
+// a model that supports images. Throws with a clear message when neither
+// provider is configured so the caller can return a 503 to the client.
+const GEMINI_VISION_MODEL = process.env.GEMINI_VISION_MODEL || 'gemini-3.1-flash-lite';
+const GROQ_VISION_MODEL_ID = process.env.GROQ_VISION_MODEL || '';
+
+const callVisionChat = async ({ systemPrompt, userContent, maxTokens = 900 }) => {
+  const geminiKey = process.env.GEMINI_API_KEY;
+  const groqKey = process.env.GROQ_API_KEY;
+
+  let visionUrl, visionHeaders, visionModel;
+
+  if (geminiKey) {
+    visionUrl = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+    visionHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${geminiKey}` };
+    visionModel = GEMINI_VISION_MODEL;
+  } else if (groqKey && GROQ_VISION_MODEL_ID) {
+    visionUrl = 'https://api.groq.com/openai/v1/chat/completions';
+    visionHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${groqKey}` };
+    visionModel = GROQ_VISION_MODEL_ID;
+  } else {
+    const err = new Error(
+      'AI photo analysis is not available. No vision API key is configured. '
+      + 'Get a free key at https://aistudio.google.com and add GEMINI_API_KEY to your .env file.',
+    );
+    err.statusCode = 503;
+    throw err;
+  }
+
+  const response = await fetch(visionUrl, {
+    method: 'POST',
+    headers: visionHeaders,
+    body: JSON.stringify({
+      model: visionModel,
+      temperature: 0.1,
+      max_tokens: maxTokens,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userContent },
+      ],
+    }),
+  });
+
+  const raw = await response.text();
+  let payload = {};
+  try { payload = raw ? JSON.parse(raw) : {}; } catch (_e) { payload = {}; }
+
+  if (!response.ok) {
+    const detail = payload?.error?.message || payload?.message || `Vision API request failed (${response.status}).`;
+    const err = new Error(detail);
+    err.statusCode = response.status;
+    throw err;
+  }
+
+  return {
+    content: String(payload?.choices?.[0]?.message?.content || '').trim(),
+    provider: geminiKey ? 'gemini' : 'groq',
+    model: payload?.model || visionModel,
+  };
+};
+
 // ---------------------------------------------------------------------
 // /api/ai-listing — Bulk product listing from a single product photo.
-// Uses a Groq vision model and returns strict JSON the seller upload
-// page can map straight into listing fields.
+// Uses callVisionChat (Gemini preferred, Groq fallback) and returns
+// strict JSON the seller upload page maps into listing fields.
 // ---------------------------------------------------------------------
-const DEFAULT_VISION_MODEL = process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-maverick-17b-128e-instruct';
 
 const SUPPORTED_LISTING_MARKET_KEYS = [
   'beverages', 'homeCare', 'tickets', 'constructionTools', 'hardwareSoftware',
@@ -855,43 +918,23 @@ app.post('/api/ai-listing', limits.ai, express.json({ limit: '8mb' }), async (re
         image_url: { url: `data:${img.mimeType};base64,${img.base64}` },
       })),
     ];
-    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: DEFAULT_VISION_MODEL,
-        temperature: 0.1,
-        max_tokens: 900,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: buildAiListingSystemPrompt(marketKeys) },
-          { role: 'user', content: userContent },
-        ],
-      }),
+
+    const { content, provider, model } = await callVisionChat({
+      systemPrompt: buildAiListingSystemPrompt(marketKeys),
+      userContent,
+      maxTokens: 900,
     });
 
-    const raw = await groqResponse.text();
-    let payload = {};
-    try { payload = raw ? JSON.parse(raw) : {}; } catch (_e) { payload = {}; }
-
-    if (!groqResponse.ok) {
-      const detail = payload?.error?.message || payload?.message || 'Groq vision request failed.';
-      return res.status(groqResponse.status).json({ error: detail });
-    }
-
-    const content = String(payload?.choices?.[0]?.message?.content || '').trim();
     const parsed = safeJsonExtractListing(content);
     if (!parsed) {
       return res.status(502).json({ error: 'AI returned an unparseable response.', raw: content.slice(0, 240) });
     }
 
     const normalized = normalizeListingResult(parsed, marketKeys);
-    return res.json({ listing: normalized, provider: 'groq', model: payload?.model || DEFAULT_VISION_MODEL });
+    return res.json({ listing: normalized, provider, model });
   } catch (error) {
-    return res.status(500).json({ error: error?.message || 'AI listing request failed.' });
+    const status = error.statusCode || 500;
+    return res.status(status).json({ error: error?.message || 'AI listing request failed.' });
   }
 });
 
@@ -953,57 +996,37 @@ app.post('/api/describe-media', limits.ai, express.json({ limit: '8mb' }), async
 
   try {
     const dataUrl = `data:${mimeType};base64,${base64}`;
-    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: DEFAULT_VISION_MODEL,
-        temperature: 0.1,
-        max_tokens: 400,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: buildDescribeMediaSystemPrompt(context) },
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: 'Describe this image so a chat assistant can reference it accurately.' },
-              { type: 'image_url', image_url: { url: dataUrl } },
-            ],
-          },
-        ],
-      }),
+    const { content, provider, model } = await callVisionChat({
+      systemPrompt: buildDescribeMediaSystemPrompt(context),
+      userContent: [
+        { type: 'text', text: 'Describe this image so a chat assistant can reference it accurately.' },
+        { type: 'image_url', image_url: { url: dataUrl } },
+      ],
+      maxTokens: 400,
     });
 
-    const raw = await groqResponse.text();
-    let payload = {};
-    try { payload = raw ? JSON.parse(raw) : {}; } catch (_e) { payload = {}; }
-
-    if (!groqResponse.ok) {
-      const detail = payload?.error?.message || payload?.message || 'Groq vision request failed.';
-      return res.status(groqResponse.status).json({ error: detail });
-    }
-
-    const content = String(payload?.choices?.[0]?.message?.content || '').trim();
     const parsed = safeJsonExtractListing(content);
     if (!parsed) {
       return res.status(502).json({ error: 'AI returned an unparseable response.', raw: content.slice(0, 240) });
     }
 
     const description = normalizeDescribeMedia(parsed);
-    return res.json({ description, provider: 'groq', model: payload?.model || DEFAULT_VISION_MODEL });
+    return res.json({ description, provider, model });
   } catch (error) {
-    return res.status(500).json({ error: error?.message || 'AI describe request failed.' });
+    const status = error.statusCode || 500;
+    return res.status(status).json({ error: error?.message || 'AI describe request failed.' });
   }
 });
 
 app.get('/api/health', (_req, res) => {
+  const visionProvider = process.env.GEMINI_API_KEY
+    ? `gemini (${GEMINI_VISION_MODEL})`
+    : (process.env.GROQ_API_KEY && GROQ_VISION_MODEL_ID ? `groq (${GROQ_VISION_MODEL_ID})` : 'none');
   res.json({
     status: 'ok',
     stripe: Boolean(process.env.STRIPE_SECRET_KEY),
     groq: Boolean(process.env.GROQ_API_KEY),
+    vision: visionProvider,
     addressLookup: 'openstreetmap-nominatim',
   });
 });
