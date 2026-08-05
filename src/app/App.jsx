@@ -4378,12 +4378,6 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
               <span className="mt-3 inline-flex rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#0f9fb2]">
                 {activeProvider.badge}
               </span>
-              <div className="mt-4 flex items-center gap-2">
-                {Array.isArray([1, 2, 3, 4, 5]) && [1, 2, 3, 4, 5].map((star) => (
-                  <Star key={`rating-star-${star}`} className="h-5 w-5 fill-[#FBBF24] text-[#FBBF24]" />
-                ))}
-                <span className="text-[18px] font-semibold">{activeProvider.ratingLabel}</span>
-              </div>
               <div className="mt-5 flex flex-wrap gap-3">
                 <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-2 text-sm font-medium"><User className="h-4 w-4" /> {activeProvider.experienceLevel}</span>
                 <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-2 text-sm font-medium"><CalendarDays className="h-4 w-4" /> {activeProvider.serviceType}</span>
@@ -4521,7 +4515,6 @@ const HomeCareProviderDetailPage = ({ sellerItems = [], onPushNotificationToUser
                   <p className="flex items-center gap-2 text-sm text-[#6B7280]"><MapPin className="h-4 w-4" /> {provider.location}</p>
                   <p className="flex items-center gap-2 text-sm text-[#6B7280]"><User className="h-4 w-4" /> {provider.experience}</p>
                   <p className="flex items-center gap-2 text-sm text-[#6B7280]"><CalendarDays className="h-4 w-4" /> {provider.availability}</p>
-                  <p className="flex items-center gap-2 text-sm text-[#374151]"><Star className="h-4 w-4 fill-[#FBBF24] text-[#FBBF24]" /> 4.8 (145 reviews)</p>
                   <button
                     type="button"
                     onClick={() => {
@@ -5668,8 +5661,7 @@ const buildVehicleDetailPayload = (item) => {
       reviewCount: seededVehicleRange(`${seed}:dealerreviews`, 20, 150),
     };
     const badges = item.badges || ['Verified Listing', 'Warranty Included'];
-    const viewCount = seededVehicleRange(`${seed}:views`, 80, 900);
-    return { productOverview, keyHighlights, technicalSpecs, specsTitle: 'Product Details', features, dealer, badges, viewCount };
+    return { productOverview, keyHighlights, technicalSpecs, specsTitle: 'Product Details', features, dealer, badges };
   }
 
   const fuel = detectMobilityAttribute(item, MOBILITY_FUEL_OPTIONS) || 'Petrol';
@@ -5795,9 +5787,7 @@ const buildVehicleDetailPayload = (item) => {
   };
 
   const badges = item.badges || ['Verified Listing', 'Warranty Included', 'Free Delivery', 'Finance Available'];
-  const viewCount = seededVehicleRange(`${seed}:views`, 320, 2400);
-
-  return { productOverview, keyHighlights, technicalSpecs, specsTitle: 'Product Details', features, dealer, badges, viewCount };
+  return { productOverview, keyHighlights, technicalSpecs, specsTitle: 'Product Details', features, dealer, badges };
 };
 
 const beautyFitnessSportsItems = [
@@ -6971,9 +6961,7 @@ const buildResourceDetailPayload = (item) => {
   );
 
   const badges = item.badges || ['Verified Listing', 'Warranty Included', 'Free Delivery', 'Finance Available'];
-  const viewCount = seededVehicleRange(`${seed}:nrviews`, 180, 2200);
-
-  return { productOverview, keyHighlights, technicalSpecs, specsTitle: 'Product Details', badges, viewCount };
+  return { productOverview, keyHighlights, technicalSpecs, specsTitle: 'Product Details', badges };
 };
 
 const footerLinks = {
@@ -16897,8 +16885,6 @@ const StationeryPage = ({ onToggleWishlist, wishlistItemIds = [], sellerItems = 
         category: other.category,
         brand: other.brand,
         sellerName: other.sellerName,
-        rating: other.rating || 4.8,
-        reviewsCount: other.reviewsCount || 145,
       }));
     onOpenItemDetails?.({
       ...buildStationeryDetailPayload(item),
@@ -16994,11 +16980,13 @@ const StationeryPage = ({ onToggleWishlist, wishlistItemIds = [], sellerItems = 
           {metaLine ? (
             <p className="mt-1.5 text-[11px] font-semibold text-slate-500 sm:text-xs">{metaLine}</p>
           ) : null}
-          <div className="mt-1.5 flex items-center gap-1 text-[11px] text-slate-500 sm:text-xs">
-            <Star className={`h-3.5 w-3.5 text-amber-500 ${hasReviews ? 'fill-current' : ''}`} />
-            <span className="font-semibold text-[#0f6674]">{ratingLabel}</span>
-            <span>({reviewSummary.reviewCount} review{reviewSummary.reviewCount === 1 ? '' : 's'})</span>
-          </div>
+          {hasReviews ? (
+            <div className="mt-1.5 flex items-center gap-1 text-[11px] text-slate-500 sm:text-xs">
+              <Star className="h-3.5 w-3.5 fill-current text-amber-500" />
+              <span className="font-semibold text-[#0f6674]">{ratingLabel}</span>
+              <span>({reviewSummary.reviewCount} review{reviewSummary.reviewCount === 1 ? '' : 's'})</span>
+            </div>
+          ) : null}
           <button
             type="button"
             onClick={(event) => { event.stopPropagation(); openDetails(item); }}
@@ -17160,11 +17148,13 @@ const StationeryPage = ({ onToggleWishlist, wishlistItemIds = [], sellerItems = 
                 <div className="flex flex-1 flex-col p-3 sm:p-4">
                   <h3 className="line-clamp-2 text-sm font-bold leading-tight text-white sm:text-base">{title}</h3>
                   {metaLine ? <p className="mt-1 text-[11px] font-semibold text-cyan-200/80">{metaLine}</p> : null}
-                  <div className="mt-1.5 flex items-center gap-1 text-[11px] text-white/70">
-                    <Star className={`h-3.5 w-3.5 text-amber-400 ${hasReviews ? 'fill-current' : ''}`} />
-                    <span className="font-semibold text-white">{ratingLabel}</span>
-                    <span>({reviewSummary.reviewCount} review{reviewSummary.reviewCount === 1 ? '' : 's'})</span>
-                  </div>
+                  {hasReviews ? (
+                    <div className="mt-1.5 flex items-center gap-1 text-[11px] text-white/70">
+                      <Star className="h-3.5 w-3.5 fill-current text-amber-400" />
+                      <span className="font-semibold text-white">{ratingLabel}</span>
+                      <span>({reviewSummary.reviewCount} review{reviewSummary.reviewCount === 1 ? '' : 's'})</span>
+                    </div>
+                  ) : null}
                   <div className="mt-2">
                     <SalePrice price={item.price} currency={item.currency} wasClassName="text-cyan-100/50" nowClassName="text-white" />
                   </div>
@@ -17678,7 +17668,7 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
                     <p className="mt-1 text-[11px] text-[var(--svs-muted)]">{item.category || 'Informal listing'} • {item.sellerName || 'Local trader'}</p>
                     <p className="mt-1 truncate text-[11px] text-slate-500">{item.normalizedLocation || 'Location unavailable'}</p>
                     <p className="mt-1 text-sm font-bold text-[var(--svs-primary)]"><SalePrice price={item.price} currency={item.currency} /></p>
-                    <p className="mt-1 text-[11px] text-slate-500">{reviewSummary.reviewCount} reviews • {reviewSummary.averageRating || 0} rating</p>
+                    {reviewSummary.reviewCount > 0 ? <p className="mt-1 text-[11px] text-slate-500">{reviewSummary.reviewCount} review{reviewSummary.reviewCount === 1 ? '' : 's'} • {reviewSummary.averageRating.toFixed(1)}★</p> : null}
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       <button
                         type="button"
@@ -17776,7 +17766,7 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
                   <p className="truncate text-sm font-bold text-[#0f6674]">{item.title}</p>
                   <p className="mt-1 text-[11px] text-slate-500">{item.normalizedCategory} • {item.normalizedVendor}</p>
                   <p className="mt-1 truncate text-[11px] text-slate-500">{item.normalizedLocation || 'Location unavailable'}</p>
-                  <p className="mt-1 text-[11px] text-slate-500">{item.reviewSummary.reviewCount || 0} review{item.reviewSummary.reviewCount === 1 ? '' : 's'} • {item.reviewSummary.averageRating || 0}★</p>
+                  {item.reviewSummary?.reviewCount > 0 ? <p className="mt-1 text-[11px] text-slate-500">{item.reviewSummary.reviewCount} review{item.reviewSummary.reviewCount === 1 ? '' : 's'} • {item.reviewSummary.averageRating.toFixed(1)}★</p> : null}
                   <p className="mt-1 text-sm font-black text-[#0f6674]"><SalePrice price={item.price} currency={item.currency} /></p>
                   <div className="mt-3 grid grid-cols-2 gap-1.5">
                     <button
@@ -19966,7 +19956,6 @@ const HomeCarePage = ({ sellerItems = [] }) => {
         <p className="flex items-center gap-1.5 text-[11px] text-[#6B7280] sm:gap-2 sm:text-sm"><MapPin className="h-3 w-3 sm:h-4 sm:w-4" /> <span className="truncate">{provider.location}</span></p>
         <p className="hidden items-center gap-2 text-sm text-[#6B7280] sm:flex"><User className="h-4 w-4" /> {provider.experience}</p>
         <p className="hidden items-center gap-2 text-sm text-[#6B7280] sm:flex"><CalendarDays className="h-4 w-4" /> {provider.serviceType} • {provider.availabilityWindow}</p>
-        <p className="hidden items-center gap-2 text-sm text-[#374151] sm:flex"><Star className="h-4 w-4 fill-[#FBBF24] text-[#FBBF24]" /> 4.8 (145 reviews)</p>
         <button
           type="button"
           onClick={() => handleOpenProvider(provider)}
@@ -20170,8 +20159,8 @@ const HardwareSoftwareFilterCheckbox = ({ label, checked, onChange }) => (
 
 const HardwareSoftwareProductCard = ({ item, isWishlisted, onAddToCart, onToggleWishlist, onOpenDetails, reviewSummary }) => {
   const { nowPrice } = getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency);
-  const rating = reviewSummary?.average || item.rating || 4.8;
-  const reviewsCount = reviewSummary?.count || item.reviewsCount || 145;
+  const reviewsCount = reviewSummary?.reviewCount || 0;
+  const rating = reviewsCount ? (reviewSummary?.averageRating || 0) : null;
   const hasStockValue = item.availableQuantity !== null && item.availableQuantity !== undefined;
   const availableQuantity = hasStockValue ? normalizeListingQuantity(item.availableQuantity, 0) : null;
   const isOutOfStock = availableQuantity !== null && availableQuantity <= 0;
@@ -20213,11 +20202,13 @@ const HardwareSoftwareProductCard = ({ item, isWishlisted, onAddToCart, onToggle
             <span className="truncate">{item.sellerName}</span>
           </p>
         ) : null}
-        <p className="flex items-center gap-1 text-xs text-[var(--svs-muted)] sm:text-sm">
-          <Star className="h-3.5 w-3.5 text-amber-400 sm:h-4 sm:w-4" fill="currentColor" />
-          <span className="font-semibold text-[var(--svs-text)]">{Number(rating).toFixed(1)}</span>
-          <span>({reviewsCount})</span>
-        </p>
+        {rating !== null ? (
+          <p className="flex items-center gap-1 text-xs text-[var(--svs-muted)] sm:text-sm">
+            <Star className="h-3.5 w-3.5 text-amber-400 sm:h-4 sm:w-4" fill="currentColor" />
+            <span className="font-semibold text-[var(--svs-text)]">{Number(rating).toFixed(1)}</span>
+            <span>({reviewsCount})</span>
+          </p>
+        ) : null}
         {availableQuantity !== null ? (
           <p className="text-xs text-[var(--svs-muted)] sm:text-sm">
             Quantity: {availableQuantity}
@@ -20498,8 +20489,6 @@ const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
         category: other.category,
         brand: other.brand,
         sellerName: other.sellerName,
-        rating: other.rating || 4.8,
-        reviewsCount: other.reviewsCount || 145,
       }));
     onOpenItemDetails?.({
       ...detailPayload,
@@ -20862,11 +20851,13 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
             {transmission ? <span className="inline-flex items-center gap-1"><Cog className="h-3 w-3" />{transmission}</span> : null}
             {!fuel && !transmission && item.specification ? <span className="inline-flex items-center gap-1"><Gauge className="h-3 w-3" />{item.specification}</span> : null}
           </div>
-          <div className="mt-1.5 flex items-center gap-1 text-[11px] text-amber-500">
-            <Star className="h-3 w-3 fill-current" />
-            <span className="font-semibold text-[var(--svs-text)]">{averageRatingLabel}</span>
-            <span className="text-[var(--svs-muted)]">({reviewSummary.reviewCount} review{reviewSummary.reviewCount === 1 ? '' : 's'})</span>
-          </div>
+          {reviewSummary.reviewCount > 0 ? (
+            <div className="mt-1.5 flex items-center gap-1 text-[11px] text-amber-500">
+              <Star className="h-3 w-3 fill-current" />
+              <span className="font-semibold text-[var(--svs-text)]">{averageRatingLabel}</span>
+              <span className="text-[var(--svs-muted)]">({reviewSummary.reviewCount} review{reviewSummary.reviewCount === 1 ? '' : 's'})</span>
+            </div>
+          ) : null}
           <button
             type="button"
             onClick={(event) => { event.stopPropagation(); openItemDetails(item); }}
@@ -22734,9 +22725,7 @@ const buildWorkerDetailPayload = (item) => {
   };
 
   const badges = item.badges || ['Verified Worker', 'Background Checked', 'Flexible Contracts'];
-  const viewCount = seededVehicleRange(`${seed}:glviews`, 90, 1800);
-
-  return { productOverview, keyHighlights, technicalSpecs, specsTitle: 'Profile Details', badges, viewCount };
+  return { productOverview, keyHighlights, technicalSpecs, specsTitle: 'Profile Details', badges };
 };
 
 const GENERAL_LABOUR_WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -22902,22 +22891,6 @@ const getWorkerPricingTiers = (item) => {
 // Reviews section — catalog profiles don't have real submitted reviews yet,
 // so this mirrors the seeded-but-stable pattern already used for
 // rating/viewCount across the rest of the marketplace.
-const getWorkerSampleReviews = (item) => {
-  const seed = item.id;
-  const reviewerPool = [
-    { name: 'Michael L.', comment: 'Showed up on time and did excellent work. Would definitely hire again for future projects.' },
-    { name: 'Sarah O.', comment: 'Professional, efficient, and easy to communicate with throughout the job. Highly recommend.' },
-    { name: 'Daniel R.', comment: 'Reasonably priced and the quality of work exceeded our expectations. Will be a repeat customer.' },
-  ];
-  return reviewerPool.map((reviewer, index) => ({
-    id: `${seed}-review-${index}`,
-    name: reviewer.name,
-    date: new Date(Date.now() - seededVehicleRange(`${seed}:reviewdate${index}`, 5, 200) * 86400000).toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' }),
-    rating: seededVehicleRange(`${seed}:reviewrating${index}`, 4, 5),
-    comment: reviewer.comment,
-    helpful: seededVehicleRange(`${seed}:reviewhelpful${index}`, 4, 35),
-  }));
-};
 
 const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
@@ -23055,8 +23028,6 @@ const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
         productType: matchedShowcaseCategory?.name || other.category,
         category: other.category,
         sellerName: other.brand,
-        rating: other.rating || 4.7,
-        reviewsCount: other.reviewCount || 86,
       }));
     onOpenItemDetails?.({
       title: getTranslatedValue(t, item.titleKey, item.title),
@@ -23087,9 +23058,8 @@ const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
     const itemTitle = getTranslatedValue(t, item.titleKey, item.title);
     const itemReviewKey = getCollectionItemId(activeCategory ? `/natural-resources-minerals/${activeCategory.slug}` : '/natural-resources-minerals', item.id);
     const reviewSummary = getProductReviewSummary(productReviewSummaryMap, itemReviewKey);
-    const hasStaticRating = typeof item.rating === 'number';
-    const averageRatingLabel = hasStaticRating ? item.rating.toFixed(1) : (reviewSummary.reviewCount ? reviewSummary.averageRating.toFixed(1) : '0.0');
-    const reviewCountValue = hasStaticRating ? (item.reviewCount || 0) : reviewSummary.reviewCount;
+    const reviewCountValue = reviewSummary.reviewCount;
+    const averageRatingLabel = reviewCountValue ? reviewSummary.averageRating.toFixed(1) : '0.0';
     const isWishlisted = wishlistItemIds.includes(itemReviewKey);
     return (
       <article
@@ -23120,11 +23090,13 @@ const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
               <Package className="h-3 w-3" />{item.category}
             </div>
           ) : null}
-          <div className="mt-1.5 flex items-center gap-1 text-[11px] text-amber-500">
-            <Star className="h-3 w-3 fill-current" />
-            <span className="font-semibold text-[var(--svs-text)]">{averageRatingLabel}</span>
-            <span className="text-[var(--svs-muted)]">({reviewCountValue} review{reviewCountValue === 1 ? '' : 's'})</span>
-          </div>
+          {reviewCountValue > 0 ? (
+            <div className="mt-1.5 flex items-center gap-1 text-[11px] text-amber-500">
+              <Star className="h-3 w-3 fill-current" />
+              <span className="font-semibold text-[var(--svs-text)]">{averageRatingLabel}</span>
+              <span className="text-[var(--svs-muted)]">({reviewCountValue} review{reviewCountValue === 1 ? '' : 's'})</span>
+            </div>
+          ) : null}
           {item.brand ? (
             <div className="mt-1.5 flex items-center gap-1 text-[11px] text-[var(--svs-muted)]">
               <Building2 className="h-3 w-3" />{item.brand}
@@ -24076,9 +24048,8 @@ const GeneralLabourPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIt
   const renderWorkerCard = (item, { compact = false } = {}) => {
     const itemReviewKey = getCollectionItemId(activeCategory ? `/general-labour-market/${activeCategory.slug}` : '/general-labour-market', item.id);
     const reviewSummary = getProductReviewSummary(productReviewSummaryMap, itemReviewKey);
-    const hasStaticRating = typeof item.rating === 'number';
-    const averageRatingLabel = hasStaticRating ? item.rating.toFixed(1) : (reviewSummary.reviewCount ? reviewSummary.averageRating.toFixed(1) : '0.0');
-    const reviewCountValue = hasStaticRating ? (item.reviewCount || 0) : reviewSummary.reviewCount;
+    const reviewCountValue = reviewSummary.reviewCount;
+    const averageRatingLabel = reviewCountValue ? reviewSummary.averageRating.toFixed(1) : '0.0';
     const isWishlisted = wishlistItemIds.includes(itemReviewKey);
     const displayTitle = item.name ? `${item.name} — ${item.title}` : item.title;
     return (
@@ -24123,11 +24094,13 @@ const GeneralLabourPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIt
               <MapPin className="h-3 w-3" />{item.location}
             </div>
           ) : null}
-          <div className="mt-1.5 flex items-center gap-1 text-[11px] text-amber-500">
-            <Star className="h-3 w-3 fill-current" />
-            <span className="font-semibold text-[var(--svs-text)]">{averageRatingLabel}</span>
-            <span className="text-[var(--svs-muted)]">({reviewCountValue} review{reviewCountValue === 1 ? '' : 's'})</span>
-          </div>
+          {reviewCountValue > 0 ? (
+            <div className="mt-1.5 flex items-center gap-1 text-[11px] text-amber-500">
+              <Star className="h-3 w-3 fill-current" />
+              <span className="font-semibold text-[var(--svs-text)]">{averageRatingLabel}</span>
+              <span className="text-[var(--svs-muted)]">({reviewCountValue} review{reviewCountValue === 1 ? '' : 's'})</span>
+            </div>
+          ) : null}
           <button
             type="button"
             onClick={(event) => { event.stopPropagation(); openItemDetails(item); }}
@@ -25581,12 +25554,6 @@ const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onPushNotificationToU
   const displayTitle = worker.name ? `${worker.name} — ${worker.title}` : worker.title;
   const availableDays = getWorkerAvailableDays(worker);
   const pricingTiers = getWorkerPricingTiers(worker);
-  const sampleReviews = getWorkerSampleReviews(worker);
-  const averageRating = sampleReviews.length ? (sampleReviews.reduce((sum, r) => sum + r.rating, 0) / sampleReviews.length) : (worker.rating || 4.5);
-  const ratingBreakdown = [5, 4, 3, 2, 1].map((star) => ({
-    star,
-    count: sampleReviews.filter((r) => Math.round(r.rating) === star).length,
-  }));
 
   // Seller-submitted workers carry a real sellerEmail; the static catalog
   // workers don't, so fall back to a deterministic synthetic address — same
@@ -25748,10 +25715,6 @@ const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onPushNotificationToU
     });
   };
 
-  const renderStars = (rating, size = 'h-4 w-4') => Array.from({ length: 5 }, (_, i) => (
-    <Star key={i} className={`${size} ${i < Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'text-slate-300'}`} />
-  ));
-
   const sameRolePool = generalLabourItems.filter((other) => other.id !== worker.id && other.category === worker.category);
   const matchedShowcaseCategory = generalLabourCategoryShowcase.find((showcase) => {
     const haystack = `${worker.category || ''} ${worker.title || ''}`.toLowerCase();
@@ -25805,14 +25768,6 @@ const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onPushNotificationToU
               <p className="text-sm font-semibold text-[var(--svs-muted)]">{worker.title}{matchedShowcaseCategory?.name && matchedShowcaseCategory.name !== worker.title ? ` / ${matchedShowcaseCategory.name.replace(/s$/, '')}` : ''}</p>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--svs-muted)]">
-              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--svs-surface-soft)] px-3 py-1 font-semibold text-[var(--svs-text)]">
-                <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                {averageRating.toFixed(1)}
-              </span>
-              <span>{worker.reviewCount || sampleReviews.length} review{(worker.reviewCount || sampleReviews.length) === 1 ? '' : 's'}</span>
-              {detail.viewCount ? (
-                <span className="inline-flex items-center gap-1"><Eye className="h-4 w-4" />{detail.viewCount.toLocaleString()} views</span>
-              ) : null}
             </div>
             {detail.badges?.length ? (
               <div className="flex flex-wrap gap-2">
@@ -25974,44 +25929,6 @@ const GeneralLabourWorkerDetailPage = ({ sellerItems = [], onPushNotificationToU
         </div>
       </section>
 
-      {/* ── Ratings & Reviews ── */}
-      <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6">
-        <h2 className="text-[22px] font-bold text-[var(--svs-text)]">Ratings &amp; Reviews</h2>
-        <div className="mt-4 flex flex-col gap-6 rounded-xl border border-[var(--svs-border)] bg-white p-5 shadow-[0_2px_8px_rgba(15,23,42,0.06)] sm:flex-row sm:items-start sm:p-6">
-          <div className="flex flex-col items-center sm:border-r sm:border-[var(--svs-border)] sm:pr-8">
-            <span className="text-5xl font-bold text-[var(--svs-text)]">{averageRating.toFixed(1)}</span>
-            <div className="mt-1.5 flex">{renderStars(averageRating, 'h-5 w-5')}</div>
-            <p className="mt-1 text-sm text-[var(--svs-muted)]">{(worker.reviewCount || sampleReviews.length).toLocaleString()} reviews</p>
-          </div>
-          <div className="flex-1 space-y-2">
-            {ratingBreakdown.map(({ star, count }) => {
-              const pct = sampleReviews.length ? Math.round((count / sampleReviews.length) * 100) : 0;
-              return (
-                <div key={star} className="flex items-center gap-3 text-sm">
-                  <span className="w-8 text-right font-medium">{star}★</span>
-                  <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
-                    <div className="h-full rounded-full bg-amber-400" style={{ width: `${pct}%` }} />
-                  </div>
-                  <span className="w-10 text-right text-[var(--svs-muted)]">{pct}%</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-        <div className="mt-6 space-y-4">
-          {sampleReviews.map((review) => (
-            <div key={review.id} className="rounded-xl border border-[var(--svs-border)] bg-white p-5 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-semibold">{review.name}</span>
-                <span className="text-xs text-[var(--svs-muted)]">{review.date}</span>
-              </div>
-              <div className="mt-1 flex">{renderStars(review.rating, 'h-4 w-4')}</div>
-              <p className="mt-2 text-[15px] leading-relaxed text-slate-600">{review.comment}</p>
-              <p className="mt-2 text-xs text-[var(--svs-muted)]">👍 {review.helpful} found this helpful</p>
-            </div>
-          ))}
-        </div>
-      </section>
 
       {/* ── You May Also Like ── */}
       {similarWorkers.length ? (
@@ -35960,13 +35877,6 @@ const NurseryHubPage = ({
                         </span>
                       ) : null}
                     </div>
-                    {item.rating ? (
-                      <p className="mt-1 flex items-center gap-1.5 text-xs text-[var(--svs-primary-strong)]/85">
-                        <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                        <span className="font-semibold">{item.rating}</span>
-                        <span className="text-[var(--svs-muted)]">({item.reviewCount} reviews)</span>
-                      </p>
-                    ) : null}
                     <div className="mt-4 space-y-2">
                       <div className="grid grid-cols-2 gap-2">
                         <button
@@ -36151,13 +36061,6 @@ const NurseryHubPage = ({
                     <div className="col-span-2 flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-[var(--svs-primary)]" />
                       <span>{selectedItem.location}</span>
-                    </div>
-                  ) : null}
-                  {selectedItem.rating ? (
-                    <div className="col-span-2 flex items-center gap-2">
-                      <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                      <span className="font-semibold">{selectedItem.rating}</span>
-                      <span className="text-slate-500">({selectedItem.reviewCount || 0} reviews)</span>
                     </div>
                   ) : null}
                   <div className="col-span-2">
@@ -36854,11 +36757,6 @@ const LivestockHubPage = ({
                         <p className="mt-1 flex items-center gap-2 text-sm text-[var(--svs-primary-strong)]/85">
                           <MapPin className="h-4 w-4" /> {item.location}
                         </p>
-                        <p className="mt-1 flex items-center gap-2 text-sm text-[var(--svs-primary-strong)]/85">
-                          <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                          <span className="font-semibold">{item.rating}</span>
-                          <span className="text-[var(--svs-muted)]">({item.reviewCount} reviews)</span>
-                        </p>
                         <div className="mt-4 grid grid-cols-2 gap-2">
                           <button
                             type="button"
@@ -37052,15 +36950,6 @@ const LivestockHubPage = ({
                     <div className="col-span-2 flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-[var(--svs-primary)]" />
                       <span>{selectedItem.location}</span>
-                    </div>
-                  ) : null}
-                  {selectedItem.rating ? (
-                    <div className="col-span-2 flex items-center gap-2">
-                      <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                      <span className="font-semibold">{selectedItem.rating}</span>
-                      <span className="text-slate-500">
-                        ({selectedItem.reviewCount || 0} reviews)
-                      </span>
                     </div>
                   ) : null}
                   <div className="col-span-2">
@@ -46847,12 +46736,6 @@ const OrderConfirmationPage = ({ orders }) => {
                     ) : null}
                   </>
                 )}
-                {Number(headlineItem.rating) ? (
-                  <p className="flex items-center gap-1 text-sm text-[var(--svs-text)]">
-                    <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                    <span className="font-semibold">{Number(headlineItem.rating).toFixed(1)}/5.0</span>
-                  </p>
-                ) : null}
                 {!isLotteryOrder ? (
                   <p className="text-sm text-[var(--svs-muted)]">Quantity: {headlineItem.quantity || 1}{itemCount > 1 ? ` (+${itemCount - 1} more item${itemCount - 1 === 1 ? '' : 's'})` : ''}</p>
                 ) : null}
@@ -47625,7 +47508,7 @@ const OrderCard = ({ order, onCancelOrder, cancellingOrderId, onSetCancelError, 
   const canCancel = canBuyerCancelOrder(order.status);
   const isCancelling = cancellingOrderId === order.id;
 
-  const ratingValue = Math.max(0, Math.min(5, Number(order.rating ?? item.rating ?? (isDelivered ? 3 : 0)) || 0));
+  const ratingValue = order.rating != null ? Math.max(0, Math.min(5, Number(order.rating) || 0)) : 0;
 
   return (
     <article className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-5 shadow-[0_4px_8px_rgba(0,0,0,0.06)]">
@@ -47728,14 +47611,16 @@ const OrderCard = ({ order, onCancelOrder, cancellingOrderId, onSetCancelError, 
 
         <div className="mt-3 flex flex-col gap-3 border-t border-[var(--svs-border)] pt-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex items-center" aria-label={`Rating ${ratingValue} of 5`}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Star
-                  key={`order-${order.id}-star-${star}`}
-                  className={`h-4 w-4 ${star <= ratingValue ? 'fill-[#FBBF24] text-[#FBBF24]' : 'text-slate-300'}`}
-                />
-              ))}
-            </div>
+            {ratingValue > 0 ? (
+              <div className="flex items-center" aria-label={`Rating ${ratingValue} of 5`}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={`order-${order.id}-star-${star}`}
+                    className={`h-4 w-4 ${star <= ratingValue ? 'fill-[#FBBF24] text-[#FBBF24]' : 'text-slate-300'}`}
+                  />
+                ))}
+              </div>
+            ) : null}
             <Link
               to={`/orders/${order.id}/track`}
               state={{ orderId: order.id, reference: order.reference, openReview: true }}
@@ -50417,6 +50302,7 @@ const ItemDetailsModal = ({
   currentReviewerName = '',
   currentReviewerEmail = '',
   reviewNotice = '',
+  hasPurchased = false,
 }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -51016,49 +50902,55 @@ const ItemDetailsModal = ({
               </div>
             ) : null}
 
-            {/* Quick review form */}
-            <form className="mt-5 space-y-2 rounded-lg border border-[#e0e7ef] bg-[#f7fbff] p-3" onSubmit={handleSubmitReview}>
-              <p className="text-xs font-bold uppercase tracking-wider text-[#0f6674]">Leave a quick review</p>
-              <div className="flex flex-wrap items-center gap-2">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => setRating(star)}
-                    aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
-                    className={`flex h-7 w-7 items-center justify-center rounded-full border ${rating >= star ? 'border-amber-400 bg-amber-400' : 'border-slate-300 bg-white'}`}
-                  >
-                    <Star className={`h-4 w-4 ${rating >= star ? 'fill-white text-white' : 'text-slate-300'}`} />
-                  </button>
-                ))}
-                <span className="text-xs text-slate-500">{rating ? `${rating}/5` : 'Tap to rate'}</span>
-              </div>
-              {!isAuthenticatedReviewer ? (
-                <input
-                  type="text"
+            {/* Quick review form — verified purchasers only */}
+            {hasPurchased ? (
+              <form className="mt-5 space-y-2 rounded-lg border border-[#e0e7ef] bg-[#f7fbff] p-3" onSubmit={handleSubmitReview}>
+                <p className="text-xs font-bold uppercase tracking-wider text-[#0f6674]">Leave a quick review</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setRating(star)}
+                      aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
+                      className={`flex h-7 w-7 items-center justify-center rounded-full border ${rating >= star ? 'border-amber-400 bg-amber-400' : 'border-slate-300 bg-white'}`}
+                    >
+                      <Star className={`h-4 w-4 ${rating >= star ? 'fill-white text-white' : 'text-slate-300'}`} />
+                    </button>
+                  ))}
+                  <span className="text-xs text-slate-500">{rating ? `${rating}/5` : 'Tap to rate'}</span>
+                </div>
+                {!isAuthenticatedReviewer ? (
+                  <input
+                    type="text"
+                    className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                    placeholder="Your name"
+                    value={reviewerName}
+                    onChange={(event) => setReviewerName(event.target.value)}
+                  />
+                ) : null}
+                <textarea
                   className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
-                  placeholder="Your name"
-                  value={reviewerName}
-                  onChange={(event) => setReviewerName(event.target.value)}
+                  placeholder="Share your experience (even a single emoji works!)"
+                  value={comment}
+                  onChange={(event) => setComment(event.target.value)}
+                  rows={2}
                 />
-              ) : null}
-              <textarea
-                className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
-                placeholder="Share your experience (even a single emoji works!)"
-                value={comment}
-                onChange={(event) => setComment(event.target.value)}
-                rows={2}
-              />
-              {reviewError ? <p className="text-xs text-rose-600">{reviewError}</p> : null}
-              <button
-                type="submit"
-                disabled={isSubmittingReview}
-                className="rounded-md bg-[#0f6674] px-4 py-1.5 text-xs font-bold text-white shadow hover:bg-[#0d5762] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isSubmittingReview ? 'Posting…' : 'Submit Review'}
-              </button>
-              {reviewNotice ? <p className="text-[11px] text-slate-500">{reviewNotice}</p> : null}
-            </form>
+                {reviewError ? <p className="text-xs text-rose-600">{reviewError}</p> : null}
+                <button
+                  type="submit"
+                  disabled={isSubmittingReview}
+                  className="rounded-md bg-[#0f6674] px-4 py-1.5 text-xs font-bold text-white shadow hover:bg-[#0d5762] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSubmittingReview ? 'Posting…' : 'Submit Review'}
+                </button>
+                {reviewNotice ? <p className="text-[11px] text-slate-500">{reviewNotice}</p> : null}
+              </form>
+            ) : (
+              <div className="mt-5 rounded-lg border border-[#e0e7ef] bg-[#f7fbff] p-3 text-xs text-slate-500">
+                <span className="font-semibold text-[#0f6674]">Only verified purchasers can leave a review.</span> Purchase this item to share your experience.
+              </div>
+            )}
           </section>
 
           {/* SIMILAR PRODUCTS */}
@@ -51254,17 +51146,13 @@ const ItemDetailsModal = ({
                 </p>
               ) : null}
               <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[var(--svs-muted)]">
-                <span className="inline-flex items-center gap-1 rounded-full bg-[var(--svs-surface-soft)] px-3 py-1 font-semibold text-[var(--svs-text)]">
-                  <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                  {averageRating || 'New'}
-                </span>
-                <span>{reviews.length ? `${reviews.length} public review${reviews.length === 1 ? '' : 's'}` : 'No public reviews yet'}</span>
-                {item.viewCount ? (
-                  <span className="inline-flex items-center gap-1">
-                    <Eye className="h-4 w-4" />
-                    {item.viewCount.toLocaleString()} views
+                {averageRating ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[var(--svs-surface-soft)] px-3 py-1 font-semibold text-[var(--svs-text)]">
+                    <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                    {averageRating}
                   </span>
                 ) : null}
+                <span>{reviews.length ? `${reviews.length} public review${reviews.length === 1 ? '' : 's'}` : 'No public reviews yet'}</span>
               </div>
               {item.badges?.length ? (
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -51520,11 +51408,6 @@ const ItemDetailsModal = ({
                       <MapPin className="h-3.5 w-3.5 shrink-0 text-[var(--svs-primary)]" />
                       {item.dealer.location}
                     </p>
-                    <p className="mt-1 flex items-center gap-1 text-xs text-amber-500">
-                      <Star className="h-3.5 w-3.5 fill-amber-400" />
-                      <span className="font-semibold text-[var(--svs-text)]">{item.dealer.rating}</span>
-                      <span className="text-[var(--svs-muted)]">({item.dealer.reviewCount} reviews)</span>
-                    </p>
                   </div>
                   {canChatSeller ? (
                     <button
@@ -51558,10 +51441,10 @@ const ItemDetailsModal = ({
         {/* Reviews Section */}
         <div className={`${isRichDetail ? 'rounded-2xl bg-[var(--svs-primary)]/5 mx-6 mb-6' : 'border-t border-[var(--svs-border)]'} px-6 py-6`}>
           <h3 className="text-lg font-bold text-[var(--svs-primary-strong)] mb-3">Ratings &amp; Reviews</h3>
-          {isRichDetail ? (() => {
-            const ratingValues = reviews.length ? reviews.map((r) => r.rating) : [5, 5, 5, 5, 4, 4, 4, 3, 5, 5];
+          {isRichDetail && reviews.length > 0 ? (() => {
+            const ratingValues = reviews.map((r) => r.rating);
             const total = ratingValues.length;
-            const avg = total ? (ratingValues.reduce((sum, n) => sum + n, 0) / total).toFixed(1) : '0.0';
+            const avg = (ratingValues.reduce((sum, n) => sum + n, 0) / total).toFixed(1);
             const distribution = [5, 4, 3, 2, 1].map((star) => ({
               star,
               count: ratingValues.filter((value) => Math.round(value) === star).length,
@@ -51616,49 +51499,55 @@ const ItemDetailsModal = ({
               <div className="text-sm text-[var(--svs-muted)]">No reviews yet. Be the first to review this product!</div>
             )}
           </div>
-          {/* Review Form */}
-          <form className="mt-4 space-y-3" onSubmit={handleSubmitReview}>
-            <div className="flex items-center gap-2">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  className={`h-7 w-7 rounded-full border ${rating >= star ? 'bg-amber-400 border-amber-400' : 'bg-white border-slate-300'} flex items-center justify-center`}
-                  onClick={() => setRating(star)}
-                  aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
-                >
-                  <Star className={`h-5 w-5 ${rating >= star ? 'fill-white' : 'fill-slate-300'}`} />
-                </button>
-              ))}
-              <span className="ml-2 text-sm text-[var(--svs-muted)]">{rating ? `${rating} star${rating > 1 ? 's' : ''}` : 'Tap to rate'}</span>
-            </div>
-            {!isAuthenticatedReviewer && (
-              <input
-                type="text"
+          {/* Review Form — verified purchasers only */}
+          {hasPurchased ? (
+            <form className="mt-4 space-y-3" onSubmit={handleSubmitReview}>
+              <div className="flex items-center gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    className={`h-7 w-7 rounded-full border ${rating >= star ? 'bg-amber-400 border-amber-400' : 'bg-white border-slate-300'} flex items-center justify-center`}
+                    onClick={() => setRating(star)}
+                    aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
+                  >
+                    <Star className={`h-5 w-5 ${rating >= star ? 'fill-white' : 'fill-slate-300'}`} />
+                  </button>
+                ))}
+                <span className="ml-2 text-sm text-[var(--svs-muted)]">{rating ? `${rating} star${rating > 1 ? 's' : ''}` : 'Tap to rate'}</span>
+              </div>
+              {!isAuthenticatedReviewer && (
+                <input
+                  type="text"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  placeholder="Your name"
+                  value={reviewerName}
+                  onChange={(e) => setReviewerName(e.target.value)}
+                  required
+                />
+              )}
+              <textarea
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                placeholder="Your name"
-                value={reviewerName}
-                onChange={(e) => setReviewerName(e.target.value)}
+                placeholder="Write your review (even a single emoji works!)"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
                 required
               />
-            )}
-            <textarea
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              placeholder="Write your review (even a single emoji works!)"
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              required
-            />
-            {reviewError && <div className="text-sm text-rose-600">{reviewError}</div>}
-            <button
-              type="submit"
-              className="rounded-lg bg-[var(--svs-primary)] px-6 py-2 text-base font-semibold text-white shadow hover:bg-[var(--svs-primary-strong)]"
-              disabled={isSubmittingReview}
-            >
-              {isSubmittingReview ? 'Submitting…' : 'Submit Review'}
-            </button>
-            {reviewNotice && <div className="text-xs text-slate-500 mt-2">{reviewNotice}</div>}
-          </form>
+              {reviewError && <div className="text-sm text-rose-600">{reviewError}</div>}
+              <button
+                type="submit"
+                className="rounded-lg bg-[var(--svs-primary)] px-6 py-2 text-base font-semibold text-white shadow hover:bg-[var(--svs-primary-strong)]"
+                disabled={isSubmittingReview}
+              >
+                {isSubmittingReview ? 'Submitting…' : 'Submit Review'}
+              </button>
+              {reviewNotice && <div className="text-xs text-slate-500 mt-2">{reviewNotice}</div>}
+            </form>
+          ) : (
+            <div className="mt-4 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4 text-sm text-[var(--svs-muted)]">
+              <span className="font-semibold text-[var(--svs-primary-strong)]">Only verified purchasers can leave a review.</span> Purchase this item to share your experience.
+            </div>
+          )}
         </div>
         {/* Similar Products Section (optional, if available) */}
         {item.similarProducts?.length ? (
@@ -51693,11 +51582,6 @@ const ItemDetailsModal = ({
                           <span>{sim.sellerName}</span>
                         </p>
                       ) : null}
-                      <p className="flex items-center gap-1 text-xs text-[var(--svs-muted)]">
-                        <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                        <span className="font-semibold text-[var(--svs-text)]">{Number(sim.rating || 4.8).toFixed(1)}</span>
-                        <span>({sim.reviewsCount || 145} reviews)</span>
-                      </p>
                       <button
                         type="button"
                         className="mt-1 w-full rounded-lg bg-[var(--svs-primary)] px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-[var(--svs-primary-strong)]"
@@ -53083,11 +52967,13 @@ const CardGrid = ({ items, focusItems, boundsItems, buttonLabel, secondaryButton
                 >
                   {secondaryButtonLabel}
                 </button>
-                <div className="hidden items-center justify-center gap-1.5 rounded-full border border-[#e0e7ef] bg-white px-3 py-1.5 text-xs text-[#0f6674]/80 sm:flex">
-                  <Star className={`h-4 w-4 text-amber-500 ${reviewSummary.reviewCount ? 'fill-current' : ''}`} />
-                  <span className="font-semibold text-[#0f6674]">{averageRatingLabel}</span>
-                  <span>{reviewCountLabel}</span>
-                </div>
+                {reviewSummary.reviewCount > 0 ? (
+                  <div className="hidden items-center justify-center gap-1.5 rounded-full border border-[#e0e7ef] bg-white px-3 py-1.5 text-xs text-[#0f6674]/80 sm:flex">
+                    <Star className="h-4 w-4 fill-current text-amber-500" />
+                    <span className="font-semibold text-[#0f6674]">{averageRatingLabel}</span>
+                    <span>{reviewCountLabel}</span>
+                  </div>
+                ) : null}
               </div>
             </div>
           </article>
@@ -55613,7 +55499,31 @@ const App = () => {
     setSelectedItemDetails(null);
   }, []);
 
+  const selectedItemHasPurchased = useMemo(() => {
+    const item = selectedItemDetails;
+    if (!item) return false;
+    const cancelledStatuses = new Set(['Cancelled', 'Cancelled by Buyer', 'Cancelled by Seller', 'Refund Pending', 'Refund Made']);
+    const purchasedItems = orders
+      .filter((o) => !cancelledStatuses.has(o.status))
+      .flatMap((o) => (Array.isArray(o.items) ? o.items : []));
+    if (!purchasedItems.length) return false;
+    const cartId = item.cartItem?.id || item.wishlistItem?.id;
+    const constructedId = item.route && item.id
+      ? getCollectionItemId(item.route, item.id)
+      : null;
+    return purchasedItems.some(
+      (oi) =>
+        (cartId && oi.id === cartId) ||
+        (constructedId && oi.id === constructedId) ||
+        (item.id && oi.sku === item.id),
+    );
+  }, [orders, selectedItemDetails]);
+
   const handleSubmitProductReview = useCallback(async ({ itemKey, rating, comment, reviewerName, reviewerEmail }) => {
+    if (!selectedItemHasPurchased) {
+      throw new Error('You can only review items you have purchased.');
+    }
+
     const normalizedComment = normalizeReviewComment(comment);
 
     if (containsHarshReviewContent(normalizedComment)) {
@@ -55651,7 +55561,7 @@ const App = () => {
     }
 
     setReviewNotice('Review published. It is now visible to shoppers.');
-  }, [loadProductReviewSummaries, loadReviewsForItem]);
+  }, [selectedItemHasPurchased, loadProductReviewSummaries, loadReviewsForItem]);
 
   useEffect(() => {
     if (!actionNotice) {
@@ -55754,6 +55664,7 @@ const App = () => {
         currentReviewerName={currentReviewerName}
         currentReviewerEmail={activeUserEmail}
         reviewNotice={reviewNotice}
+        hasPurchased={selectedItemHasPurchased}
       />
       {actionNotice ? (
         <div className="pointer-events-none fixed bottom-5 right-5 z-[90] max-w-sm rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 shadow-[0_8px_24px_rgba(16,185,129,0.25)]">
