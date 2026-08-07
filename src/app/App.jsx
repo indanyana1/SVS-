@@ -37458,7 +37458,7 @@ const TrendingSellerHero = ({ items }) => {
           return (
             <div
               key={item.id || index}
-              className="relative h-[360px] w-full shrink-0 sm:h-[400px]"
+              className="relative h-[260px] w-full shrink-0 sm:h-[300px]"
             >
               <div
                 className="absolute inset-0 bg-cover bg-center"
