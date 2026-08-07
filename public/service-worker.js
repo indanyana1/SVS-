@@ -6,7 +6,7 @@
 // ─── VERSION ────────────────────────────────────────────────────────────────
 // Auto-stamped by scripts/version-sw.js at build time (git hash + date).
 // DO NOT edit manually — every `npm run build` overwrites this automatically.
-const APP_VERSION = '2026-07-07-61779b7';
+const APP_VERSION = '2026-08-07-304cce1';
 const CACHE_NAME = `svs-pwa-${APP_VERSION}`;
 // ────────────────────────────────────────────────────────────────────────────
 

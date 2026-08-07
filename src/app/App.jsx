@@ -9961,7 +9961,7 @@ const normalizeListingQuantity = (value, fallback = 0) => {
 };
 
 const getSellerListingIdFromItemKey = (value) => {
-  const rawValue = String(value || '');
+  const rawValue = String(value || '').replace(/::size-[a-z0-9-]+$/i, '');
 
   if (!rawValue) {
     return '';
@@ -9977,16 +9977,21 @@ const getSellerListingIdFromItemKey = (value) => {
 };
 
 const getSellerListingStock = (sellerItems, candidateItem) => {
-  const listingDbId = getSellerListingIdFromItemKey(candidateItem?.sku || candidateItem?.id);
+  const rawKey = String(candidateItem?.sku || candidateItem?.id || '');
+  const sizeSlugMatch = rawKey.match(/::size-([a-z0-9-]+)$/i);
+  const sizeSlug = sizeSlugMatch ? sizeSlugMatch[1] : null;
 
-  if (!listingDbId) {
-    return null;
-  }
+  const listingDbId = getSellerListingIdFromItemKey(rawKey);
+  if (!listingDbId) return null;
 
   const listing = sellerItems.find((item) => item.dbId === listingDbId || item.id === `seller-${listingDbId}`);
+  if (!listing) return null;
 
-  if (!listing) {
-    return null;
+  if (sizeSlug && listing.sizeStock && typeof listing.sizeStock === 'object') {
+    const matchKey = Object.keys(listing.sizeStock).find(
+      (k) => k.toLowerCase().replace(/[^a-z0-9]+/g, '-') === sizeSlug,
+    );
+    if (matchKey !== undefined) return normalizeListingQuantity(listing.sizeStock[matchKey], 0);
   }
 
   return normalizeListingQuantity(listing.availableQuantity, 0);
@@ -14690,11 +14695,12 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
                             disabled={isOutOfStock}
                             onClick={(event) => {
                               event.stopPropagation();
-                              onAddToCart(buildCartItem(item));
+                              if (getItemSizeOptions(item).length > 0) onOpenItemDetails?.(item);
+                              else onAddToCart(buildCartItem(item));
                             }}
                             className="rounded-full bg-[#0f6674] px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-[#33b9f2] disabled:bg-slate-400 disabled:cursor-not-allowed sm:px-5 sm:py-2 sm:text-base"
                           >
-                            {isOutOfStock ? 'Out of stock' : t('common.addToBasket')}
+                            {isOutOfStock ? 'Out of stock' : (getItemSizeOptions(item).length > 0 ? 'Select Size' : t('common.addToBasket'))}
                           </button>
                           <button
                             type="button"
@@ -15200,11 +15206,12 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
-                            onAddToCart(buildCartItem(item));
+                            if (getItemSizeOptions(item).length > 0) onOpenItemDetails?.(item);
+                            else onAddToCart(buildCartItem(item));
                           }}
                           className={`${cudyBluePrimaryButtonClassName} w-full rounded-full bg-[#0f6674] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#0d6357] sm:w-auto sm:bg-[#0f766e] sm:px-4 sm:py-2`}
                         >
-                          Add to Cart
+                          {getItemSizeOptions(item).length > 0 ? 'Select Size' : 'Add to Cart'}
                         </button>
                         <button
                           type="button"
@@ -15680,10 +15687,13 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
                         <button
                           type="button"
                           disabled={isOutOfStock}
-                          onClick={() => handleAddToCart(item)}
+                          onClick={() => {
+                            if (getItemSizeOptions(item).length > 0) handleOpenDetails(item);
+                            else handleAddToCart(item);
+                          }}
                           className="flex-1 rounded-xl bg-[var(--svs-primary)] px-2 py-1.5 text-xs font-semibold text-white transition hover:bg-[var(--svs-primary-strong)] disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          {isOutOfStock ? 'Out of stock' : 'Add to Cart'}
+                          {isOutOfStock ? 'Out of stock' : (getItemSizeOptions(item).length > 0 ? 'Select Size' : 'Add to Cart')}
                         </button>
                         <button
                           type="button"
@@ -16084,12 +16094,16 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
                         onClick={(e) => {
                           e.stopPropagation();
                           if (isOutOfStock) return;
-                          const details = [item.displayCategory, item.displayType, item.volume].filter(Boolean).join(' • ');
-                          onAddToCart(createCartItem({ ...item, route: '/beverages-liquors', marketName: 'Beverages & Liquors', details }));
+                          if (getItemSizeOptions(item).length > 0) {
+                            onOpenItemDetails?.(item);
+                          } else {
+                            const details = [item.displayCategory, item.displayType, item.volume].filter(Boolean).join(' • ');
+                            onAddToCart(createCartItem({ ...item, route: '/beverages-liquors', marketName: 'Beverages & Liquors', details }));
+                          }
                         }}
                         className="flex-1 rounded-xl bg-[var(--svs-primary)] px-2 py-1.5 text-xs font-semibold text-white transition hover:bg-[var(--svs-primary-strong)] disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        {isOutOfStock ? 'Out of stock' : 'Add to Basket'}
+                        {isOutOfStock ? 'Out of stock' : (getItemSizeOptions(item).length > 0 ? 'Select Size' : 'Add to Basket')}
                       </button>
                       <button
                         type="button"
@@ -20595,7 +20609,10 @@ const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
                   key={item.id}
                   item={item}
                   isWishlisted={isWishlistedItem(item)}
-                  onAddToCart={() => handleAdd(item)}
+                  onAddToCart={() => {
+                    if (getItemSizeOptions(item).length > 0) handleOpen(item);
+                    else handleAdd(item);
+                  }}
                   onToggleWishlist={() => handleWishlist(item)}
                   onOpenDetails={() => handleOpen(item)}
                   reviewSummary={productReviewSummaryMap[getCollectionItemId('/hardware-software', item.id)]}
@@ -20636,7 +20653,10 @@ const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
                   key={`trend-${item.id}`}
                   item={item}
                   isWishlisted={isWishlistedItem(item)}
-                  onAddToCart={() => handleAdd(item)}
+                  onAddToCart={() => {
+                    if (getItemSizeOptions(item).length > 0) handleOpen(item);
+                    else handleAdd(item);
+                  }}
                   onToggleWishlist={() => handleWishlist(item)}
                   onOpenDetails={() => handleOpen(item)}
                   reviewSummary={productReviewSummaryMap[getCollectionItemId('/hardware-software', item.id)]}
@@ -35457,6 +35477,60 @@ const NURSERY_TRUST_BG = 'https://images.pexels.com/photos/931177/pexels-photo-9
 const NURSERY_CARE_LEVELS = ['Easy', 'Moderate', 'Expert'];
 const NURSERY_LIGHT_REQS  = ['Full Sun', 'Partial Shade', 'Full Shade', 'Indoors'];
 const NURSERY_SUITABLE    = ['Indoors', 'Outdoors', 'Both'];
+const NURSERY_WATERING    = ['Daily', 'Every 2-3 days', 'Weekly', 'Bi-weekly', 'Monthly'];
+
+const NURSERY_CATEGORY_FILTERS = {
+  seeds: {
+    careLevels: ['Easy', 'Moderate', 'Expert'],
+    lightRequirements: ['Full Sun', 'Partial Shade', 'Full Shade', 'Indoors'],
+    wateringFrequencies: ['Daily', 'Every 2-3 days', 'Weekly', 'Bi-weekly'],
+    suitableFor: ['Indoors', 'Outdoors', 'Both'],
+    petSafe: ['Yes', 'No', 'Unknown'],
+  },
+  seedlings: {
+    careLevels: ['Easy', 'Moderate', 'Expert'],
+    lightRequirements: ['Full Sun', 'Partial Shade', 'Full Shade', 'Indoors'],
+    wateringFrequencies: ['Daily', 'Every 2-3 days', 'Weekly', 'Bi-weekly'],
+    suitableFor: ['Indoors', 'Outdoors', 'Both'],
+    petSafe: ['Yes', 'No', 'Unknown'],
+  },
+  saplings: {
+    careLevels: ['Easy', 'Moderate', 'Expert'],
+    lightRequirements: ['Full Sun', 'Partial Shade', 'Full Shade'],
+    wateringFrequencies: ['Every 2-3 days', 'Weekly', 'Bi-weekly', 'Monthly'],
+    suitableFor: ['Outdoors', 'Both'],
+    petSafe: ['Yes', 'No', 'Unknown'],
+  },
+  flowers: {
+    careLevels: ['Easy', 'Moderate', 'Expert'],
+    lightRequirements: ['Full Sun', 'Partial Shade', 'Full Shade', 'Indoors'],
+    wateringFrequencies: ['Daily', 'Every 2-3 days', 'Weekly', 'Bi-weekly'],
+    suitableFor: ['Indoors', 'Outdoors', 'Both'],
+    petSafe: ['Yes', 'No', 'Unknown'],
+  },
+  'vegetable-starts': {
+    careLevels: ['Easy', 'Moderate', 'Expert'],
+    lightRequirements: ['Full Sun', 'Partial Shade'],
+    wateringFrequencies: ['Daily', 'Every 2-3 days', 'Weekly'],
+    suitableFor: ['Indoors', 'Outdoors', 'Both'],
+    petSafe: ['Yes', 'No', 'Unknown'],
+  },
+  herbs: {
+    careLevels: ['Easy', 'Moderate', 'Expert'],
+    lightRequirements: ['Full Sun', 'Partial Shade', 'Full Shade', 'Indoors'],
+    wateringFrequencies: ['Daily', 'Every 2-3 days', 'Weekly', 'Bi-weekly'],
+    suitableFor: ['Indoors', 'Outdoors', 'Both'],
+    petSafe: ['Yes', 'No', 'Unknown'],
+  },
+  shrubs: {
+    careLevels: ['Easy', 'Moderate', 'Expert'],
+    lightRequirements: ['Full Sun', 'Partial Shade', 'Full Shade'],
+    wateringFrequencies: ['Every 2-3 days', 'Weekly', 'Bi-weekly', 'Monthly'],
+    suitableFor: ['Outdoors', 'Both'],
+    petSafe: ['Yes', 'No', 'Unknown'],
+  },
+  supplies: {},
+};
 
 const NurseryHubPage = ({
   onAddToCart,
@@ -35470,14 +35544,22 @@ const NurseryHubPage = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState(null);
-  const [activeCareLevel, setActiveCareLevel] = useState(null);
-  const [activeLightReq, setActiveLightReq] = useState(null);
-  const [activeSuitable, setActiveSuitable] = useState(null);
   const [subscribeEmail, setSubscribeEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
   const [sort, setSort] = useState('relevance');
   const [isSearching, setIsSearching] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedVariant, setSelectedVariant] = useState('');
+  const [selectedCareLevels, setSelectedCareLevels] = useState([]);
+  const [selectedLightReqs, setSelectedLightReqs] = useState([]);
+  const [selectedSuitableFor, setSelectedSuitableFor] = useState([]);
+  const [selectedWateringFreqs, setSelectedWateringFreqs] = useState([]);
+  const [selectedPetSafe, setSelectedPetSafe] = useState([]);
+  const [selectedLocations, setSelectedLocations] = useState([]);
+  const [selectedPotSizes, setSelectedPotSizes] = useState([]);
+  const [priceRange, setPriceRange] = useState([0, 0]);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(false);
   const featuredRef = useRef(null);
 
   const { code: buyerCurrencyCode } = useBuyerCurrency();
@@ -35500,6 +35582,13 @@ const NurseryHubPage = ({
         document.removeEventListener('keydown', onKey);
       }
     };
+  }, [selectedItem]);
+
+  useEffect(() => {
+    if (!selectedItem) { setSelectedVariant(''); return; }
+    const opts = getItemSizeOptions(selectedItem);
+    const firstAvailable = opts.find((s) => Number(selectedItem.sizeStock?.[s] ?? 1) > 0) || opts[0] || '';
+    setSelectedVariant(firstAvailable);
   }, [selectedItem]);
 
   useEffect(() => {
@@ -35553,15 +35642,117 @@ const NurseryHubPage = ({
   const allItems = useMemo(() => [...sellerNurseryItems, ...baseItems], [sellerNurseryItems, baseItems]);
 
   const filteredItems = useMemo(
-    () => searchNurseryListings(allItems, debouncedQuery, {
-      categoryId: activeCategory,
-      careLevel: activeCareLevel,
-      lightRequirement: activeLightReq,
-      suitableFor: activeSuitable,
-      sort,
-    }),
-    [allItems, debouncedQuery, activeCategory, activeCareLevel, activeLightReq, activeSuitable, sort],
+    () => searchNurseryListings(allItems, debouncedQuery, { categoryId: activeCategory, sort }),
+    [allItems, debouncedQuery, activeCategory, sort],
   );
+
+  const catPreset = activeCategory ? (NURSERY_CATEGORY_FILTERS[activeCategory] || {}) : {};
+
+  const careLevelOptions = useMemo(() => {
+    const seen = new Set(catPreset.careLevels || NURSERY_CARE_LEVELS);
+    filteredItems.forEach((item) => { const v = String(item.careLevel || '').trim(); if (v) seen.add(v); });
+    return Array.from(seen);
+  }, [filteredItems, catPreset.careLevels]);
+
+  const lightReqOptions = useMemo(() => {
+    if (activeCategory === 'supplies') return [];
+    const seen = new Set(catPreset.lightRequirements || NURSERY_LIGHT_REQS);
+    filteredItems.forEach((item) => { const v = String(item.lightRequirement || '').trim(); if (v) seen.add(v); });
+    return Array.from(seen);
+  }, [filteredItems, catPreset.lightRequirements, activeCategory]);
+
+  const suitableForOptions = useMemo(() => {
+    if (activeCategory === 'supplies') return [];
+    const seen = new Set(catPreset.suitableFor || NURSERY_SUITABLE);
+    filteredItems.forEach((item) => { const v = String(item.suitableFor || '').trim(); if (v) seen.add(v); });
+    return Array.from(seen);
+  }, [filteredItems, catPreset.suitableFor, activeCategory]);
+
+  const wateringFreqOptions = useMemo(() => {
+    if (activeCategory === 'supplies') return [];
+    const seen = new Set(catPreset.wateringFrequencies || NURSERY_WATERING);
+    filteredItems.forEach((item) => { const v = String(item.wateringFrequency || '').trim(); if (v) seen.add(v); });
+    return Array.from(seen);
+  }, [filteredItems, catPreset.wateringFrequencies, activeCategory]);
+
+  const petSafeOptions = useMemo(() => {
+    if (activeCategory === 'supplies') return [];
+    const seen = new Set(catPreset.petSafe || ['Yes', 'No', 'Unknown']);
+    filteredItems.forEach((item) => { const v = String(item.petSafe || '').trim(); if (v) seen.add(v); });
+    return Array.from(seen);
+  }, [filteredItems, catPreset.petSafe, activeCategory]);
+
+  const locationOptions = useMemo(() => {
+    const seen = new Set();
+    filteredItems.forEach((item) => { const v = String(item.location || '').trim(); if (v) seen.add(v); });
+    return Array.from(seen).sort();
+  }, [filteredItems]);
+
+  const potSizeOptions = useMemo(() => {
+    if (activeCategory === 'supplies') return [];
+    const seen = new Set();
+    filteredItems.forEach((item) => { const v = String(item.potPlantSize || '').trim(); if (v) seen.add(v); });
+    return Array.from(seen);
+  }, [filteredItems, activeCategory]);
+
+  const nurseryPriceMax = useMemo(() => {
+    const max = filteredItems.reduce((highest, item) => Math.max(highest, getNumericPriceValue(item.price, 0, item.currency || null)), 0);
+    return Math.max(50, Math.ceil(max));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredItems, buyerCurrencyCode]);
+
+  const nurseryPriceStep = nurseryPriceMax <= 100 ? 1 : nurseryPriceMax <= 500 ? 5 : nurseryPriceMax <= 2000 ? 10 : 50;
+
+  const prevNurseryCurrencyRef = useRef(buyerCurrencyCode);
+  useEffect(() => {
+    if (prevNurseryCurrencyRef.current !== buyerCurrencyCode) {
+      prevNurseryCurrencyRef.current = buyerCurrencyCode;
+      setPriceRange([0, nurseryPriceMax]);
+    } else {
+      setPriceRange((prev) => [Math.min(prev[0], nurseryPriceMax), nurseryPriceMax]);
+    }
+  }, [nurseryPriceMax, buyerCurrencyCode]);
+
+  useEffect(() => {
+    setSelectedCareLevels([]);
+    setSelectedLightReqs([]);
+    setSelectedSuitableFor([]);
+    setSelectedWateringFreqs([]);
+    setSelectedPetSafe([]);
+    setSelectedLocations([]);
+    setSelectedPotSizes([]);
+  }, [activeCategory, debouncedQuery]);
+
+  const activeFilterCount = selectedCareLevels.length + selectedLightReqs.length + selectedSuitableFor.length + selectedWateringFreqs.length + selectedPetSafe.length + selectedLocations.length + selectedPotSizes.length;
+
+  const clearSidebarFilters = () => {
+    setSelectedCareLevels([]);
+    setSelectedLightReqs([]);
+    setSelectedSuitableFor([]);
+    setSelectedWateringFreqs([]);
+    setSelectedPetSafe([]);
+    setSelectedLocations([]);
+    setSelectedPotSizes([]);
+    setPriceRange([0, nurseryPriceMax]);
+  };
+
+  const toggleNurseryFilter = (value, list, setter) => {
+    setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
+  };
+
+  const displayedItems = useMemo(() => filteredItems.filter((item) => {
+    const careMatch = !selectedCareLevels.length || selectedCareLevels.some((c) => String(item.careLevel || '').toLowerCase() === c.toLowerCase());
+    const lightMatch = !selectedLightReqs.length || selectedLightReqs.some((l) => String(item.lightRequirement || '').toLowerCase() === l.toLowerCase());
+    const suitableMatch = !selectedSuitableFor.length || selectedSuitableFor.some((s) => String(item.suitableFor || '').toLowerCase() === s.toLowerCase());
+    const waterMatch = !selectedWateringFreqs.length || selectedWateringFreqs.some((w) => String(item.wateringFrequency || '').toLowerCase() === w.toLowerCase());
+    const petMatch = !selectedPetSafe.length || selectedPetSafe.some((p) => String(item.petSafe || '').toLowerCase() === p.toLowerCase());
+    const locationMatch = !selectedLocations.length || selectedLocations.some((l) => String(item.location || '').toLowerCase() === l.toLowerCase());
+    const potMatch = !selectedPotSizes.length || selectedPotSizes.some((s) => String(item.potPlantSize || '').toLowerCase() === s.toLowerCase());
+    const price = getNumericPriceValue(item.price, 0, item.currency || null);
+    if (price > 0 && (price < priceRange[0] || price > priceRange[1])) return false;
+    return careMatch && lightMatch && suitableMatch && waterMatch && petMatch && locationMatch && potMatch;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [filteredItems, selectedCareLevels, selectedLightReqs, selectedSuitableFor, selectedWateringFreqs, selectedPetSafe, selectedLocations, selectedPotSizes, priceRange, buyerCurrencyCode]);
 
   const formatPrice = (item) => {
     const from = item.currency || 'ZAR';
@@ -35625,14 +35816,38 @@ const NurseryHubPage = ({
     setTimeout(() => setSubscribed(false), 3500);
   };
 
-  const filterPillClass = (active) =>
-    `rounded-full border px-3 py-1.5 text-xs font-semibold transition cursor-pointer select-none ${
-      active
-        ? 'border-[var(--svs-primary)] bg-[var(--svs-primary)] text-white'
-        : 'border-[var(--svs-border)] bg-white text-slate-600 hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]'
-    }`;
+  const variantSizeOptions = selectedItem ? getItemSizeOptions(selectedItem) : [];
+  const variantRawPrice = selectedVariant && selectedItem?.sizePrices ? selectedItem.sizePrices[selectedVariant] : undefined;
+  const variantPrice = variantRawPrice != null ? Number(variantRawPrice) || null : null;
+  const variantDisplayPrice = selectedItem
+    ? (variantPrice != null ? formatPrice({ ...selectedItem, price: variantPrice }) : formatPrice(selectedItem))
+    : '';
+  const variantSizeQty = (selectedVariant && selectedItem?.sizeStock?.[selectedVariant] != null)
+    ? normalizeListingQuantity(selectedItem.sizeStock[selectedVariant], 0)
+    : null;
+  const variantIsInStock = variantSizeOptions.length === 0
+    ? isInStock(selectedItem)
+    : !!(selectedVariant && (variantSizeQty == null ? true : variantSizeQty > 0));
 
-  const hasActiveFilters = activeCategory || activeCareLevel || activeLightReq || activeSuitable;
+  const buildVariantCartItem = (item) => {
+    const adjustedItem = variantPrice != null ? { ...item, price: variantPrice } : item;
+    const base = buildSavedPayload(adjustedItem);
+    if (!selectedVariant || !variantSizeOptions.length) return createCartItem(base);
+    const safeSizeId = selectedVariant.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const baseId = String(base.id || '').replace(/::size-[a-z0-9-]+$/i, '');
+    const sizeQty = item.sizeStock?.[selectedVariant] != null
+      ? normalizeListingQuantity(item.sizeStock[selectedVariant], 0)
+      : null;
+    return {
+      ...createCartItem({
+        ...base,
+        id: `${baseId}::size-${safeSizeId}`,
+        details: [base.details, `Size: ${selectedVariant}`].filter(Boolean).join(' • '),
+        ...(sizeQty != null ? { availableQuantity: sizeQty } : {}),
+      }),
+      selectedSize: selectedVariant,
+    };
+  };
 
   return (
     <section className="bg-white">
@@ -35681,64 +35896,9 @@ const NurseryHubPage = ({
           </div>
         </div>
 
-        {/* ── Filter pills ── */}
-        <div className="mt-4 space-y-2">
-          {/* Care level */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold text-slate-500">Care level:</span>
-            {NURSERY_CARE_LEVELS.map((level) => (
-              <button
-                key={level}
-                type="button"
-                onClick={() => setActiveCareLevel((c) => (c === level ? null : level))}
-                className={filterPillClass(activeCareLevel === level)}
-              >
-                {level}
-              </button>
-            ))}
-          </div>
-          {/* Light requirement */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold text-slate-500">Light:</span>
-            {NURSERY_LIGHT_REQS.map((req) => (
-              <button
-                key={req}
-                type="button"
-                onClick={() => setActiveLightReq((r) => (r === req ? null : req))}
-                className={filterPillClass(activeLightReq === req)}
-              >
-                {req}
-              </button>
-            ))}
-          </div>
-          {/* Suitable for */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold text-slate-500">Suitable for:</span>
-            {NURSERY_SUITABLE.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setActiveSuitable((cur) => (cur === s ? null : s))}
-                className={filterPillClass(activeSuitable === s)}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-          {hasActiveFilters ? (
-            <button
-              type="button"
-              onClick={() => { setActiveCategory(null); setActiveCareLevel(null); setActiveLightReq(null); setActiveSuitable(null); }}
-              className="text-xs font-semibold text-rose-500 hover:underline"
-            >
-              Clear all filters
-            </button>
-          ) : null}
-        </div>
-
         {debouncedQuery ? (
           <p className="mt-2 text-xs text-slate-500">
-            {filteredItems.length} {filteredItems.length === 1 ? 'result' : 'results'} for
+            {displayedItems.length} {displayedItems.length === 1 ? 'result' : 'results'} for
             {' '}<span className="font-semibold text-[var(--svs-primary-strong)]">&ldquo;{debouncedQuery}&rdquo;</span>
           </p>
         ) : null}
@@ -35784,29 +35944,305 @@ const NurseryHubPage = ({
         </div>
       </div>
 
-      {/* ── Listings grid ── */}
+      {/* ── Listings: sidebar + grid ── */}
       <div ref={featuredRef} className="mx-auto w-full max-w-6xl px-4 pb-8 sm:px-6">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-[var(--svs-primary-strong)] sm:text-3xl">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold text-[var(--svs-primary-strong)] sm:text-2xl">
             {activeCategory ? (nurseryCategories.find((c) => c.id === activeCategory)?.title || 'Plants') : 'All Nursery Listings'}
           </h2>
-          <p className="mt-2 text-sm text-[var(--svs-primary-strong)]/85 sm:text-base">
-            Locally grown plants, seeds, and supplies from verified nurseries
-          </p>
-          {activeCategory ? (
-            <button type="button" onClick={() => setActiveCategory(null)} className="mt-2 text-xs font-semibold text-[var(--svs-primary)] hover:underline">
-              View all plant types
+          <div className="flex items-center gap-2">
+            {activeCategory ? (
+              <button type="button" onClick={() => setActiveCategory(null)} className="text-xs font-semibold text-[var(--svs-primary)] hover:underline">
+                View all
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setIsDesktopFiltersHidden((v) => !v)}
+              className="hidden items-center gap-1.5 rounded-full border border-[var(--svs-border)] bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)] lg:flex"
+            >
+              <Filter className="h-3.5 w-3.5" />
+              {isDesktopFiltersHidden ? 'Show Filters' : 'Hide Filters'}
             </button>
-          ) : null}
+            <button
+              type="button"
+              onClick={() => setIsFiltersOpen(true)}
+              className="flex items-center gap-1.5 rounded-full border border-[var(--svs-border)] bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)] lg:hidden"
+            >
+              <Filter className="h-3.5 w-3.5" />
+              Filters {activeFilterCount > 0 ? `(${activeFilterCount})` : ''}
+            </button>
+          </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredItems.length === 0 ? (
-            <div className="col-span-full rounded-xl border border-dashed border-[var(--svs-border)] bg-white px-5 py-10 text-center text-sm text-[var(--svs-muted)]">
-              No listings match your current search or filters. Try adjusting your filters above.
+        <div className="mt-4 flex gap-6">
+          {/* ── Desktop sidebar ── */}
+          {!isDesktopFiltersHidden ? (
+            <aside className="hidden w-52 shrink-0 lg:block">
+              <div className="sticky top-24 space-y-5 rounded-xl border border-[var(--svs-border)] bg-white p-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold uppercase tracking-wide text-[var(--svs-primary-strong)]">Filters</p>
+                  {activeFilterCount > 0 ? (
+                    <button type="button" onClick={clearSidebarFilters} className="text-[11px] font-semibold text-rose-500 hover:underline">Clear all</button>
+                  ) : null}
+                </div>
+
+                {careLevelOptions.length > 0 ? (
+                  <div>
+                    <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">Care Level</p>
+                    <div className="space-y-1.5">
+                      {careLevelOptions.map((v) => (
+                        <label key={v} className="flex cursor-pointer items-center gap-2 text-xs text-slate-700">
+                          <input type="checkbox" checked={selectedCareLevels.includes(v)} onChange={() => toggleNurseryFilter(v, selectedCareLevels, setSelectedCareLevels)} className="accent-[var(--svs-primary)]" />
+                          {v}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {lightReqOptions.length > 0 ? (
+                  <div>
+                    <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">Light Requirement</p>
+                    <div className="space-y-1.5">
+                      {lightReqOptions.map((v) => (
+                        <label key={v} className="flex cursor-pointer items-center gap-2 text-xs text-slate-700">
+                          <input type="checkbox" checked={selectedLightReqs.includes(v)} onChange={() => toggleNurseryFilter(v, selectedLightReqs, setSelectedLightReqs)} className="accent-[var(--svs-primary)]" />
+                          {v}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {suitableForOptions.length > 0 ? (
+                  <div>
+                    <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">Suitable For</p>
+                    <div className="space-y-1.5">
+                      {suitableForOptions.map((v) => (
+                        <label key={v} className="flex cursor-pointer items-center gap-2 text-xs text-slate-700">
+                          <input type="checkbox" checked={selectedSuitableFor.includes(v)} onChange={() => toggleNurseryFilter(v, selectedSuitableFor, setSelectedSuitableFor)} className="accent-[var(--svs-primary)]" />
+                          {v}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {wateringFreqOptions.length > 0 ? (
+                  <div>
+                    <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">Watering Frequency</p>
+                    <div className="space-y-1.5">
+                      {wateringFreqOptions.map((v) => (
+                        <label key={v} className="flex cursor-pointer items-center gap-2 text-xs text-slate-700">
+                          <input type="checkbox" checked={selectedWateringFreqs.includes(v)} onChange={() => toggleNurseryFilter(v, selectedWateringFreqs, setSelectedWateringFreqs)} className="accent-[var(--svs-primary)]" />
+                          {v}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {petSafeOptions.length > 0 ? (
+                  <div>
+                    <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">Pet Safe</p>
+                    <div className="space-y-1.5">
+                      {petSafeOptions.map((v) => (
+                        <label key={v} className="flex cursor-pointer items-center gap-2 text-xs text-slate-700">
+                          <input type="checkbox" checked={selectedPetSafe.includes(v)} onChange={() => toggleNurseryFilter(v, selectedPetSafe, setSelectedPetSafe)} className="accent-[var(--svs-primary)]" />
+                          <span className={v === 'Yes' ? 'text-emerald-600 font-semibold' : v === 'No' ? 'text-rose-600 font-semibold' : ''}>{v}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {potSizeOptions.length > 0 ? (
+                  <div>
+                    <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">Pot / Plant Size</p>
+                    <div className="space-y-1.5">
+                      {potSizeOptions.map((v) => (
+                        <label key={v} className="flex cursor-pointer items-center gap-2 text-xs text-slate-700">
+                          <input type="checkbox" checked={selectedPotSizes.includes(v)} onChange={() => toggleNurseryFilter(v, selectedPotSizes, setSelectedPotSizes)} className="accent-[var(--svs-primary)]" />
+                          {v}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {locationOptions.length > 0 ? (
+                  <div>
+                    <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">Location</p>
+                    <div className="space-y-1.5">
+                      {locationOptions.map((v) => (
+                        <label key={v} className="flex cursor-pointer items-center gap-2 text-xs text-slate-700">
+                          <input type="checkbox" checked={selectedLocations.includes(v)} onChange={() => toggleNurseryFilter(v, selectedLocations, setSelectedLocations)} className="accent-[var(--svs-primary)]" />
+                          {v}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                <div>
+                  <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                    Price Range <span className="font-normal normal-case tracking-normal opacity-60">({buyerCurrencyCode})</span>
+                  </p>
+                  <div className="flex items-center justify-between text-[10px] text-[var(--svs-muted)] mb-1">
+                    <span>{formatAmountInCurrency(priceRange[0], _fxState.buyerCurrency)}</span>
+                    <span>{formatAmountInCurrency(priceRange[1], _fxState.buyerCurrency)}</span>
+                  </div>
+                  <input type="range" min={0} max={nurseryPriceMax} step={nurseryPriceStep} value={priceRange[0]} onChange={(e) => setPriceRange([Math.min(Number(e.target.value), priceRange[1]), priceRange[1]])} className="svs-range-slider mb-1 w-full accent-[var(--svs-primary)]" />
+                  <input type="range" min={0} max={nurseryPriceMax} step={nurseryPriceStep} value={priceRange[1]} onChange={(e) => setPriceRange([priceRange[0], Math.max(Number(e.target.value), priceRange[0])])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
+                </div>
+              </div>
+            </aside>
+          ) : null}
+
+          {/* ── Mobile filter drawer ── */}
+          {isFiltersOpen ? (
+            <div className="fixed inset-0 z-50 flex lg:hidden" role="dialog" aria-modal="true">
+              <div className="absolute inset-0 bg-black/50" onClick={() => setIsFiltersOpen(false)} aria-hidden="true" />
+              <div className="relative ml-auto flex h-full w-72 flex-col overflow-y-auto bg-white p-5 shadow-xl">
+                <div className="mb-4 flex items-center justify-between">
+                  <p className="font-bold text-[var(--svs-primary-strong)]">Filters</p>
+                  <button type="button" onClick={() => setIsFiltersOpen(false)} className="rounded-full p-1 text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button>
+                </div>
+                {activeFilterCount > 0 ? (
+                  <button type="button" onClick={() => { clearSidebarFilters(); setIsFiltersOpen(false); }} className="mb-4 text-xs font-semibold text-rose-500 hover:underline text-left">Clear all filters</button>
+                ) : null}
+
+                {careLevelOptions.length > 0 ? (
+                  <div className="mb-4">
+                    <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">Care Level</p>
+                    <div className="space-y-2">
+                      {careLevelOptions.map((v) => (
+                        <label key={v} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                          <input type="checkbox" checked={selectedCareLevels.includes(v)} onChange={() => toggleNurseryFilter(v, selectedCareLevels, setSelectedCareLevels)} className="accent-[var(--svs-primary)]" />
+                          {v}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {lightReqOptions.length > 0 ? (
+                  <div className="mb-4">
+                    <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">Light Requirement</p>
+                    <div className="space-y-2">
+                      {lightReqOptions.map((v) => (
+                        <label key={v} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                          <input type="checkbox" checked={selectedLightReqs.includes(v)} onChange={() => toggleNurseryFilter(v, selectedLightReqs, setSelectedLightReqs)} className="accent-[var(--svs-primary)]" />
+                          {v}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {suitableForOptions.length > 0 ? (
+                  <div className="mb-4">
+                    <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">Suitable For</p>
+                    <div className="space-y-2">
+                      {suitableForOptions.map((v) => (
+                        <label key={v} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                          <input type="checkbox" checked={selectedSuitableFor.includes(v)} onChange={() => toggleNurseryFilter(v, selectedSuitableFor, setSelectedSuitableFor)} className="accent-[var(--svs-primary)]" />
+                          {v}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {wateringFreqOptions.length > 0 ? (
+                  <div className="mb-4">
+                    <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">Watering Frequency</p>
+                    <div className="space-y-2">
+                      {wateringFreqOptions.map((v) => (
+                        <label key={v} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                          <input type="checkbox" checked={selectedWateringFreqs.includes(v)} onChange={() => toggleNurseryFilter(v, selectedWateringFreqs, setSelectedWateringFreqs)} className="accent-[var(--svs-primary)]" />
+                          {v}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {petSafeOptions.length > 0 ? (
+                  <div className="mb-4">
+                    <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">Pet Safe</p>
+                    <div className="space-y-2">
+                      {petSafeOptions.map((v) => (
+                        <label key={v} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                          <input type="checkbox" checked={selectedPetSafe.includes(v)} onChange={() => toggleNurseryFilter(v, selectedPetSafe, setSelectedPetSafe)} className="accent-[var(--svs-primary)]" />
+                          <span className={v === 'Yes' ? 'text-emerald-600 font-semibold' : v === 'No' ? 'text-rose-600 font-semibold' : ''}>{v}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {potSizeOptions.length > 0 ? (
+                  <div className="mb-4">
+                    <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">Pot / Plant Size</p>
+                    <div className="space-y-2">
+                      {potSizeOptions.map((v) => (
+                        <label key={v} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                          <input type="checkbox" checked={selectedPotSizes.includes(v)} onChange={() => toggleNurseryFilter(v, selectedPotSizes, setSelectedPotSizes)} className="accent-[var(--svs-primary)]" />
+                          {v}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {locationOptions.length > 0 ? (
+                  <div className="mb-4">
+                    <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">Location</p>
+                    <div className="space-y-2">
+                      {locationOptions.map((v) => (
+                        <label key={v} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                          <input type="checkbox" checked={selectedLocations.includes(v)} onChange={() => toggleNurseryFilter(v, selectedLocations, setSelectedLocations)} className="accent-[var(--svs-primary)]" />
+                          {v}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="mb-4">
+                  <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                    Price Range <span className="font-normal normal-case tracking-normal opacity-60">({buyerCurrencyCode})</span>
+                  </p>
+                  <div className="flex items-center justify-between text-xs text-[var(--svs-muted)] mb-1">
+                    <span>{formatAmountInCurrency(priceRange[0], _fxState.buyerCurrency)}</span>
+                    <span>{formatAmountInCurrency(priceRange[1], _fxState.buyerCurrency)}</span>
+                  </div>
+                  <input type="range" min={0} max={nurseryPriceMax} step={nurseryPriceStep} value={priceRange[0]} onChange={(e) => setPriceRange([Math.min(Number(e.target.value), priceRange[1]), priceRange[1]])} className="svs-range-slider mb-1 w-full accent-[var(--svs-primary)]" />
+                  <input type="range" min={0} max={nurseryPriceMax} step={nurseryPriceStep} value={priceRange[1]} onChange={(e) => setPriceRange([priceRange[0], Math.max(Number(e.target.value), priceRange[0])])} className="svs-range-slider w-full accent-[var(--svs-primary)]" />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsFiltersOpen(false)}
+                  className={`mt-auto ${cudyBluePrimaryButtonClassName} w-full rounded-xl bg-[var(--svs-primary)] py-3 text-sm font-bold text-white`}
+                >
+                  Show {displayedItems.length} result{displayedItems.length === 1 ? '' : 's'}
+                </button>
+              </div>
             </div>
-          ) : (
-            filteredItems.map((item) => {
+          ) : null}
+
+          {/* ── Main content ── */}
+          <div className="min-w-0 flex-1">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              {displayedItems.length === 0 ? (
+                <div className="col-span-full rounded-xl border border-dashed border-[var(--svs-border)] bg-white px-5 py-10 text-center text-sm text-[var(--svs-muted)]">
+                  No listings match your current filters. Try adjusting or clearing the filters.
+                </div>
+              ) : (
+                displayedItems.map((item) => {
               const liked = wishSet.has(item.id);
               const inStock = isInStock(item);
               return (
@@ -35856,7 +36292,17 @@ const NurseryHubPage = ({
                     ) : null}
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <span className="rounded-full bg-[#e6f7fb] px-3 py-1 text-sm font-semibold text-[var(--svs-primary-strong)]">
-                        {formatPrice(item)}
+                        {(() => {
+                          const sp = item.sizePrices;
+                          if (sp && typeof sp === 'object') {
+                            const vals = Object.values(sp).map(Number).filter((v) => v > 0);
+                            if (vals.length > 0) {
+                              const minP = Math.min(...vals);
+                              return `From ${formatPrice({ ...item, price: minP })}`;
+                            }
+                          }
+                          return formatPrice(item);
+                        })()}
                       </span>
                       <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">{item.category}</span>
                     </div>
@@ -35889,10 +36335,17 @@ const NurseryHubPage = ({
                         <button
                           type="button"
                           disabled={!inStock}
-                          onClick={(event) => { event.stopPropagation(); handleAddToCart(item); }}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            if (getItemSizeOptions(item).length > 0) {
+                              setSelectedItem(item);
+                            } else {
+                              handleAddToCart(item);
+                            }
+                          }}
                           className={`rounded-md py-2 text-sm font-semibold leading-tight transition ${inStock ? `${cudyBluePrimaryButtonClassName} bg-[var(--svs-primary)] text-white hover:bg-[var(--svs-primary-strong)]` : 'cursor-not-allowed bg-slate-100 text-slate-400'}`}
                         >
-                          {inStock ? 'Add to Cart' : 'Out of Stock'}
+                          {inStock ? (getItemSizeOptions(item).length > 0 ? 'Select Size' : 'Add to Cart') : 'Out of Stock'}
                         </button>
                       </div>
                       <button
@@ -35906,22 +36359,24 @@ const NurseryHubPage = ({
                     </div>
                   </div>
                 </article>
-              );
-            })
-          )}
-        </div>
+                );
+              })
+              )}
+            </div>
 
-        {activeCategory || activeCareLevel || activeLightReq || activeSuitable ? (
-          <div className="mt-6 flex justify-center">
-            <button
-              type="button"
-              onClick={() => { setActiveCategory(null); setActiveCareLevel(null); setActiveLightReq(null); setActiveSuitable(null); if (featuredRef.current) featuredRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
-              className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-10 py-3 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}
-            >
-              View All Plants & Supplies
-            </button>
+            {activeCategory ? (
+              <div className="mt-6 flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => { setActiveCategory(null); clearSidebarFilters(); if (featuredRef.current) featuredRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+                  className={`${cudyBluePrimaryButtonClassName} rounded-md bg-[var(--svs-primary)] px-10 py-3 text-sm font-semibold text-white transition hover:bg-[var(--svs-primary-strong)]`}
+                >
+                  View All Plants & Supplies
+                </button>
+              </div>
+            ) : null}
           </div>
-        ) : null}
+        </div>
       </div>
 
       {/* ── Why shop with us ── */}
@@ -36012,7 +36467,7 @@ const NurseryHubPage = ({
                 ) : null}
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <span className="rounded-full bg-[#e6f7fb] px-3 py-1 text-base font-semibold text-[var(--svs-primary-strong)]">
-                    {formatPrice(selectedItem)}
+                    {variantDisplayPrice}
                   </span>
                   {selectedItem.category ? (
                     <span className="rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700">{selectedItem.category}</span>
@@ -36023,6 +36478,38 @@ const NurseryHubPage = ({
                     </span>
                   ) : null}
                 </div>
+
+                {variantSizeOptions.length > 0 ? (
+                  <div className="mt-3">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {Object.keys(selectedItem.sizePrices || {}).length > 0 ? 'Select size & price' : 'Select size'}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {variantSizeOptions.map((size) => {
+                        const soldOut = Number(selectedItem.sizeStock?.[size] ?? 1) === 0;
+                        const sp = selectedItem.sizePrices?.[size];
+                        const spLabel = sp != null ? ` — ${formatPrice({ ...selectedItem, price: sp })}` : '';
+                        return (
+                          <button
+                            key={size}
+                            type="button"
+                            disabled={soldOut}
+                            onClick={() => { if (!soldOut) setSelectedVariant(size); }}
+                            className={`rounded-lg border px-3 py-1.5 text-sm font-semibold transition ${
+                              selectedVariant === size
+                                ? 'border-[var(--svs-primary)] bg-[var(--svs-primary)] text-white'
+                                : soldOut
+                                ? 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400 line-through'
+                                : 'border-slate-300 bg-white text-slate-700 hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]'
+                            }`}
+                          >
+                            {size}{spLabel}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
 
                 <dl className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-700">
                   {selectedItem.lightRequirement ? (
@@ -36064,14 +36551,17 @@ const NurseryHubPage = ({
                     </div>
                   ) : null}
                   <div className="col-span-2">
-                    {isInStock(selectedItem) ? (
-                      selectedItem.quantity != null ? (
-                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                          In stock — {selectedItem.quantity} available
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">In stock</span>
-                      )
+                    {variantIsInStock ? (
+                      (() => {
+                        const displayQty = variantSizeQty != null ? variantSizeQty : selectedItem.quantity;
+                        return displayQty != null ? (
+                          <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                            In stock — {displayQty} available{variantSizeQty != null && variantSizeOptions.length > 0 ? ' for this size' : ''}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">In stock</span>
+                        );
+                      })()
                     ) : (
                       <span className="inline-flex items-center rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">Currently Out of Stock</span>
                     )}
@@ -36097,18 +36587,37 @@ const NurseryHubPage = ({
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
-                      onClick={() => handleToggleWishlist(selectedItem)}
+                      onClick={() => {
+                        if (selectedVariant && variantSizeOptions.length > 0) {
+                          const adjustedItem = variantPrice != null ? { ...selectedItem, price: variantPrice } : selectedItem;
+                          const base = buildSavedPayload(adjustedItem);
+                          const safeSizeId = selectedVariant.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                          const baseId = String(base.id || '').replace(/::size-[a-z0-9-]+$/i, '');
+                          const variantWishlistItem = createWishlistItem({
+                            ...base,
+                            id: `${baseId}::size-${safeSizeId}`,
+                            details: [base.details, `Size: ${selectedVariant}`].filter(Boolean).join(' • '),
+                          });
+                          if (typeof onToggleWishlist === 'function') onToggleWishlist(variantWishlistItem);
+                        } else {
+                          handleToggleWishlist(selectedItem);
+                        }
+                      }}
                       className="rounded-md border border-[var(--svs-primary)] bg-white py-2 text-sm font-semibold text-[var(--svs-primary)] transition hover:bg-[var(--svs-primary)]/10"
                     >
                       {wishSet.has(selectedItem.id) ? 'Remove from Wishlist' : 'Add to Wishlist'}
                     </button>
                     <button
                       type="button"
-                      disabled={!isInStock(selectedItem)}
-                      onClick={() => { setSelectedItem(null); handleAddToCart(selectedItem); }}
-                      className={`rounded-md py-2 text-sm font-semibold transition ${isInStock(selectedItem) ? `${cudyBluePrimaryButtonClassName} bg-[var(--svs-primary)] text-white hover:bg-[var(--svs-primary-strong)]` : 'cursor-not-allowed bg-slate-100 text-slate-400'}`}
+                      disabled={!variantIsInStock || (variantSizeOptions.length > 0 && !selectedVariant)}
+                      onClick={() => {
+                        if (!variantIsInStock) return;
+                        if (typeof onAddToCart === 'function') onAddToCart(buildVariantCartItem(selectedItem));
+                        setSelectedItem(null);
+                      }}
+                      className={`rounded-md py-2 text-sm font-semibold transition ${variantIsInStock ? `${cudyBluePrimaryButtonClassName} bg-[var(--svs-primary)] text-white hover:bg-[var(--svs-primary-strong)]` : 'cursor-not-allowed bg-slate-100 text-slate-400'}`}
                     >
-                      {isInStock(selectedItem) ? 'Add to Cart' : 'Out of Stock'}
+                      {variantIsInStock ? 'Add to Cart' : 'Out of Stock'}
                     </button>
                   </div>
                   <button
@@ -37684,12 +38193,13 @@ const MarketsPage = ({ sellerItems = [] }) => {
           const isJewelleryAccessories = market.href === '/voting-providers';
           const isDirectLinks = market.href === '/retailer-direct-links';
           const isInformalMarket = market.href === '/informal-market';
+          const isNursery = market.href === '/nursery-hub';
           const useBookingsPreset = isBookings;
           const overlayClassName = useBookingsPreset
             ? 'absolute inset-0 bg-gradient-to-t from-[#041a26]/80 via-[#0f6f84]/50 to-[#14b8a6]/20'
             : 'absolute inset-0 bg-gradient-to-t from-black/75 via-black/50 to-black/20';
           const marketTitleClassName = 'text-base font-bold leading-tight text-white drop-shadow line-clamp-3 sm:text-lg sm:line-clamp-none';
-          const hasHeroImage = isFastFood || isFashion || isBookings || isBeverages || isGroceries || isMobility || isEcommerce || isBetting || isConstruction || isLivestock || isHomeCare || isNaturalResources || isGeneralLabour || isWellness || isStationery || isProperty || isHerbs || isSecondhand || isBeautyFitnessSports || isToysKids || isJewelleryAccessories || isDirectLinks || isInformalMarket;
+          const hasHeroImage = isFastFood || isFashion || isBookings || isBeverages || isGroceries || isMobility || isEcommerce || isBetting || isConstruction || isLivestock || isHomeCare || isNaturalResources || isGeneralLabour || isWellness || isStationery || isProperty || isHerbs || isSecondhand || isBeautyFitnessSports || isToysKids || isJewelleryAccessories || isDirectLinks || isInformalMarket || isNursery;
           const heroImageUrl = isFastFood
             ? 'https://images.pexels.com/photos/2983101/pexels-photo-2983101.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isFashion
@@ -37743,6 +38253,8 @@ const MarketsPage = ({ sellerItems = [] }) => {
             ? 'https://images.pexels.com/photos/1884581/pexels-photo-1884581.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isInformalMarket
             ? 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            : isNursery
+            ? 'https://images.pexels.com/photos/1005058/pexels-photo-1005058.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : ''
           return hasHeroImage ? (
             <Link
@@ -39440,7 +39952,7 @@ const CartQtyInput = ({ quantity, onChange }) => {
   );
 };
 
-const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemoveCartItem, onClearBuyNowCheckout }) => {
+const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemoveCartItem, onClearBuyNowCheckout, sellerItems = [] }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { code: buyerCurrencyCode } = useBuyerCurrency();
@@ -39449,6 +39961,19 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
   const checkoutItems = useMemo(() => (
     isBuyNowMode ? (buyNowCheckout?.items || []) : cartItems
   ), [buyNowCheckout, cartItems, isBuyNowMode]);
+
+  const stockWarnings = useMemo(() => {
+    const warnings = new Map();
+    checkoutItems.forEach((item) => {
+      const available = getSellerListingStock(sellerItems, item);
+      if (available === null) return;
+      if (item.quantity > available) {
+        warnings.set(item.id, { available });
+      }
+    });
+    return warnings;
+  }, [checkoutItems, sellerItems]);
+  const hasStockWarnings = stockWarnings.size > 0;
   const [formState, setFormState] = useState({
     contact: typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''),
     saveInformation: false,
@@ -39942,6 +40467,14 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
                   ) : (
                     <p className="mt-2 text-xs text-[var(--svs-muted)]">Qty: {item.quantity}</p>
                   )}
+                  {stockWarnings.has(item.id) ? (
+                    <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-rose-600">
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                      {stockWarnings.get(item.id).available === 0
+                        ? 'No longer available — please remove this item'
+                        : `Only ${stockWarnings.get(item.id).available} left — reduce quantity to continue`}
+                    </p>
+                  ) : null}
                 </div>
                 <p className="shrink-0 text-sm font-semibold text-[var(--svs-text)] sm:text-base">
                   {formatCartItemAmount(item, linePrice)}
@@ -39977,16 +40510,25 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
         ) : null}
 
         <div className="mt-8 flex flex-col items-center gap-3">
+          {hasStockWarnings ? (
+            <p className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-center text-sm font-semibold text-rose-700">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              Some items in your cart are no longer available in the quantity you selected. Please update your cart before continuing.
+            </p>
+          ) : null}
           <button
             type="button"
             onClick={handleContinueFromItems}
-            className={`${cudyBluePrimaryButtonClassName} w-full max-w-md rounded-xl bg-[var(--svs-primary)] px-6 py-3.5 text-sm font-bold uppercase tracking-wide text-white transition hover:opacity-95 sm:text-base`}
+            disabled={hasStockWarnings}
+            className={`${cudyBluePrimaryButtonClassName} w-full max-w-md rounded-xl bg-[var(--svs-primary)] px-6 py-3.5 text-sm font-bold uppercase tracking-wide text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50 sm:text-base`}
           >
             Proceed to Checkout
           </button>
-          <p className="text-center text-sm italic text-[var(--svs-primary-strong)]/80">
-            Don't miss out—complete your purchase today.
-          </p>
+          {!hasStockWarnings ? (
+            <p className="text-center text-sm italic text-[var(--svs-primary-strong)]/80">
+              Don't miss out—complete your purchase today.
+            </p>
+          ) : null}
         </div>
       </section>
     );
@@ -52937,11 +53479,15 @@ const CardGrid = ({ items, focusItems, boundsItems, buttonLabel, secondaryButton
                     disabled={isOutOfStock}
                     onClick={(event) => {
                       event.stopPropagation();
-                      onPrimaryAction?.(actionItem);
+                      if (itemSizeOptions.length > 0) {
+                        onOpenItemDetails?.(actionItem);
+                      } else {
+                        onPrimaryAction?.(actionItem);
+                      }
                     }}
                     className="rounded-full bg-[#0f6674] px-3 py-1.5 text-xs font-semibold text-white shadow transition hover:bg-[#33b9f2] disabled:cursor-not-allowed disabled:bg-slate-400 sm:px-5 sm:py-2 sm:text-base"
                   >
-                    {isOutOfStock ? 'Out of stock' : buttonLabel}
+                    {isOutOfStock ? 'Out of stock' : (itemSizeOptions.length > 0 ? 'Select Size' : buttonLabel)}
                   </button>
                   {onBuyNowAction ? (
                     <button
@@ -53472,7 +54018,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/betting-ticket-tracking" element={<BettingTicketTrackingPage orders={orders} />} />
     <Route path="/wishlist" element={<WishlistPage wishlistItems={wishlistItems} onAddToCart={onAddToCart} onRemoveWishlistItem={onRemoveWishlistItem} onClearWishlist={onClearWishlist} onOpenItemDetails={onOpenItemDetails} sellerItems={sellerItems} />} />
     <Route path="/wishlist/share" element={<WishlistSharePage />} />
-    <Route path="/checkout" element={<CheckoutPage cartItems={cartItems} buyNowCheckout={buyNowCheckout} onUpdateCartQuantity={onUpdateCartQuantity} onRemoveCartItem={onRemoveCartItem} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />
+    <Route path="/checkout" element={<CheckoutPage cartItems={cartItems} buyNowCheckout={buyNowCheckout} onUpdateCartQuantity={onUpdateCartQuantity} onRemoveCartItem={onRemoveCartItem} onClearBuyNowCheckout={onClearBuyNowCheckout} sellerItems={sellerItems} />} />
     <Route path="/checkout/payfast" element={<PayfastCheckoutPage buyNowCheckout={buyNowCheckout} onPlaceOrder={onPlaceOrder} onClearBuyNowCheckout={onClearBuyNowCheckout} />} />
     <Route path="/support/chat" element={<SupportChatPage orders={orders} onPushNotificationToUser={onPushNotificationToUser} onDismissChatNotifications={onDismissChatNotifications} />} />
     <Route path="/u/:handle" element={<UserProfileLinkPage />} />
@@ -54743,17 +55289,23 @@ const App = () => {
       ],
     };
 
-    const inventoryRequest = Array.from(orderItems.reduce((accumulator, item) => {
+    const sizeDecrements = new Map(); // listingDbId → Map(size → qty)
+    const inventoryMap = new Map();   // listingDbId → total qty
+
+    for (const item of orderItems) {
       const listingDbId = getSellerListingIdFromItemKey(item.sku || item.id);
-
-      if (!listingDbId) {
-        return accumulator;
-      }
-
+      if (!listingDbId) continue;
       const purchasedQuantity = Math.max(Number(item.quantity) || 1, 1);
-      accumulator.set(listingDbId, (accumulator.get(listingDbId) || 0) + purchasedQuantity);
-      return accumulator;
-    }, new Map()).entries()).map(([listingId, quantity]) => ({
+      inventoryMap.set(listingDbId, (inventoryMap.get(listingDbId) || 0) + purchasedQuantity);
+      const selectedSize = item.selectedSize || '';
+      if (selectedSize) {
+        if (!sizeDecrements.has(listingDbId)) sizeDecrements.set(listingDbId, new Map());
+        const sizeMap = sizeDecrements.get(listingDbId);
+        sizeMap.set(selectedSize, (sizeMap.get(selectedSize) || 0) + purchasedQuantity);
+      }
+    }
+
+    const inventoryRequest = Array.from(inventoryMap.entries()).map(([listingId, quantity]) => ({
       listing_id: listingId,
       quantity,
     }));
@@ -54772,8 +55324,29 @@ const App = () => {
         }
 
         if (!inventoryResult || !['applied', 'already_applied'].includes(inventoryResult.status)) {
-          const failureReason = String(inventoryResult?.failure_reason || 'One or more items are no longer in stock.');
-          setActionNotice(failureReason);
+          setActionNotice('Sorry, one or more items in your cart just sold out. Your cart has been updated — please review it before continuing.');
+          // Re-fetch the real current stock for every listing in this order so
+          // the cart validation immediately reflects what is actually available.
+          const listingIds = inventoryRequest.map((entry) => entry.listing_id).filter(Boolean);
+          if (listingIds.length) {
+            supabase
+              .from('marketplace_items')
+              .select('id, quantity')
+              .in('id', listingIds)
+              .then(({ data: freshListings }) => {
+                if (!freshListings?.length) return;
+                const freshQtyMap = new Map(
+                  freshListings.map((l) => [String(l.id), Math.max(Number(l.quantity) || 0, 0)]),
+                );
+                setSellerItems((current) =>
+                  current.map((si) => {
+                    const freshQty = freshQtyMap.get(String(si.dbId || ''));
+                    return freshQty !== undefined ? { ...si, availableQuantity: freshQty } : si;
+                  }),
+                );
+              })
+              .catch(() => {});
+          }
           return null;
         }
 
@@ -54788,32 +55361,61 @@ const App = () => {
           );
 
           setSellerItems((currentItems) => currentItems.map((sellerItem) => {
-            const nextQuantity = stockByListingId.get(String(sellerItem.dbId || ''));
+            const listingId = String(sellerItem.dbId || '');
+            const nextQuantity = stockByListingId.get(listingId);
+            if (nextQuantity === undefined) return sellerItem;
 
-            if (nextQuantity === undefined) {
-              return sellerItem;
+            const sizeMap = sizeDecrements.get(listingId);
+            const existingSizeStock = sellerItem.sizeStock && typeof sellerItem.sizeStock === 'object' ? sellerItem.sizeStock : null;
+            let newSizeStock = existingSizeStock ? { ...existingSizeStock } : null;
+            if (newSizeStock && sizeMap) {
+              sizeMap.forEach((qty, size) => {
+                if (size in newSizeStock) newSizeStock[size] = Math.max(0, Number(newSizeStock[size] || 0) - qty);
+              });
             }
 
             return {
               ...sellerItem,
               availableQuantity: nextQuantity,
+              ...(newSizeStock ? { sizeStock: newSizeStock } : {}),
             };
           }));
+
+          // Persist per-size stock to DB (best-effort, fire-and-forget)
+          if (sizeDecrements.size) {
+            for (const [listingId, sizeMap] of sizeDecrements) {
+              const sellerItem = sellerItems.find((s) => String(s.dbId || '') === listingId);
+              if (!sellerItem?.sizeStock || typeof sellerItem.sizeStock !== 'object') continue;
+              for (const [size, qty] of sizeMap) {
+                if (!(size in sellerItem.sizeStock)) continue;
+                const newQty = Math.max(0, Number(sellerItem.sizeStock[size] || 0) - qty);
+                supabase.rpc('patch_listing_size_stock', { p_listing_id: listingId, p_size: size, p_quantity: newQty }).catch(() => {});
+              }
+            }
+          }
         }
       } else {
         // Local-only fallback without Supabase persistence.
         const purchasedByListingId = new Map(inventoryRequest.map((entry) => [String(entry.listing_id || ''), Number(entry.quantity) || 0]));
 
         setSellerItems((currentItems) => currentItems.map((sellerItem) => {
-          const purchasedQuantity = purchasedByListingId.get(String(sellerItem.dbId || ''));
+          const listingId = String(sellerItem.dbId || '');
+          const purchasedQuantity = purchasedByListingId.get(listingId);
+          if (!purchasedQuantity) return sellerItem;
 
-          if (!purchasedQuantity) {
-            return sellerItem;
+          const sizeMap = sizeDecrements.get(listingId);
+          const existingSizeStock = sellerItem.sizeStock && typeof sellerItem.sizeStock === 'object' ? sellerItem.sizeStock : null;
+          let newSizeStock = existingSizeStock ? { ...existingSizeStock } : null;
+          if (newSizeStock && sizeMap) {
+            sizeMap.forEach((qty, size) => {
+              if (size in newSizeStock) newSizeStock[size] = Math.max(0, Number(newSizeStock[size] || 0) - qty);
+            });
           }
 
           return {
             ...sellerItem,
             availableQuantity: Math.max(normalizeListingQuantity(sellerItem.availableQuantity, 0) - purchasedQuantity, 0),
+            ...(newSizeStock ? { sizeStock: newSizeStock } : {}),
           };
         }));
       }
