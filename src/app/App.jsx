@@ -30008,7 +30008,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
 //  containing one of them (same filter pattern as SellerPayoutsPage's
 //  visibleOrders), then aggregates client-side — no new SQL/RPC needed.
 // ────────────────────────────────────────────────────────────────────
-const SellerAnalyticsPage = () => {
+const SellerAnalyticsPage = ({ orders: buyerOrders = [] }) => {
   const isAuthenticated = getAuthState();
   const userEmail = normalizeEmail(typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''));
   const [myListings, setMyListings] = useState([]);
@@ -30045,16 +30045,19 @@ const SellerAnalyticsPage = () => {
   // same shape SellerDashboardPage/SellerPayoutsPage already compute.
   const visibleOrders = useMemo(() => {
     const myListingIds = new Set(myListings.map((listing) => String(listing.id)));
-    const myEmail = (userEmail || '').toLowerCase();
-    return sellerOrders.filter((order) => {
+    // Use the DB-fetched orders when available; fall back to the buyer orders prop (same
+    // pattern as SellerPayoutsPage) so the chart isn't blank when Supabase returns nothing.
+    const sourceOrders = sellerOrders.length > 0 ? sellerOrders : buyerOrders;
+    return sourceOrders.filter((order) => {
       const items = Array.isArray(order.items) ? order.items : [];
-      return items.some((item) => myListingIds.has(String(item.id)) || (item.sellerEmail || '').toLowerCase() === myEmail);
+      return items.some((item) => doesLineItemBelongToSeller(item, userEmail, myListingIds));
     }).map((order) => {
-      const myItems = (order.items || []).filter((item) => myListingIds.has(String(item.id)) || (item.sellerEmail || '').toLowerCase() === myEmail);
-      const sellerSubtotal = myItems.reduce((sum, item) => sum + (Number(item.price ?? item.unitPrice) || 0) * (Number(item.quantity) || 1), 0);
+      const myItems = (order.items || []).filter((item) => doesLineItemBelongToSeller(item, userEmail, myListingIds));
+      // Cart items store numeric price as `unitPrice`; guard with `price` fallback for older orders.
+      const sellerSubtotal = myItems.reduce((sum, item) => sum + (Number(item.unitPrice ?? item.price) || 0) * Math.max(Number(item.quantity) || 1, 1), 0);
       return { ...order, sellerLineItems: myItems, sellerSubtotal };
     });
-  }, [myListings, sellerOrders, userEmail]);
+  }, [myListings, sellerOrders, buyerOrders, userEmail]);
 
   const sellerCurrency = useMemo(() => {
     const tally = new Map();
@@ -30077,7 +30080,7 @@ const SellerAnalyticsPage = () => {
     });
     const byKey = new Map(days.map((day) => [day.key, day]));
     visibleOrders
-      .filter((order) => order.status === 'Delivered' && order.createdAt)
+      .filter((order) => getAutoOrderStatus(order) === 'Delivered' && order.createdAt)
       .forEach((order) => {
         const key = String(order.createdAt).slice(0, 10);
         const day = byKey.get(key);
@@ -30091,7 +30094,7 @@ const SellerAnalyticsPage = () => {
   const topListings = useMemo(() => {
     const tally = new Map();
     visibleOrders
-      .filter((order) => !['Cancelled by Buyer', 'Cancelled by Seller', 'Cancelled'].includes(order.status))
+      .filter((order) => !['Cancelled by Buyer', 'Cancelled by Seller', 'Cancelled'].includes(getAutoOrderStatus(order)))
       .forEach((order) => {
         (order.sellerLineItems || []).forEach((item) => {
           const title = item.title || 'Untitled listing';
@@ -30107,7 +30110,7 @@ const SellerAnalyticsPage = () => {
   const revenueByMarket = useMemo(() => {
     const tally = new Map();
     visibleOrders
-      .filter((order) => order.status === 'Delivered')
+      .filter((order) => getAutoOrderStatus(order) === 'Delivered')
       .forEach((order) => {
         (order.sellerLineItems || []).forEach((item) => {
           const marketName = item.marketName || 'Other';
@@ -31356,20 +31359,20 @@ const SellerPayoutsPage = ({ orders = [] }) => {
   const visibleOrders = useMemo(() => {
     if (!myListings.length) return orders || [];
     const myListingIds = new Set(myListings.map((l) => String(l.id)));
-    const myEmail = (userEmail || '').toLowerCase();
     return (sellerOrders.length ? sellerOrders : (orders || [])).filter((order) => {
       const items = Array.isArray(order.items) ? order.items : [];
-      return items.some((item) => myListingIds.has(String(item.id)) || (item.sellerEmail || '').toLowerCase() === myEmail);
+      return items.some((item) => doesLineItemBelongToSeller(item, userEmail, myListingIds));
     }).map((order) => {
-      const myItems = (order.items || []).filter((item) => myListingIds.has(String(item.id)) || (item.sellerEmail || '').toLowerCase() === myEmail);
-      const sellerSubtotal = myItems.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
+      const myItems = (order.items || []).filter((item) => doesLineItemBelongToSeller(item, userEmail, myListingIds));
+      // Cart items store numeric price as `unitPrice`; guard with `price` fallback for older orders.
+      const sellerSubtotal = myItems.reduce((sum, item) => sum + (Number(item.unitPrice ?? item.price) || 0) * Math.max(Number(item.quantity) || 1, 1), 0);
       return { ...order, sellerSubtotal };
     });
   }, [myListings, sellerOrders, orders, userEmail]);
 
   const grossEarnings = useMemo(
     () => visibleOrders
-      .filter((order) => order.status === 'Delivered')
+      .filter((order) => getAutoOrderStatus(order) === 'Delivered')
       .reduce((sum, order) => sum + (Number(order.sellerSubtotal) || 0), 0),
     [visibleOrders],
   );
@@ -54058,7 +54061,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/seller/upload" element={<SellerUploadPage onSellerItemCreated={onSellerItemCreated} />} />
     <Route path="/seller/dashboard" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onToggleListingPaused={onToggleListingPaused} onUpdateOrderStatus={onUpdateOrderStatus} initialView="listings" />} />
     <Route path="/seller/orders" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onToggleListingPaused={onToggleListingPaused} onUpdateOrderStatus={onUpdateOrderStatus} initialView="orders" />} />
-    <Route path="/seller/analytics" element={<SellerAnalyticsPage />} />
+    <Route path="/seller/analytics" element={<SellerAnalyticsPage orders={orders} />} />
     <Route path="/seller/payouts" element={<SellerPayoutsPage orders={orders} />} />
     <Route path="/wallet" element={<WalletPage />} />
     <Route path="/account" element={<AccountSettingsPage />} />
