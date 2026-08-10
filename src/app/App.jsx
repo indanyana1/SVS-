@@ -21225,8 +21225,18 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(true);
   const [showAllRelated, setShowAllRelated] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedVariant, setSelectedVariant] = useState('');
   const productsSectionRef = useRef(null);
   const relatedSectionRef = useRef(null);
+
+  // Auto-select the first in-stock size whenever the picker opens.
+  useEffect(() => {
+    if (!selectedItem) { setSelectedVariant(''); return; }
+    const opts = getItemSizeOptions(selectedItem);
+    const first = opts.find((s) => (getItemSizeStock(selectedItem, s) ?? 1) > 0) || opts[0] || '';
+    setSelectedVariant(first);
+  }, [selectedItem]);
 
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'fashionStyle'), ...fashionStyleItems], [sellerItems]);
 
@@ -21387,8 +21397,29 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
     ...item,
     route: '/fashion-style',
     marketName: t('markets.fashionStyle'),
-    details: buildDetailsText({ ...item, selectedSize: '' }),
+    details: buildDetailsText(item),
   });
+
+  // Variant picker state (mirrors nursery pattern).
+  const variantSizeOptions = selectedItem ? getItemSizeOptions(selectedItem) : [];
+  const variantPrice = selectedItem && selectedVariant ? getItemSizePrice(selectedItem, selectedVariant) : null;
+  const variantSizeQty = selectedVariant && selectedItem ? getItemSizeStock(selectedItem, selectedVariant) : null;
+  const variantIsInStock = variantSizeOptions.length === 0
+    ? Boolean(selectedItem && (selectedItem.availableQuantity == null || selectedItem.availableQuantity > 0))
+    : !!(selectedVariant && (variantSizeQty == null ? true : variantSizeQty > 0));
+
+  // Build the cart item for the selected variant. Adjusts the price BEFORE
+  // passing to buildCartItem so createSavedItem computes unitPrice correctly —
+  // the same pattern nursery uses to avoid patching unitPrice after the fact.
+  const buildVariantCartItem = (item) => {
+    const sizeQty = getItemSizeStock(item, selectedVariant);
+    return buildCartItem({
+      ...item,
+      ...(variantPrice != null ? { price: variantPrice } : {}),
+      selectedSize: selectedVariant || undefined,
+      ...(sizeQty !== null ? { availableQuantity: sizeQty } : {}),
+    });
+  };
 
   const handleViewAllRelated = () => {
     setShowAllRelated(true);
@@ -21594,10 +21625,26 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
     secondaryButtonLabel: t('common.viewDetails'),
     reviewSummaryMap: productReviewSummaryMap,
     getItemReviewKey: (item) => getCollectionItemId('/fashion-style', item.id),
-    onPrimaryAction: (item) => onAddToCart(buildCartItem(item)),
-    onBuyNowAction: (item) => onBuyNow?.(buildCartItem(item)),
-    onToggleWishlist: (item) => onToggleWishlist(buildWishlistItem(item)),
+    onPrimaryAction: (item) => {
+      if (getItemSizeOptions(item).length > 0) { setSelectedItem(item); return; }
+      onAddToCart(buildCartItem(item));
+    },
+    onBuyNowAction: (item) => {
+      if (getItemSizeOptions(item).length > 0) { setSelectedItem(item); return; }
+      onBuyNow?.(buildCartItem(item));
+    },
+    onToggleWishlist: (item) => {
+      if (getItemSizeOptions(item).length > 0) { setSelectedItem(item); return; }
+      onToggleWishlist(buildWishlistItem(item));
+    },
     onOpenItemDetails: (item) => {
+      // Items with sizes use the page-level variant picker (nursery pattern) so
+      // unitPrice is computed fresh from the selected size's price. Items
+      // without sizes go straight to the global detail modal.
+      if (getItemSizeOptions(item).length > 0) {
+        setSelectedItem(item);
+        return;
+      }
       const wishlistItem = buildWishlistItem(item);
       onOpenItemDetails?.({
         title: getTranslatedValue(t, item.titleKey, item.title),
@@ -21606,17 +21653,13 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
         marketName: t('markets.fashionStyle'),
         details: buildDetailsText(item),
         priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
-        sizeOptions: getItemSizeOptions(item),
-        sizeStock: item.sizeStock,
-        sizePrices: item.sizePrices,
+        sizeOptions: [],
         currency: item.currency,
         availableQuantity: item.availableQuantity,
-        defaultSelectedSize: item.selectedSize || getItemInStockSizes(item)[0] || getItemSizeOptions(item)[0] || '',
         detailsTable: {
           Category: item.category || 'Fashion',
           Subcategory: item.subcategory || 'General',
           Specification: item.specification || 'Style listing',
-          Sizes: getItemSizeOptions(item).join(', ') || 'One size',
         },
         cartItemBase: buildBaseCartItem(item),
         cartItem: buildCartItem(item),
@@ -21737,6 +21780,153 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
               </button>
             </div>
             {FilterPanel}
+          </div>
+        </div>
+      ) : null}
+
+      {/* ── Size & variant picker (mirrors nursery pattern) ── */}
+      {selectedItem ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="fashion-variant-title"
+          onClick={() => setSelectedItem(null)}
+        >
+          <div
+            className="relative max-h-[92vh] w-full max-w-2xl overflow-hidden rounded-2xl bg-[var(--svs-surface)] shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setSelectedItem(null)}
+              aria-label="Close"
+              className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-rose-500/80 text-white shadow transition hover:bg-rose-600/90"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <div className="grid max-h-[92vh] overflow-y-auto sm:grid-cols-2">
+              {/* Image */}
+              <div className="aspect-square w-full overflow-hidden bg-slate-100 sm:aspect-auto sm:h-full">
+                <img
+                  src={selectedItem.image}
+                  alt={selectedItem.title}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              {/* Info + size picker */}
+              <div className="flex flex-col p-5 sm:p-6">
+                <h3 id="fashion-variant-title" className="text-xl font-bold text-[var(--svs-text)]">{selectedItem.title}</h3>
+                <p className="mt-0.5 text-sm text-[var(--svs-muted)]">{selectedItem.category}{selectedItem.subcategory ? ` • ${selectedItem.subcategory}` : ''}</p>
+
+                {/* Price — updates with selected variant */}
+                <div className="mt-3">
+                  <span className="rounded-full bg-[var(--svs-cyan-surface)] px-3 py-1 text-base font-semibold text-[var(--svs-primary-strong)]">
+                    {variantPrice != null
+                      ? getSalePrices(String(variantPrice), 0, selectedItem.currency || null).nowPrice
+                      : getSalePrices(selectedItem.price, getItemSaleDiscountRate(selectedItem), selectedItem.currency || null).nowPrice}
+                  </span>
+                </div>
+
+                {/* Size buttons */}
+                {variantSizeOptions.length > 0 ? (
+                  <div className="mt-4">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
+                      {Object.keys(selectedItem.sizePrices || {}).length > 0 ? 'Select size & price' : 'Select size'}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {variantSizeOptions.map((size) => {
+                        const soldOut = (getItemSizeStock(selectedItem, size) ?? 1) === 0;
+                        const sp = getItemSizePrice(selectedItem, size);
+                        const spLabel = sp != null
+                          ? ` — ${getSalePrices(String(sp), 0, selectedItem.currency || null).nowPrice}`
+                          : '';
+                        return (
+                          <button
+                            key={size}
+                            type="button"
+                            disabled={soldOut}
+                            onClick={() => { if (!soldOut) setSelectedVariant(size); }}
+                            className={`rounded-lg border px-3 py-1.5 text-sm font-semibold transition ${
+                              selectedVariant === size
+                                ? 'border-[var(--svs-primary)] bg-[var(--svs-primary)] text-white'
+                                : soldOut
+                                ? 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400 line-through'
+                                : 'border-slate-300 bg-[var(--svs-surface)] text-[var(--svs-text)] hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]'
+                            }`}
+                          >
+                            {size}{spLabel}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {/* Per-size stock badge */}
+                    {selectedVariant ? (
+                      <p className="mt-2 text-xs text-[var(--svs-muted)]">
+                        {variantSizeQty != null
+                          ? variantIsInStock
+                            ? <span className="font-semibold text-emerald-600">{variantSizeQty} available in this size</span>
+                            : <span className="font-semibold text-rose-600">Out of stock in this size</span>
+                          : <span className="font-semibold text-emerald-600">In stock</span>}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {selectedItem.description ? (
+                  <p className="mt-4 text-sm leading-relaxed text-[var(--svs-muted)]">{selectedItem.description}</p>
+                ) : null}
+
+                <div className="mt-auto space-y-2 pt-5">
+                  {(() => {
+                    const canAct = variantIsInStock && (variantSizeOptions.length === 0 || selectedVariant);
+                    const label = !variantIsInStock ? 'Out of Stock' : !selectedVariant && variantSizeOptions.length > 0 ? 'Select a size' : null;
+                    return (
+                      <>
+                        <button
+                          type="button"
+                          disabled={!canAct}
+                          onClick={() => {
+                            if (!canAct) return;
+                            if (typeof onAddToCart === 'function') onAddToCart(buildVariantCartItem(selectedItem));
+                            setSelectedItem(null);
+                          }}
+                          className={`w-full rounded-lg py-3 text-sm font-semibold transition ${canAct ? 'bg-[var(--svs-primary)] text-white hover:bg-[var(--svs-primary-strong)]' : 'cursor-not-allowed bg-slate-100 text-slate-400'}`}
+                        >
+                          {label || 'Add to Cart'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!canAct}
+                          onClick={() => {
+                            if (!canAct) return;
+                            onBuyNow?.(buildVariantCartItem(selectedItem));
+                            setSelectedItem(null);
+                          }}
+                          className={`w-full rounded-lg py-2.5 text-sm font-semibold transition ${canAct ? 'border border-[var(--svs-primary)] bg-[var(--svs-surface)] text-[var(--svs-primary)] hover:bg-[var(--svs-primary)]/10' : 'cursor-not-allowed border border-slate-200 bg-slate-50 text-slate-400'}`}
+                        >
+                          {label || 'Buy Now'}
+                        </button>
+                      </>
+                    );
+                  })()}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onToggleWishlist(buildWishlistItem({
+                        ...selectedItem,
+                        selectedSize: selectedVariant || undefined,
+                        ...(variantPrice != null ? { price: variantPrice } : {}),
+                      }));
+                      setSelectedItem(null);
+                    }}
+                    className="w-full rounded-lg border border-[var(--svs-primary)] bg-[var(--svs-surface)] py-2.5 text-sm font-semibold text-[var(--svs-primary)] transition hover:bg-[var(--svs-primary)]/10"
+                  >
+                    {wishlistItemIds.includes(getCollectionItemId('/fashion-style', selectedItem.id)) ? 'Remove from Wishlist' : 'Add to Wishlist'}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       ) : null}
@@ -27363,6 +27553,7 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
       buyerEmail: order.user_email,
       sellerEmail: item.sellerEmail || item.seller_email || '—',
       title: item.title || 'Item',
+      details: item.details || '',
       quantity: item.quantity || 1,
       unitPriceLabel: item.unitPriceLabel || '',
     })))
@@ -27908,7 +28099,10 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                           {line.reference || line.orderKey}
                           <div className="text-xs font-normal text-[var(--svs-muted)] sm:hidden">{line.buyerEmail}</div>
                         </td>
-                        <td className="px-4 py-3 text-[var(--svs-muted)]">{line.title} ×{line.quantity}</td>
+                        <td className="px-4 py-3 text-[var(--svs-muted)]">
+                          {line.title} ×{line.quantity}
+                          {line.details ? <div className="text-xs text-[var(--svs-muted)]">{line.details}</div> : null}
+                        </td>
                         <td className="hidden px-4 py-3 text-[var(--svs-muted)] sm:table-cell">{line.buyerEmail}</td>
                         <td className="hidden px-4 py-3 text-[var(--svs-muted)] md:table-cell">{line.sellerEmail}</td>
                         <td className="px-4 py-3 text-[var(--svs-muted)]">{line.status}</td>
@@ -29675,17 +29869,56 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
 
                       <div className="mt-3 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3">
                         <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Your items in this order</p>
-                        <div className="mt-2 space-y-2">
+                        <div className="mt-2 space-y-3">
                           {order.sellerLineItems.map((lineItem, index) => {
                             const quantity = Math.max(Number(lineItem.quantity) || 1, 1);
                             const linePrice = (Number(lineItem.unitPrice) || 0) * quantity;
+                            const rawSku = String(lineItem.sku || '').replace(/::size-[a-z0-9-]+$/i, '');
+                            const itemHref = lineItem.route
+                              ? `${lineItem.route}?focus=${encodeURIComponent(rawSku)}`
+                              : null;
                             return (
-                              <div key={`${order.id}-${lineItem.id || lineItem.sku || index}`} className="flex items-start justify-between gap-3 text-xs text-[var(--svs-text)]">
-                                <div>
-                                  <p className="font-semibold text-[var(--svs-text)]">{lineItem.title || 'Untitled item'}</p>
-                                  <p className="text-[var(--svs-muted)]">Qty: {quantity}</p>
+                              <div key={`${order.id}-${lineItem.id || lineItem.sku || index}`} className="flex items-start gap-3 text-xs text-[var(--svs-text)]">
+                                {lineItem.image ? (
+                                  itemHref ? (
+                                    <a href={itemHref} target="_blank" rel="noopener noreferrer" className="shrink-0" title="View listing in new tab">
+                                      <img
+                                        src={lineItem.image}
+                                        alt={lineItem.title || 'Item'}
+                                        className="h-16 w-16 rounded-lg border border-[var(--svs-border)] object-cover transition hover:opacity-80"
+                                        loading="lazy"
+                                      />
+                                    </a>
+                                  ) : (
+                                    <img
+                                      src={lineItem.image}
+                                      alt={lineItem.title || 'Item'}
+                                      className="h-16 w-16 shrink-0 rounded-lg border border-[var(--svs-border)] object-cover"
+                                      loading="lazy"
+                                    />
+                                  )
+                                ) : (
+                                  <div className="h-16 w-16 shrink-0 rounded-lg bg-[var(--svs-surface-soft)]" />
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  {itemHref ? (
+                                    <a
+                                      href={itemHref}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="font-semibold text-[var(--svs-text)] hover:text-[var(--svs-primary)] hover:underline"
+                                    >
+                                      {lineItem.title || 'Untitled item'}
+                                    </a>
+                                  ) : (
+                                    <p className="font-semibold text-[var(--svs-text)]">{lineItem.title || 'Untitled item'}</p>
+                                  )}
+                                  {lineItem.details ? (
+                                    <p className="mt-0.5 text-[var(--svs-muted)]">{lineItem.details}</p>
+                                  ) : null}
+                                  <p className="mt-0.5 text-[var(--svs-muted)]">Qty: {quantity}</p>
                                 </div>
-                                <p className="font-semibold text-[var(--svs-primary-strong)]">{formatCheckoutAmount(linePrice)}</p>
+                                <p className="shrink-0 font-semibold text-[var(--svs-primary-strong)]">{formatCheckoutAmount(linePrice)}</p>
                               </div>
                             );
                           })}
@@ -38948,6 +39181,9 @@ const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onClea
                 <div>
                   <h3 className="text-lg font-bold text-[var(--svs-text)]">{item.title}</h3>
                   <p className="mt-1 text-sm text-[var(--svs-muted)]">{item.marketName}</p>
+                  {item.details ? (
+                    <p className="mt-0.5 text-xs text-[var(--svs-muted)]">{item.details}</p>
+                  ) : null}
                 </div>
                 <Heart className="h-5 w-5 fill-current text-rose-500" />
               </div>
@@ -40398,37 +40634,44 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
         <ul className="mt-8 divide-y divide-[var(--svs-border)]/70">
           {checkoutItems.map((item) => {
             const linePrice = (Number(item.unitPrice) || 0) * (Number(item.quantity) || 1);
-            const baseHref = item.route || '/markets';
-            const focusKey = item.sku ? encodeURIComponent(String(item.sku)) : '';
-            const listingHref = focusKey ? `${baseHref}?focus=${focusKey}` : baseHref;
+            const rawItemSku = String(item.sku || '').replace(/::size-[a-z0-9-]+$/i, '');
+            const listingHref = item.route && rawItemSku
+              ? `${item.route}?focus=${encodeURIComponent(rawItemSku)}`
+              : (item.route || null);
             return (
               <li key={`preview-${item.id}`} className="flex items-start gap-4 py-4">
-                <Link
-                  to={listingHref}
-                  aria-label={`View ${item.title} in ${item.marketName || 'market'}`}
-                  className="shrink-0"
-                >
+                {listingHref ? (
+                  <a href={listingHref} target="_blank" rel="noopener noreferrer" aria-label={`View ${item.title} in ${item.marketName || 'market'}`} className="shrink-0">
+                    <img
+                      src={item.image}
+                      alt={item.title}
+                      className="h-20 w-20 rounded-xl border border-[var(--svs-border)] object-cover transition hover:opacity-90"
+                      loading="lazy"
+                    />
+                  </a>
+                ) : (
                   <img
                     src={item.image}
                     alt={item.title}
-                    className="h-20 w-20 rounded-xl border border-[var(--svs-border)] object-cover transition hover:opacity-90"
+                    className="h-20 w-20 shrink-0 rounded-xl border border-[var(--svs-border)] object-cover"
                     loading="lazy"
                   />
-                </Link>
+                )}
                 <div className="min-w-0 flex-1">
-                  <Link
-                    to={listingHref}
-                    className="block truncate text-sm font-semibold text-[var(--svs-text)] hover:text-[var(--svs-primary)] hover:underline sm:text-base"
-                  >
-                    {item.title}
-                  </Link>
+                  {listingHref ? (
+                    <a href={listingHref} target="_blank" rel="noopener noreferrer" className="block truncate text-sm font-semibold text-[var(--svs-text)] hover:text-[var(--svs-primary)] hover:underline sm:text-base">
+                      {item.title}
+                    </a>
+                  ) : (
+                    <p className="block truncate text-sm font-semibold text-[var(--svs-text)] sm:text-base">{item.title}</p>
+                  )}
                   {item.marketName ? (
-                    <Link
-                      to={listingHref}
-                      className="mt-0.5 block truncate text-xs text-[var(--svs-muted)] hover:text-[var(--svs-primary)] hover:underline"
-                    >
+                    <a href={listingHref || '#'} target="_blank" rel="noopener noreferrer" className="mt-0.5 block truncate text-xs text-[var(--svs-muted)] hover:text-[var(--svs-primary)] hover:underline">
                       {item.marketName}
-                    </Link>
+                    </a>
+                  ) : null}
+                  {item.details ? (
+                    <p className="mt-0.5 truncate text-xs text-[var(--svs-muted)]">{item.details}</p>
                   ) : null}
                   <p className="mt-1 text-xs text-[var(--svs-muted)]">
                     {formatCartItemAmount(item, item.unitPrice)} each
@@ -47198,7 +47441,7 @@ const OrderConfirmationPage = ({ orders }) => {
       </div>
       <h2>Items</h2>
       <table><thead><tr><th>Item</th><th class="right">Qty</th><th class="right">Total</th></tr></thead><tbody>
-      ${(order.items || []).map((it) => `<tr><td>${it.title || ''}<div class="muted">${it.marketName || ''}</div></td><td class="right">${it.quantity || 1}</td><td class="right">${formatCheckoutAmount((Number(it.unitPrice) || 0) * (Number(it.quantity) || 1))}</td></tr>`).join('')}
+      ${(order.items || []).map((it) => `<tr><td>${it.title || ''}${it.details ? `<div class="muted">${it.details}</div>` : ''}<div class="muted">${it.marketName || ''}</div></td><td class="right">${it.quantity || 1}</td><td class="right">${formatCheckoutAmount((Number(it.unitPrice) || 0) * (Number(it.quantity) || 1))}</td></tr>`).join('')}
       </tbody></table>
       <table style="margin-top:12px">
         <tr><td>Subtotal</td><td class="right">${formatCheckoutAmount(order.subtotal)}</td></tr>
@@ -47247,14 +47490,29 @@ const OrderConfirmationPage = ({ orders }) => {
         <div className="mt-8 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.05)] sm:p-7">
           <h2 className="text-center text-lg font-bold text-[var(--svs-primary-strong)]">Confirmed Order</h2>
 
-          {headlineItem ? (
+          {headlineItem ? (() => {
+            const rawHeadlineSku = String(headlineItem.sku || '').replace(/::size-[a-z0-9-]+$/i, '');
+            const headlineHref = headlineItem.route && rawHeadlineSku
+              ? `${headlineItem.route}?focus=${encodeURIComponent(rawHeadlineSku)}`
+              : null;
+            return (
             <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-start">
               {headlineItem.image ? (
-                <img
-                  src={headlineItem.image}
-                  alt={headlineItem.title}
-                  className="h-32 w-32 shrink-0 rounded-xl object-cover sm:h-36 sm:w-36"
-                />
+                headlineHref ? (
+                  <a href={headlineHref} target="_blank" rel="noopener noreferrer" className="shrink-0" title="View item details">
+                    <img
+                      src={headlineItem.image}
+                      alt={headlineItem.title}
+                      className="h-32 w-32 rounded-xl object-cover transition hover:opacity-80 sm:h-36 sm:w-36"
+                    />
+                  </a>
+                ) : (
+                  <img
+                    src={headlineItem.image}
+                    alt={headlineItem.title}
+                    className="h-32 w-32 shrink-0 rounded-xl object-cover sm:h-36 sm:w-36"
+                  />
+                )
               ) : (
                 <div className="flex h-32 w-32 shrink-0 items-center justify-center rounded-xl bg-[var(--svs-surface-soft)] sm:h-36 sm:w-36">
                   <Package className="h-8 w-8 text-[var(--svs-muted)]" />
@@ -47274,6 +47532,9 @@ const OrderConfirmationPage = ({ orders }) => {
                 ) : (
                   <>
                     <h3 className="text-lg font-bold text-[var(--svs-primary-strong)]">{headlineItem.title}</h3>
+                    {headlineItem.details ? (
+                      <p className="text-xs text-[var(--svs-muted)]">{headlineItem.details}</p>
+                    ) : null}
                     {headlineItem.category || headlineItem.marketName ? (
                       <span className="inline-block rounded-full bg-[var(--svs-primary-strong)] px-3 py-1 text-xs font-semibold text-white">
                         {headlineItem.category || headlineItem.marketName}
@@ -47290,7 +47551,8 @@ const OrderConfirmationPage = ({ orders }) => {
                 </p>
               </div>
             </div>
-          ) : null}
+            );
+          })() : null}
 
           <div className="mt-6 space-y-3 border-t border-[var(--svs-border)] pt-5 text-sm">
             <div className="flex items-center justify-between">
@@ -47676,6 +47938,58 @@ const TrackOrderPage = ({ orders, onAdminSetOrderStatus }) => {
             </div>
           </div>
         </section>
+
+        {/* Items in this order */}
+        {Array.isArray(order.items) && order.items.length > 0 ? (
+          <section className="mt-6 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-sm sm:p-6">
+            <h2 className="text-base font-bold text-[var(--svs-primary-strong)]">Items in Your Order</h2>
+            <p className="text-xs text-[var(--svs-muted)]">Click an item to view its full details.</p>
+            <div className="mt-4 space-y-4 divide-y divide-[var(--svs-border)]">
+              {order.items.map((lineItem, idx) => {
+                const lineQty = Math.max(Number(lineItem.quantity) || 1, 1);
+                const linePrice = (Number(lineItem.unitPrice) || 0) * lineQty;
+                const rawSku = String(lineItem.sku || '').replace(/::size-[a-z0-9-]+$/i, '');
+                const lineHref = lineItem.route && rawSku
+                  ? `${lineItem.route}?focus=${encodeURIComponent(rawSku)}`
+                  : null;
+                return (
+                  <div key={`track-line-${lineItem.id || lineItem.sku || idx}`} className="flex items-start gap-4 pt-4 first:pt-0">
+                    {lineItem.image ? (
+                      lineHref ? (
+                        <a href={lineHref} target="_blank" rel="noopener noreferrer" className="shrink-0" title="View item details">
+                          <img src={lineItem.image} alt={lineItem.title} className="h-20 w-20 rounded-xl border border-[var(--svs-border)] object-cover transition hover:opacity-80" loading="lazy" />
+                        </a>
+                      ) : (
+                        <img src={lineItem.image} alt={lineItem.title} className="h-20 w-20 shrink-0 rounded-xl border border-[var(--svs-border)] object-cover" loading="lazy" />
+                      )
+                    ) : (
+                      <div className="h-20 w-20 shrink-0 rounded-xl bg-[var(--svs-surface-soft)]" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      {lineHref ? (
+                        <a href={lineHref} target="_blank" rel="noopener noreferrer" className="block font-bold text-[var(--svs-text)] hover:text-[var(--svs-primary)] hover:underline">
+                          {lineItem.title || 'Untitled item'}
+                        </a>
+                      ) : (
+                        <p className="font-bold text-[var(--svs-text)]">{lineItem.title || 'Untitled item'}</p>
+                      )}
+                      {lineItem.details ? (
+                        <p className="mt-0.5 text-xs text-[var(--svs-muted)]">{lineItem.details}</p>
+                      ) : null}
+                      {lineItem.marketName ? (
+                        <p className="mt-0.5 text-xs text-[var(--svs-muted)]">{lineItem.marketName}</p>
+                      ) : null}
+                      <p className="mt-1 text-xs text-[var(--svs-muted)]">Qty: {lineQty}</p>
+                    </div>
+                    {linePrice > 0 ? (
+                      <p className="shrink-0 text-sm font-semibold text-[var(--svs-primary-strong)]">{formatCheckoutAmount(linePrice)}</p>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
 
         {/* Live Tracking */}
         <section className="mt-6 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-sm sm:p-6">
@@ -48091,60 +48405,65 @@ const OrderCard = ({ order, onCancelOrder, cancellingOrderId, onSetCancelError, 
       ) : null}
 
       <div className="mt-4 rounded-xl bg-white/60 p-3 sm:p-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-1 items-center gap-3 sm:gap-4">
-            {item.image ? (
-              <img
-                src={item.image}
-                alt={item.title}
-                className="h-16 w-16 flex-shrink-0 rounded-lg object-cover sm:h-20 sm:w-20"
-                loading="lazy"
-              />
-            ) : (
-              <div className="h-16 w-16 flex-shrink-0 rounded-lg bg-[var(--svs-surface-soft)] sm:h-20 sm:w-20" />
-            )}
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                {item.brand ? (
-                  <span className="text-sm font-semibold text-[var(--svs-text)]">{item.brand}</span>
-                ) : null}
-                {item.category ? (
-                  <span className="rounded-md border border-[var(--svs-border)] bg-white px-2 py-0.5 text-[11px] font-medium text-[var(--svs-muted)]">
-                    {item.category}
-                  </span>
-                ) : null}
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Items in this order</p>
+        <div className="space-y-3">
+          {(order.items || []).map((lineItem, idx) => {
+            const lineQty = Math.max(Number(lineItem.quantity) || 1, 1);
+            const linePrice = (Number(lineItem.unitPrice) || 0) * lineQty;
+            const rawLineSku = String(lineItem.sku || '').replace(/::size-[a-z0-9-]+$/i, '');
+            const lineHref = lineItem.route && rawLineSku
+              ? `${lineItem.route}?focus=${encodeURIComponent(rawLineSku)}`
+              : null;
+            return (
+              <div key={`${order.id}-line-${lineItem.id || lineItem.sku || idx}`} className="flex items-start gap-3">
+                {lineItem.image ? (
+                  lineHref ? (
+                    <a href={lineHref} target="_blank" rel="noopener noreferrer" className="shrink-0" title="View item details">
+                      <img src={lineItem.image} alt={lineItem.title} className="h-14 w-14 rounded-lg border border-[var(--svs-border)] object-cover transition hover:opacity-80 sm:h-16 sm:w-16" loading="lazy" />
+                    </a>
+                  ) : (
+                    <img src={lineItem.image} alt={lineItem.title} className="h-14 w-14 shrink-0 rounded-lg border border-[var(--svs-border)] object-cover sm:h-16 sm:w-16" loading="lazy" />
+                  )
+                ) : (
+                  <div className="h-14 w-14 shrink-0 rounded-lg bg-[var(--svs-surface-soft)] sm:h-16 sm:w-16" />
+                )}
+                <div className="min-w-0 flex-1">
+                  {lineHref ? (
+                    <a href={lineHref} target="_blank" rel="noopener noreferrer" className="block truncate text-sm font-bold text-[var(--svs-text)] hover:text-[var(--svs-primary)] hover:underline">
+                      {lineItem.title || 'Untitled item'}
+                    </a>
+                  ) : (
+                    <p className="truncate text-sm font-bold text-[var(--svs-text)]">{lineItem.title || 'Untitled item'}</p>
+                  )}
+                  {lineItem.details ? <p className="mt-0.5 truncate text-xs text-[var(--svs-muted)]">{lineItem.details}</p> : null}
+                  <p className="mt-0.5 text-xs text-[var(--svs-muted)]">Qty: {lineQty}</p>
+                </div>
+                <p className="shrink-0 text-sm font-semibold text-[var(--svs-primary-strong)]">{linePrice > 0 ? formatCheckoutAmount(linePrice) : ''}</p>
               </div>
-              <p className="mt-1 truncate text-sm font-bold text-[var(--svs-text)] sm:text-base">{item.title}</p>
-              <p className="mt-0.5 text-xs text-[var(--svs-muted)]">Quantity: {item.quantity}</p>
-              {order.items.length > 1 ? (
-                <p className="mt-0.5 text-[11px] text-[var(--svs-muted)]">
-                  + {order.items.length - 1} more item{order.items.length - 1 === 1 ? '' : 's'}
-                </p>
-              ) : null}
-            </div>
-          </div>
-          <div className="flex sm:justify-end">
-            {isDelivered ? (
-              <button
-                type="button"
-                onClick={() => {
-                  (order.items || []).forEach((lineItem) => onAddToCart?.({ ...lineItem }));
-                  navigate('/checkout');
-                }}
-                className={`${cudyBluePrimaryButtonClassName} inline-flex items-center justify-center rounded-lg bg-[var(--svs-primary-strong)] px-4 py-2 text-sm font-semibold text-white`}
-              >
-                Buy it again
-              </button>
-            ) : (
-              <Link
-                to={`/orders/${order.id}/track`}
-                state={{ orderId: order.id, reference: order.reference }}
-                className={`${cudyBluePrimaryButtonClassName} inline-flex items-center justify-center rounded-lg bg-[var(--svs-primary-strong)] px-4 py-2 text-sm font-semibold text-white`}
-              >
-                <Truck className="mr-2 h-4 w-4" /> Track Your Order
-              </Link>
-            )}
-          </div>
+            );
+          })}
+        </div>
+        <div className="mt-4 flex justify-end">
+          {isDelivered ? (
+            <button
+              type="button"
+              onClick={() => {
+                (order.items || []).forEach((lineItem) => onAddToCart?.({ ...lineItem }));
+                navigate('/checkout');
+              }}
+              className={`${cudyBluePrimaryButtonClassName} inline-flex items-center justify-center rounded-lg bg-[var(--svs-primary-strong)] px-4 py-2 text-sm font-semibold text-white`}
+            >
+              Buy it again
+            </button>
+          ) : (
+            <Link
+              to={`/orders/${order.id}/track`}
+              state={{ orderId: order.id, reference: order.reference }}
+              className={`${cudyBluePrimaryButtonClassName} inline-flex items-center justify-center rounded-lg bg-[var(--svs-primary-strong)] px-4 py-2 text-sm font-semibold text-white`}
+            >
+              <Truck className="mr-2 h-4 w-4" /> Track Your Order
+            </Link>
+          )}
         </div>
 
         {isDelivered && returnWindowClosed ? (
@@ -50913,19 +51232,51 @@ const ItemDetailsModal = ({
       ? existingDetails
       : [existingDetails, selectedSizeDetail].filter(Boolean).join(' • ');
 
-    // When the chosen size has its own price, charge that price instead of the
-    // listing's base price so each packing size is sold at its own rate.
+    // When the chosen size has its own price, update price, unitPrice, and
+    // unitPriceLabel so the cart shows and charges the correct per-size amount
+    // rather than the listing's base price.
     const sizePrice = getItemSizePrice(item, selectedSize);
+    const sizePriceOverride = sizePrice != null ? (() => {
+      const priceStr = String(sizePrice);
+      return {
+        price: priceStr,
+        unitPrice: getNumericPriceValue(priceStr, 0, item.currency || null),
+        unitPriceLabel: getSalePrices(priceStr, 0, item.currency || null).nowPrice,
+      };
+    })() : {};
+
+    // Per-size stock: override availableQuantity so the cart quantity spinner
+    // is capped at this variant's own stock, not the full listing total.
+    const sizeStock = getItemSizeStock(item, selectedSize);
+    const sizeStockOverride = sizeStock !== null ? { availableQuantity: sizeStock } : {};
 
     return {
       ...baseCartItem,
       id: `${baseId}::size-${normalizedSize}`,
       details,
       selectedSize,
-      ...(sizePrice != null ? { price: String(sizePrice) } : {}),
+      ...sizePriceOverride,
+      ...sizeStockOverride,
     };
   })();
-  const actionWishlistItem = item.wishlistItem || item;
+  const actionWishlistItem = (() => {
+    const base = item.wishlistItem || item;
+    if (!sizeOptions.length || !selectedSize) return base;
+    const existingDetails = String(base.details || '').trim();
+    const selectedSizeDetail = `Size ${selectedSize}`;
+    const details = existingDetails.toLowerCase().includes(selectedSizeDetail.toLowerCase())
+      ? existingDetails
+      : [existingDetails, selectedSizeDetail].filter(Boolean).join(' • ');
+    const sizePrice = getItemSizePrice(item, selectedSize);
+    const sizePriceOverride = sizePrice != null ? (() => {
+      const priceStr = String(sizePrice);
+      return {
+        unitPrice: getNumericPriceValue(priceStr, 0, item.currency || null),
+        unitPriceLabel: getSalePrices(priceStr, 0, item.currency || null).nowPrice,
+      };
+    })() : {};
+    return { ...base, details, ...sizePriceOverride };
+  })();
   const itemHasSizeStock = hasItemSizeStock(item);
   // Per-size pricing: show the selected size's price when the listing carries a
   // sizePrices map, otherwise fall back to the listing's base price label.
