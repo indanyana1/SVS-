@@ -56188,7 +56188,22 @@ const App = () => {
       if (!listingDbId) continue;
       const purchasedQuantity = Math.max(Number(item.quantity) || 1, 1);
       inventoryMap.set(listingDbId, (inventoryMap.get(listingDbId) || 0) + purchasedQuantity);
-      const selectedSize = item.selectedSize || '';
+      let selectedSize = item.selectedSize || '';
+      if (!selectedSize) {
+        // selectedSize isn't persisted to Supabase, so derive it from the ::size-
+        // slug embedded in the cart item id when loading from DB on page reload.
+        const sizeSlugMatch = String(item.id || '').match(/::size-([a-z0-9-]+)$/i);
+        if (sizeSlugMatch) {
+          const sizeSlug = sizeSlugMatch[1];
+          const refItem = sellerItems.find((s) => String(s.dbId || '') === listingDbId);
+          if (refItem?.sizeStock && typeof refItem.sizeStock === 'object') {
+            const matchedKey = Object.keys(refItem.sizeStock).find(
+              (k) => sanitizeStorageSegment(k) === sizeSlug,
+            );
+            if (matchedKey) selectedSize = matchedKey;
+          }
+        }
+      }
       if (selectedSize) {
         if (!sizeDecrements.has(listingDbId)) sizeDecrements.set(listingDbId, new Map());
         const sizeMap = sizeDecrements.get(listingDbId);
@@ -56271,18 +56286,58 @@ const App = () => {
               ...(newSizeStock ? { sizeStock: newSizeStock } : {}),
             };
           }));
+        } else {
+          // RPC returned 'applied' but no applied_items — update local state
+          // by subtracting purchased quantities ourselves.
+          const purchasedByListingId = new Map(
+            inventoryRequest.map((e) => [String(e.listing_id || ''), Number(e.quantity) || 0]),
+          );
+          setSellerItems((currentItems) => currentItems.map((sellerItem) => {
+            const listingId = String(sellerItem.dbId || '');
+            const purchasedQty = purchasedByListingId.get(listingId);
+            if (!purchasedQty) return sellerItem;
 
-          // Persist per-size stock to DB (best-effort, fire-and-forget)
-          if (sizeDecrements.size) {
-            for (const [listingId, sizeMap] of sizeDecrements) {
-              const sellerItem = sellerItems.find((s) => String(s.dbId || '') === listingId);
-              if (!sellerItem?.sizeStock || typeof sellerItem.sizeStock !== 'object') continue;
-              for (const [size, qty] of sizeMap) {
-                if (!(size in sellerItem.sizeStock)) continue;
-                const newQty = Math.max(0, Number(sellerItem.sizeStock[size] || 0) - qty);
-                supabase.rpc('patch_listing_size_stock', { p_listing_id: listingId, p_size: size, p_quantity: newQty }).catch(() => {});
-              }
+            const sizeMap = sizeDecrements.get(listingId);
+            const existingSizeStock = sellerItem.sizeStock && typeof sellerItem.sizeStock === 'object' ? sellerItem.sizeStock : null;
+            let newSizeStock = existingSizeStock ? { ...existingSizeStock } : null;
+            if (newSizeStock && sizeMap) {
+              sizeMap.forEach((qty, size) => {
+                if (size in newSizeStock) newSizeStock[size] = Math.max(0, Number(newSizeStock[size] || 0) - qty);
+              });
             }
+
+            return {
+              ...sellerItem,
+              availableQuantity: Math.max(normalizeListingQuantity(sellerItem.availableQuantity, 0) - purchasedQty, 0),
+              ...(newSizeStock ? { sizeStock: newSizeStock } : {}),
+            };
+          }));
+        }
+
+        // Persist per-size stock to DB (best-effort, fire-and-forget).
+        // Fetches the current details_json row, merges the updated sizeStock,
+        // and writes it back — no custom RPC required.
+        if (sizeDecrements.size) {
+          for (const [listingId, sizeMap] of sizeDecrements) {
+            const sellerItem = sellerItems.find((s) => String(s.dbId || '') === listingId);
+            if (!sellerItem?.sizeStock || typeof sellerItem.sizeStock !== 'object') continue;
+            const updatedSizeStock = { ...sellerItem.sizeStock };
+            sizeMap.forEach((qty, size) => {
+              if (size in updatedSizeStock) updatedSizeStock[size] = Math.max(0, Number(updatedSizeStock[size] || 0) - qty);
+            });
+            supabase
+              .from('marketplace_items')
+              .select('details_json')
+              .eq('id', listingId)
+              .single()
+              .then(({ data }) => {
+                if (!data) return null;
+                return supabase
+                  .from('marketplace_items')
+                  .update({ details_json: { ...(data.details_json || {}), sizeStock: updatedSizeStock } })
+                  .eq('id', listingId);
+              })
+              .catch(() => {});
           }
         }
       } else {
