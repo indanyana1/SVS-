@@ -950,7 +950,7 @@ const marketShortDescriptions = {
   '/voting-clients': 'Beauty, fitness & sports essentials',
   '/betting-lottery-games': 'Play, predict & win big',
   '/beverages-liquors': 'Wines, spirits & refreshing drinks',
-  '/home-care': 'Cleaning, laundry & home essentials',
+  '/home-care': 'Book home cleaning, laundry & maintenance services',
   '/tickets': 'Events, travel & experience bookings',
   '/building-construction-tools': 'Tools & materials for every build',
   '/retailer-direct-links': 'Quick links to top global retailers & brands',
@@ -1882,8 +1882,8 @@ const featureSlides = [
   {
     id: 'feat-5',
     image: 'https://images.pexels.com/photos/3846022/pexels-photo-3846022.jpeg?auto=compress&cs=tinysrgb&w=1600',
-    title: 'Book Service',
-    subtitle: 'Cleaning, laundry & home essentials',
+    title: 'Home Care',
+    subtitle: 'Book trusted home care professionals online',
     route: '/home-care',
   },
   {
@@ -1910,28 +1910,28 @@ const featureSlides = [
   {
     id: 'feat-9',
     image: 'https://images.pexels.com/photos/120049/pexels-photo-120049.jpeg?auto=compress&cs=tinysrgb&w=1600',
-    title: 'Automobility',
+    title: 'Vehicles & Mobility',
     subtitle: 'Cars, bikes & mobility solutions',
     route: '/mobility-vehicles',
   },
   {
     id: 'feat-10',
     image: 'https://images.pexels.com/photos/2101137/pexels-photo-2101137.jpeg?auto=compress&cs=tinysrgb&w=1600',
-    title: 'Earth Resources',
+    title: 'Natural Resources',
     subtitle: 'Quality raw materials & minerals',
     route: '/natural-resources-minerals',
   },
   {
     id: 'feat-11',
-    image: 'https://images.pexels.com/photos/3735149/pexels-photo-3735149.jpeg?auto=compress&cs=tinysrgb&w=1600',
-    title: 'Pharmaceutics',
-    subtitle: 'Pharmacy, health & wellness products',
-    route: '/wellness',
+    image: 'https://images.pexels.com/photos/3762879/pexels-photo-3762879.jpeg?auto=compress&cs=tinysrgb&w=1600',
+    title: 'Beauty & Sports',
+    subtitle: 'Shop beauty, fitness, and sports products',
+    route: '/voting-clients',
   },
   {
     id: 'feat-12',
     image: 'https://images.pexels.com/photos/5480192/pexels-photo-5480192.jpeg?auto=compress&cs=tinysrgb&w=1600',
-    title: 'Ancient Remedies',
+    title: 'Traditional Medicines',
     subtitle: 'Authentic herbs & natural remedies',
     route: '/traditional-medicines-herbs',
   },
@@ -1973,7 +1973,7 @@ const featureSlides = [
   {
     id: 'feat-17',
     image: 'https://images.pexels.com/photos/6664248/pexels-photo-6664248.jpeg?auto=compress&cs=tinysrgb&w=1600',
-    title: 'Games',
+    title: 'Betting & Lottery',
     subtitle: 'Play, predict & win big',
     route: '/betting-lottery-games',
   },
@@ -1981,13 +1981,13 @@ const featureSlides = [
     id: 'feat-18',
     image: 'https://images.pexels.com/photos/3757376/pexels-photo-3757376.jpeg?auto=compress&cs=tinysrgb&w=1600',
     title: 'Wellness',
-    subtitle: 'Beauty, fitness & sports essentials',
-    route: '/voting-clients',
+    subtitle: 'Pharmacy, self-care & telehealth',
+    route: '/wellness',
   },
   {
     id: 'feat-19',
     image: 'https://images.pexels.com/photos/230544/pexels-photo-230544.jpeg?auto=compress&cs=tinysrgb&w=1600',
-    title: 'Commerce Link',
+    title: 'Retail Links',
     subtitle: 'Quick links to top global retailers & brands',
     route: '/retailer-direct-links',
   },
@@ -2015,7 +2015,7 @@ const featureSlides = [
   {
     id: 'feat-23',
     image: 'https://images.pexels.com/photos/163064/play-stone-network-networked-163064.jpeg?auto=compress&cs=tinysrgb&w=1600',
-    title: 'Toys',
+    title: 'Toys & Kids',
     subtitle: 'Toys, games & kids essentials',
     route: '/safety',
   },
@@ -7507,7 +7507,8 @@ const WEB_SEARCH_ENGINES = [
   },
 ];
 
-const buildProjectWideStaticSearchCatalog = () => {
+const buildProjectWideStaticSearchCatalog = (t) => {
+  const translate = t || ((key) => key);
   const routeEntries = PROJECT_ROUTE_SEARCH_ENTRIES.map((entry) => ({
     id: entry.id,
     title: entry.title,
@@ -7517,19 +7518,22 @@ const buildProjectWideStaticSearchCatalog = () => {
     searchText: buildSearchText([entry.title, entry.section, entry.route, entry.keywords]),
   }));
 
-  const marketEntries = marketLinks.map((market) => ({
-    id: `market-link-${market.href}`,
-    title: market.label || market.labelKey,
-    subtitle: marketShortDescriptions[market.href] || 'Market',
-    section: 'Markets Directory',
-    route: market.href,
-    searchText: buildSearchText([
-      market.label || market.labelKey,
-      market.href,
-      marketShortDescriptions[market.href],
-      'market category shopping services listings',
-    ]),
-  }));
+  const marketEntries = marketLinks.map((market) => {
+    const label = market.label || translate(market.labelKey);
+    return {
+      id: `market-link-${market.href}`,
+      title: label,
+      subtitle: marketShortDescriptions[market.href] || 'Market',
+      section: 'Markets Directory',
+      route: market.href,
+      searchText: buildSearchText([
+        label,
+        market.href,
+        marketShortDescriptions[market.href],
+        'market category shopping services listings',
+      ]),
+    };
+  });
 
   const retailerEntries = RETAILER_DIRECT_LINKS.map(mapRetailerDirectLinkToSearchEntry).filter(Boolean);
 
@@ -8665,6 +8669,7 @@ const getGroceriesListingMetaText = (item = {}) => {
 const getGroceriesListingDetailsText = (item = {}) => {
   const categoryLabel = item.category || getGroceriesCategoryTitle(item.categoryKey);
   const parts = [
+    item.selectedSize && `Size: ${item.selectedSize}`,
     item.discount,
     categoryLabel,
     item.brand,
@@ -11474,11 +11479,11 @@ const Shell = ({ children, cartItemCount = 0, wishlistItemCount = 0, notificatio
   const quickSearchSource = useMemo(
     () => dedupeSearchCatalogEntries([
       ...searchableCatalog,
-      ...buildProjectWideStaticSearchCatalog(),
+      ...buildProjectWideStaticSearchCatalog(t),
       ...(Array.isArray(searchCatalog) ? searchCatalog : []),
       ...remoteQuickSearchCatalog,
     ]),
-    [remoteQuickSearchCatalog, searchCatalog],
+    [t, remoteQuickSearchCatalog, searchCatalog],
   );
 
   useEffect(() => {
@@ -12965,13 +12970,13 @@ const ECommercePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
     ...item,
     route: '/e-commerce',
     marketName: t('markets.ecommerce'),
-    details: item.subtitle || item.description || item.sellerName,
+    details: [item.selectedSize && `Size: ${item.selectedSize}`, item.subtitle || item.description || item.sellerName].filter(Boolean).join(' • '),
   });
   const buildWishlistItem = (item) => createWishlistItem({
     ...item,
     route: '/e-commerce',
     marketName: t('markets.ecommerce'),
-    details: item.subtitle || item.description || item.sellerName,
+    details: [item.selectedSize && `Size: ${item.selectedSize}`, item.subtitle || item.description || item.sellerName].filter(Boolean).join(' • '),
   });
 
   const filtersPanel = (
@@ -13045,7 +13050,7 @@ const ECommercePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
                 image: item.image,
                 images: item.images || (item.image ? [item.image] : []),
                 ...getItemDetailSizeProps(item),
-                availableQuantity: getSellerListingStock(sellerItems, item),
+                availableQuantity: hasItemSizeStock(item) ? (item.availableQuantity ?? getSellerListingStock(sellerItems, item)) : getSellerListingStock(sellerItems, item),
                 marketName: t('markets.ecommerce'),
                 details: item.subtitle || item.description || item.sellerName,
                 priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -13586,7 +13591,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
       image: item.image,
       images: item.images || (item.image ? [item.image] : []),
       ...getItemDetailSizeProps(item),
-      availableQuantity: getSellerListingStock(sellerItems, item),
+      availableQuantity: hasItemSizeStock(item) ? (item.availableQuantity ?? getSellerListingStock(sellerItems, item)) : getSellerListingStock(sellerItems, item),
       marketName: t('markets.bookings'),
       details,
       priceLabel: getSalePrices(item.price, 0, sourceCurrency).nowPrice,
@@ -14156,61 +14161,438 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
   );
 };
 
+const BFS_SORT_OPTIONS = ['Newest', 'Price: Low to High', 'Price: High to Low', 'Name: A–Z'];
+const BFS_BASE_CATEGORIES = [
+  'Beauty', 'Skincare', 'Haircare', 'Makeup', 'Fragrance', 'Nailcare',
+  'Fitness', 'Home Gym Equipment', 'Yoga & Pilates', 'Cardio Equipment', 'Activewear',
+  'Sports', 'Football', 'Basketball', 'Cricket', 'Rugby', 'Tennis', 'Cycling', 'Running', 'Outdoor & Hiking', 'Swimming',
+];
+const BFS_SUITABLE_FOR_OPTIONS = ['All Skin Types', 'Oily Skin', 'Dry Skin', 'Sensitive Skin', 'Men', 'Women', 'Unisex', 'Kids', 'Beginners', 'Pro Athletes', 'All Ages'];
+const BFS_CONDITION_OPTIONS = ['Brand New', 'Like New', 'Good'];
+
 const VotingClientsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
   const marketItems = useMemo(
     () => [...getSellerItemsForMarket(sellerItems, 'beautyFitnessSports'), ...beautyFitnessSportsItems],
     [sellerItems],
   );
+
+  /* ── dynamic filter options — always include predefined list, add seller values on top ── */
+  const dynamicCategories = useMemo(() => {
+    const seen = new Set(BFS_BASE_CATEGORIES);
+    marketItems.forEach((item) => { const v = String(item.category || '').trim(); if (v && v.toLowerCase() !== 'other') seen.add(v); });
+    return ['All', ...Array.from(seen)];
+  }, [marketItems]);
+
+  // Brand: purely from seller-added items (no predefined list)
+  const dynamicBrands = useMemo(() => {
+    const seen = new Set();
+    marketItems.forEach((item) => { if (item.brand) seen.add(String(item.brand).trim()); });
+    return Array.from(seen).sort();
+  }, [marketItems]);
+
+  // Condition: always show full predefined list; add any new seller values at the end
+  const dynamicConditions = useMemo(() => {
+    const seen = new Set(BFS_CONDITION_OPTIONS);
+    marketItems.forEach((item) => { if (item.condition) seen.add(String(item.condition).trim()); });
+    return Array.from(seen);
+  }, [marketItems]);
+
+  // Color: purely from seller-added items
+  const dynamicColors = useMemo(() => {
+    const seen = new Set();
+    marketItems.forEach((item) => { if (item.color) seen.add(String(item.color).trim()); });
+    return Array.from(seen).sort();
+  }, [marketItems]);
+
+  /* ── filter & sort state ── */
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState(['All']);
+  const [selectedBrands, setSelectedBrands] = useState([]);
+  const [selectedSuitableFor, setSelectedSuitableFor] = useState([]);
+  const [selectedConditions, setSelectedConditions] = useState([]);
+  const [selectedColors, setSelectedColors] = useState([]);
+  const [sortOrder, setSortOrder] = useState('Newest');
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(false);
+
+  const toggleMultiFilter = (value, list, setter, exclusiveValue) => {
+    if (exclusiveValue && value === exclusiveValue) { setter([exclusiveValue]); return; }
+    const without = list.filter((e) => e !== exclusiveValue);
+    const next = without.includes(value) ? without.filter((e) => e !== value) : [...without, value];
+    setter(next.length ? next : (exclusiveValue ? [exclusiveValue] : []));
+  };
+
+  const clearAllFilters = () => {
+    setSelectedCategories(['All']);
+    setSelectedBrands([]);
+    setSelectedSuitableFor([]);
+    setSelectedConditions([]);
+    setSelectedColors([]);
+    setSearchQuery('');
+  };
+
+  const activeFilterCount = (
+    selectedCategories.filter((v) => v !== 'All').length
+    + selectedBrands.length
+    + selectedSuitableFor.length
+    + selectedConditions.length
+    + selectedColors.length
+    + (searchQuery.trim() ? 1 : 0)
+  );
+
+  const filteredItems = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    const base = marketItems.filter((item) => {
+      if (query) {
+        const haystack = [item.title, item.category, item.brand, item.description, item.sellerName, item.suitableFor, item.color]
+          .filter(Boolean).join(' ').toLowerCase();
+        if (!haystack.includes(query)) return false;
+      }
+      const catActive = selectedCategories.filter((v) => v !== 'All');
+      if (catActive.length && !catActive.includes(item.category)) return false;
+      // Brand / color / condition: permissive for items that don't have the field set
+      if (selectedBrands.length && item.brand && !selectedBrands.includes(item.brand)) return false;
+      if (selectedColors.length && item.color && !selectedColors.includes(item.color)) return false;
+      if (selectedConditions.length && item.condition && !selectedConditions.includes(item.condition)) return false;
+      // suitableFor: permissive for items without the field (static items have no suitableFor)
+      if (selectedSuitableFor.length && item.suitableFor && !selectedSuitableFor.includes(item.suitableFor)) return false;
+      return true;
+    });
+    if (sortOrder === 'Price: Low to High') {
+      return [...base].sort((a, b) =>
+        getNumericPriceValue(a.price, getItemSaleDiscountRate(a), a.currency || null)
+        - getNumericPriceValue(b.price, getItemSaleDiscountRate(b), b.currency || null));
+    }
+    if (sortOrder === 'Price: High to Low') {
+      return [...base].sort((a, b) =>
+        getNumericPriceValue(b.price, getItemSaleDiscountRate(b), b.currency || null)
+        - getNumericPriceValue(a.price, getItemSaleDiscountRate(a), a.currency || null));
+    }
+    if (sortOrder === 'Name: A–Z') {
+      return [...base].sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')));
+    }
+    return base;
+  }, [marketItems, searchQuery, selectedCategories, selectedBrands, selectedSuitableFor, selectedConditions, selectedColors, sortOrder]);
+
   const buildCartItem = (item) => createCartItem({
     ...item,
     route: '/voting-clients',
     marketName: t('markets.votingClients'),
-    details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Beauty, fitness & sports'}`,
+    details: [item.selectedSize && `Size: ${item.selectedSize}`, item.category, item.brand, item.description || item.sellerName].filter(Boolean).join(' • '),
   });
   const buildWishlistItem = (item) => createWishlistItem({
     ...item,
     route: '/voting-clients',
     marketName: t('markets.votingClients'),
-    details: `${item.category || 'Seller item'} • ${item.sellerName || 'Beauty, fitness & sports'}`,
+    details: [item.selectedSize && `Size: ${item.selectedSize}`, item.category, item.brand, item.sellerName].filter(Boolean).join(' • '),
   });
 
+  /* ── inline filter panel ── */
+  const FilterPanel = (
+    <div className="flex h-full flex-col bg-white font-['Inter',sans-serif]">
+      <div className="space-y-6 px-5 py-6">
+
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-semibold text-[#1A1A1A]">Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}</h3>
+          {activeFilterCount ? (
+            <button type="button" onClick={clearAllFilters} className="text-xs font-medium text-[#0f9fb2] hover:underline">Clear all</button>
+          ) : null}
+        </div>
+
+        {/* ── Category (Beauty / Fitness / Sports + subcategories) ── */}
+        <div>
+          <h4 className="text-sm font-semibold text-[#1A1A1A]">Category</h4>
+          <p className="mt-0.5 text-[11px] text-[#6B7280]">Covers beauty, skincare, gym, sport types & more</p>
+          <div className="mt-3 max-h-56 space-y-1.5 overflow-y-auto pr-1">
+            {dynamicCategories.map((cat) => (
+              <label key={cat} className="flex cursor-pointer items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input
+                  type="checkbox"
+                  checked={selectedCategories.includes(cat)}
+                  onChange={() => toggleMultiFilter(cat, selectedCategories, setSelectedCategories, 'All')}
+                  className="h-4 w-4 rounded border-[#D1D5DB] text-[#0f9fb2] focus:ring-[#0f9fb2]"
+                />
+                <span>{cat}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Brand (from seller listings) ── */}
+        <div>
+          <h4 className="text-sm font-semibold text-[#1A1A1A]">Brand</h4>
+          {dynamicBrands.length > 0 ? (
+            <div className="mt-3 max-h-44 space-y-1.5 overflow-y-auto pr-1">
+              {dynamicBrands.map((brand) => (
+                <label key={brand} className="flex cursor-pointer items-center gap-2.5 text-sm text-[#1A1A1A]">
+                  <input
+                    type="checkbox"
+                    checked={selectedBrands.includes(brand)}
+                    onChange={() => toggleMultiFilter(brand, selectedBrands, setSelectedBrands)}
+                    className="h-4 w-4 rounded border-[#D1D5DB] text-[#0f9fb2] focus:ring-[#0f9fb2]"
+                  />
+                  <span>{brand}</span>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2 text-xs italic text-[#9CA3AF]">Brands appear here as sellers add items with a brand name.</p>
+          )}
+        </div>
+
+        {/* ── Gender / Audience + Skin Type + Fitness Level (all via suitableFor) ── */}
+        <div>
+          <h4 className="text-sm font-semibold text-[#1A1A1A]">Gender / Audience</h4>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {['Men', 'Women', 'Unisex', 'Kids'].map((opt) => {
+              const active = selectedSuitableFor.includes(opt);
+              return (
+                <button key={opt} type="button" onClick={() => setSelectedSuitableFor((prev) => prev.includes(opt) ? prev.filter((v) => v !== opt) : [...prev, opt])} aria-pressed={active}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition ${active ? 'border-[#0f9fb2] bg-[#0f9fb2] text-white' : 'border-[#E5E7EB] bg-white text-[#1A1A1A] hover:border-[#0f9fb2]'}`}>
+                  {opt}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-sm font-semibold text-[#1A1A1A]">Skin Type</h4>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {['All Skin Types', 'Oily Skin', 'Dry Skin', 'Sensitive Skin'].map((opt) => {
+              const active = selectedSuitableFor.includes(opt);
+              return (
+                <button key={opt} type="button" onClick={() => setSelectedSuitableFor((prev) => prev.includes(opt) ? prev.filter((v) => v !== opt) : [...prev, opt])} aria-pressed={active}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition ${active ? 'border-[#0f9fb2] bg-[#0f9fb2] text-white' : 'border-[#E5E7EB] bg-white text-[#1A1A1A] hover:border-[#0f9fb2]'}`}>
+                  {opt}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-sm font-semibold text-[#1A1A1A]">Fitness Level</h4>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {['Beginners', 'Pro Athletes', 'All Ages'].map((opt) => {
+              const active = selectedSuitableFor.includes(opt);
+              return (
+                <button key={opt} type="button" onClick={() => setSelectedSuitableFor((prev) => prev.includes(opt) ? prev.filter((v) => v !== opt) : [...prev, opt])} aria-pressed={active}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition ${active ? 'border-[#0f9fb2] bg-[#0f9fb2] text-white' : 'border-[#E5E7EB] bg-white text-[#1A1A1A] hover:border-[#0f9fb2]'}`}>
+                  {opt}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── Condition ── */}
+        <div>
+          <h4 className="text-sm font-semibold text-[#1A1A1A]">Condition</h4>
+          <div className="mt-3 space-y-1.5">
+            {dynamicConditions.map((opt) => (
+              <label key={opt} className="flex cursor-pointer items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input
+                  type="checkbox"
+                  checked={selectedConditions.includes(opt)}
+                  onChange={() => toggleMultiFilter(opt, selectedConditions, setSelectedConditions)}
+                  className="h-4 w-4 rounded border-[#D1D5DB] text-[#0f9fb2] focus:ring-[#0f9fb2]"
+                />
+                <span>{opt}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Colour (from seller listings) ── */}
+        {dynamicColors.length > 0 ? (
+          <div>
+            <h4 className="text-sm font-semibold text-[#1A1A1A]">Colour</h4>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {dynamicColors.map((col) => {
+                const active = selectedColors.includes(col);
+                return (
+                  <button key={col} type="button" onClick={() => setSelectedColors((prev) => prev.includes(col) ? prev.filter((v) => v !== col) : [...prev, col])} aria-pressed={active}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium transition ${active ? 'border-[#0f9fb2] bg-[#0f9fb2] text-white' : 'border-[#E5E7EB] bg-white text-[#1A1A1A] hover:border-[#0f9fb2]'}`}>
+                    {col}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+
+      </div>
+
+      <div className="mt-auto border-t border-[#E5E7EB] p-5">
+        <button
+          type="button"
+          onClick={() => setIsFilterDrawerOpen(false)}
+          className="h-[48px] w-full rounded-lg bg-[#0f9fb2] text-sm font-semibold text-white transition hover:bg-[#0d8a9c]"
+        >
+          Apply Filters
+        </button>
+      </div>
+    </div>
+  );
+
   return (
-    <MarketShowcase
-      marketKey="votingClients"
-      title={t('markets.votingClients')}
-      subtitle={t('pageSubtitles.votingClients')}
-      eyebrow={t('markets.votingClients')}
-      chips={['Beauty', 'Fitness', 'Sports']}
-    >
-      <CardGrid
-        items={marketItems}
-        buttonLabel={t('common.addToCart')}
-        secondaryButtonLabel={t('common.viewDetails')}
-        reviewSummaryMap={productReviewSummaryMap}
-        getItemReviewKey={(item) => getCollectionItemId('/voting-clients', item.id)}
-        onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-        onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
-        onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
-        onOpenItemDetails={(item) => {
-          const wishlistItem = buildWishlistItem(item);
-          onOpenItemDetails?.({
-            title: getTranslatedValue(t, item.titleKey, item.title),
-            image: item.image,
-            images: item.images || (item.image ? [item.image] : []),
-            ...getItemDetailSizeProps(item),
-            availableQuantity: getSellerListingStock(sellerItems, item),
-            marketName: t('markets.votingClients'),
-            details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Beauty, fitness & sports'}`,
-            priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
-            cartItem: buildCartItem(item),
-            wishlistItem,
-          });
-        }}
-        isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/voting-clients', item.id))}
-        metaRenderer={(item) => <p className="text-sm text-slate-600">{item.category || 'Seller item'} • <SalePrice price={item.price} currency={item.currency} /></p>}
+    <section className="bg-[var(--svs-bg)] font-['Inter',sans-serif] text-[#1A1A1A]">
+      <MarketHero
+        marketKey="votingClients"
+        title={t('markets.votingClients')}
+        subtitle={t('pageSubtitles.votingClients')}
+        eyebrow={t('markets.votingClients')}
+        chips={['Beauty', 'Fitness', 'Sports', 'Verified sellers']}
       />
-    </MarketShowcase>
+      <MarketTrustStrip />
+      <div className="mx-auto w-full max-w-[1280px] px-4 py-8 sm:px-6 lg:py-10">
+        {/* ── Search bar ── */}
+        <div className="flex items-center gap-2 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-3 shadow-sm">
+          <Search className="h-5 w-5 shrink-0 text-[var(--svs-primary-strong)]" />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search beauty, fitness & sports products or brands..."
+            className="w-full bg-transparent text-sm text-[var(--svs-text)] placeholder:text-[var(--svs-muted)] focus:outline-none"
+          />
+        </div>
+
+        {/* ── Top bar: sort + filter toggle ── */}
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xl font-semibold text-[var(--svs-text)]">
+            Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}
+          </h2>
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+                className="h-9 appearance-none rounded-full border border-[var(--svs-border)] bg-white px-4 pr-8 text-xs font-semibold text-[var(--svs-text)] outline-none transition hover:border-[#0f9fb2] focus:border-[#0f9fb2] focus:ring-2 focus:ring-[#0f9fb2]/20"
+              >
+                {BFS_SORT_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--svs-muted)]" />
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+                  setIsDesktopFiltersHidden((prev) => !prev);
+                } else {
+                  setIsFilterDrawerOpen(true);
+                }
+              }}
+              className="inline-flex items-center gap-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-4 py-2 text-sm font-medium text-[#0f9fb2]"
+            >
+              <Menu className="h-4 w-4" />
+              <span className="lg:hidden">Filter</span>
+              <span className="hidden lg:inline">{isDesktopFiltersHidden ? 'Show Filters' : 'Hide Filters'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* ── Desktop sidebar + main content ── */}
+        <div className={`mt-8 grid items-start gap-10 ${isDesktopFiltersHidden ? '' : 'lg:grid-cols-[280px_minmax(0,1fr)]'}`}>
+          {!isDesktopFiltersHidden ? (
+            <aside className="hidden min-h-[calc(100vh-220px)] border-r border-[#E5E7EB] lg:block">
+              {FilterPanel}
+            </aside>
+          ) : null}
+
+          <main>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-[var(--svs-muted)]">
+                Showing <span className="font-semibold text-[var(--svs-text)]">{filteredItems.length}</span> {filteredItems.length === 1 ? 'item' : 'items'}
+              </p>
+              {activeFilterCount ? (
+                <button
+                  type="button"
+                  onClick={clearAllFilters}
+                  className="rounded-full border border-[var(--svs-border)] bg-white px-4 py-2 text-xs font-semibold text-[var(--svs-text)] transition hover:border-[#0f9fb2] hover:text-[#0f9fb2]"
+                >
+                  Clear filters
+                </button>
+              ) : null}
+            </div>
+
+            {filteredItems.length ? (
+              <CardGrid
+                items={filteredItems}
+                boundsItems={marketItems}
+                focusItems={marketItems}
+                buttonLabel={t('common.addToCart')}
+                secondaryButtonLabel={t('common.viewDetails')}
+                reviewSummaryMap={productReviewSummaryMap}
+                getItemReviewKey={(item) => getCollectionItemId('/voting-clients', item.id)}
+                onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+                onBuyNowAction={(item) => onBuyNow?.(buildCartItem(item))}
+                onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+                onOpenItemDetails={(item) => {
+                  const wishlistItem = buildWishlistItem(item);
+                  onOpenItemDetails?.({
+                    title: getTranslatedValue(t, item.titleKey, item.title),
+                    image: item.image,
+                    images: item.images || (item.image ? [item.image] : []),
+                    ...getItemDetailSizeProps(item),
+                    availableQuantity: hasItemSizeStock(item) ? (item.availableQuantity ?? getSellerListingStock(sellerItems, item)) : getSellerListingStock(sellerItems, item),
+                    marketName: t('markets.votingClients'),
+                    details: [item.category, item.brand, item.description || item.sellerName].filter(Boolean).join(' • '),
+                    priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
+                    detailsTable: {
+                      Category: item.category || 'Beauty, Fitness & Sports',
+                      ...(item.brand ? { Brand: item.brand } : {}),
+                      ...(item.suitableFor ? { 'Suitable For': item.suitableFor } : {}),
+                      ...(item.volume ? { 'Pack Size / Volume': item.volume } : {}),
+                      ...(item.color ? { Colour: item.color } : {}),
+                      ...(item.condition ? { Condition: item.condition } : {}),
+                    },
+                    cartItem: buildCartItem(item),
+                    wishlistItem,
+                  });
+                }}
+                isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/voting-clients', item.id))}
+                metaRenderer={(item) => (
+                  <p className="text-sm text-slate-600">
+                    {item.category || 'Seller item'}{item.brand ? ` • ${item.brand}` : ''} • <SalePrice price={item.price} currency={item.currency} />
+                  </p>
+                )}
+              />
+            ) : (
+              <div className="rounded-2xl border border-dashed border-[var(--svs-border)] bg-white p-12 text-center">
+                <h3 className="text-lg font-semibold text-[var(--svs-text)]">No items match your filters</h3>
+                <p className="mt-2 text-sm text-[var(--svs-muted)]">Try clearing some filters to see more products.</p>
+                <button
+                  type="button"
+                  onClick={clearAllFilters}
+                  className="mt-4 inline-flex h-11 items-center rounded-lg bg-[#0f9fb2] px-6 text-sm font-medium text-white transition hover:bg-[#0d8a9c]"
+                >
+                  Clear all filters
+                </button>
+              </div>
+            )}
+          </main>
+        </div>
+      </div>
+
+      {/* ── Mobile filter drawer ── */}
+      {isFilterDrawerOpen ? (
+        <div className="fixed inset-0 z-[90] bg-black/45 lg:hidden" role="dialog" aria-modal="true" aria-label="Filter beauty, fitness & sports products">
+          <div className="absolute inset-y-0 left-0 w-[min(92vw,320px)] overflow-y-auto bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#E5E7EB] px-4 py-3">
+              <h3 className="text-base font-semibold text-[#1A1A1A]">Filters</h3>
+              <button type="button" onClick={() => setIsFilterDrawerOpen(false)} className="rounded-md p-1 text-rose-600 transition hover:bg-rose-50" aria-label="Close filters">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {FilterPanel}
+          </div>
+        </div>
+      ) : null}
+    </section>
   );
 };
 
@@ -14281,13 +14663,13 @@ const VotingProvidersPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
     ...item,
     route: '/voting-providers',
     marketName: t('markets.votingProviders'),
-    details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Jewellery & accessories'}`,
+    details: [item.selectedSize && `Size: ${item.selectedSize}`, item.category || 'Seller item', item.description || item.sellerName || 'Jewellery & accessories'].filter(Boolean).join(' • '),
   });
   const buildWishlistItem = (item) => createWishlistItem({
     ...item,
     route: '/voting-providers',
     marketName: t('markets.votingProviders'),
-    details: `${item.category || 'Seller item'} • ${item.sellerName || 'Jewellery & accessories'}`,
+    details: [item.selectedSize && `Size: ${item.selectedSize}`, item.category || 'Seller item', item.sellerName || 'Jewellery & accessories'].filter(Boolean).join(' • '),
   });
 
   const FilterPanel = (
@@ -14443,7 +14825,7 @@ const VotingProvidersPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
                   image: item.image,
                   images: item.images || (item.image ? [item.image] : []),
                   ...getItemDetailSizeProps(item),
-                  availableQuantity: getSellerListingStock(sellerItems, item),
+                  availableQuantity: hasItemSizeStock(item) ? (item.availableQuantity ?? getSellerListingStock(sellerItems, item)) : getSellerListingStock(sellerItems, item),
                   marketName: t('markets.votingProviders'),
                   details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Jewellery & accessories'}`,
                   priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -14853,13 +15235,13 @@ const SecondHandPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemI
     ...item,
     route: `/secondhand-central/product/${item.id}`,
     marketName: t('markets.secondhand'),
-    details: `${item.condition || 'Pre-owned'} • ${item.description || ''}`,
+    details: [item.selectedSize && `Size: ${item.selectedSize}`, item.condition || 'Pre-owned', item.description].filter(Boolean).join(' • '),
   });
   const buildWishlistItem = (item) => createWishlistItem({
     ...item,
     route: `/secondhand-central/product/${item.id}`,
     marketName: t('markets.secondhand'),
-    details: `${item.condition || 'Pre-owned'}`,
+    details: [item.selectedSize && `Size: ${item.selectedSize}`, item.condition || 'Pre-owned'].filter(Boolean).join(' • '),
   });
 
   /* ── category detail view w/ sidebar (from Bookings movies pattern) ── */
@@ -15877,7 +16259,7 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
   };
 
   const openBeverageItemDetails = (item) => {
-    const details = [item.displayCategory, item.displayType, item.volume, item.subtitle].filter(Boolean).join(' • ');
+    const details = [item.selectedSize && `Size: ${item.selectedSize}`, item.displayCategory, item.displayType, item.volume, item.subtitle].filter(Boolean).join(' • ');
     const payload = { ...item, route: '/beverages-liquors', marketName: 'Beverages & Liquors', details };
     const cartItem = createCartItem(payload);
     const wishlistItem = createWishlistItem(payload);
@@ -15886,7 +16268,7 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       image: item.image,
       images: item.images || (item.image ? [item.image] : []),
       ...getItemDetailSizeProps(item),
-      availableQuantity: getSellerListingStock(sellerItems, item),
+      availableQuantity: hasItemSizeStock(item) ? (item.availableQuantity ?? getSellerListingStock(sellerItems, item)) : getSellerListingStock(sellerItems, item),
       marketName: 'Beverages & Liquors',
       details,
       priceLabel: getSalePrices(item.price, SALE_DISCOUNT_RATE, item.currency).nowPrice,
@@ -16097,7 +16479,7 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
                           if (getItemSizeOptions(item).length > 0) {
                             onOpenItemDetails?.(item);
                           } else {
-                            const details = [item.displayCategory, item.displayType, item.volume].filter(Boolean).join(' • ');
+                            const details = [item.selectedSize && `Size: ${item.selectedSize}`, item.displayCategory, item.displayType, item.volume].filter(Boolean).join(' • ');
                             onAddToCart(createCartItem({ ...item, route: '/beverages-liquors', marketName: 'Beverages & Liquors', details }));
                           }
                         }}
@@ -16111,6 +16493,10 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
                         onClick={(e) => {
                           e.stopPropagation();
                           if (isOutOfStock) return;
+                          if (getItemSizeOptions(item).length > 0) {
+                            openBeverageItemDetails(item);
+                            return;
+                          }
                           const details = [item.displayCategory, item.displayType, item.volume].filter(Boolean).join(' • ');
                           onBuyNow?.(createCartItem({ ...item, route: '/beverages-liquors', marketName: 'Beverages & Liquors', details }));
                         }}
@@ -16138,302 +16524,386 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
 
 const isWellnessPrescriptionRequired = (item) => item.prescriptionRequired === true || item.prescriptionRequired === 'Yes';
 
-const WellnessFilterCheckbox = ({ label, checked, onChange }) => (
-  <label className="flex cursor-pointer items-center gap-2 py-1 text-sm text-[var(--svs-text)]">
-    <input
-      type="checkbox"
-      checked={checked}
-      onChange={onChange}
-      className="h-4 w-4 rounded border-[var(--svs-border)] text-[var(--svs-primary)] focus:ring-[var(--svs-primary)]"
-    />
-    <span>{label}</span>
-  </label>
-);
-
-const WellnessFiltersPanel = ({
-  categories, brands, suitableForOptions,
-  selectedCategories, setSelectedCategories,
-  selectedBrands, setSelectedBrands,
-  selectedSuitableFor, setSelectedSuitableFor,
-  prescriptionOnly, setPrescriptionOnly,
-  toggleSelection, onApply,
-}) => (
-  <div className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-sm">
-    <div>
-      <h3 className="text-sm font-bold text-[var(--svs-text)]">Category</h3>
-      <div className="mt-2 max-h-56 overflow-y-auto pr-1">
-        {categories.map((category) => (
-          <WellnessFilterCheckbox
-            key={category}
-            label={category}
-            checked={selectedCategories.includes(category)}
-            onChange={() => toggleSelection(selectedCategories, setSelectedCategories, category, true)}
-          />
-        ))}
-      </div>
-    </div>
-    <hr className="my-4 border-[var(--svs-border)]" />
-    <div>
-      <h3 className="text-sm font-bold text-[var(--svs-text)]">Brand</h3>
-      <div className="mt-2 max-h-56 overflow-y-auto pr-1">
-        {brands.map((brand) => (
-          <WellnessFilterCheckbox
-            key={brand}
-            label={brand}
-            checked={selectedBrands.includes(brand)}
-            onChange={() => toggleSelection(selectedBrands, setSelectedBrands, brand, true)}
-          />
-        ))}
-      </div>
-    </div>
-    <hr className="my-4 border-[var(--svs-border)]" />
-    <div>
-      <h3 className="text-sm font-bold text-[var(--svs-text)]">Suitable For</h3>
-      <div className="mt-2">
-        {suitableForOptions.map((option) => (
-          <WellnessFilterCheckbox
-            key={option}
-            label={option}
-            checked={selectedSuitableFor.includes(option)}
-            onChange={() => toggleSelection(selectedSuitableFor, setSelectedSuitableFor, option, false)}
-          />
-        ))}
-      </div>
-    </div>
-    <hr className="my-4 border-[var(--svs-border)]" />
-    <div>
-      <h3 className="text-sm font-bold text-[var(--svs-text)]">Prescription</h3>
-      <WellnessFilterCheckbox
-        label="Prescription items only"
-        checked={prescriptionOnly}
-        onChange={() => setPrescriptionOnly((prev) => !prev)}
-      />
-    </div>
-    <button
-      type="button"
-      onClick={onApply}
-      className="mt-5 w-full rounded-lg bg-[var(--svs-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-[var(--svs-primary-strong)]"
-    >
-      Apply Filters
-    </button>
-  </div>
-);
+const WELLNESS_SORT_OPTIONS = ['Newest', 'Price: Low to High', 'Price: High to Low', 'Name: A–Z'];
 
 const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const marketItems = useMemo(() => [...getSellerItemsForMarket(sellerItems, 'wellness'), ...wellnessItems], [sellerItems]);
 
+  /* ── dynamic filter options (auto-update when seller adds items) ── */
   const dynamicCategories = useMemo(() => {
-    const set = new Set();
-    marketItems.forEach((item) => { if (item.category) set.add(item.category); });
-    return ['All', ...Array.from(set)];
+    const seen = new Set();
+    marketItems.forEach((item) => { if (item.category) seen.add(item.category); });
+    return ['All', ...Array.from(seen)];
   }, [marketItems]);
   const dynamicBrands = useMemo(() => {
-    const set = new Set();
-    marketItems.forEach((item) => { if (item.brand) set.add(item.brand); });
-    return ['All', ...Array.from(set)];
+    const seen = new Set();
+    marketItems.forEach((item) => { if (item.brand) seen.add(item.brand); });
+    return ['All', ...Array.from(seen)];
   }, [marketItems]);
   const dynamicSuitableFor = useMemo(() => {
-    const set = new Set();
-    marketItems.forEach((item) => { if (item.suitableFor) set.add(item.suitableFor); });
-    return Array.from(set);
+    const seen = new Set();
+    marketItems.forEach((item) => { if (item.suitableFor) seen.add(item.suitableFor); });
+    return Array.from(seen);
   }, [marketItems]);
 
+  /* ── filter state ── */
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategories, setSelectedCategories] = useState(['All']);
   const [selectedBrands, setSelectedBrands] = useState(['All']);
   const [selectedSuitableFor, setSelectedSuitableFor] = useState([]);
   const [prescriptionOnly, setPrescriptionOnly] = useState(false);
-  const [showAll, setShowAll] = useState(false);
-  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const [sortOrder, setSortOrder] = useState('Newest');
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [isDesktopFiltersHidden, setIsDesktopFiltersHidden] = useState(false);
 
-  const toggleSelection = useCallback((current, setter, value, exclusiveAll = false) => {
-    if (exclusiveAll && value === 'All') {
-      setter(['All']);
-      return;
-    }
-    setter((prev) => {
-      const without = prev.filter((entry) => entry !== 'All');
-      if (without.includes(value)) {
-        const next = without.filter((entry) => entry !== value);
-        return next.length ? next : (exclusiveAll ? ['All'] : []);
-      }
-      return [...without, value];
-    });
-  }, []);
-
-  const handleApplyFilters = () => {
-    setShowAll(false);
-    setIsMobileFiltersOpen(false);
+  const toggleMultiFilter = (value, list, setter, exclusiveValue) => {
+    if (exclusiveValue && value === exclusiveValue) { setter([exclusiveValue]); return; }
+    const without = list.filter((e) => e !== exclusiveValue);
+    const exists = without.includes(value);
+    const next = exists ? without.filter((e) => e !== value) : [...without, value];
+    setter(next.length ? next : (exclusiveValue ? [exclusiveValue] : []));
   };
+
+  const clearAllFilters = () => {
+    setSelectedCategories(['All']);
+    setSelectedBrands(['All']);
+    setSelectedSuitableFor([]);
+    setPrescriptionOnly(false);
+  };
+
+  const activeFilterCount = (
+    selectedCategories.filter((v) => v !== 'All').length
+    + selectedBrands.filter((v) => v !== 'All').length
+    + selectedSuitableFor.length
+    + (prescriptionOnly ? 1 : 0)
+  );
 
   const filteredItems = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    return marketItems.filter((item) => {
+    const base = marketItems.filter((item) => {
       if (query) {
         const haystack = [item.title, item.category, item.brand, item.description, item.sellerName]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase();
+          .filter(Boolean).join(' ').toLowerCase();
         if (!haystack.includes(query)) return false;
       }
-      if (selectedCategories.length && !selectedCategories.includes('All') && !selectedCategories.includes(item.category)) return false;
-      if (selectedBrands.length && !selectedBrands.includes('All') && !selectedBrands.includes(item.brand)) return false;
+      const catActive = selectedCategories.filter((v) => v !== 'All');
+      if (catActive.length && !catActive.includes(item.category)) return false;
+      const brandActive = selectedBrands.filter((v) => v !== 'All');
+      if (brandActive.length && !brandActive.includes(item.brand)) return false;
       if (selectedSuitableFor.length && !selectedSuitableFor.includes(item.suitableFor)) return false;
       if (prescriptionOnly && !isWellnessPrescriptionRequired(item)) return false;
       return true;
     });
-  }, [marketItems, searchQuery, selectedCategories, selectedBrands, selectedSuitableFor, prescriptionOnly]);
-
-  const visibleItems = showAll ? filteredItems : filteredItems.slice(0, 12);
+    if (sortOrder === 'Price: Low to High') {
+      return [...base].sort((a, b) =>
+        getNumericPriceValue(a.price, getItemSaleDiscountRate(a), a.currency || null)
+        - getNumericPriceValue(b.price, getItemSaleDiscountRate(b), b.currency || null));
+    }
+    if (sortOrder === 'Price: High to Low') {
+      return [...base].sort((a, b) =>
+        getNumericPriceValue(b.price, getItemSaleDiscountRate(b), b.currency || null)
+        - getNumericPriceValue(a.price, getItemSaleDiscountRate(a), a.currency || null));
+    }
+    if (sortOrder === 'Name: A–Z') {
+      return [...base].sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')));
+    }
+    return base; // Newest — seller items first (already at front of marketItems)
+  }, [marketItems, searchQuery, selectedCategories, selectedBrands, selectedSuitableFor, prescriptionOnly, sortOrder]);
 
   const buildCartItem = (item) => createCartItem({
     ...item,
     route: '/wellness',
     marketName: t('markets.wellness'),
-    details: item.description || item.sellerName,
+    details: [item.selectedSize && `Size: ${item.selectedSize}`, item.category, item.brand, item.description || item.sellerName].filter(Boolean).join(' • '),
   });
   const buildWishlistItem = (item) => createWishlistItem({
     ...item,
     route: '/wellness',
     marketName: t('markets.wellness'),
-    details: item.sellerName,
+    details: [item.selectedSize && `Size: ${item.selectedSize}`, item.category, item.brand, item.sellerName].filter(Boolean).join(' • '),
   });
 
-  const filtersPanel = (
-    <WellnessFiltersPanel
-      categories={dynamicCategories}
-      brands={dynamicBrands}
-      suitableForOptions={dynamicSuitableFor}
-      selectedCategories={selectedCategories}
-      setSelectedCategories={setSelectedCategories}
-      selectedBrands={selectedBrands}
-      setSelectedBrands={setSelectedBrands}
-      selectedSuitableFor={selectedSuitableFor}
-      setSelectedSuitableFor={setSelectedSuitableFor}
-      prescriptionOnly={prescriptionOnly}
-      setPrescriptionOnly={setPrescriptionOnly}
-      toggleSelection={toggleSelection}
-      onApply={handleApplyFilters}
-    />
+  /* ── inline filter panel (FashionStylePage pattern) ── */
+  const FilterPanel = (
+    <div className="flex h-full flex-col bg-white font-['Inter',sans-serif]">
+      <div className="space-y-6 px-5 py-6">
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-semibold text-[#1A1A1A]">Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}</h3>
+          {activeFilterCount ? (
+            <button type="button" onClick={clearAllFilters} className="text-xs font-medium text-[#0f9fb2] hover:underline">
+              Clear all
+            </button>
+          ) : null}
+        </div>
+
+        {/* Category */}
+        <div>
+          <h4 className="text-sm font-medium text-[#1A1A1A]">Category</h4>
+          <div className="mt-3 max-h-52 space-y-2 overflow-y-auto pr-1">
+            {dynamicCategories.map((cat) => (
+              <label key={cat} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input
+                  type="checkbox"
+                  checked={selectedCategories.includes(cat)}
+                  onChange={() => toggleMultiFilter(cat, selectedCategories, setSelectedCategories, 'All')}
+                  className="h-4 w-4 rounded border-[#D1D5DB] text-[#0f9fb2] focus:ring-[#0f9fb2]"
+                />
+                <span>{cat}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Brand */}
+        <div>
+          <h4 className="text-sm font-medium text-[#1A1A1A]">Brand</h4>
+          <div className="mt-3 max-h-52 space-y-2 overflow-y-auto pr-1">
+            {dynamicBrands.map((brand) => (
+              <label key={brand} className="flex items-center gap-2.5 text-sm text-[#1A1A1A]">
+                <input
+                  type="checkbox"
+                  checked={selectedBrands.includes(brand)}
+                  onChange={() => toggleMultiFilter(brand, selectedBrands, setSelectedBrands, 'All')}
+                  className="h-4 w-4 rounded border-[#D1D5DB] text-[#0f9fb2] focus:ring-[#0f9fb2]"
+                />
+                <span>{brand}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Suitable For */}
+        {dynamicSuitableFor.length > 0 ? (
+          <div>
+            <h4 className="text-sm font-medium text-[#1A1A1A]">Suitable For</h4>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {dynamicSuitableFor.map((opt) => {
+                const active = selectedSuitableFor.includes(opt);
+                return (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => {
+                      setSelectedSuitableFor((prev) =>
+                        prev.includes(opt) ? prev.filter((v) => v !== opt) : [...prev, opt]);
+                    }}
+                    aria-pressed={active}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium transition ${active ? 'border-[#0f9fb2] bg-[#0f9fb2] text-white' : 'border-[#E5E7EB] bg-white text-[#1A1A1A] hover:border-[#0f9fb2]'}`}
+                  >
+                    {opt}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+
+        {/* Prescription */}
+        <div>
+          <label className="flex items-center gap-2.5 text-sm font-medium text-[#1A1A1A]">
+            <input
+              type="checkbox"
+              checked={prescriptionOnly}
+              onChange={(e) => setPrescriptionOnly(e.target.checked)}
+              className="h-4 w-4 rounded border-[#D1D5DB] text-[#0f9fb2] focus:ring-[#0f9fb2]"
+            />
+            <span>Prescription items only</span>
+          </label>
+        </div>
+      </div>
+
+      <div className="mt-auto border-t border-[#E5E7EB] p-5">
+        <button
+          type="button"
+          onClick={() => setIsFilterDrawerOpen(false)}
+          className="h-[48px] w-full rounded-lg bg-[#0f9fb2] text-sm font-semibold text-white transition hover:bg-[#0d8a9c]"
+        >
+          Apply Filters
+        </button>
+      </div>
+    </div>
   );
 
   return (
-  <MarketShowcase
-    marketKey="wellness"
-    title={t('markets.wellness')}
-    subtitle={t('pageSubtitles.wellness')}
-    eyebrow={t('markets.wellness')}
-    chips={['Pharmacy', 'Self-care', 'Telehealth ready']}
-  >
-    <div className="flex items-center gap-2 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-3 shadow-sm">
-      <Search className="h-5 w-5 text-[var(--svs-primary-strong)]" />
-      <input
-        type="search"
-        value={searchQuery}
-        onChange={(event) => setSearchQuery(event.target.value)}
-        placeholder="Search wellness products, brands, or categories..."
-        className="w-full bg-transparent text-sm text-[var(--svs-text)] placeholder:text-[var(--svs-muted)] focus:outline-none"
+    <section className="bg-[var(--svs-bg)] font-['Inter',sans-serif] text-[#1A1A1A]">
+      <MarketHero
+        marketKey="wellness"
+        title={t('markets.wellness')}
+        subtitle={t('pageSubtitles.wellness')}
+        eyebrow={t('markets.wellness')}
+        chips={['Pharmacy', 'Self-care', 'Telehealth ready']}
       />
-    </div>
-    <div className="mt-3 flex justify-end lg:hidden">
-      <button
-        type="button"
-        onClick={() => setIsMobileFiltersOpen((prev) => !prev)}
-        className="inline-flex items-center gap-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-2 text-sm font-semibold text-[var(--svs-text)] shadow-sm"
-        aria-expanded={isMobileFiltersOpen}
-      >
-        <Filter className="h-4 w-4" />
-        {isMobileFiltersOpen ? 'Hide Filters' : 'Show Filters'}
-      </button>
-    </div>
+      <MarketTrustStrip />
+      <div className="mx-auto w-full max-w-[1280px] px-4 py-8 sm:px-6 lg:py-10">
+        {/* ── Search bar ── */}
+        <div className="flex items-center gap-2 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-4 py-3 shadow-sm">
+          <Search className="h-5 w-5 shrink-0 text-[var(--svs-primary-strong)]" />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search wellness products, brands, or categories..."
+            className="w-full bg-transparent text-sm text-[var(--svs-text)] placeholder:text-[var(--svs-muted)] focus:outline-none"
+          />
+        </div>
 
-    <div className="mt-5 grid w-full grid-cols-1 gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-      <aside className="hidden lg:block">{filtersPanel}</aside>
-      {isMobileFiltersOpen ? <div className="lg:hidden">{filtersPanel}</div> : null}
-
-      <div>
-        <CardGrid
-          items={visibleItems}
-          focusItems={marketItems}
-          buttonLabel={t('common.add')}
-          secondaryButtonLabel="View Details"
-          buyNowLabel="Let's Talk For More Info"
-          reviewSummaryMap={productReviewSummaryMap}
-          getItemReviewKey={(item) => getCollectionItemId('/wellness', item.id)}
-          onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
-          onBuyNowAction={(item) => {
-            const itemKey = item.key || item.id;
-            const sellerEmail = normalizeEmail(item.sellerEmail || '');
-            navigate('/support/chat', {
-              state: {
-                recipientEmail: sellerEmail || 'support@biznisdil.com',
-                recipientName: item.sellerName || item.sellerEmail || 'Biznisdil Support',
-                recipientRole: 'seller',
-                issueType: 'Pharmaceutics Enquiry',
-                itemKey,
-                itemTitle: item.title,
-                itemImage: item.image || item.images?.[0] || '',
-                itemLink: `/wellness?focus=${encodeURIComponent(itemKey)}`,
-              },
-            });
-          }}
-          onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
-          onOpenItemDetails={(item) => {
-            const wishlistItem = buildWishlistItem(item);
-            const requiresPrescription = isWellnessPrescriptionRequired(item);
-            onOpenItemDetails?.({
-              title: getTranslatedValue(t, item.titleKey, item.title),
-              image: item.image,
-              images: item.images || (item.image ? [item.image] : []),
-              ...getItemDetailSizeProps(item),
-              availableQuantity: getSellerListingStock(sellerItems, item),
-              marketName: t('markets.wellness'),
-              details: item.description || item.sellerName,
-              priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
-              detailsTable: {
-                Category: item.category || 'Wellness',
-                Brand: item.brand || 'Generic',
-                'Pack Size / Volume': item.volume || 'N/A',
-                'Suitable For': item.suitableFor || 'All Ages',
-                'Prescription Required': requiresPrescription ? 'Yes — upload your prescription at checkout' : 'No — available over the counter',
-                'Expiry Date': item.expiryDate || 'N/A',
-              },
-              cartItem: buildCartItem(item),
-              wishlistItem,
-            });
-          }}
-          isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/wellness', item.id))}
-          metaRenderer={(item) => (
-            <p className="flex flex-wrap items-center gap-1.5 text-sm text-slate-600">
-              <SalePrice price={item.price} currency={item.currency} />
-              {item.sellerName ? ` • ${item.sellerName}` : ''}
-              {isWellnessPrescriptionRequired(item) ? (
-                <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-700">Rx Required</span>
-              ) : null}
-            </p>
-          )}
-        />
-        {!filteredItems.length ? (
-          <div className="rounded-2xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface)] p-10 text-center text-sm text-[var(--svs-muted)]">
-            No wellness products match your filters.
-          </div>
-        ) : null}
-        {filteredItems.length > 12 ? (
-          <div className="mt-6 flex justify-center">
+        {/* ── Top bar: filter toggle + sort ── */}
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xl font-semibold text-[var(--svs-text)]">
+            Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}
+          </h2>
+          <div className="flex items-center gap-2">
+            {/* Sort dropdown */}
+            <div className="relative">
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+                className="h-9 appearance-none rounded-full border border-[var(--svs-border)] bg-white px-4 pr-8 text-xs font-semibold text-[var(--svs-text)] outline-none transition hover:border-[#0f9fb2] focus:border-[#0f9fb2] focus:ring-2 focus:ring-[#0f9fb2]/20"
+              >
+                {WELLNESS_SORT_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--svs-muted)]" />
+            </div>
+            {/* Filter toggle */}
             <button
               type="button"
-              onClick={() => setShowAll((prev) => !prev)}
-              className="rounded-lg bg-[var(--svs-primary)] px-8 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-[var(--svs-primary-strong)]"
+              onClick={() => {
+                if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+                  setIsDesktopFiltersHidden((prev) => !prev);
+                } else {
+                  setIsFilterDrawerOpen(true);
+                }
+              }}
+              className="inline-flex items-center gap-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] px-4 py-2 text-sm font-medium text-[#0f9fb2]"
             >
-              {showAll ? 'Show Less' : 'View All'}
+              <Menu className="h-4 w-4" />
+              <span className="lg:hidden">Filter</span>
+              <span className="hidden lg:inline">{isDesktopFiltersHidden ? 'Show Filters' : 'Hide Filters'}</span>
             </button>
           </div>
-        ) : null}
+        </div>
+
+        {/* ── Desktop sidebar + main content ── */}
+        <div className={`mt-8 grid items-start gap-10 ${isDesktopFiltersHidden ? '' : 'lg:grid-cols-[280px_minmax(0,1fr)]'}`}>
+          {!isDesktopFiltersHidden ? (
+            <aside className="hidden min-h-[calc(100vh-220px)] border-r border-[#E5E7EB] lg:block">
+              {FilterPanel}
+            </aside>
+          ) : null}
+
+          <main>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-[var(--svs-muted)]">
+                Showing <span className="font-semibold text-[var(--svs-text)]">{filteredItems.length}</span> {filteredItems.length === 1 ? 'item' : 'items'}
+              </p>
+              {activeFilterCount ? (
+                <button
+                  type="button"
+                  onClick={clearAllFilters}
+                  className="rounded-full border border-[var(--svs-border)] bg-white px-4 py-2 text-xs font-semibold text-[var(--svs-text)] transition hover:border-[#0f9fb2] hover:text-[#0f9fb2]"
+                >
+                  Clear filters
+                </button>
+              ) : null}
+            </div>
+
+            {filteredItems.length ? (
+              <CardGrid
+                items={filteredItems}
+                boundsItems={marketItems}
+                focusItems={marketItems}
+                buttonLabel={t('common.add')}
+                secondaryButtonLabel="View Details"
+                buyNowLabel="Let's Talk For More Info"
+                reviewSummaryMap={productReviewSummaryMap}
+                getItemReviewKey={(item) => getCollectionItemId('/wellness', item.id)}
+                onPrimaryAction={(item) => onAddToCart(buildCartItem(item))}
+                onBuyNowAction={(item) => {
+                  const itemKey = item.key || item.id;
+                  const sellerEmail = normalizeEmail(item.sellerEmail || '');
+                  navigate('/support/chat', {
+                    state: {
+                      recipientEmail: sellerEmail || 'support@biznisdil.com',
+                      recipientName: item.sellerName || item.sellerEmail || 'Biznisdil Support',
+                      recipientRole: 'seller',
+                      issueType: 'Pharmaceutics Enquiry',
+                      itemKey,
+                      itemTitle: item.title,
+                      itemImage: item.image || item.images?.[0] || '',
+                      itemLink: `/wellness?focus=${encodeURIComponent(itemKey)}`,
+                    },
+                  });
+                }}
+                onToggleWishlist={(item) => onToggleWishlist(buildWishlistItem(item))}
+                onOpenItemDetails={(item) => {
+                  const wishlistItem = buildWishlistItem(item);
+                  const requiresPrescription = isWellnessPrescriptionRequired(item);
+                  onOpenItemDetails?.({
+                    title: getTranslatedValue(t, item.titleKey, item.title),
+                    image: item.image,
+                    images: item.images || (item.image ? [item.image] : []),
+                    ...getItemDetailSizeProps(item),
+                    availableQuantity: hasItemSizeStock(item) ? (item.availableQuantity ?? getSellerListingStock(sellerItems, item)) : getSellerListingStock(sellerItems, item),
+                    marketName: t('markets.wellness'),
+                    details: [item.category, item.brand, item.description || item.sellerName].filter(Boolean).join(' • '),
+                    priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
+                    detailsTable: {
+                      Category: item.category || 'Wellness',
+                      Brand: item.brand || 'Generic',
+                      'Pack Size / Volume': item.volume || 'N/A',
+                      'Suitable For': item.suitableFor || 'All Ages',
+                      'Prescription Required': requiresPrescription ? 'Yes — upload your prescription at checkout' : 'No — available over the counter',
+                      'Expiry Date': item.expiryDate || 'N/A',
+                    },
+                    cartItem: buildCartItem(item),
+                    wishlistItem,
+                  });
+                }}
+                isItemWishlisted={(item) => wishlistItemIds.includes(getCollectionItemId('/wellness', item.id))}
+                metaRenderer={(item) => (
+                  <p className="flex flex-wrap items-center gap-1.5 text-sm text-slate-600">
+                    <SalePrice price={item.price} currency={item.currency} />
+                    {item.sellerName ? ` • ${item.sellerName}` : ''}
+                    {isWellnessPrescriptionRequired(item) ? (
+                      <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-700">Rx Required</span>
+                    ) : null}
+                  </p>
+                )}
+              />
+            ) : (
+              <div className="rounded-2xl border border-dashed border-[var(--svs-border)] bg-white p-12 text-center">
+                <h3 className="text-lg font-semibold text-[var(--svs-text)]">No items match your filters</h3>
+                <p className="mt-2 text-sm text-[var(--svs-muted)]">Try clearing some filters to see more products.</p>
+                <button
+                  type="button"
+                  onClick={clearAllFilters}
+                  className="mt-4 inline-flex h-11 items-center rounded-lg bg-[#0f9fb2] px-6 text-sm font-medium text-white transition hover:bg-[#0d8a9c]"
+                >
+                  Clear all filters
+                </button>
+              </div>
+            )}
+          </main>
+        </div>
       </div>
-    </div>
-  </MarketShowcase>
+
+      {/* ── Mobile filter drawer ── */}
+      {isFilterDrawerOpen ? (
+        <div className="fixed inset-0 z-[90] bg-black/45 lg:hidden" role="dialog" aria-modal="true" aria-label="Filter wellness products">
+          <div className="absolute inset-y-0 left-0 w-[min(92vw,320px)] overflow-y-auto bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#E5E7EB] px-4 py-3">
+              <h3 className="text-base font-semibold text-[#1A1A1A]">Filters</h3>
+              <button type="button" onClick={() => setIsFilterDrawerOpen(false)} className="rounded-md p-1 text-rose-600 transition hover:bg-rose-50" aria-label="Close filters">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {FilterPanel}
+          </div>
+        </div>
+      ) : null}
+    </section>
   );
 };
 
@@ -16506,13 +16976,13 @@ const TraditionalMedicinesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wis
     ...item,
     route: '/traditional-medicines-herbs',
     marketName: t('markets.traditionalMedicines'),
-    details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Traditional herbal listing'}`,
+    details: [item.selectedSize && `Size: ${item.selectedSize}`, item.category || 'Seller item', item.description || item.sellerName || 'Traditional herbal listing'].filter(Boolean).join(' • '),
   });
   const buildWishlistItem = (item) => createWishlistItem({
     ...item,
     route: '/traditional-medicines-herbs',
     marketName: t('markets.traditionalMedicines'),
-    details: `${item.category || 'Seller item'} • ${item.sellerName || 'Traditional herbal listing'}`,
+    details: [item.selectedSize && `Size: ${item.selectedSize}`, item.category || 'Seller item', item.sellerName || 'Traditional herbal listing'].filter(Boolean).join(' • '),
   });
 
   const FilterPanel = (
@@ -16674,7 +17144,7 @@ const TraditionalMedicinesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wis
                   image: item.image,
                   images: item.images || (item.image ? [item.image] : []),
                   ...getItemDetailSizeProps(item),
-                  availableQuantity: getSellerListingStock(sellerItems, item),
+                  availableQuantity: hasItemSizeStock(item) ? (item.availableQuantity ?? getSellerListingStock(sellerItems, item)) : getSellerListingStock(sellerItems, item),
                   marketName: t('markets.traditionalMedicines'),
                   details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Traditional herbal listing'}`,
                   priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -16740,13 +17210,13 @@ const StationeryPage = ({ onToggleWishlist, wishlistItemIds = [], sellerItems = 
     ...item,
     route: '/stationery-office',
     marketName: t('markets.stationery'),
-    details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Ready for school and office use'}`,
+    details: [item.selectedSize && `Size: ${item.selectedSize}`, item.category || 'Seller item', item.description || item.sellerName || 'Ready for school and office use'].filter(Boolean).join(' • '),
   });
   const buildWishlistItem = (item) => createWishlistItem({
     ...item,
     route: '/stationery-office',
     marketName: t('markets.stationery'),
-    details: `${item.category || 'Seller item'} • ${item.sellerName || 'Ready for school and office use'}`,
+    details: [item.selectedSize && `Size: ${item.selectedSize}`, item.category || 'Seller item', item.sellerName || 'Ready for school and office use'].filter(Boolean).join(' • '),
   });
 
   // Resolve every item's price into the buyer's selected currency (applying
@@ -16906,7 +17376,7 @@ const StationeryPage = ({ onToggleWishlist, wishlistItemIds = [], sellerItems = 
       image: item.image,
       images: item.images || (item.image ? [item.image] : []),
       ...getItemDetailSizeProps(item),
-      availableQuantity: getSellerListingStock(sellerItems, item),
+      availableQuantity: hasItemSizeStock(item) ? (item.availableQuantity ?? getSellerListingStock(sellerItems, item)) : getSellerListingStock(sellerItems, item),
       marketName: t('markets.stationery'),
       details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Ready for school and office use'}`,
       priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -17460,7 +17930,7 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
     ...item,
     route: '/informal-market',
     marketName: t('markets.informalMarket'),
-    details: `${item.category || 'Informal listing'} • ${item.sellerName || 'Local informal seller'}`,
+    details: [item.selectedSize && `Size: ${item.selectedSize}`, item.category || 'Informal listing', item.sellerName || 'Local informal seller'].filter(Boolean).join(' • '),
   }), [t]);
 
   const openItemDetails = useCallback((item) => {
@@ -19250,6 +19720,7 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
 
   const buildDetailsText = (item) => (
     [
+      item.selectedSize && `Size: ${item.selectedSize}`,
       item.category || 'Seller item',
       item.subcategory || item.specification || '',
       item.brand && item.brand !== 'Generic' ? item.brand : '',
@@ -19497,7 +19968,7 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
         title: itemTitle,
         image: item.image,
         images: item.images || (item.image ? [item.image] : []),
-        availableQuantity: getSellerListingStock(sellerItems, item),
+        availableQuantity: hasItemSizeStock(item) ? (item.availableQuantity ?? getSellerListingStock(sellerItems, item)) : getSellerListingStock(sellerItems, item),
         marketName: t('markets.constructionTools'),
         details: buildDetailsText(item),
         priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -20478,13 +20949,13 @@ const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
     ...item,
     route: '/hardware-software',
     marketName: t('markets.hardwareSoftware'),
-    details: item.description || item.subtitle || item.sellerName,
+    details: [item.selectedSize && `Size: ${item.selectedSize}`, item.description || item.subtitle || item.sellerName].filter(Boolean).join(' • '),
   });
   const buildWishlistItem = (item) => createWishlistItem({
     ...item,
     route: '/hardware-software',
     marketName: t('markets.hardwareSoftware'),
-    details: item.subtitle || item.sellerName,
+    details: [item.selectedSize && `Size: ${item.selectedSize}`, item.subtitle || item.sellerName].filter(Boolean).join(' • '),
   });
   const handleAdd = (item) => onAddToCart(buildCartItem(item));
   const handleWishlist = (item) => onToggleWishlist(buildWishlistItem(item));
@@ -20510,7 +20981,7 @@ const HardwareSoftwarePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       image: item.image,
       images: item.images || (item.image ? [item.image] : []),
       ...getItemDetailSizeProps(item),
-      availableQuantity: getSellerListingStock(sellerItems, item),
+      availableQuantity: hasItemSizeStock(item) ? (item.availableQuantity ?? getSellerListingStock(sellerItems, item)) : getSellerListingStock(sellerItems, item),
       marketName: t('markets.hardwareSoftware'),
       details: item.description || item.subtitle || item.sellerName,
       priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency).nowPrice,
@@ -20777,13 +21248,13 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
     ...item,
     route: activeCategory ? `/mobility-vehicles/${activeCategory.slug}` : '/mobility-vehicles',
     marketName: t('markets.mobilityVehicles'),
-    details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Transport listing'}`,
+    details: [item.selectedSize && `Size: ${item.selectedSize}`, item.category || 'Seller item', item.specification || item.description || item.sellerName || 'Transport listing'].filter(Boolean).join(' • '),
   });
   const buildWishlistItem = (item) => createWishlistItem({
     ...item,
     route: activeCategory ? `/mobility-vehicles/${activeCategory.slug}` : '/mobility-vehicles',
     marketName: t('markets.mobilityVehicles'),
-    details: `${item.category || 'Seller item'} • ${item.specification || item.sellerName || 'Transport listing'}`,
+    details: [item.selectedSize && `Size: ${item.selectedSize}`, item.category || 'Seller item', item.specification || item.sellerName || 'Transport listing'].filter(Boolean).join(' • '),
   });
   const openItemDetails = (item) => {
     const wishlistItem = buildWishlistItem(item);
@@ -20808,7 +21279,7 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       image: item.image,
       images: item.images || (item.image ? [item.image] : []),
       ...getItemDetailSizeProps(item),
-      availableQuantity: getSellerListingStock(sellerItems, item),
+      availableQuantity: hasItemSizeStock(item) ? (item.availableQuantity ?? getSellerListingStock(sellerItems, item)) : getSellerListingStock(sellerItems, item),
       marketName: t('markets.mobilityVehicles'),
       details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Transport listing'}`,
       priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -21212,7 +21683,7 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
   );
 };
 
-const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
+const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {}, cartItems = [] }) => {
   const { t } = useTranslation();
   const [selectedGender, setSelectedGender] = useState('All');
   const [selectedCategories, setSelectedCategories] = useState(['All']);
@@ -21407,6 +21878,15 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
   const variantIsInStock = variantSizeOptions.length === 0
     ? Boolean(selectedItem && (selectedItem.availableQuantity == null || selectedItem.availableQuantity > 0))
     : !!(selectedVariant && (variantSizeQty == null ? true : variantSizeQty > 0));
+  const cartQtyForVariant = (() => {
+    if (!selectedItem || !selectedVariant || !Array.isArray(cartItems) || !cartItems.length) return 0;
+    const baseId = String(selectedItem.id || '').replace(/::size-[a-z0-9-]+$/i, '');
+    const normalizedSize = sanitizeStorageSegment(selectedVariant);
+    const sizeCartId = `${baseId}::size-${normalizedSize}`;
+    const match = cartItems.find((ci) => String(ci.id) === sizeCartId);
+    return match ? (Number(match.quantity) || 0) : 0;
+  })();
+  const variantCartFull = variantSizeQty !== null && variantSizeQty > 0 && cartQtyForVariant >= variantSizeQty;
 
   // Build the cart item for the selected variant. Adjusts the price BEFORE
   // passing to buildCartItem so createSavedItem computes unitPrice correctly —
@@ -21863,9 +22343,13 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
                     {/* Per-size stock badge */}
                     {selectedVariant ? (
                       <p className="mt-2 text-xs text-[var(--svs-muted)]">
-                        {variantSizeQty != null
+                        {variantCartFull
+                          ? <span className="font-semibold text-amber-600">All stock in your basket — pick another size</span>
+                          : variantSizeQty != null
                           ? variantIsInStock
-                            ? <span className="font-semibold text-emerald-600">{variantSizeQty} available in this size</span>
+                            ? cartQtyForVariant > 0
+                              ? <span className="font-semibold text-amber-600">{variantSizeQty - cartQtyForVariant} remaining ({cartQtyForVariant} in basket)</span>
+                              : <span className="font-semibold text-emerald-600">{variantSizeQty} available in this size</span>
                             : <span className="font-semibold text-rose-600">Out of stock in this size</span>
                           : <span className="font-semibold text-emerald-600">In stock</span>}
                       </p>
@@ -21879,8 +22363,8 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
 
                 <div className="mt-auto space-y-2 pt-5">
                   {(() => {
-                    const canAct = variantIsInStock && (variantSizeOptions.length === 0 || selectedVariant);
-                    const label = !variantIsInStock ? 'Out of Stock' : !selectedVariant && variantSizeOptions.length > 0 ? 'Select a size' : null;
+                    const canAct = variantIsInStock && !variantCartFull && (variantSizeOptions.length === 0 || selectedVariant);
+                    const label = variantCartFull ? 'In basket' : !variantIsInStock ? 'Out of Stock' : !selectedVariant && variantSizeOptions.length > 0 ? 'Select a size' : null;
                     return (
                       <>
                         <button
@@ -23206,13 +23690,13 @@ const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
     ...item,
     route: activeCategory ? `/natural-resources-minerals/${activeCategory.slug}` : '/natural-resources-minerals',
     marketName: t('markets.naturalResources'),
-    details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Resource listing'}`,
+    details: [item.selectedSize && `Size: ${item.selectedSize}`, item.category || 'Seller item', item.specification || item.description || item.sellerName || 'Resource listing'].filter(Boolean).join(' • '),
   });
   const buildWishlistItem = (item) => createWishlistItem({
     ...item,
     route: activeCategory ? `/natural-resources-minerals/${activeCategory.slug}` : '/natural-resources-minerals',
     marketName: t('markets.naturalResources'),
-    details: `${item.category || 'Seller item'} • ${item.specification || item.sellerName || 'Resource listing'}`,
+    details: [item.selectedSize && `Size: ${item.selectedSize}`, item.category || 'Seller item', item.specification || item.sellerName || 'Resource listing'].filter(Boolean).join(' • '),
   });
 
   const openItemDetails = (item) => {
@@ -23244,7 +23728,7 @@ const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       image: item.image,
       images: item.images || (item.image ? [item.image] : []),
       ...getItemDetailSizeProps(item),
-      availableQuantity: getSellerListingStock(sellerItems, item),
+      availableQuantity: hasItemSizeStock(item) ? (item.availableQuantity ?? getSellerListingStock(sellerItems, item)) : getSellerListingStock(sellerItems, item),
       marketName: t('markets.naturalResources'),
       details: `${item.category || 'Seller item'} • ${item.brand || item.sellerName || 'Resource listing'}${item.unit ? ` • Sold per ${item.unit}` : ''}`,
       priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -35774,6 +36258,7 @@ const NurseryHubPage = ({
   onToggleWishlist,
   wishlistItemIds = [],
   sellerItems = [],
+  cartItems = [],
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -36064,6 +36549,15 @@ const NurseryHubPage = ({
   const variantIsInStock = variantSizeOptions.length === 0
     ? isInStock(selectedItem)
     : !!(selectedVariant && (variantSizeQty == null ? true : variantSizeQty > 0));
+  const cartQtyForVariant = (() => {
+    if (!selectedItem || !selectedVariant || !Array.isArray(cartItems) || !cartItems.length) return 0;
+    const baseId = String(selectedItem.id || '').replace(/::size-[a-z0-9-]+$/i, '');
+    const safeSizeId = selectedVariant.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const sizeCartId = `${baseId}::size-${safeSizeId}`;
+    const match = cartItems.find((ci) => String(ci.id) === sizeCartId);
+    return match ? (Number(match.quantity) || 0) : 0;
+  })();
+  const variantCartFull = variantSizeQty !== null && variantSizeQty > 0 && cartQtyForVariant >= variantSizeQty;
 
   const buildVariantCartItem = (item) => {
     const adjustedItem = variantPrice != null ? { ...item, price: variantPrice } : item;
@@ -36787,12 +37281,17 @@ const NurseryHubPage = ({
                     </div>
                   ) : null}
                   <div className="col-span-2">
-                    {variantIsInStock ? (
+                    {variantCartFull ? (
+                      <span className="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">All stock in your basket — pick another size</span>
+                    ) : variantIsInStock ? (
                       (() => {
                         const displayQty = variantSizeQty != null ? variantSizeQty : selectedItem.quantity;
-                        return displayQty != null ? (
+                        const remaining = variantSizeQty != null ? variantSizeQty - cartQtyForVariant : null;
+                        const inCartNote = cartQtyForVariant > 0 && remaining != null ? ` (${cartQtyForVariant} in basket)` : '';
+                        const shownQty = remaining != null ? remaining : displayQty;
+                        return shownQty != null ? (
                           <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                            In stock — {displayQty} available{variantSizeQty != null && variantSizeOptions.length > 0 ? ' for this size' : ''}
+                            In stock — {shownQty} available{variantSizeQty != null && variantSizeOptions.length > 0 ? ' for this size' : ''}{inCartNote}
                           </span>
                         ) : (
                           <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">In stock</span>
@@ -36845,15 +37344,15 @@ const NurseryHubPage = ({
                     </button>
                     <button
                       type="button"
-                      disabled={!variantIsInStock || (variantSizeOptions.length > 0 && !selectedVariant)}
+                      disabled={!variantIsInStock || variantCartFull || (variantSizeOptions.length > 0 && !selectedVariant)}
                       onClick={() => {
-                        if (!variantIsInStock) return;
+                        if (!variantIsInStock || variantCartFull) return;
                         if (typeof onAddToCart === 'function') onAddToCart(buildVariantCartItem(selectedItem));
                         setSelectedItem(null);
                       }}
-                      className={`rounded-md py-2 text-sm font-semibold transition ${variantIsInStock ? `${cudyBluePrimaryButtonClassName} bg-[var(--svs-primary)] text-white hover:bg-[var(--svs-primary-strong)]` : 'cursor-not-allowed bg-slate-100 text-slate-400'}`}
+                      className={`rounded-md py-2 text-sm font-semibold transition ${variantIsInStock && !variantCartFull ? `${cudyBluePrimaryButtonClassName} bg-[var(--svs-primary)] text-white hover:bg-[var(--svs-primary-strong)]` : 'cursor-not-allowed bg-slate-100 text-slate-400'}`}
                     >
-                      {variantIsInStock ? 'Add to Cart' : 'Out of Stock'}
+                      {variantCartFull ? 'In basket' : variantIsInStock ? 'Add to Cart' : 'Out of Stock'}
                     </button>
                   </div>
                   <button
@@ -37923,13 +38422,13 @@ const SafetyPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds =
     ...item,
     route: '/safety',
     marketName: t('markets.safety'),
-    details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Toys & kids'}`,
+    details: [item.selectedSize && `Size: ${item.selectedSize}`, item.category || 'Seller item', item.description || item.sellerName || 'Toys & kids'].filter(Boolean).join(' • '),
   });
   const buildWishlistItem = (item) => createWishlistItem({
     ...item,
     route: '/safety',
     marketName: t('markets.safety'),
-    details: `${item.category || 'Seller item'} • ${item.sellerName || 'Toys & kids'}`,
+    details: [item.selectedSize && `Size: ${item.selectedSize}`, item.category || 'Seller item', item.sellerName || 'Toys & kids'].filter(Boolean).join(' • '),
   });
 
   const filtersPanel = (
@@ -38011,7 +38510,7 @@ const SafetyPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds =
                 image: item.image,
                 images: item.images || (item.image ? [item.image] : []),
                 ...getItemDetailSizeProps(item),
-                availableQuantity: getSellerListingStock(sellerItems, item),
+                availableQuantity: hasItemSizeStock(item) ? (item.availableQuantity ?? getSellerListingStock(sellerItems, item)) : getSellerListingStock(sellerItems, item),
                 marketName: t('markets.safety'),
                 details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Toys & kids'}`,
                 priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
@@ -40610,7 +41109,8 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
     const isCartMode = !isBuyNowMode;
     const handleQtyChange = (item, nextQty) => {
       if (!isCartMode || !onUpdateCartQuantity) return;
-      const safe = Math.max(1, Math.min(99, Number(nextQty) || 1));
+      const maxQty = typeof item.availableQuantity === 'number' && item.availableQuantity > 0 ? item.availableQuantity : 99;
+      const safe = Math.max(1, Math.min(maxQty, Number(nextQty) || 1));
       // onUpdateCartQuantity (handleUpdateCartQuantity) adds its second
       // argument to the item's current quantity — it's a delta, not the
       // target quantity — so convert here rather than passing `safe`
@@ -40696,8 +41196,9 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
                         <button
                           type="button"
                           onClick={() => handleQtyChange(item, item.quantity + 1)}
+                          disabled={typeof item.availableQuantity === 'number' && item.availableQuantity > 0 && item.quantity >= item.availableQuantity}
                           aria-label="Increase quantity"
-                          className="h-10 w-12 text-lg font-bold text-[var(--svs-text)] transition hover:bg-[var(--svs-border)]/30 hover:text-[var(--svs-primary)]"
+                          className="h-10 w-12 text-lg font-bold text-[var(--svs-text)] transition hover:bg-[var(--svs-border)]/30 hover:text-[var(--svs-primary)] disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           +
                         </button>
@@ -51155,6 +51656,7 @@ const MOBILITY_FEATURE_ICON = {
 
 const ItemDetailsModal = ({
   item,
+  cartItems = [],
   onClose,
   onAddToCart,
   onBuyNow,
@@ -51291,7 +51793,18 @@ const ItemDetailsModal = ({
   const allSizesSoldOut = itemHasSizeStock && sizeOptions.length > 0 && getItemInStockSizes(item).length === 0;
   const hasPlainStockValue = item.availableQuantity !== null && item.availableQuantity !== undefined;
   const isPlainOutOfStock = hasPlainStockValue && normalizeListingQuantity(item.availableQuantity, 0) <= 0;
-  const isModalOutOfStock = isPlainOutOfStock || selectedSizeSoldOut || allSizesSoldOut;
+  // How many of this size variant are already in the cart?
+  const cartQtyForSelectedSize = (() => {
+    if (!selectedSize || !Array.isArray(cartItems) || !cartItems.length) return 0;
+    const baseId = String(actionCartItem?.id || item?.id || '').replace(/::size-[a-z0-9-]+$/i, '');
+    const normalizedSize = sanitizeStorageSegment(selectedSize);
+    const sizeCartId = `${baseId}::size-${normalizedSize}`;
+    const match = cartItems.find((ci) => String(ci.id) === sizeCartId);
+    return match ? (Number(match.quantity) || 0) : 0;
+  })();
+  const selectedSizeStock = itemHasSizeStock && selectedSize ? getItemSizeStock(item, selectedSize) : null;
+  const selectedSizeCartFull = selectedSizeStock !== null && cartQtyForSelectedSize >= selectedSizeStock;
+  const isModalOutOfStock = isPlainOutOfStock || selectedSizeSoldOut || allSizesSoldOut || selectedSizeCartFull;
   const isInformalMarketItem = item.marketKey === 'informalMarket' || String(item.marketName || '').toLowerCase().includes('informal market');
   const rawSellerName = String(
     actionCartItem?.sellerName
@@ -52145,9 +52658,24 @@ const ItemDetailsModal = ({
                     );
                   })}
                 </div>
-                {selectedSizeSoldOut ? (
-                  <p className="mt-2 text-sm font-semibold text-rose-600">That size is sold out. Pick another size to order.</p>
-                ) : null}
+                {selectedSizeSoldOut || selectedSizeCartFull ? (
+                  <p className="mt-2 text-sm font-semibold text-rose-600">
+                    {selectedSizeCartFull
+                      ? 'All stock for this size is already in your basket. Pick another size.'
+                      : 'That size is sold out. Pick another size to order.'}
+                  </p>
+                ) : selectedSize && itemHasSizeStock ? (() => {
+                  const sizeQty = getItemSizeStock(item, selectedSize);
+                  if (sizeQty == null) return null;
+                  const remaining = sizeQty - cartQtyForSelectedSize;
+                  return (
+                    <p className="mt-2 text-xs text-[var(--svs-muted)]">
+                      {cartQtyForSelectedSize > 0
+                        ? <span className="font-semibold text-amber-600">{remaining} remaining ({cartQtyForSelectedSize} in basket)</span>
+                        : <span className="font-semibold text-emerald-600">{sizeQty} available in this size</span>}
+                    </p>
+                  );
+                })() : null}
               </div>
             ) : null}
             {isInformalMarketItem ? (
@@ -52164,7 +52692,7 @@ const ItemDetailsModal = ({
                     className="rounded-lg bg-[var(--svs-primary)] px-6 py-3 text-base font-semibold text-white shadow hover:bg-[var(--svs-primary-strong)] disabled:cursor-not-allowed disabled:bg-slate-400"
                     onClick={() => onAddToCart?.(actionCartItem)}
                   >
-                    {isModalOutOfStock ? 'Out of stock' : 'Add to Basket'}
+                    {selectedSizeCartFull ? 'In basket' : isModalOutOfStock ? 'Out of stock' : 'Add to Basket'}
                   </button>
                   <button
                     type="button"
@@ -52172,7 +52700,7 @@ const ItemDetailsModal = ({
                     className="rounded-lg border border-[var(--svs-primary)] px-6 py-3 text-base font-semibold text-[var(--svs-primary)] hover:bg-[var(--svs-primary-faint)] disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400"
                     onClick={() => onBuyNow?.(actionCartItem)}
                   >
-                    {isModalOutOfStock ? 'Out of stock' : 'Buy Now'}
+                    {selectedSizeCartFull ? 'In basket' : isModalOutOfStock ? 'Out of stock' : 'Buy Now'}
                   </button>
                 </>
               ) : null}
@@ -53727,7 +54255,13 @@ const CardGrid = ({ items, focusItems, boundsItems, buttonLabel, secondaryButton
         const isOutOfStock = (availableQuantity !== null && availableQuantity <= 0)
           || selectedSizeSoldOut
           || allSizesSoldOut;
-        const actionItem = selectedSize ? { ...item, selectedSize } : item;
+        const sizeSpecificStock = (itemHasSizeStock && selectedSize) ? getItemSizeStock(item, selectedSize) : null;
+        const sizeSpecificPrice = (itemSizeOptions.length > 0 && selectedSize) ? getItemSizePrice(item, selectedSize) : null;
+        const actionItem = {
+          ...(selectedSize ? { ...item, selectedSize } : item),
+          ...(sizeSpecificStock !== null ? { availableQuantity: sizeSpecificStock } : {}),
+          ...(sizeSpecificPrice !== null ? { price: String(sizeSpecificPrice) } : {}),
+        };
         const rawSellerName = String(actionItem?.sellerName || item?.sellerName || '').trim();
         const sellerEmail = (() => {
           const email = normalizeEmail(actionItem?.sellerEmail || item?.sellerEmail || '');
@@ -53772,7 +54306,7 @@ const CardGrid = ({ items, focusItems, boundsItems, buttonLabel, secondaryButton
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
-                    onToggleWishlist(item);
+                    onToggleWishlist(actionItem);
                   }}
                   aria-pressed={isItemWishlisted?.(item) || false}
                   aria-label={isItemWishlisted?.(item) ? 'Remove from wishlist' : 'Add to wishlist'}
@@ -53792,10 +54326,13 @@ const CardGrid = ({ items, focusItems, boundsItems, buttonLabel, secondaryButton
               {/* Meta (volume, brand, etc.) — hidden on mobile to keep cards compact. */}
               <div className="mb-2 hidden text-base font-medium text-[#374151] sm:block">{metaRenderer(item)}</div>
               {/* Description intentionally hidden in main listing. Only show in details modal. */}
-              {availableQuantity !== null ? (
-                <p className="mb-2 hidden text-xs text-[#0f6674]/70 sm:block">
-                  Quantity: {availableQuantity}
-                  {isOutOfStock ? ' (Out of stock)' : ''}
+              {(sizeSpecificStock !== null || availableQuantity !== null) ? (
+                <p className="mb-2 hidden text-xs sm:block">
+                  {sizeSpecificStock !== null
+                    ? sizeSpecificStock === 0
+                      ? <span className="text-rose-600 font-semibold">Out of stock in this size</span>
+                      : <span className="text-emerald-600 font-semibold">{sizeSpecificStock} available in this size</span>
+                    : <span className="text-[#0f6674]/70">Quantity: {availableQuantity}{isOutOfStock ? ' (Out of stock)' : ''}</span>}
                 </p>
               ) : null}
               {itemSizeOptions.length ? (
@@ -54389,7 +54926,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/fast-food" element={<FastFoodPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/beverages-liquors" element={<BeveragesLiquorsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/building-construction-tools" element={<ConstructionToolsPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
-    <Route path="/fashion-style" element={<FashionStylePage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
+    <Route path="/fashion-style" element={<FashionStylePage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} cartItems={cartItems} />} />
     <Route path="/traditional-medicines-herbs" element={<TraditionalMedicinesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/wellness" element={<WellnessPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/stationery-office" element={<StationeryPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
@@ -54430,7 +54967,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/betting-lottery-games/confirm" element={<LotteryConfirmPage onBuyNow={onBuyNow} />} />
     <Route path="/international-lottery-games" element={<Navigate to="/betting-lottery-games" replace />} />
     <Route path="/livestock-hub" element={<LivestockHubPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} />} />
-    <Route path="/nursery-hub" element={<NurseryHubPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} />} />
+    <Route path="/nursery-hub" element={<NurseryHubPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} cartItems={cartItems} />} />
     <Route path="/betting-hub" element={<Navigate to="/betting-lottery-games" replace />} />
     <Route path="/betting-voting" element={<Navigate to="/betting-lottery-games" replace />} />
     <Route path="/safety" element={<SafetyPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
@@ -56609,6 +57146,7 @@ const App = () => {
       />
       <ItemDetailsModal
         item={selectedItemDetails}
+        cartItems={cartItems}
         onClose={handleCloseItemDetails}
         onAddToCart={handleAddToCart}
         onBuyNow={handleBuyNow}
