@@ -10148,6 +10148,30 @@ const toWishlistItemRecord = (userEmail, item) => ({
   unit_price_label: item.unitPriceLabel,
 });
 
+// Returns { displaySize, displayDetails } for a cart/order line item.
+// displaySize: the human-readable selected size (e.g. "30 ml").
+// displayDetails: item.details with the "Size: X •" prefix stripped.
+const getItemDisplayParts = (item) => {
+  const displaySize = (() => {
+    if (item.selectedSize) return item.selectedSize;
+    if (item.details) {
+      const m = item.details.match(/^Size:\s*([^•]+)/);
+      if (m) return m[1].trim();
+    }
+    const slugMatch = String(item.id || '').match(/::size-([a-z0-9-]+)$/i);
+    return slugMatch ? slugMatch[1] : null;
+  })();
+  const displayDetails = (() => {
+    if (!item.details) return null;
+    if (displaySize && /^Size:\s*/i.test(item.details)) {
+      const stripped = item.details.replace(/^Size:\s*[^•]*(?:•\s*)?/, '').trim();
+      return stripped || null;
+    }
+    return item.details;
+  })();
+  return { displaySize, displayDetails };
+};
+
 const mapOrderRecord = (record) => ({
   id: record.order_key,
   reference: record.reference,
@@ -21883,7 +21907,9 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
     const baseId = String(selectedItem.id || '').replace(/::size-[a-z0-9-]+$/i, '');
     const normalizedSize = sanitizeStorageSegment(selectedVariant);
     const sizeCartId = `${baseId}::size-${normalizedSize}`;
-    const match = cartItems.find((ci) => String(ci.id) === sizeCartId);
+    // ci.id has a route prefix from getCollectionItemId; ci.sku holds the raw
+    // pre-transform id which matches sizeCartId directly.
+    const match = cartItems.find((ci) => String(ci.sku || ci.id) === sizeCartId);
     return match ? (Number(match.quantity) || 0) : 0;
   })();
   const variantCartFull = variantSizeQty !== null && variantSizeQty > 0 && cartQtyForVariant >= variantSizeQty;
@@ -30397,9 +30423,10 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                                   ) : (
                                     <p className="font-semibold text-[var(--svs-text)]">{lineItem.title || 'Untitled item'}</p>
                                   )}
-                                  {lineItem.details ? (
-                                    <p className="mt-0.5 text-[var(--svs-muted)]">{lineItem.details}</p>
-                                  ) : null}
+                                  {(() => { const { displaySize: sdSize, displayDetails: sdDets } = getItemDisplayParts(lineItem); return (<>
+                                    {sdSize ? <span className="mt-1 inline-flex items-center rounded-full bg-[var(--svs-primary)]/10 px-2 py-0.5 text-[11px] font-semibold text-[var(--svs-primary)]">Size: {sdSize}</span> : null}
+                                    {sdDets ? <p className="mt-0.5 text-[var(--svs-muted)]">{sdDets}</p> : null}
+                                  </>); })()}
                                   <p className="mt-0.5 text-[var(--svs-muted)]">Qty: {quantity}</p>
                                 </div>
                                 <p className="shrink-0 font-semibold text-[var(--svs-primary-strong)]">{formatCheckoutAmount(linePrice)}</p>
@@ -36554,7 +36581,9 @@ const NurseryHubPage = ({
     const baseId = String(selectedItem.id || '').replace(/::size-[a-z0-9-]+$/i, '');
     const safeSizeId = selectedVariant.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     const sizeCartId = `${baseId}::size-${safeSizeId}`;
-    const match = cartItems.find((ci) => String(ci.id) === sizeCartId);
+    // ci.id has a route prefix from getCollectionItemId; ci.sku holds the raw
+    // pre-transform id which matches sizeCartId directly.
+    const match = cartItems.find((ci) => String(ci.sku || ci.id) === sizeCartId);
     return match ? (Number(match.quantity) || 0) : 0;
   })();
   const variantCartFull = variantSizeQty !== null && variantSizeQty > 0 && cartQtyForVariant >= variantSizeQty;
@@ -39680,9 +39709,10 @@ const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onClea
                 <div>
                   <h3 className="text-lg font-bold text-[var(--svs-text)]">{item.title}</h3>
                   <p className="mt-1 text-sm text-[var(--svs-muted)]">{item.marketName}</p>
-                  {item.details ? (
-                    <p className="mt-0.5 text-xs text-[var(--svs-muted)]">{item.details}</p>
-                  ) : null}
+                  {(() => { const { displaySize: wSize, displayDetails: wDetails } = getItemDisplayParts(item); return (<>
+                    {wSize ? <span className="mt-1 inline-flex items-center rounded-full bg-[var(--svs-primary)]/10 px-2.5 py-0.5 text-xs font-semibold text-[var(--svs-primary)]">Size: {wSize}</span> : null}
+                    {wDetails ? <p className="mt-0.5 text-xs text-[var(--svs-muted)]">{wDetails}</p> : null}
+                  </>); })()}
                 </div>
                 <Heart className="h-5 w-5 fill-current text-rose-500" />
               </div>
@@ -41138,6 +41168,7 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
             const listingHref = item.route && rawItemSku
               ? `${item.route}?focus=${encodeURIComponent(rawItemSku)}`
               : (item.route || null);
+            const { displaySize: cartDisplaySize, displayDetails: cartDisplayDetails } = getItemDisplayParts(item);
             return (
               <li key={`preview-${item.id}`} className="flex items-start gap-4 py-4">
                 {listingHref ? (
@@ -41170,8 +41201,13 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
                       {item.marketName}
                     </a>
                   ) : null}
-                  {item.details ? (
-                    <p className="mt-0.5 truncate text-xs text-[var(--svs-muted)]">{item.details}</p>
+                  {cartDisplaySize ? (
+                    <span className="mt-1 inline-flex items-center rounded-full bg-[var(--svs-primary)]/10 px-2.5 py-0.5 text-xs font-semibold text-[var(--svs-primary)]">
+                      Size: {cartDisplaySize}
+                    </span>
+                  ) : null}
+                  {cartDisplayDetails ? (
+                    <p className="mt-0.5 text-xs text-[var(--svs-muted)]">{cartDisplayDetails}</p>
                   ) : null}
                   <p className="mt-1 text-xs text-[var(--svs-muted)]">
                     {formatCartItemAmount(item, item.unitPrice)} each
@@ -48033,9 +48069,10 @@ const OrderConfirmationPage = ({ orders }) => {
                 ) : (
                   <>
                     <h3 className="text-lg font-bold text-[var(--svs-primary-strong)]">{headlineItem.title}</h3>
-                    {headlineItem.details ? (
-                      <p className="text-xs text-[var(--svs-muted)]">{headlineItem.details}</p>
-                    ) : null}
+                    {(() => { const { displaySize: hiSize, displayDetails: hiDets } = getItemDisplayParts(headlineItem); return (<>
+                      {hiSize ? <span className="mt-1 inline-flex items-center rounded-full bg-[var(--svs-primary)]/10 px-2.5 py-0.5 text-xs font-semibold text-[var(--svs-primary)]">Size: {hiSize}</span> : null}
+                      {hiDets ? <p className="text-xs text-[var(--svs-muted)]">{hiDets}</p> : null}
+                    </>); })()}
                     {headlineItem.category || headlineItem.marketName ? (
                       <span className="inline-block rounded-full bg-[var(--svs-primary-strong)] px-3 py-1 text-xs font-semibold text-white">
                         {headlineItem.category || headlineItem.marketName}
@@ -48474,9 +48511,10 @@ const TrackOrderPage = ({ orders, onAdminSetOrderStatus }) => {
                       ) : (
                         <p className="font-bold text-[var(--svs-text)]">{lineItem.title || 'Untitled item'}</p>
                       )}
-                      {lineItem.details ? (
-                        <p className="mt-0.5 text-xs text-[var(--svs-muted)]">{lineItem.details}</p>
-                      ) : null}
+                      {(() => { const { displaySize: liSize, displayDetails: liDets } = getItemDisplayParts(lineItem); return (<>
+                        {liSize ? <span className="mt-1 inline-flex items-center rounded-full bg-[var(--svs-primary)]/10 px-2.5 py-0.5 text-xs font-semibold text-[var(--svs-primary)]">Size: {liSize}</span> : null}
+                        {liDets ? <p className="mt-0.5 text-xs text-[var(--svs-muted)]">{liDets}</p> : null}
+                      </>); })()}
                       {lineItem.marketName ? (
                         <p className="mt-0.5 text-xs text-[var(--svs-muted)]">{lineItem.marketName}</p>
                       ) : null}
@@ -48936,7 +48974,10 @@ const OrderCard = ({ order, onCancelOrder, cancellingOrderId, onSetCancelError, 
                   ) : (
                     <p className="truncate text-sm font-bold text-[var(--svs-text)]">{lineItem.title || 'Untitled item'}</p>
                   )}
-                  {lineItem.details ? <p className="mt-0.5 truncate text-xs text-[var(--svs-muted)]">{lineItem.details}</p> : null}
+                  {(() => { const { displaySize: liSize2, displayDetails: liDets2 } = getItemDisplayParts(lineItem); return (<>
+                    {liSize2 ? <span className="mt-1 inline-flex items-center rounded-full bg-[var(--svs-primary)]/10 px-2 py-0.5 text-[11px] font-semibold text-[var(--svs-primary)]">Size: {liSize2}</span> : null}
+                    {liDets2 ? <p className="mt-0.5 truncate text-xs text-[var(--svs-muted)]">{liDets2}</p> : null}
+                  </>); })()}
                   <p className="mt-0.5 text-xs text-[var(--svs-muted)]">Qty: {lineQty}</p>
                 </div>
                 <p className="shrink-0 text-sm font-semibold text-[var(--svs-primary-strong)]">{linePrice > 0 ? formatCheckoutAmount(linePrice) : ''}</p>
@@ -51799,7 +51840,10 @@ const ItemDetailsModal = ({
     const baseId = String(actionCartItem?.id || item?.id || '').replace(/::size-[a-z0-9-]+$/i, '');
     const normalizedSize = sanitizeStorageSegment(selectedSize);
     const sizeCartId = `${baseId}::size-${normalizedSize}`;
-    const match = cartItems.find((ci) => String(ci.id) === sizeCartId);
+    // When baseId comes from actionCartItem.id (full path like /route:seller-x),
+    // ci.id matches. When it comes from the raw item.id (seller-x without route),
+    // ci.id won't match but ci.sku (the pre-transform raw id) will.
+    const match = cartItems.find((ci) => String(ci.id) === sizeCartId || String(ci.sku || '') === sizeCartId);
     return match ? (Number(match.quantity) || 0) : 0;
   })();
   const selectedSizeStock = itemHasSizeStock && selectedSize ? getItemSizeStock(item, selectedSize) : null;
