@@ -13077,6 +13077,7 @@ const ECommercePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
                 availableQuantity: hasItemSizeStock(item) ? (item.availableQuantity ?? getSellerListingStock(sellerItems, item)) : getSellerListingStock(sellerItems, item),
                 marketName: t('markets.ecommerce'),
                 details: item.subtitle || item.description || item.sellerName,
+                description: item.description || '',
                 priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
                 category: item.category || '',
                 brand: item.brand || '',
@@ -13618,6 +13619,7 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
       availableQuantity: hasItemSizeStock(item) ? (item.availableQuantity ?? getSellerListingStock(sellerItems, item)) : getSellerListingStock(sellerItems, item),
       marketName: t('markets.bookings'),
       details,
+      description: item.description || '',
       priceLabel: getSalePrices(item.price, 0, sourceCurrency).nowPrice,
       cartItem,
       wishlistItem,
@@ -14565,6 +14567,7 @@ const VotingClientsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIt
                     availableQuantity: hasItemSizeStock(item) ? (item.availableQuantity ?? getSellerListingStock(sellerItems, item)) : getSellerListingStock(sellerItems, item),
                     marketName: t('markets.votingClients'),
                     details: [item.category, item.brand, item.description || item.sellerName].filter(Boolean).join(' • '),
+                    description: item.description || '',
                     priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
                     detailsTable: {
                       Category: item.category || 'Beauty, Fitness & Sports',
@@ -14852,6 +14855,7 @@ const VotingProvidersPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
                   availableQuantity: hasItemSizeStock(item) ? (item.availableQuantity ?? getSellerListingStock(sellerItems, item)) : getSellerListingStock(sellerItems, item),
                   marketName: t('markets.votingProviders'),
                   details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Jewellery & accessories'}`,
+                  description: item.description || '',
                   priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
                   detailsTable: {
                     Category: item.category || 'Jewellery & Accessories',
@@ -16295,6 +16299,7 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       availableQuantity: hasItemSizeStock(item) ? (item.availableQuantity ?? getSellerListingStock(sellerItems, item)) : getSellerListingStock(sellerItems, item),
       marketName: 'Beverages & Liquors',
       details,
+      description: item.description || '',
       priceLabel: getSalePrices(item.price, SALE_DISCOUNT_RATE, item.currency).nowPrice,
       cartItem,
       wishlistItem,
@@ -16872,6 +16877,7 @@ const WellnessPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
                     availableQuantity: hasItemSizeStock(item) ? (item.availableQuantity ?? getSellerListingStock(sellerItems, item)) : getSellerListingStock(sellerItems, item),
                     marketName: t('markets.wellness'),
                     details: [item.category, item.brand, item.description || item.sellerName].filter(Boolean).join(' • '),
+                    description: item.description || '',
                     priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
                     detailsTable: {
                       Category: item.category || 'Wellness',
@@ -17171,6 +17177,7 @@ const TraditionalMedicinesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wis
                   availableQuantity: hasItemSizeStock(item) ? (item.availableQuantity ?? getSellerListingStock(sellerItems, item)) : getSellerListingStock(sellerItems, item),
                   marketName: t('markets.traditionalMedicines'),
                   details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Traditional herbal listing'}`,
+                  description: item.description || '',
                   priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
                   highlights: [item.traditionalUses, item.preparationMethod].filter(Boolean),
                   detailsTable: {
@@ -17403,6 +17410,7 @@ const StationeryPage = ({ onToggleWishlist, wishlistItemIds = [], sellerItems = 
       availableQuantity: hasItemSizeStock(item) ? (item.availableQuantity ?? getSellerListingStock(sellerItems, item)) : getSellerListingStock(sellerItems, item),
       marketName: t('markets.stationery'),
       details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Ready for school and office use'}`,
+      description: item.description || '',
       priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
       productType: item.productType,
       category: item.category,
@@ -21306,6 +21314,7 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       availableQuantity: hasItemSizeStock(item) ? (item.availableQuantity ?? getSellerListingStock(sellerItems, item)) : getSellerListingStock(sellerItems, item),
       marketName: t('markets.mobilityVehicles'),
       details: `${item.category || 'Seller item'} • ${item.specification || item.description || item.sellerName || 'Transport listing'}`,
+      description: item.description || '',
       priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
       cartItem: buildCartItem(item),
       wishlistItem,
@@ -22158,6 +22167,7 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
         images: item.images || (item.image ? [item.image] : []),
         marketName: t('markets.fashionStyle'),
         details: buildDetailsText(item),
+        description: item.description || '',
         priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
         sizeOptions: [],
         currency: item.currency,
@@ -23757,6 +23767,7 @@ const NaturalResourcesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       availableQuantity: hasItemSizeStock(item) ? (item.availableQuantity ?? getSellerListingStock(sellerItems, item)) : getSellerListingStock(sellerItems, item),
       marketName: t('markets.naturalResources'),
       details: `${item.category || 'Seller item'} • ${item.brand || item.sellerName || 'Resource listing'}${item.unit ? ` • Sold per ${item.unit}` : ''}`,
+      description: item.description || '',
       priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
       cartItem: buildCartItem(item),
       wishlistItem,
@@ -38542,6 +38553,7 @@ const SafetyPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds =
                 availableQuantity: hasItemSizeStock(item) ? (item.availableQuantity ?? getSellerListingStock(sellerItems, item)) : getSellerListingStock(sellerItems, item),
                 marketName: t('markets.safety'),
                 details: `${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Toys & kids'}`,
+                description: item.description || '',
                 priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
                 highlights: [
                   item.ageRange ? `Recommended for ${item.ageRange}` : null,
@@ -39685,6 +39697,7 @@ const WishlistPage = ({ wishlistItems, onAddToCart, onRemoveWishlistItem, onClea
               availableQuantity,
               marketName: item.marketName,
               details: item.details,
+              description: item.description || '',
               priceLabel: item.unitPriceLabel,
               cartItem: { ...item, quantity: 1 },
               wishlistItem: item,
@@ -52624,6 +52637,15 @@ const ItemDetailsModal = ({
                 <div className="mt-3 rounded-lg border border-[#d6e6f5] bg-[#f8fbff] px-3 py-2 text-xs text-slate-600">
                   <p className="font-semibold text-[#0f6674]">Listed by: {sellerDisplayName}</p>
                   {sellerChatEmail ? <p className="mt-0.5 truncate">{sellerChatEmail}</p> : null}
+                </div>
+              ) : null}
+              {/* Seller description — shown for non-rich-detail markets (rich variants show productOverview instead) */}
+              {item.description && !isRichDetail ? (
+                <div>
+                  <h3 className="mt-4 text-lg font-bold text-[var(--svs-text)]">Description</h3>
+                  <div className="mt-2 whitespace-pre-line text-[15px] text-slate-600">
+                    {item.description}
+                  </div>
                 </div>
               ) : null}
             </div>
