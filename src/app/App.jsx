@@ -56815,11 +56815,13 @@ const App = () => {
       return lookup;
     }, new Map());
 
-    const orderItems = sourceItems.map((item) => {
+    const orderItems = sourceItems.flatMap((item) => {
       const existingSellerEmail = normalizeEmail(item.sellerEmail || '');
       const existingSellerName = item.sellerName || '';
       const isTicketItem = item.route === '/bookings-tickets' || item.marketKey === 'tickets';
-      const ticketFields = isTicketItem ? (() => {
+
+      if (isTicketItem) {
+        const qty = Math.max(Number(item.quantity) || 1, 1);
         const listingId = getSellerListingIdFromItemKey(item.sku || item.id);
         const prevTicketCount = orders.reduce((count, order) =>
           count + (order.items || []).filter((oi) => {
@@ -56827,22 +56829,32 @@ const App = () => {
             return oiListingId === listingId && Boolean(oi.ticketNumber);
           }).length
         , 0);
-        return {
-          ticketNumber: item.ticketNumber || generateTicketNumber(),
-          ticketSequence: item.ticketSequence || prevTicketCount + 1,
-          ticketClaimed: item.ticketClaimed || false,
-          ticketClaimedAt: item.ticketClaimedAt || null,
-          ticketClaimedBy: item.ticketClaimedBy || null,
-        };
-      })() : {};
+        const itemIdKey = String(item.id || '').includes(':')
+          ? String(item.id || '').split(':').pop()
+          : String(item.id || '');
+        const sellerFromLookup = sellerLookup.get(String(item.sku || '')) || sellerLookup.get(itemIdKey) || null;
+        const resolvedSellerEmail = existingSellerEmail || normalizeEmail(sellerFromLookup?.sellerEmail || '');
+        const resolvedSellerName = existingSellerName || sellerFromLookup?.sellerName || '';
+        return Array.from({ length: qty }, (_, i) => ({
+          ...item,
+          quantity: 1,
+          sellerEmail: resolvedSellerEmail,
+          sellerName: resolvedSellerName,
+          ticketNumber: generateTicketNumber(),
+          ticketSequence: prevTicketCount + i + 1,
+          ticketClaimed: false,
+          ticketClaimedAt: null,
+          ticketClaimedBy: null,
+          ticketStatus: null,
+        }));
+      }
 
       if (existingSellerEmail) {
-        return {
+        return [{
           ...item,
           sellerEmail: existingSellerEmail,
           sellerName: existingSellerName,
-          ...ticketFields,
-        };
+        }];
       }
 
       const itemIdKey = String(item.id || '').includes(':')
@@ -56850,12 +56862,11 @@ const App = () => {
         : String(item.id || '');
       const sellerFromLookup = sellerLookup.get(String(item.sku || '')) || sellerLookup.get(itemIdKey) || null;
 
-      return {
+      return [{
         ...item,
         sellerEmail: normalizeEmail(sellerFromLookup?.sellerEmail || ''),
         sellerName: sellerFromLookup?.sellerName || existingSellerName,
-        ...ticketFields,
-      };
+      }];
     });
 
     const resolvedPayment = paymentDetails || {
