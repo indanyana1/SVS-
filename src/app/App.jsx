@@ -49682,7 +49682,7 @@ const TicketQrDisplay = ({ lineItem, onUpdateTicketStatus }) => {
       {/* Perforation */}
       <div className="mx-4 border-t border-dashed border-slate-200" />
       <div className="px-4 py-2 text-center text-[10px] text-slate-400">
-        Qty: {Math.max(Number(lineItem.quantity) || 1, 1)} &bull; {lineItem.marketName || 'Bookings & Tickets'} &bull; SVS Platform
+        Qty: {Math.max(Number(lineItem.quantity) || 1, 1)} &bull; {lineItem.marketName || 'Bookings & Tickets'} &bull; Biznisdil
       </div>
     </div>
   );
