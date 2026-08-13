@@ -29098,7 +29098,7 @@ const SellerTicketValidator = ({ onClaimTicket, userEmail }) => {
   );
 };
 
-const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerItem, onToggleListingPaused, onUpdateOrderStatus, onClaimTicket, initialView = 'listings' }) => {
+const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerItem, onToggleListingPaused, onUpdateOrderStatus, onClaimTicket, onOrganiserCancelOrder, initialView = 'listings' }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -29140,6 +29140,9 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
   const [listingStockFilter, setListingStockFilter] = useState('all');
   const [listingSort, setListingSort] = useState('newest');
   const [orderStatusFilter, setOrderStatusFilter] = useState('all');
+  const [cancelEventConfirmId, setCancelEventConfirmId] = useState('');
+  const [cancelEventLoading, setCancelEventLoading] = useState(false);
+  const [cancelEventError, setCancelEventError] = useState('');
 
   // Subscribe to FX rate updates so converted KPIs re-render when rates arrive.
   useBuyerCurrency();
@@ -30601,19 +30604,49 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                                     const sellerBadge = {
                                       active: { text: 'Active — scan buyer\'s QR to claim', cls: 'bg-emerald-100 text-emerald-700' },
                                       claimed: { text: 'Claimed', cls: 'bg-slate-200 text-slate-500' },
-                                      pending_refund: { text: 'Pending Refund', cls: 'bg-amber-100 text-amber-700' },
+                                      pending_refund: { text: 'Refund Requested', cls: 'bg-amber-100 text-amber-700' },
                                       cancelled: { text: 'Cancelled', cls: 'bg-rose-100 text-rose-600' },
+                                      organiser_cancelled: { text: 'Event Cancelled — 100% refund due', cls: 'bg-rose-100 text-rose-700' },
                                       expired: { text: 'Expired', cls: 'bg-slate-100 text-slate-400' },
                                     }[ts] || { text: ts, cls: 'bg-slate-100 text-slate-500' };
+                                    const currSymbol = lineItem.unitPriceCurrency === 'USD' ? '$' : lineItem.unitPriceCurrency === 'EUR' ? '€' : lineItem.unitPriceCurrency === 'GBP' ? '£' : 'R';
                                     return (
-                                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                                        <Ticket className="h-3 w-3 text-[#0f4c75]" />
-                                        {lineItem.ticketSequence ? (
-                                          <span className="text-[10px] font-bold text-[#0f4c75]">Ticket #{lineItem.ticketSequence}</span>
-                                        ) : (
-                                          <span className="text-[10px] text-[#0f4c75] font-semibold">Ticket</span>
-                                        )}
-                                        <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${sellerBadge.cls}`}>{sellerBadge.text}</span>
+                                      <div className="mt-1 space-y-1">
+                                        <div className="flex flex-wrap items-center gap-1.5">
+                                          <Ticket className="h-3 w-3 text-[#0f4c75]" />
+                                          {lineItem.ticketSequence ? (
+                                            <span className="text-[10px] font-bold text-[#0f4c75]">Ticket #{lineItem.ticketSequence}</span>
+                                          ) : (
+                                            <span className="text-[10px] text-[#0f4c75] font-semibold">Ticket</span>
+                                          )}
+                                          <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${sellerBadge.cls}`}>{sellerBadge.text}</span>
+                                        </div>
+                                        {ts === 'pending_refund' && lineItem.ticketRefundBuyerPct != null ? (
+                                          <div className="rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[10px] text-amber-800 space-y-0.5">
+                                            <p className="font-semibold text-amber-900">Refund breakdown — {lineItem.ticketRefundTierLabel || 'buyer-initiated'}</p>
+                                            <div className="flex justify-between">
+                                              <span className="text-emerald-700">Buyer refund</span>
+                                              <span className="font-semibold text-emerald-700">{lineItem.ticketRefundBuyerPct}% — {currSymbol}{Number(lineItem.ticketRefundBuyerAmount || 0).toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                              <span>You keep</span>
+                                              <span className="font-semibold">{lineItem.ticketRefundOrganiserPct}% — {currSymbol}{Number(lineItem.ticketRefundOrganiserAmount || 0).toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-slate-500">
+                                              <span>Platform fee</span>
+                                              <span>{lineItem.ticketRefundPlatformPct}% — {currSymbol}{Number(lineItem.ticketRefundPlatformAmount || 0).toFixed(2)}</span>
+                                            </div>
+                                            {lineItem.ticketRefundRequestedAt ? (
+                                              <p className="text-slate-400 pt-0.5">Requested: {new Date(lineItem.ticketRefundRequestedAt).toLocaleString()}</p>
+                                            ) : null}
+                                          </div>
+                                        ) : null}
+                                        {ts === 'organiser_cancelled' ? (
+                                          <div className="rounded-lg border border-rose-200 bg-rose-50 px-2 py-1.5 text-[10px] text-rose-800">
+                                            <p className="font-semibold">Full refund due to buyer: {currSymbol}{Number(lineItem.ticketRefundBuyerAmount || lineItem.unitPrice || 0).toFixed(2)} (100%)</p>
+                                            <p className="text-rose-600">You keep nothing as the cancellation was organiser-initiated.</p>
+                                          </div>
+                                        ) : null}
                                       </div>
                                     );
                                   })() : null}
@@ -30642,6 +30675,60 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                           <span className="text-xs text-[var(--svs-muted)]">Updating…</span>
                         ) : null}
                       </div>
+
+                      {/* Organiser-cancel event — only shown for orders that have ticket items not yet organiser-cancelled */}
+                      {(() => {
+                        const ticketItems = (order.sellerLineItems || []).filter((item) => Boolean(item.ticketNumber));
+                        const alreadyCancelled = ticketItems.length > 0 && ticketItems.every((item) => item.ticketStatus === 'organiser_cancelled');
+                        if (ticketItems.length === 0 || alreadyCancelled) return null;
+                        const isConfirming = cancelEventConfirmId === order.id;
+                        return (
+                          <div className="mt-3">
+                            {isConfirming ? (
+                              <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs text-rose-800">
+                                <p className="font-bold text-rose-900">Cancel this event for this order?</p>
+                                <p className="mt-0.5 text-rose-700 leading-relaxed">
+                                  All {ticketItems.length} ticket{ticketItems.length !== 1 ? 's' : ''} in this order will be marked as <strong>Event Cancelled</strong> and the buyer will receive a <strong>100% refund</strong>. You will keep nothing. This cannot be undone.
+                                </p>
+                                {cancelEventError ? <p className="mt-1 text-rose-600 font-semibold">{cancelEventError}</p> : null}
+                                <div className="mt-2 flex gap-2">
+                                  <button
+                                    type="button"
+                                    disabled={cancelEventLoading}
+                                    onClick={async () => {
+                                      if (!onOrganiserCancelOrder) return;
+                                      setCancelEventLoading(true);
+                                      setCancelEventError('');
+                                      const result = await onOrganiserCancelOrder(order.id);
+                                      setCancelEventLoading(false);
+                                      if (result?.error) { setCancelEventError(result.error); }
+                                      else { setCancelEventConfirmId(''); }
+                                    }}
+                                    className="rounded-lg bg-rose-600 px-3 py-1.5 text-[11px] font-bold text-white disabled:opacity-50"
+                                  >
+                                    {cancelEventLoading ? 'Cancelling…' : 'Yes, cancel event & refund buyer'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => { setCancelEventConfirmId(''); setCancelEventError(''); }}
+                                    className="rounded-lg border border-rose-300 px-3 py-1.5 text-[11px] font-semibold text-rose-700"
+                                  >
+                                    Go back
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => { setCancelEventConfirmId(order.id); setCancelEventError(''); }}
+                                className="text-[11px] font-semibold text-rose-500 underline underline-offset-2 hover:text-rose-700"
+                              >
+                                Cancelled your event? Issue full refund to buyer
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </article>
                   ))}
                 </div>
@@ -49305,13 +49392,47 @@ const TICKET_STATUS_CONFIG = {
     footerNote: 'The event date has passed and this ticket is no longer active.',
     opacity: 'opacity-60',
   },
+  organiser_cancelled: {
+    headerBg: 'bg-rose-700',
+    cardBorder: 'border-rose-300',
+    cardBg: 'bg-rose-50',
+    headerLabel: 'Event Cancelled',
+    badgeText: 'Event Cancelled',
+    badgeClass: 'bg-rose-600 text-white',
+    codeBg: 'bg-rose-100 text-rose-600',
+    qrFilter: 'grayscale',
+    showQr: false,
+    showCopy: false,
+    footerNote: 'The organiser has cancelled this event. You are entitled to a full 100% refund. Our team will process your refund shortly.',
+    opacity: 'opacity-80',
+  },
 };
+
+// Time-based cancellation tiers (buyer-initiated). Ordered from most to least generous.
+const TICKET_CANCELLATION_TIERS = [
+  { minDays: 30, label: '30+ days before event',  buyerPct: 90, organiserPct: 7,  platformPct: 3  },
+  { minDays: 14, label: '14–29 days before event', buyerPct: 80, organiserPct: 15, platformPct: 5  },
+  { minDays: 7,  label: '7–13 days before event',  buyerPct: 60, organiserPct: 30, platformPct: 10 },
+  { minDays: 1,  label: '0–6 days before event',   buyerPct: 30, organiserPct: 60, platformPct: 10 },
+  { minDays: -Infinity, label: 'Event day',         buyerPct: 0,  organiserPct: 90, platformPct: 10 },
+];
+
+function getTicketCancellationTier(eventDateStr) {
+  if (!eventDateStr) return null;
+  const eventDate = new Date(eventDateStr);
+  if (isNaN(eventDate.getTime())) return null;
+  const endOfEventDay = new Date(eventDate);
+  endOfEventDay.setHours(23, 59, 59, 999);
+  const daysUntil = Math.floor((endOfEventDay.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  return TICKET_CANCELLATION_TIERS.find((tier) => daysUntil >= tier.minDays) || TICKET_CANCELLATION_TIERS[TICKET_CANCELLATION_TIERS.length - 1];
+}
 
 // Renders a ticket stub with QR code for a single ticket order line item.
 const TicketQrDisplay = ({ lineItem, onUpdateTicketStatus }) => {
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [copied, setCopied] = useState(false);
   const [refundConfirm, setRefundConfirm] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [refundLoading, setRefundLoading] = useState(false);
   const [refundError, setRefundError] = useState('');
   const ticketNumber = lineItem.ticketNumber || '';
@@ -49342,7 +49463,21 @@ const TicketQrDisplay = ({ lineItem, onUpdateTicketStatus }) => {
     if (!onUpdateTicketStatus || !ticketNumber) return;
     setRefundLoading(true);
     setRefundError('');
-    const result = await onUpdateTicketStatus(ticketNumber, 'pending_refund');
+    const tier = getTicketCancellationTier(lineItem.date);
+    const price = Number(lineItem.unitPrice) || 0;
+    const refundMeta = {
+      ticketRefundRequestedAt: new Date().toISOString(),
+      ...(tier ? {
+        ticketRefundTierLabel: tier.label,
+        ticketRefundBuyerPct: tier.buyerPct,
+        ticketRefundBuyerAmount: parseFloat((price * tier.buyerPct / 100).toFixed(2)),
+        ticketRefundOrganiserPct: tier.organiserPct,
+        ticketRefundOrganiserAmount: parseFloat((price * tier.organiserPct / 100).toFixed(2)),
+        ticketRefundPlatformPct: tier.platformPct,
+        ticketRefundPlatformAmount: parseFloat((price * tier.platformPct / 100).toFixed(2)),
+      } : {}),
+    };
+    const result = await onUpdateTicketStatus(ticketNumber, 'pending_refund', refundMeta);
     setRefundLoading(false);
     if (result?.error) { setRefundError(result.error); }
     else { setRefundConfirm(false); }
@@ -49400,20 +49535,139 @@ const TicketQrDisplay = ({ lineItem, onUpdateTicketStatus }) => {
           {cfg.footerNote ? (
             <p className="mt-1 text-[11px] text-slate-500 leading-relaxed">{cfg.footerNote}</p>
           ) : null}
+          {/* Show stored refund breakdown when pending or organiser-cancelled */}
+          {(status === 'pending_refund' || status === 'organiser_cancelled') && lineItem.ticketRefundBuyerPct != null ? (
+            <div className="mt-1 rounded-lg border border-amber-200 bg-white px-2.5 py-2 text-[10px] text-amber-800 space-y-0.5">
+              <p className="font-semibold text-amber-900">
+                {status === 'organiser_cancelled' ? 'Your full refund' : `Your refund — ${lineItem.ticketRefundTierLabel || ''}`}
+              </p>
+              <div className="flex justify-between">
+                <span className="text-emerald-700 font-semibold">You receive</span>
+                <span className="font-bold text-emerald-700">
+                  {lineItem.ticketRefundBuyerPct}% &mdash; R{Number(lineItem.ticketRefundBuyerAmount || 0).toFixed(2)}
+                </span>
+              </div>
+              {lineItem.ticketRefundRequestedAt ? (
+                <p className="text-slate-400 pt-0.5">
+                  {status === 'organiser_cancelled' ? 'Cancelled' : 'Requested'}: {new Date(lineItem.ticketRefundRequestedAt).toLocaleString()}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           {/* Refund request — only for active tickets */}
           {status === 'active' && onUpdateTicketStatus ? (
             refundConfirm ? (
-              <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
-                <p className="font-semibold">Request a refund?</p>
-                <p className="mt-0.5 text-amber-700">A cancellation fee may be charged per event policy. This action cannot be undone.</p>
-                {refundError ? <p className="mt-1 text-rose-600">{refundError}</p> : null}
-                <div className="mt-2 flex gap-2">
-                  <button type="button" disabled={refundLoading} onClick={handleRequestRefund} className="rounded-lg bg-amber-500 px-3 py-1.5 text-[11px] font-bold text-white disabled:opacity-60">
-                    {refundLoading ? 'Submitting…' : 'Yes, request refund'}
-                  </button>
-                  <button type="button" onClick={() => setRefundConfirm(false)} className="rounded-lg border border-amber-300 px-3 py-1.5 text-[11px] font-semibold text-amber-700">
-                    Cancel
-                  </button>
+              <div className="mt-2 overflow-hidden rounded-xl border border-amber-200 bg-amber-50 text-xs text-amber-800">
+                {/* Terms header */}
+                <div className="border-b border-amber-200 bg-amber-100 px-3 py-2.5">
+                  <p className="text-sm font-bold text-amber-900">Cancellation &amp; Refund Policy</p>
+                  <p className="mt-0.5 text-[10px] text-amber-700">Please read carefully before requesting a refund. This action cannot be undone.</p>
+                </div>
+
+                <div className="px-3 py-2.5 space-y-2.5">
+                  {/* Current tier highlight */}
+                  {(() => {
+                    const tier = getTicketCancellationTier(lineItem.date);
+                    const price = Number(lineItem.unitPrice) || 0;
+                    const currSymbol = lineItem.unitPriceCurrency === 'USD' ? '$' : lineItem.unitPriceCurrency === 'EUR' ? '€' : lineItem.unitPriceCurrency === 'GBP' ? '£' : 'R';
+                    if (tier && price > 0) {
+                      const buyerAmt  = (price * tier.buyerPct  / 100).toFixed(2);
+                      const orgAmt    = (price * tier.organiserPct / 100).toFixed(2);
+                      const platAmt   = (price * tier.platformPct  / 100).toFixed(2);
+                      return (
+                        <div className="rounded-lg border border-amber-300 bg-white px-3 py-2">
+                          <p className="font-semibold text-amber-900">Your refund if you cancel now</p>
+                          <p className="text-[10px] text-amber-600 mt-0.5">{tier.label}</p>
+                          <div className="mt-2 space-y-1">
+                            <div className="flex justify-between">
+                              <span className="font-semibold text-emerald-700">You receive</span>
+                              <span className="font-bold text-emerald-700">{tier.buyerPct}% &mdash; {currSymbol}{buyerAmt}</span>
+                            </div>
+                            <div className="flex justify-between text-amber-700">
+                              <span>Organiser keeps</span>
+                              <span>{tier.organiserPct}% &mdash; {currSymbol}{orgAmt}</span>
+                            </div>
+                            <div className="flex justify-between text-amber-700">
+                              <span>Platform fee</span>
+                              <span>{tier.platformPct}% &mdash; {currSymbol}{platAmt}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+
+                  {/* Full tiers table */}
+                  <div>
+                    <p className="font-semibold text-amber-900 mb-1">Buyer-initiated cancellation tiers</p>
+                    <div className="rounded-lg border border-amber-200 bg-white overflow-hidden">
+                      <table className="w-full text-[10px]">
+                        <thead>
+                          <tr className="bg-amber-100 text-amber-800">
+                            <th className="px-2 py-1.5 text-left font-semibold">When you cancel</th>
+                            <th className="px-2 py-1.5 text-center font-semibold">You get</th>
+                            <th className="px-2 py-1.5 text-center font-semibold">Organiser</th>
+                            <th className="px-2 py-1.5 text-center font-semibold">Platform</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-amber-100">
+                          {TICKET_CANCELLATION_TIERS.map((tier) => (
+                            <tr key={tier.label}>
+                              <td className="px-2 py-1.5">{tier.label}</td>
+                              <td className="px-2 py-1.5 text-center font-semibold text-emerald-700">{tier.buyerPct}%</td>
+                              <td className="px-2 py-1.5 text-center">{tier.organiserPct}%</td>
+                              <td className="px-2 py-1.5 text-center">{tier.platformPct}%</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Organiser-cancels policy */}
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2">
+                    <p className="font-semibold text-blue-800">If the organiser cancels the event</p>
+                    <p className="mt-0.5 text-blue-700 leading-relaxed">You receive a full 100% refund. The organiser and platform receive nothing. This protects you because the cancellation was not your fault.</p>
+                  </div>
+
+                  {/* CPA compliance note */}
+                  <p className="text-[10px] text-amber-600 leading-relaxed">
+                    This policy is designed in accordance with the South African Consumer Protection Act. You retain the right to cancel; however, the organiser is entitled to a reasonable cancellation penalty based on how close to the event date you cancel.
+                  </p>
+
+                  {/* Agreement checkbox */}
+                  <label className="flex items-start gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={termsAccepted}
+                      onChange={(e) => setTermsAccepted(e.target.checked)}
+                      className="mt-0.5 accent-amber-600 shrink-0"
+                    />
+                    <span className="text-amber-800 leading-relaxed">
+                      I have read and understand the cancellation and refund policy, and wish to proceed with my refund request.
+                    </span>
+                  </label>
+
+                  {refundError ? <p className="text-rose-600">{refundError}</p> : null}
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={!termsAccepted || refundLoading}
+                      onClick={handleRequestRefund}
+                      className="rounded-lg bg-amber-500 px-3 py-1.5 text-[11px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {refundLoading ? 'Submitting…' : 'Confirm refund request'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setRefundConfirm(false); setTermsAccepted(false); setRefundError(''); }}
+                      className="rounded-lg border border-amber-300 px-3 py-1.5 text-[11px] font-semibold text-amber-700"
+                    >
+                      Go back
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -55578,7 +55832,7 @@ const FloatingSupportChatButton = () => (
   </Link>
 );
 
-const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerItems, buyNowCheckout, productReviewSummaryMap, onAddToCart, onBuyNow, onToggleWishlist, onRemoveWishlistItem, onClearWishlist, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder, onClearBuyNowCheckout, onCancelOrder, onSellerItemCreated, onDeleteSellerItem, onUpdateSellerItem, onToggleListingPaused, onUpdateOrderStatus, onClaimTicket, onUpdateTicketStatus, onAdminSetOrderStatus, onOpenItemDetails, onPushNotificationToUser, onDismissChatNotifications }) => {
+const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerItems, buyNowCheckout, productReviewSummaryMap, onAddToCart, onBuyNow, onToggleWishlist, onRemoveWishlistItem, onClearWishlist, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder, onClearBuyNowCheckout, onCancelOrder, onSellerItemCreated, onDeleteSellerItem, onUpdateSellerItem, onToggleListingPaused, onUpdateOrderStatus, onClaimTicket, onUpdateTicketStatus, onOrganiserCancelOrder, onAdminSetOrderStatus, onOpenItemDetails, onPushNotificationToUser, onDismissChatNotifications }) => {
   const { t } = useTranslation();
 
   return (
@@ -55640,8 +55894,8 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/general-labour-market/:categorySlug" element={<GeneralLabourPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/general-labour-market/worker/:workerId" element={<GeneralLabourWorkerDetailPage sellerItems={sellerItems} onPushNotificationToUser={onPushNotificationToUser} />} />
     <Route path="/seller/upload" element={<SellerUploadPage onSellerItemCreated={onSellerItemCreated} />} />
-    <Route path="/seller/dashboard" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onToggleListingPaused={onToggleListingPaused} onUpdateOrderStatus={onUpdateOrderStatus} onClaimTicket={onClaimTicket} initialView="listings" />} />
-    <Route path="/seller/orders" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onToggleListingPaused={onToggleListingPaused} onUpdateOrderStatus={onUpdateOrderStatus} onClaimTicket={onClaimTicket} initialView="orders" />} />
+    <Route path="/seller/dashboard" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onToggleListingPaused={onToggleListingPaused} onUpdateOrderStatus={onUpdateOrderStatus} onClaimTicket={onClaimTicket} onOrganiserCancelOrder={onOrganiserCancelOrder} initialView="listings" />} />
+    <Route path="/seller/orders" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onToggleListingPaused={onToggleListingPaused} onUpdateOrderStatus={onUpdateOrderStatus} onClaimTicket={onClaimTicket} onOrganiserCancelOrder={onOrganiserCancelOrder} initialView="orders" />} />
     <Route path="/seller/analytics" element={<SellerAnalyticsPage orders={orders} />} />
     <Route path="/seller/payouts" element={<SellerPayoutsPage orders={orders} />} />
     <Route path="/wallet" element={<WalletPage />} />
@@ -57727,7 +57981,7 @@ const App = () => {
     return { data: { claimedAt, ticketNumber } };
   }, [orders]);
 
-  const handleUpdateTicketStatus = useCallback(async (ticketNumber, newStatus) => {
+  const handleUpdateTicketStatus = useCallback(async (ticketNumber, newStatus, meta = {}) => {
     if (!ticketNumber || !newStatus) return { error: 'Missing ticket number or status.' };
     let foundOrderId = null;
     for (const order of orders) {
@@ -57742,7 +57996,7 @@ const App = () => {
         ...order,
         items: (order.items || []).map((item) =>
           item.ticketNumber === ticketNumber
-            ? { ...item, ticketStatus: newStatus, ticketStatusUpdatedAt: updatedAt }
+            ? { ...item, ticketStatus: newStatus, ticketStatusUpdatedAt: updatedAt, ...meta }
             : item
         ),
       };
@@ -57757,6 +58011,36 @@ const App = () => {
     }
     setOrders(updatedOrders);
     return { data: { ticketNumber, newStatus } };
+  }, [orders]);
+
+  const handleOrganiserCancelOrder = useCallback(async (orderId) => {
+    const targetOrder = orders.find((o) => o.id === orderId);
+    if (!targetOrder) return { error: 'Order not found.' };
+    const updatedAt = new Date().toISOString();
+    const updatedItems = (targetOrder.items || []).map((item) => {
+      const isTicket = item.route === '/bookings-tickets' || item.marketKey === 'tickets' || Boolean(item.ticketNumber);
+      if (!isTicket) return item;
+      return {
+        ...item,
+        ticketStatus: 'organiser_cancelled',
+        ticketStatusUpdatedAt: updatedAt,
+        ticketRefundTierLabel: 'Organiser cancelled event',
+        ticketRefundBuyerPct: 100,
+        ticketRefundBuyerAmount: Number(item.unitPrice) || 0,
+        ticketRefundOrganiserPct: 0,
+        ticketRefundOrganiserAmount: 0,
+        ticketRefundPlatformPct: 0,
+        ticketRefundPlatformAmount: 0,
+        ticketRefundRequestedAt: updatedAt,
+      };
+    });
+    const updatedOrders = orders.map((o) => o.id === orderId ? { ...o, items: updatedItems } : o);
+    if (hasSupabaseEnv && supabase) {
+      const { error } = await supabase.from('orders').update({ items: updatedItems }).eq('order_key', orderId);
+      if (error) return { error: `Could not cancel: ${error.message}` };
+    }
+    setOrders(updatedOrders);
+    return { data: { orderId } };
   }, [orders]);
 
   const handleOpenItemDetails = useCallback((itemDetails) => {
@@ -58003,6 +58287,7 @@ const App = () => {
         onUpdateOrderStatus={handleUpdateOrderStatus}
         onClaimTicket={handleClaimTicket}
         onUpdateTicketStatus={handleUpdateTicketStatus}
+        onOrganiserCancelOrder={handleOrganiserCancelOrder}
         onAdminSetOrderStatus={handleAdminSetOrderStatus}
         onOpenItemDetails={handleOpenItemDetails}
         onPushNotificationToUser={pushNotificationToUser}
