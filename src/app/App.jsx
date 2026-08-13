@@ -116,6 +116,8 @@ import {
   WALLET_TRANSACTION_LABELS,
 } from '../lib/wallet';
 import { buildShareLink, ensureUserHandle, lookupAccountByHandle } from '../lib/userHandles';
+import QRCode from 'qrcode';
+import jsQR from 'jsqr';
 import useWalletOtp from '../components/wallet/useWalletOtp';
 import BeneficiaryManager from '../components/wallet/BeneficiaryManager';
 import BankAccountManager from '../components/wallet/BankAccountManager';
@@ -10148,6 +10150,14 @@ const toWishlistItemRecord = (userEmail, item) => ({
   unit_price_label: item.unitPriceLabel,
 });
 
+// Generates a human-readable ticket number that avoids ambiguous chars (0/O, 1/I).
+const generateTicketNumber = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let result = 'TKT-';
+  for (let i = 0; i < 8; i++) result += chars[Math.floor(Math.random() * chars.length)];
+  return result;
+};
+
 // Returns { displaySize, displayDetails } for a cart/order line item.
 // displaySize: the human-readable selected size (e.g. "30 ml").
 // displayDetails: item.details with the "Size: X •" prefix stripped.
@@ -13420,9 +13430,10 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
   const sellerTicketItems = useMemo(
     () => getSellerItemsForMarket(sellerItems, 'tickets').map((item) => ({
       id: item.id,
+      sku: item.sku || item.dbId || '',
       category: bookingsSellerCategoryOptions.includes(item.category) ? item.category : 'Concerts',
       title: item.title || 'Seller Event',
-      subtitle: item.subtitle || item.description || 'Seller listing',
+      subtitle: item.subtitle || item.sellerName || 'Seller listing',
       meta: item.meta || 'Seller listing',
       provider: item.provider || item.sellerName || 'Biznisdil Seller',
       date: item.date || '',
@@ -13438,6 +13449,12 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
       currency: item.currency || '',
       image: item.image || 'https://images.pexels.com/photos/1190297/pexels-photo-1190297.jpeg?auto=compress&cs=tinysrgb&w=1200',
       images: item.images || (item.image ? [item.image] : []),
+      description: item.description || '',
+      sizes: Array.isArray(item.sizes) ? item.sizes : [],
+      sizeStock: item.sizeStock && typeof item.sizeStock === 'object' ? item.sizeStock : {},
+      sizePrices: item.sizePrices && typeof item.sizePrices === 'object' ? item.sizePrices : {},
+      sellerEmail: item.sellerEmail || '',
+      sellerName: item.sellerName || '',
       isSellerListing: true,
     })),
     [sellerItems],
@@ -13620,6 +13637,16 @@ const BookingsTicketsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
       marketName: t('markets.bookings'),
       details,
       description: item.description || '',
+      category: item.category || '',
+      date: item.date || '',
+      country: item.country || '',
+      city: item.city || '',
+      location: item.location || '',
+      provider: item.provider || '',
+      meta: item.meta || '',
+      genre: item.genre || '',
+      language: item.language || '',
+      showtime: item.showtime || '',
       priceLabel: getSalePrices(item.price, 0, sourceCurrency).nowPrice,
       cartItem,
       wishlistItem,
@@ -14193,7 +14220,6 @@ const BFS_BASE_CATEGORIES = [
   'Fitness', 'Home Gym Equipment', 'Yoga & Pilates', 'Cardio Equipment', 'Activewear',
   'Sports', 'Football', 'Basketball', 'Cricket', 'Rugby', 'Tennis', 'Cycling', 'Running', 'Outdoor & Hiking', 'Swimming',
 ];
-const BFS_SUITABLE_FOR_OPTIONS = ['All Skin Types', 'Oily Skin', 'Dry Skin', 'Sensitive Skin', 'Men', 'Women', 'Unisex', 'Kids', 'Beginners', 'Pro Athletes', 'All Ages'];
 const BFS_CONDITION_OPTIONS = ['Brand New', 'Like New', 'Good'];
 
 const VotingClientsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
@@ -16298,8 +16324,18 @@ const BeveragesLiquorsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
       ...getItemDetailSizeProps(item),
       availableQuantity: hasItemSizeStock(item) ? (item.availableQuantity ?? getSellerListingStock(sellerItems, item)) : getSellerListingStock(sellerItems, item),
       marketName: 'Beverages & Liquors',
+      marketKey: 'beverages',
+      route: '/beverages-liquors',
       details,
       description: item.description || '',
+      beverageCategory: item.beverageCategory || item.displayCategory || '',
+      alcoholContent: item.alcoholContent || '',
+      beverageType: item.beverageType || item.displayType || '',
+      brand: item.brand || '',
+      volume: item.volume || '',
+      origin: item.origin || '',
+      sellerEmail: item.sellerEmail || '',
+      sellerName: item.sellerName || '',
       priceLabel: getSalePrices(item.price, SALE_DISCOUNT_RATE, item.currency).nowPrice,
       cartItem,
       wishlistItem,
@@ -28967,7 +29003,102 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
   );
 };
 
-const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerItem, onToggleListingPaused, onUpdateOrderStatus, initialView = 'listings' }) => {
+// Standalone ticket-claiming panel for seller dashboard.
+// Seller can either scan the buyer's QR code with their device camera
+// or manually type the ticket number the buyer reads aloud to them.
+// The ticket number is NEVER displayed to the seller from order data.
+const SellerTicketValidator = ({ onClaimTicket, userEmail }) => {
+  const [input, setInput] = useState('');
+  const [status, setStatus] = useState(null); // null | { type, message, buyerInfo }
+  const [isClaiming, setIsClaiming] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+
+  const claim = async (rawValue) => {
+    const trimmed = String(rawValue || '').trim();
+    if (!trimmed) return;
+    setIsClaiming(true);
+    setStatus(null);
+    const result = await onClaimTicket?.(trimmed, userEmail);
+    setIsClaiming(false);
+    if (result?.error) {
+      setStatus({ type: 'error', message: result.error });
+    } else {
+      setShowScanner(false);
+      setInput('');
+      setStatus({
+        type: 'success',
+        message: `Ticket ${result?.data?.ticketNumber || trimmed.replace(/^SVS-TICKET:/i, '')} claimed successfully. Buyer may now enter.`,
+      });
+    }
+  };
+
+  const handleSubmit = (event) => { event.preventDefault(); claim(input); };
+
+  const handleQrDetected = (rawQrData) => {
+    // Only act on our own QR payloads; ignore unrelated QR codes.
+    if (!String(rawQrData || '').toUpperCase().includes('TKT-')) return;
+    setShowScanner(false);
+    claim(rawQrData);
+  };
+
+  return (
+    <div className="rounded-xl border border-[#b6daf6] bg-gradient-to-br from-[#f0f8ff] to-[#e8f4fd] p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <Ticket className="h-4 w-4 text-[#0f4c75]" />
+        <h3 className="text-sm font-bold text-[#0f4c75]">Validate Buyer Ticket</h3>
+      </div>
+      <p className="mb-3 text-xs text-slate-500">
+        Ask the buyer to show their QR code or read their ticket number.
+        Claimed tickets cannot be reused.
+      </p>
+
+      {/* Camera scanner */}
+      {showScanner ? (
+        <QrCameraScanner onDetected={handleQrDetected} onClose={() => setShowScanner(false)} />
+      ) : (
+        <button
+          type="button"
+          onClick={() => { setShowScanner(true); setStatus(null); }}
+          className="mb-3 flex w-full items-center justify-center gap-2 rounded-lg border border-[#0f4c75] bg-[#0f4c75] py-2.5 text-sm font-bold text-white transition hover:bg-[#0d3a5c]"
+        >
+          <Camera className="h-4 w-4" /> Scan QR Code
+        </button>
+      )}
+
+      {/* Manual entry fallback */}
+      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Or enter ticket number manually</p>
+      <form onSubmit={handleSubmit} className="flex flex-wrap gap-2">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => { setInput(e.target.value.toUpperCase()); setStatus(null); }}
+          placeholder="TKT-XXXXXXXX"
+          maxLength={12}
+          disabled={isClaiming}
+          className="flex-1 min-w-0 rounded-lg border border-[#b6daf6] bg-white px-3 py-2 font-mono text-sm font-semibold text-[#0f4c75] placeholder-slate-300 outline-none focus:border-[#0f4c75] focus:ring-1 focus:ring-[#0f4c75] disabled:opacity-60"
+        />
+        <button
+          type="submit"
+          disabled={isClaiming || !input.trim()}
+          className="rounded-lg bg-[#0f4c75] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#0d3a5c] disabled:opacity-60"
+        >
+          {isClaiming ? 'Claiming…' : 'Claim'}
+        </button>
+      </form>
+
+      {status ? (
+        <div className={`mt-3 flex items-start gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold ${status.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+          {status.type === 'success'
+            ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+            : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />}
+          <span>{status.message}</span>
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerItem, onToggleListingPaused, onUpdateOrderStatus, onClaimTicket, initialView = 'listings' }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -30299,6 +30430,13 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
               <SellerReturnsInbox />
               <SellerExchangesInbox />
 
+              {/* Ticket validator — lets event staff claim a buyer's ticket.
+                  The ticket number is NEVER shown to the seller in order listings;
+                  they can only claim it by scanning the buyer's QR or the buyer reading the number aloud. */}
+              {onClaimTicket ? (
+                <SellerTicketValidator onClaimTicket={onClaimTicket} userEmail={userEmail} />
+              ) : null}
+
               {visibleOrders.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {[
@@ -30380,13 +30518,31 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                         </span>
                       </div>
 
-                      <div className="mt-3 grid gap-1 text-xs text-[var(--svs-muted)] sm:grid-cols-2">
-                        <p>Customer: {order.customer?.fullName || order.customer?.email || 'Guest customer'}</p>
-                        {order.customer?.email ? <p>Email: {order.customer.email}</p> : null}
-                        {order.customer?.phone ? <p>Phone: {order.customer.phone}</p> : null}
-                        <p>Items from your store: {Array.isArray(order.sellerLineItems) ? order.sellerLineItems.reduce((count, lineItem) => count + (Number(lineItem.quantity) || 1), 0) : 0}</p>
-                        <p className="font-semibold text-[var(--svs-text)]">Your subtotal: {typeof order.sellerSubtotal === 'number' ? formatCheckoutAmount(order.sellerSubtotal) : ''}</p>
-                      </div>
+                      {/* Buyer info — always visible so seller can verify identity at the gate */}
+                      {(() => {
+                        const hasTickets = (order.sellerLineItems || []).some((li) => Boolean(li.ticketNumber));
+                        return hasTickets ? (
+                          <div className="mt-3 rounded-lg border border-[#b6daf6] bg-[#f0f8ff] px-3 py-2.5">
+                            <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-[#0f4c75]">Ticket Buyer — verify identity before claiming</p>
+                            <div className="grid gap-0.5 text-xs text-[#0f4c75]">
+                              <p className="font-semibold">{order.customer?.fullName || 'Guest'}</p>
+                              {order.customer?.email ? <p className="truncate">{order.customer.email}</p> : null}
+                              {order.customer?.phone ? <p>{order.customer.phone}</p> : null}
+                              {order.ownerEmail && order.ownerEmail !== order.customer?.email ? (
+                                <p className="text-slate-400">Account: {order.ownerEmail}</p>
+                              ) : null}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mt-3 grid gap-1 text-xs text-[var(--svs-muted)] sm:grid-cols-2">
+                            <p>Customer: {order.customer?.fullName || order.customer?.email || 'Guest customer'}</p>
+                            {order.customer?.email ? <p>Email: {order.customer.email}</p> : null}
+                            {order.customer?.phone ? <p>Phone: {order.customer.phone}</p> : null}
+                            <p>Items from your store: {Array.isArray(order.sellerLineItems) ? order.sellerLineItems.reduce((count, lineItem) => count + (Number(lineItem.quantity) || 1), 0) : 0}</p>
+                            <p className="font-semibold text-[var(--svs-text)]">Your subtotal: {typeof order.sellerSubtotal === 'number' ? formatCheckoutAmount(order.sellerSubtotal) : ''}</p>
+                          </div>
+                        );
+                      })()}
 
                       <div className="mt-3 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3">
                         <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Your items in this order</p>
@@ -30439,6 +30595,28 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                                     {sdDets ? <p className="mt-0.5 text-[var(--svs-muted)]">{sdDets}</p> : null}
                                   </>); })()}
                                   <p className="mt-0.5 text-[var(--svs-muted)]">Qty: {quantity}</p>
+                                  {/* Show sequence + status — never the claim code — so sellers cannot steal tickets */}
+                                  {lineItem.ticketNumber ? (() => {
+                                    const ts = lineItem.ticketStatus || (lineItem.ticketClaimed ? 'claimed' : 'active');
+                                    const sellerBadge = {
+                                      active: { text: 'Active — scan buyer\'s QR to claim', cls: 'bg-emerald-100 text-emerald-700' },
+                                      claimed: { text: 'Claimed', cls: 'bg-slate-200 text-slate-500' },
+                                      pending_refund: { text: 'Pending Refund', cls: 'bg-amber-100 text-amber-700' },
+                                      cancelled: { text: 'Cancelled', cls: 'bg-rose-100 text-rose-600' },
+                                      expired: { text: 'Expired', cls: 'bg-slate-100 text-slate-400' },
+                                    }[ts] || { text: ts, cls: 'bg-slate-100 text-slate-500' };
+                                    return (
+                                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                        <Ticket className="h-3 w-3 text-[#0f4c75]" />
+                                        {lineItem.ticketSequence ? (
+                                          <span className="text-[10px] font-bold text-[#0f4c75]">Ticket #{lineItem.ticketSequence}</span>
+                                        ) : (
+                                          <span className="text-[10px] text-[#0f4c75] font-semibold">Ticket</span>
+                                        )}
+                                        <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${sellerBadge.cls}`}>{sellerBadge.text}</span>
+                                      </div>
+                                    );
+                                  })() : null}
                                 </div>
                                 <p className="shrink-0 font-semibold text-[var(--svs-primary-strong)]">{formatCheckoutAmount(linePrice)}</p>
                               </div>
@@ -48378,6 +48556,27 @@ const TrackOrderPage = ({ orders, onAdminSetOrderStatus }) => {
     return base;
   }, [order]);
 
+  const isTicketOrder = useMemo(() => {
+    if (!order) return false;
+    return Array.isArray(order.items) && order.items.length > 0
+      && order.items.every((item) => item.route === '/bookings-tickets' || item.marketKey === 'tickets' || Boolean(item.ticketNumber));
+  }, [order]);
+
+  const ticketTimeline = useMemo(() => {
+    if (!order || !isTicketOrder) return [];
+    const allClaimed = (order.items || []).every((item) => item.ticketClaimed || item.ticketStatus === 'claimed');
+    const anyPendingRefund = (order.items || []).some((item) => item.ticketStatus === 'pending_refund');
+    const anyCancelled = (order.items || []).some((item) => item.ticketStatus === 'cancelled');
+    const confirmedAt = order.createdAt ? new Date(order.createdAt) : null;
+    return [
+      { key: 'booked', title: 'Booking Confirmed', isCurrent: false, reached: true, at: confirmedAt, description: 'Your booking was confirmed and payment received.' },
+      anyCancelled ? { key: 'cancelled', title: 'Ticket Cancelled', isCurrent: true, reached: true, at: null, description: 'One or more tickets have been cancelled.' }
+        : anyPendingRefund ? { key: 'refund', title: 'Refund Requested', isCurrent: true, reached: true, at: null, description: 'A refund request is being reviewed. A cancellation fee may apply.' }
+        : { key: 'active', title: allClaimed ? 'All Tickets Claimed' : 'Tickets Active', isCurrent: !allClaimed, reached: true, at: null, description: allClaimed ? 'All tickets were presented and entry was granted.' : 'Your tickets are valid. Show the QR code at the venue to enter.' },
+      (!anyCancelled && !anyPendingRefund) ? { key: 'claimed', title: 'Entry Claimed', isCurrent: allClaimed, reached: allClaimed, at: null, description: 'Tickets have been scanned and entry granted at the venue.' } : null,
+    ].filter(Boolean);
+  }, [order, isTicketOrder]);
+
   if (!order) {
     return (
       <main className="mx-auto w-full max-w-4xl px-4 py-10 sm:py-14">
@@ -48410,6 +48609,7 @@ const TrackOrderPage = ({ orders, onAdminSetOrderStatus }) => {
   const trackingNumber = order.fulfillment?.trackingNumber || `BZD${String(order.reference || order.id || '').replace(/\D/g, '').slice(-12).padStart(12, '0')}`;
   const badgeLabel = getTrackBadgeLabel(order.status);
   const badgeClass = TRACK_BADGE_STYLES[order.status] || 'bg-slate-50 text-slate-700 border-slate-200';
+
   const lastUpdatedRelative = (() => {
     const tail = [...timeline].reverse().find((step) => step.reached && step.at);
     if (!tail?.at) return 'Just now';
@@ -48446,15 +48646,17 @@ const TrackOrderPage = ({ orders, onAdminSetOrderStatus }) => {
         <section className="rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-sm sm:p-6">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-base font-bold text-[var(--svs-primary-strong)]">Order Summary</h2>
+              <h2 className="text-base font-bold text-[var(--svs-primary-strong)]">{isTicketOrder ? 'Booking Summary' : 'Order Summary'}</h2>
               <p className="text-xs text-[var(--svs-muted)]">
                 {isCancelledOrder
                   ? 'This order has been cancelled.'
-                  : (order.status === 'Delivered' ? 'Your package has been delivered' : 'Your package is on the way')}
+                  : isTicketOrder
+                    ? 'Your tickets are confirmed and ready to use.'
+                    : (order.status === 'Delivered' ? 'Your package has been delivered' : 'Your package is on the way')}
               </p>
             </div>
             <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${badgeClass}`}>
-              <Truck className="h-3.5 w-3.5" /> {badgeLabel}
+              {isTicketOrder ? <Ticket className="h-3.5 w-3.5" /> : <Truck className="h-3.5 w-3.5" />} {badgeLabel}
             </span>
           </div>
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -48481,12 +48683,27 @@ const TrackOrderPage = ({ orders, onAdminSetOrderStatus }) => {
                 </span>
               </div>
             </div>
-            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
-                <Truck className="h-4 w-4 text-[var(--svs-primary-strong)]" /> Estimated Delivery
+            {isTicketOrder ? (
+              <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
+                  <CalendarDays className="h-4 w-4 text-[var(--svs-primary-strong)]" /> Event Date
+                </div>
+                <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">
+                  {(() => {
+                    const d = (order.items || []).find((i) => i.date)?.date;
+                    if (!d) return 'See event details';
+                    try { return new Date(d).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }); } catch { return d; }
+                  })()}
+                </p>
               </div>
-              <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{formatTrackDate(estimatedDelivery)}</p>
-            </div>
+            ) : (
+              <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-cyan-surface)] p-4">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">
+                  <Truck className="h-4 w-4 text-[var(--svs-primary-strong)]" /> Estimated Delivery
+                </div>
+                <p className="mt-1 text-sm font-bold text-[var(--svs-text)]">{formatTrackDate(estimatedDelivery)}</p>
+              </div>
+            )}
           </div>
         </section>
 
@@ -48543,20 +48760,22 @@ const TrackOrderPage = ({ orders, onAdminSetOrderStatus }) => {
           </section>
         ) : null}
 
-        {/* Live Tracking */}
+        {/* Ticket Status (ticket orders) or Live Tracking (physical orders) */}
         <section className="mt-6 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-sm sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-base font-bold text-[var(--svs-primary-strong)]">Live Tracking</h2>
-              <p className="text-xs text-[var(--svs-muted)]">See real-time location and status of your package.</p>
+              <h2 className="text-base font-bold text-[var(--svs-primary-strong)]">{isTicketOrder ? 'Ticket Status' : 'Live Tracking'}</h2>
+              <p className="text-xs text-[var(--svs-muted)]">{isTicketOrder ? 'Current status of your tickets.' : 'See real-time location and status of your package.'}</p>
             </div>
+            {!isTicketOrder ? (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-1 text-xs font-semibold text-[var(--svs-muted)]">
               <RefreshCw className="h-3.5 w-3.5" /> Last updated: {lastUpdatedRelative}
             </span>
+            ) : null}
           </div>
 
           <ol className="mt-5 relative space-y-3 pl-2">
-            {(isCancelledOrder ? cancellationTimeline : timeline).map((step, index, arr) => {
+            {(isTicketOrder ? ticketTimeline : isCancelledOrder ? cancellationTimeline : timeline).map((step, index, arr) => {
               const isLast = index === arr.length - 1;
               const reached = step.reached;
               return (
@@ -48647,9 +48866,38 @@ const TrackOrderPage = ({ orders, onAdminSetOrderStatus }) => {
           ) : null}
         </section>
 
+        {/* Ticket QR stubs (ticket orders only) */}
+        {isTicketOrder ? (
+          <section className="mt-6 rounded-2xl border border-[#b6daf6] bg-[var(--svs-surface)] p-5 shadow-sm sm:p-6">
+            <h2 className="text-base font-bold text-[#0f4c75]">Your Tickets</h2>
+            <p className="text-xs text-[var(--svs-muted)]">Present these at the venue to claim your entry.</p>
+            <div className="mt-3 space-y-2">
+              {(order.items || []).filter((item) => item.ticketNumber).map((item, idx) => {
+                const ts = item.ticketStatus || (item.ticketClaimed ? 'claimed' : 'active');
+                const cfg = TICKET_STATUS_CONFIG[ts] || TICKET_STATUS_CONFIG.active;
+                return (
+                  <div key={item.ticketNumber || idx} className={`flex items-center justify-between rounded-xl border px-4 py-3 ${cfg.cardBorder} ${cfg.cardBg}`}>
+                    <div className="flex items-center gap-2">
+                      <Ticket className="h-4 w-4 text-[#0f4c75]" />
+                      <div>
+                        <p className="text-sm font-bold text-[#0f4c75]">{item.title}</p>
+                        {item.selectedSize ? <p className="text-xs text-slate-500">{item.selectedSize}</p> : null}
+                        {item.ticketSequence ? <p className="text-xs text-slate-400">Ticket #{item.ticketSequence}</p> : null}
+                      </div>
+                    </div>
+                    <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${cfg.badgeClass}`}>{cfg.badgeText}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="mt-3 text-xs text-[var(--svs-muted)]">Go to <Link to="/orders" className="font-semibold text-[var(--svs-primary-strong)] underline">My Orders</Link> to view your QR codes.</p>
+          </section>
+        ) : null}
+
         {/* Delivery Details */}
-        {isCancelledOrder ? (
+        {!isTicketOrder && isCancelledOrder ? (
           <section className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-5 shadow-sm sm:p-6">
+
             <h2 className="text-base font-bold text-rose-900">Cancellation Details</h2>
             <p className="text-xs text-rose-700">This order will not be shipped. Refund processing details below.</p>
 
@@ -48671,7 +48919,7 @@ const TrackOrderPage = ({ orders, onAdminSetOrderStatus }) => {
               </Link>
             </div>
           </section>
-        ) : (
+        ) : !isTicketOrder ? (
         <section className="mt-6 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-sm sm:p-6">
           <h2 className="text-base font-bold text-[var(--svs-primary-strong)]">Delivery Details</h2>
           <p className="text-xs text-[var(--svs-muted)]">
@@ -48721,7 +48969,7 @@ const TrackOrderPage = ({ orders, onAdminSetOrderStatus }) => {
             </Link>
           </div>
         </section>
-        )}
+        ) : null}
 
         {/* Footer Buttons */}
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -48899,7 +49147,294 @@ const RefundBankDetailsForm = ({ order }) => {
   );
 };
 
-const OrderCard = ({ order, onCancelOrder, cancellingOrderId, onSetCancelError, onAddToCart }) => {
+// In-browser camera QR scanner for sellers to validate buyer tickets.
+// Opens the device camera, scans frames continuously, and calls onDetected(rawQrData)
+// the moment a valid SVS-TICKET QR code is recognised.
+const QrCameraScanner = ({ onDetected, onClose }) => {
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+  const rafRef = useRef(null);
+  const [camError, setCamError] = useState('');
+  const [scanning, setScanning] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const startCamera = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 } },
+        });
+        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => {});
+        }
+        setScanning(true);
+      } catch (_err) {
+        if (!cancelled) setCamError('Camera access denied or not available on this device.');
+      }
+    };
+
+    startCamera();
+    return () => {
+      cancelled = true;
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!scanning) return undefined;
+    const tick = () => {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      if (!video || !canvas || video.readyState < 2) { rafRef.current = requestAnimationFrame(tick); return; }
+      const ctx = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+      if (code?.data) {
+        onDetected(code.data);
+        return; // stop scanning after first hit
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [scanning, onDetected]);
+
+  return (
+    <div className="mt-3 overflow-hidden rounded-xl border border-[#b6daf6] bg-[#0f4c75]">
+      <div className="flex items-center justify-between px-3 py-2">
+        <span className="text-xs font-bold text-white">Point camera at buyer&apos;s QR code</span>
+        <button type="button" onClick={onClose} className="rounded p-0.5 text-white/70 hover:text-white">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      {camError ? (
+        <div className="flex items-center gap-2 bg-rose-50 px-3 py-3 text-xs text-rose-700">
+          <AlertTriangle className="h-4 w-4 shrink-0" /> {camError}
+        </div>
+      ) : (
+        <div className="relative bg-black">
+          <video ref={videoRef} muted playsInline className="w-full max-h-56 object-cover" />
+          {/* targeting reticle */}
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <div className="h-40 w-40 rounded-xl border-2 border-white/60" style={{ boxShadow: '0 0 0 9999px rgba(0,0,0,0.45)' }} />
+          </div>
+        </div>
+      )}
+      <canvas ref={canvasRef} className="hidden" />
+    </div>
+  );
+};
+
+const TICKET_STATUS_CONFIG = {
+  active: {
+    headerBg: 'bg-[#0f4c75]',
+    cardBorder: 'border-[#b6daf6]',
+    cardBg: 'bg-gradient-to-br from-[#f0f8ff] to-[#e8f4fd]',
+    headerLabel: 'Your Ticket',
+    badgeText: 'Active',
+    badgeClass: 'bg-emerald-400 text-white',
+    codeBg: 'bg-[#0f4c75] text-white',
+    qrFilter: '',
+    showQr: true,
+    showCopy: true,
+    footerNote: 'Show this QR code or ticket number to the event organiser to claim your entry.',
+    opacity: '',
+  },
+  claimed: {
+    headerBg: 'bg-slate-500',
+    cardBorder: 'border-slate-300',
+    cardBg: 'bg-slate-50',
+    headerLabel: 'Entry Claimed',
+    badgeText: 'Claimed',
+    badgeClass: 'bg-slate-400 text-white',
+    codeBg: 'bg-slate-200 text-slate-500',
+    qrFilter: 'grayscale',
+    showQr: true,
+    showCopy: false,
+    footerNote: null,
+    opacity: 'opacity-70',
+  },
+  pending_refund: {
+    headerBg: 'bg-amber-500',
+    cardBorder: 'border-amber-200',
+    cardBg: 'bg-amber-50',
+    headerLabel: 'Refund Requested',
+    badgeText: 'Pending Refund',
+    badgeClass: 'bg-amber-500 text-white',
+    codeBg: 'bg-amber-100 text-amber-700',
+    qrFilter: 'grayscale opacity-40',
+    showQr: false,
+    showCopy: false,
+    footerNote: 'Your refund request is being reviewed. A cancellation fee may apply per event policy.',
+    opacity: '',
+  },
+  cancelled: {
+    headerBg: 'bg-rose-600',
+    cardBorder: 'border-rose-200',
+    cardBg: 'bg-rose-50',
+    headerLabel: 'Ticket Cancelled',
+    badgeText: 'Cancelled',
+    badgeClass: 'bg-rose-500 text-white',
+    codeBg: 'bg-rose-100 text-rose-600',
+    qrFilter: 'grayscale',
+    showQr: false,
+    showCopy: false,
+    footerNote: 'This ticket has been cancelled and is no longer valid.',
+    opacity: 'opacity-60',
+  },
+  expired: {
+    headerBg: 'bg-slate-400',
+    cardBorder: 'border-slate-200',
+    cardBg: 'bg-slate-50',
+    headerLabel: 'Ticket Expired',
+    badgeText: 'Expired',
+    badgeClass: 'bg-slate-300 text-slate-600',
+    codeBg: 'bg-slate-200 text-slate-400',
+    qrFilter: 'grayscale',
+    showQr: false,
+    showCopy: false,
+    footerNote: 'The event date has passed and this ticket is no longer active.',
+    opacity: 'opacity-60',
+  },
+};
+
+// Renders a ticket stub with QR code for a single ticket order line item.
+const TicketQrDisplay = ({ lineItem, onUpdateTicketStatus }) => {
+  const [qrDataUrl, setQrDataUrl] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [refundConfirm, setRefundConfirm] = useState(false);
+  const [refundLoading, setRefundLoading] = useState(false);
+  const [refundError, setRefundError] = useState('');
+  const ticketNumber = lineItem.ticketNumber || '';
+
+  // Derive status: explicit ticketStatus wins; fall back to claimed flag; default active.
+  const status = lineItem.ticketStatus || (lineItem.ticketClaimed ? 'claimed' : 'active');
+  const cfg = TICKET_STATUS_CONFIG[status] || TICKET_STATUS_CONFIG.active;
+
+  useEffect(() => {
+    if (!ticketNumber) return;
+    QRCode.toDataURL(`SVS-TICKET:${ticketNumber}`, {
+      width: 200,
+      margin: 2,
+      color: { dark: '#0f4c75', light: '#f8fbff' },
+      errorCorrectionLevel: 'M',
+    }).then(setQrDataUrl).catch(() => {});
+  }, [ticketNumber]);
+
+  const handleCopy = () => {
+    if (!ticketNumber) return;
+    navigator.clipboard?.writeText(ticketNumber).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {});
+  };
+
+  const handleRequestRefund = async () => {
+    if (!onUpdateTicketStatus || !ticketNumber) return;
+    setRefundLoading(true);
+    setRefundError('');
+    const result = await onUpdateTicketStatus(ticketNumber, 'pending_refund');
+    setRefundLoading(false);
+    if (result?.error) { setRefundError(result.error); }
+    else { setRefundConfirm(false); }
+  };
+
+  return (
+    <div className={`mt-3 overflow-hidden rounded-2xl border ${cfg.cardBorder} ${cfg.cardBg} ${cfg.opacity} shadow-md`}>
+      {/* Header bar */}
+      <div className={`flex items-center gap-2 px-4 py-2.5 ${cfg.headerBg}`}>
+        <Ticket className="h-4 w-4 text-white" />
+        <span className="text-xs font-bold uppercase tracking-widest text-white">{cfg.headerLabel}</span>
+        <span className={`ml-auto rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${cfg.badgeClass}`}>{cfg.badgeText}</span>
+      </div>
+
+      {/* Body */}
+      <div className="flex flex-col items-center gap-3 px-4 py-4 sm:flex-row sm:items-start">
+        {/* QR code */}
+        <div className={`shrink-0 rounded-xl border-2 p-1.5 ${cfg.cardBorder} bg-white ${cfg.qrFilter}`}>
+          {cfg.showQr && qrDataUrl ? (
+            <img src={qrDataUrl} alt="Ticket QR code" className="h-28 w-28 rounded-lg sm:h-32 sm:w-32" />
+          ) : (
+            <div className="flex h-28 w-28 items-center justify-center rounded-lg bg-slate-100 sm:h-32 sm:w-32">
+              <Hash className="h-8 w-8 text-slate-300" />
+            </div>
+          )}
+        </div>
+
+        {/* Details */}
+        <div className="flex min-w-0 flex-1 flex-col gap-2 text-center sm:text-left">
+          <p className="truncate text-sm font-bold text-[#0f4c75]">{lineItem.title}</p>
+          {lineItem.ticketSequence ? (
+            <p className="text-xs font-bold text-[#0f4c75] opacity-60">Ticket #{lineItem.ticketSequence}</p>
+          ) : null}
+          {lineItem.details ? (
+            <p className="text-xs text-slate-500 leading-relaxed">{lineItem.details}</p>
+          ) : null}
+          <div className="mt-1">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Ticket Number</p>
+            <div className="mt-0.5 flex items-center justify-center gap-2 sm:justify-start">
+              <code className={`rounded-lg px-3 py-1.5 font-mono text-sm font-bold tracking-widest ${cfg.codeBg}`}>
+                {ticketNumber}
+              </code>
+              {cfg.showCopy ? (
+                <button type="button" onClick={handleCopy} title="Copy ticket number" className="rounded-lg border border-[#b6daf6] bg-white p-1.5 text-[#0f4c75] transition hover:bg-[#e8f4fd]">
+                  {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                </button>
+              ) : null}
+            </div>
+          </div>
+          {status === 'claimed' ? (
+            <p className="text-[11px] text-slate-400">
+              Claimed {lineItem.ticketClaimedAt ? new Date(lineItem.ticketClaimedAt).toLocaleString() : ''}
+            </p>
+          ) : null}
+          {cfg.footerNote ? (
+            <p className="mt-1 text-[11px] text-slate-500 leading-relaxed">{cfg.footerNote}</p>
+          ) : null}
+          {/* Refund request — only for active tickets */}
+          {status === 'active' && onUpdateTicketStatus ? (
+            refundConfirm ? (
+              <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
+                <p className="font-semibold">Request a refund?</p>
+                <p className="mt-0.5 text-amber-700">A cancellation fee may be charged per event policy. This action cannot be undone.</p>
+                {refundError ? <p className="mt-1 text-rose-600">{refundError}</p> : null}
+                <div className="mt-2 flex gap-2">
+                  <button type="button" disabled={refundLoading} onClick={handleRequestRefund} className="rounded-lg bg-amber-500 px-3 py-1.5 text-[11px] font-bold text-white disabled:opacity-60">
+                    {refundLoading ? 'Submitting…' : 'Yes, request refund'}
+                  </button>
+                  <button type="button" onClick={() => setRefundConfirm(false)} className="rounded-lg border border-amber-300 px-3 py-1.5 text-[11px] font-semibold text-amber-700">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setRefundConfirm(true)} className="mt-1 self-start text-[11px] font-semibold text-slate-400 underline underline-offset-2 hover:text-amber-600">
+                No longer attending? Request refund
+              </button>
+            )
+          ) : null}
+        </div>
+      </div>
+
+      {/* Perforation */}
+      <div className="mx-4 border-t border-dashed border-slate-200" />
+      <div className="px-4 py-2 text-center text-[10px] text-slate-400">
+        Qty: {Math.max(Number(lineItem.quantity) || 1, 1)} &bull; {lineItem.marketName || 'Bookings & Tickets'} &bull; SVS Platform
+      </div>
+    </div>
+  );
+};
+
+const OrderCard = ({ order, onCancelOrder, cancellingOrderId, onSetCancelError, onAddToCart, onUpdateTicketStatus }) => {
   const navigate = useNavigate();
   const meta = getOrderDisplayMeta(order);
   const item = order.items?.[0];
@@ -48960,6 +49495,10 @@ const OrderCard = ({ order, onCancelOrder, cancellingOrderId, onSetCancelError, 
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Items in this order</p>
         <div className="space-y-3">
           {(order.items || []).map((lineItem, idx) => {
+            const isTicket = lineItem.route === '/bookings-tickets' || lineItem.marketKey === 'tickets' || Boolean(lineItem.ticketNumber);
+            if (isTicket) {
+              return <TicketQrDisplay key={`${order.id}-ticket-${lineItem.ticketNumber || idx}`} lineItem={lineItem} onUpdateTicketStatus={onUpdateTicketStatus} />;
+            }
             const lineQty = Math.max(Number(lineItem.quantity) || 1, 1);
             const linePrice = (Number(lineItem.unitPrice) || 0) * lineQty;
             const rawLineSku = String(lineItem.sku || '').replace(/::size-[a-z0-9-]+$/i, '');
@@ -50936,7 +51475,7 @@ const CancelOrderPage = ({ orders, onCancelOrder }) => {
   );
 };
 
-const OrdersPage = ({ orders, cartItems, onCancelOrder, onAddToCart }) => {
+const OrdersPage = ({ orders, cartItems, onCancelOrder, onAddToCart, onUpdateTicketStatus }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -51014,6 +51553,7 @@ const OrdersPage = ({ orders, cartItems, onCancelOrder, onAddToCart }) => {
               cancellingOrderId={cancellingOrderId}
               onSetCancelError={setCancelError}
               onAddToCart={onAddToCart}
+              onUpdateTicketStatus={onUpdateTicketStatus}
             />
           ))}
 
@@ -52522,6 +53062,7 @@ const ItemDetailsModal = ({
   // spec table, ratings breakdown, similar-products grid). Shared by the
   // electronics and construction/building markets.
   const isRichDetail = item.detailVariant === 'electronics' || item.detailVariant === 'construction' || item.detailVariant === 'vehicle' || item.detailVariant === 'naturalResource' || item.detailVariant === 'generalLabour';
+  const isTicketItem = item.marketKey === 'tickets' || item.route === '/bookings-tickets';
 
   return (
     <div
@@ -52547,60 +53088,92 @@ const ItemDetailsModal = ({
             <X className="h-6 w-6" strokeWidth={2.75} />
           </button>
         </div>
-        {/* Main Content Grid */}
-        <div className="grid gap-8 p-6 md:grid-cols-[1.1fr_0.9fr]">
+        {/* Main Content — ticket items use a vertical hero layout; others use a side-by-side grid */}
+        <div className={isTicketItem ? 'flex flex-col' : 'grid gap-8 p-6 md:grid-cols-[1.1fr_0.9fr]'}>
           {/* Gallery Section */}
-          <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-2 flex flex-col items-center">
-            <div className="relative w-full" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+          {isTicketItem ? (
+            <div className="relative w-full overflow-hidden" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
               {currentImage ? (
                 <img
                   src={currentImage}
                   alt={`${item.title} ${currentImageIndex + 1}`}
-                  className="h-[320px] w-full rounded-lg object-contain bg-white"
+                  className="h-[280px] w-full object-cover sm:h-[420px]"
                   loading="eager"
                 />
               ) : (
-                <div className="flex h-56 items-center justify-center rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] text-sm text-[var(--svs-muted)]">
+                <div className="flex h-56 w-full items-center justify-center bg-slate-100 text-sm text-slate-400">
                   No image available
                 </div>
               )}
               {hasMultipleImages ? (
                 <>
-                  <button
-                    type="button"
-                    onClick={showPreviousImage}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full border border-[var(--svs-border)] bg-white/90 p-1.5 text-[var(--svs-text)]"
-                    aria-label="Previous image"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
+                  <button type="button" onClick={showPreviousImage} className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white backdrop-blur-sm" aria-label="Previous image">
+                    <ChevronLeft className="h-5 w-5" />
                   </button>
-                  <button
-                    type="button"
-                    onClick={showNextImage}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full border border-[var(--svs-border)] bg-white/90 p-1.5 text-[var(--svs-text)]"
-                    aria-label="Next image"
-                  >
-                    <ChevronRight className="h-4 w-4" />
+                  <button type="button" onClick={showNextImage} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white backdrop-blur-sm" aria-label="Next image">
+                    <ChevronRight className="h-5 w-5" />
                   </button>
+                  <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
+                    {itemImages.map((_, index) => (
+                      <button key={index} type="button" onClick={() => setCurrentImageIndex(index)} className={`h-2 w-2 rounded-full ${index === currentImageIndex ? 'bg-white' : 'bg-white/40'}`} aria-label={`View image ${index + 1}`} />
+                    ))}
+                  </div>
                 </>
               ) : null}
             </div>
-            {hasMultipleImages ? (
-              <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
-                {itemImages.map((imageUrl, index) => (
-                  <button
-                    key={`${imageUrl}-${index}`}
-                    type="button"
-                    onClick={() => setCurrentImageIndex(index)}
-                    className={`h-2.5 w-2.5 rounded-full ${index === currentImageIndex ? 'bg-[var(--svs-primary)]' : 'bg-slate-300'}`}
-                    aria-label={`View image ${index + 1}`}
+          ) : (
+            <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-2 flex flex-col items-center">
+              <div className="relative w-full" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+                {currentImage ? (
+                  <img
+                    src={currentImage}
+                    alt={`${item.title} ${currentImageIndex + 1}`}
+                    className="h-[320px] w-full rounded-lg object-contain bg-white"
+                    loading="eager"
                   />
-                ))}
+                ) : (
+                  <div className="flex h-56 items-center justify-center rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] text-sm text-[var(--svs-muted)]">
+                    No image available
+                  </div>
+                )}
+                {hasMultipleImages ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={showPreviousImage}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full border border-[var(--svs-border)] bg-white/90 p-1.5 text-[var(--svs-text)]"
+                      aria-label="Previous image"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={showNextImage}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full border border-[var(--svs-border)] bg-white/90 p-1.5 text-[var(--svs-text)]"
+                      aria-label="Next image"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </>
+                ) : null}
               </div>
-            ) : null}
-          </div>
+              {hasMultipleImages ? (
+                <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
+                  {itemImages.map((imageUrl, index) => (
+                    <button
+                      key={`${imageUrl}-${index}`}
+                      type="button"
+                      onClick={() => setCurrentImageIndex(index)}
+                      className={`h-2.5 w-2.5 rounded-full ${index === currentImageIndex ? 'bg-[var(--svs-primary)]' : 'bg-slate-300'}`}
+                      aria-label={`View image ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          )}
           {/* Details Section */}
-          <div className="flex flex-col gap-4">
+          <div className={`flex flex-col gap-4 ${isTicketItem ? 'p-6' : ''}`}>
             <div>
               <p className="text-sm font-semibold text-[var(--svs-primary-strong)]">{item.marketName}</p>
               {displayPriceLabel ? (
@@ -52639,6 +53212,61 @@ const ItemDetailsModal = ({
                   {sellerChatEmail ? <p className="mt-0.5 truncate">{sellerChatEmail}</p> : null}
                 </div>
               ) : null}
+              {/* Drink Details — beverages/liquors items only */}
+              {(item.marketKey === 'beverages' || item.route === '/beverages-liquors') ? (() => {
+                const drinkRows = [
+                  item.beverageCategory ? { Icon: Info, label: 'Category', value: item.beverageCategory } : null,
+                  item.alcoholContent ? { Icon: Info, label: 'Alcohol', value: item.alcoholContent } : null,
+                  item.beverageType ? { Icon: Info, label: 'Type', value: item.beverageType } : null,
+                  item.brand ? { Icon: Info, label: 'Brand', value: item.brand } : null,
+                  item.volume ? { Icon: Info, label: 'Volume', value: item.volume } : null,
+                  item.origin ? { Icon: Globe, label: 'Origin', value: item.origin } : null,
+                ].filter(Boolean);
+                if (!drinkRows.length) return null;
+                return (
+                  <div className="mt-3 rounded-xl border border-[#b6daf6] bg-[#f0f8ff] px-4 py-3">
+                    <p className="mb-2.5 text-[10px] font-bold uppercase tracking-widest text-[#0f4c75]">Product Info</p>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                      {drinkRows.map(({ Icon, label, value }) => (
+                        <div key={label} className="flex items-start gap-1.5 text-xs text-slate-700">
+                          <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#0f4c75]" />
+                          <span className="font-semibold text-[#0f4c75] shrink-0">{label}:&nbsp;</span>
+                          <span className="leading-snug">{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })() : null}
+              {/* Event Details — ticket/bookings items only */}
+              {(item.marketKey === 'tickets' || item.route === '/bookings-tickets') ? (() => {
+                const eventRows = [
+                  item.category ? { Icon: Ticket, label: 'Category', value: item.category } : null,
+                  item.date ? { Icon: CalendarDays, label: 'Date', value: (() => { try { return new Date(item.date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }); } catch { return item.date; } })() } : null,
+                  item.showtime ? { Icon: Clock, label: 'Showtime', value: item.showtime } : null,
+                  item.location ? { Icon: MapPin, label: 'Venue', value: item.location } : null,
+                  (item.city || item.country) ? { Icon: Globe, label: 'Location', value: [item.city, item.country].filter(Boolean).join(', ') } : null,
+                  item.provider ? { Icon: Users, label: 'Organizer', value: item.provider } : null,
+                  item.genre ? { Icon: Star, label: 'Genre', value: item.genre } : null,
+                  item.language ? { Icon: Info, label: 'Language', value: item.language } : null,
+                  item.meta ? { Icon: Info, label: 'Details', value: item.meta } : null,
+                ].filter(Boolean);
+                if (!eventRows.length) return null;
+                return (
+                  <div className="mt-3 rounded-xl border border-[#b6daf6] bg-[#f0f8ff] px-4 py-3">
+                    <p className="mb-2.5 text-[10px] font-bold uppercase tracking-widest text-[#0f4c75]">Event Details</p>
+                    <div className="space-y-2">
+                      {eventRows.map(({ Icon, label, value }) => (
+                        <div key={label} className="flex items-start gap-2 text-xs text-slate-700">
+                          <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#0f4c75]" />
+                          <span className="w-16 shrink-0 font-semibold text-[#0f4c75]">{label}</span>
+                          <span className="leading-snug">{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })() : null}
               {/* Seller description — shown for non-rich-detail markets (rich variants show productOverview instead) */}
               {item.description && !isRichDetail ? (
                 <div>
@@ -53099,7 +53727,6 @@ const ItemDetailsModal = ({
       </div>
     </div>
   );
-// ...existing code...
 };
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -54951,7 +55578,7 @@ const FloatingSupportChatButton = () => (
   </Link>
 );
 
-const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerItems, buyNowCheckout, productReviewSummaryMap, onAddToCart, onBuyNow, onToggleWishlist, onRemoveWishlistItem, onClearWishlist, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder, onClearBuyNowCheckout, onCancelOrder, onSellerItemCreated, onDeleteSellerItem, onUpdateSellerItem, onToggleListingPaused, onUpdateOrderStatus, onAdminSetOrderStatus, onOpenItemDetails, onPushNotificationToUser, onDismissChatNotifications }) => {
+const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerItems, buyNowCheckout, productReviewSummaryMap, onAddToCart, onBuyNow, onToggleWishlist, onRemoveWishlistItem, onClearWishlist, onUpdateCartQuantity, onRemoveCartItem, onPlaceOrder, onClearBuyNowCheckout, onCancelOrder, onSellerItemCreated, onDeleteSellerItem, onUpdateSellerItem, onToggleListingPaused, onUpdateOrderStatus, onClaimTicket, onUpdateTicketStatus, onAdminSetOrderStatus, onOpenItemDetails, onPushNotificationToUser, onDismissChatNotifications }) => {
   const { t } = useTranslation();
 
   return (
@@ -54960,7 +55587,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/logo" element={<LogoFullscreenPage />} />
     <Route path="/markets" element={<MarketsPage sellerItems={sellerItems} />} />
     <Route path="/offers" element={<OffersPage />} />
-    <Route path="/orders" element={<OrdersPage orders={orders} cartItems={cartItems} onCancelOrder={onCancelOrder} onAddToCart={onAddToCart} />} />
+    <Route path="/orders" element={<OrdersPage orders={orders} cartItems={cartItems} onCancelOrder={onCancelOrder} onAddToCart={onAddToCart} onUpdateTicketStatus={onUpdateTicketStatus} />} />
     <Route path="/orders/:orderId/track" element={<TrackOrderPage orders={orders} onAdminSetOrderStatus={onAdminSetOrderStatus} />} />
     <Route path="/bookings" element={<MyBookingsPage />} />
     <Route path="/bookings/:bookingType/:bookingId/track" element={<BookingTrackPage />} />
@@ -55013,8 +55640,8 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/general-labour-market/:categorySlug" element={<GeneralLabourPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/general-labour-market/worker/:workerId" element={<GeneralLabourWorkerDetailPage sellerItems={sellerItems} onPushNotificationToUser={onPushNotificationToUser} />} />
     <Route path="/seller/upload" element={<SellerUploadPage onSellerItemCreated={onSellerItemCreated} />} />
-    <Route path="/seller/dashboard" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onToggleListingPaused={onToggleListingPaused} onUpdateOrderStatus={onUpdateOrderStatus} initialView="listings" />} />
-    <Route path="/seller/orders" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onToggleListingPaused={onToggleListingPaused} onUpdateOrderStatus={onUpdateOrderStatus} initialView="orders" />} />
+    <Route path="/seller/dashboard" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onToggleListingPaused={onToggleListingPaused} onUpdateOrderStatus={onUpdateOrderStatus} onClaimTicket={onClaimTicket} initialView="listings" />} />
+    <Route path="/seller/orders" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onToggleListingPaused={onToggleListingPaused} onUpdateOrderStatus={onUpdateOrderStatus} onClaimTicket={onClaimTicket} initialView="orders" />} />
     <Route path="/seller/analytics" element={<SellerAnalyticsPage orders={orders} />} />
     <Route path="/seller/payouts" element={<SellerPayoutsPage orders={orders} />} />
     <Route path="/wallet" element={<WalletPage />} />
@@ -56191,12 +56818,30 @@ const App = () => {
     const orderItems = sourceItems.map((item) => {
       const existingSellerEmail = normalizeEmail(item.sellerEmail || '');
       const existingSellerName = item.sellerName || '';
+      const isTicketItem = item.route === '/bookings-tickets' || item.marketKey === 'tickets';
+      const ticketFields = isTicketItem ? (() => {
+        const listingId = getSellerListingIdFromItemKey(item.sku || item.id);
+        const prevTicketCount = orders.reduce((count, order) =>
+          count + (order.items || []).filter((oi) => {
+            const oiListingId = getSellerListingIdFromItemKey(oi.sku || oi.id);
+            return oiListingId === listingId && Boolean(oi.ticketNumber);
+          }).length
+        , 0);
+        return {
+          ticketNumber: item.ticketNumber || generateTicketNumber(),
+          ticketSequence: item.ticketSequence || prevTicketCount + 1,
+          ticketClaimed: item.ticketClaimed || false,
+          ticketClaimedAt: item.ticketClaimedAt || null,
+          ticketClaimedBy: item.ticketClaimedBy || null,
+        };
+      })() : {};
 
       if (existingSellerEmail) {
         return {
           ...item,
           sellerEmail: existingSellerEmail,
           sellerName: existingSellerName,
+          ...ticketFields,
         };
       }
 
@@ -56209,6 +56854,7 @@ const App = () => {
         ...item,
         sellerEmail: normalizeEmail(sellerFromLookup?.sellerEmail || ''),
         sellerName: sellerFromLookup?.sellerName || existingSellerName,
+        ...ticketFields,
       };
     });
 
@@ -56502,7 +57148,7 @@ const App = () => {
     }
 
     return order;
-  }, [activeUserEmail, cartItems, clearCartFromRemote, pushNotificationToUser, sellerItems]);
+  }, [activeUserEmail, cartItems, clearCartFromRemote, orders, pushNotificationToUser, sellerItems]);
 
   const handleSellerItemCreated = useCallback((item) => {
     setSellerItems((currentItems) => [item, ...currentItems]);
@@ -57018,6 +57664,90 @@ const App = () => {
     return { data: true };
   }, [orders, pushNotificationToUser]);
 
+  // Marks a ticket as claimed in both local state and Supabase.
+  // rawInput accepts either "TKT-XXXXXXXX" or the full QR payload "SVS-TICKET:TKT-XXXXXXXX".
+  // claimedByEmail: the seller's email stored as the audit trail.
+  const handleClaimTicket = useCallback(async (rawInput, claimedByEmail) => {
+    // Strip the QR prefix if the seller's scanner returned the full payload.
+    const ticketNumber = String(rawInput || '').replace(/^SVS-TICKET:/i, '').trim().toUpperCase();
+    if (!ticketNumber) return { error: 'No ticket number provided.' };
+
+    const claimedAt = new Date().toISOString();
+
+    // Check for already-claimed BEFORE building the new map (use original orders).
+    let foundTicketItem = null;
+    let foundOrderId = null;
+    for (const order of orders) {
+      const match = (order.items || []).find((item) => item.ticketNumber === ticketNumber);
+      if (match) { foundTicketItem = match; foundOrderId = order.id; break; }
+    }
+
+    if (!foundOrderId) {
+      return { error: 'Ticket not found. Check the number and try again.' };
+    }
+    if (foundTicketItem?.ticketClaimed) {
+      return { error: 'This ticket has already been claimed and cannot be reused.' };
+    }
+
+    // Build updated orders with this ticket marked claimed.
+    const updatedOrders = orders.map((order) => {
+      if (order.id !== foundOrderId) return order;
+      return {
+        ...order,
+        items: (order.items || []).map((item) => (item.ticketNumber === ticketNumber
+          ? { ...item, ticketClaimed: true, ticketClaimedAt: claimedAt, ticketClaimedBy: claimedByEmail }
+          : item
+        )),
+      };
+    });
+
+    const targetOrder = updatedOrders.find((o) => o.id === foundOrderId);
+
+    // Persist to Supabase.
+    if (hasSupabaseEnv && supabase && targetOrder) {
+      const { error } = await supabase
+        .from('orders')
+        .update({ items: targetOrder.items })
+        .eq('order_key', targetOrder.id);
+      if (error) return { error: `Could not claim ticket: ${error.message}` };
+    }
+
+    setOrders(updatedOrders);
+    return { data: { claimedAt, ticketNumber } };
+  }, [orders]);
+
+  const handleUpdateTicketStatus = useCallback(async (ticketNumber, newStatus) => {
+    if (!ticketNumber || !newStatus) return { error: 'Missing ticket number or status.' };
+    let foundOrderId = null;
+    for (const order of orders) {
+      const match = (order.items || []).find((item) => item.ticketNumber === ticketNumber);
+      if (match) { foundOrderId = order.id; break; }
+    }
+    if (!foundOrderId) return { error: 'Ticket not found.' };
+    const updatedAt = new Date().toISOString();
+    const updatedOrders = orders.map((order) => {
+      if (order.id !== foundOrderId) return order;
+      return {
+        ...order,
+        items: (order.items || []).map((item) =>
+          item.ticketNumber === ticketNumber
+            ? { ...item, ticketStatus: newStatus, ticketStatusUpdatedAt: updatedAt }
+            : item
+        ),
+      };
+    });
+    const targetOrder = updatedOrders.find((o) => o.id === foundOrderId);
+    if (hasSupabaseEnv && supabase && targetOrder) {
+      const { error } = await supabase
+        .from('orders')
+        .update({ items: targetOrder.items })
+        .eq('order_key', targetOrder.id);
+      if (error) return { error: `Could not update ticket: ${error.message}` };
+    }
+    setOrders(updatedOrders);
+    return { data: { ticketNumber, newStatus } };
+  }, [orders]);
+
   const handleOpenItemDetails = useCallback((itemDetails) => {
     const normalizedSellerEmail = normalizeEmail(
       itemDetails?.sellerEmail
@@ -57260,6 +57990,8 @@ const App = () => {
         onUpdateSellerItem={handleUpdateSellerItem}
         onToggleListingPaused={handleToggleListingPaused}
         onUpdateOrderStatus={handleUpdateOrderStatus}
+        onClaimTicket={handleClaimTicket}
+        onUpdateTicketStatus={handleUpdateTicketStatus}
         onAdminSetOrderStatus={handleAdminSetOrderStatus}
         onOpenItemDetails={handleOpenItemDetails}
         onPushNotificationToUser={pushNotificationToUser}
