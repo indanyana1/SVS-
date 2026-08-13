@@ -57950,8 +57950,18 @@ const App = () => {
     if (!foundOrderId) {
       return { error: 'Ticket not found. Check the number and try again.' };
     }
-    if (foundTicketItem?.ticketClaimed) {
+    if (foundTicketItem?.ticketClaimed || foundTicketItem?.ticketStatus === 'claimed') {
       return { error: 'This ticket has already been claimed and cannot be reused.' };
+    }
+    const nonClaimableStatuses = ['cancelled', 'organiser_cancelled', 'pending_refund', 'expired'];
+    if (nonClaimableStatuses.includes(foundTicketItem?.ticketStatus)) {
+      const statusMessages = {
+        cancelled: 'This ticket has been cancelled and is no longer valid.',
+        organiser_cancelled: 'This event was cancelled by the organiser. This ticket is not valid for entry.',
+        pending_refund: 'This ticket has a pending refund request and cannot be used for entry.',
+        expired: 'This ticket has expired and is no longer valid.',
+      };
+      return { error: statusMessages[foundTicketItem.ticketStatus] || 'This ticket is not valid for entry.' };
     }
 
     // Build updated orders with this ticket marked claimed.
