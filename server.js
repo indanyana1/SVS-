@@ -1,4 +1,5 @@
 require('dotenv').config({ quiet: true });
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
@@ -1015,6 +1016,110 @@ app.post('/api/describe-media', limits.ai, express.json({ limit: '8mb' }), async
   } catch (error) {
     const status = error.statusCode || 500;
     return res.status(status).json({ error: error?.message || 'AI describe request failed.' });
+  }
+});
+
+// ────────────────────────────────────────────────────────────────────
+//  Password-reset email  (nodemailer — full HTML, no dashboard needed)
+//  Set in .env:
+//    SMTP_HOST=smtp.gmail.com
+//    SMTP_PORT=587
+//    SMTP_USER=your@gmail.com
+//    SMTP_PASS=your-app-password      ← Gmail → Account → App Passwords
+//    SMTP_FROM="Biznisdil <your@gmail.com>"
+// ────────────────────────────────────────────────────────────────────
+app.post('/api/send-reset-email', rateLimit({ windowMs: 60_000, max: 10 }), async (req, res) => {
+  const { email, resetLink, fullName, roleLabel } = req.body || {};
+  if (!email || !resetLink) {
+    return res.status(400).json({ error: 'email and resetLink are required.' });
+  }
+
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpPort = Number(process.env.SMTP_PORT) || 587;
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  const smtpFrom = process.env.SMTP_FROM || `Biznisdil <${smtpUser}>`;
+
+  if (!smtpHost || !smtpUser || !smtpPass) {
+    logger.warn('[send-reset-email] SMTP env vars not set — cannot deliver.');
+    return res.status(503).json({ error: 'Email service not configured on server.' });
+  }
+
+  const nodemailer = require('nodemailer');
+  const transporter = nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
+    secure: smtpPort === 465,
+    auth: { user: smtpUser, pass: smtpPass },
+  });
+
+  const displayName = fullName || 'there';
+  const label = roleLabel || 'Biznisdil';
+  const logoPath = path.join(__dirname, 'src/assets/icons/biznisdil-logo.jpeg');
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:20px 14px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" style="max-width:600px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08);" cellpadding="0" cellspacing="0">
+        <tr>
+          <td align="center" style="background:linear-gradient(135deg,#1e40af 0%,#06b6d4 100%);padding:24px 14px 20px;">
+            <img src="cid:biznisdil-logo" alt="Biznisdil" width="72" height="72"
+              style="display:block;width:72px;height:72px;object-fit:cover;border-radius:16px;border:3px solid rgba(255,255,255,0.25);margin:0 auto 12px;" />
+            <h2 style="margin:0;color:#fff;font-size:22px;font-weight:800;letter-spacing:3px;">Biznisdil</h2>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:28px 24px;">
+            <h1 style="font-size:22px;margin:0 0 20px;color:#0f172a;">Reset your ${label} password</h1>
+            <p style="margin:0 0 14px;color:#1f2937;">Hi ${displayName},</p>
+            <p style="margin:0 0 24px;line-height:1.6;color:#374151;">We received a request to reset the password for your <strong>${label}</strong> account. Click the button below to choose a new password.</p>
+            <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+              <tr>
+                <td style="border-radius:8px;background:linear-gradient(135deg,#1e40af 0%,#06b6d4 100%);">
+                  <a href="${resetLink}" target="_blank" style="display:inline-block;padding:14px 32px;color:#fff;font-size:15px;font-weight:700;text-decoration:none;border-radius:8px;">Reset my password</a>
+                </td>
+              </tr>
+            </table>
+            <p style="margin:0 0 6px;color:#64748b;font-size:13px;">Or copy this link into your browser:</p>
+            <p style="margin:0 0 24px;word-break:break-all;font-size:13px;"><a href="${resetLink}" style="color:#1e40af;">${resetLink}</a></p>
+            <p style="margin:0 0 6px;color:#64748b;font-size:13px;">This link expires in <strong>30 minutes</strong> and can only be used once.</p>
+            <p style="margin:0;color:#64748b;font-size:13px;">If you didn't request this, you can safely ignore this email.</p>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding:18px 24px;border-top:1px solid #e2e8f0;background:#f8fafc;">
+            <p style="margin:0;font-size:12px;color:#94a3b8;">Best regards,<br><strong>The Biznisdil Team</strong></p>
+            <p style="margin:8px 0 0;font-size:11px;color:#cbd5e1;">This email was sent to ${email}<br>You received this because you are registered with Biznisdil.</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  try {
+    await transporter.sendMail({
+      from: smtpFrom,
+      to: email,
+      subject: `Reset your ${label} password`,
+      html,
+      attachments: [
+        {
+          filename: 'biznisdil-logo.jpeg',
+          path: logoPath,
+          cid: 'biznisdil-logo',
+        },
+      ],
+    });
+    logger.info('[send-reset-email] Delivered', { to: email });
+    return res.json({ delivered: true });
+  } catch (err) {
+    logger.error('[send-reset-email] Failed', { error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
