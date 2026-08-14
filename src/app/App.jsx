@@ -29007,40 +29007,166 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
 // Seller can either scan the buyer's QR code with their device camera
 // or manually type the ticket number the buyer reads aloud to them.
 // The ticket number is NEVER displayed to the seller from order data.
-const SellerTicketValidator = ({ onClaimTicket, userEmail }) => {
+// Flow: scan / enter → lookup → verify preview → confirm claim.
+const SellerTicketValidator = ({ onClaimTicket, onLookupTicket, userEmail }) => {
   const [input, setInput] = useState('');
-  const [status, setStatus] = useState(null); // null | { type, message, buyerInfo }
+  const [status, setStatus] = useState(null); // null | { type, message }
   const [isClaiming, setIsClaiming] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  // scannedTicket: verified ticket info awaiting seller confirmation
+  const [scannedTicket, setScannedTicket] = useState(null);
+  const [pendingRaw, setPendingRaw] = useState('');
 
-  const claim = async (rawValue) => {
+  const nonClaimable = ['claimed', 'cancelled', 'organiser_cancelled', 'pending_refund', 'expired'];
+  const nonClaimableMsg = {
+    claimed: 'Already claimed — this ticket cannot be reused.',
+    cancelled: 'Ticket has been cancelled.',
+    organiser_cancelled: 'Event was cancelled by the organiser.',
+    pending_refund: 'Refund pending — ticket is not valid for entry.',
+    expired: 'Ticket has expired.',
+  };
+
+  const lookup = (rawValue) => {
     const trimmed = String(rawValue || '').trim();
     if (!trimmed) return;
+    setStatus(null);
+    const found = onLookupTicket?.(trimmed);
+    if (!found) {
+      setStatus({ type: 'error', message: 'Ticket not found. Check the number and try again.' });
+      return;
+    }
+    setPendingRaw(trimmed);
+    setScannedTicket(found);
+  };
+
+  const confirmClaim = async () => {
+    if (!pendingRaw) return;
     setIsClaiming(true);
     setStatus(null);
-    const result = await onClaimTicket?.(trimmed, userEmail);
+    const result = await onClaimTicket?.(pendingRaw, userEmail);
     setIsClaiming(false);
+    setScannedTicket(null);
+    setPendingRaw('');
+    setInput('');
     if (result?.error) {
       setStatus({ type: 'error', message: result.error });
     } else {
-      setShowScanner(false);
-      setInput('');
       setStatus({
         type: 'success',
-        message: `Ticket ${result?.data?.ticketNumber || trimmed.replace(/^SVS-TICKET:/i, '')} claimed successfully. Buyer may now enter.`,
+        message: `Ticket ${result?.data?.ticketNumber || ''} claimed. Buyer may now enter.`,
       });
     }
   };
 
-  const handleSubmit = (event) => { event.preventDefault(); claim(input); };
+  const reset = () => { setScannedTicket(null); setPendingRaw(''); setStatus(null); setInput(''); };
+
+  const handleSubmit = (event) => { event.preventDefault(); lookup(input); };
 
   const handleQrDetected = (rawQrData) => {
-    // Only act on our own QR payloads; ignore unrelated QR codes.
     if (!String(rawQrData || '').toUpperCase().includes('TKT-')) return;
     setShowScanner(false);
-    claim(rawQrData);
+    lookup(rawQrData);
   };
 
+  // ── Ticket preview card (step 2) ────────────────────────────────────────
+  if (scannedTicket) {
+    const ts = scannedTicket.ticketStatus || (scannedTicket.ticketClaimed ? 'claimed' : 'active');
+    const isBlocked = nonClaimable.includes(ts);
+    const statusColors = {
+      active:              'bg-emerald-100 text-emerald-700 border-emerald-300',
+      claimed:             'bg-slate-100 text-slate-500 border-slate-300',
+      cancelled:           'bg-rose-100 text-rose-700 border-rose-300',
+      organiser_cancelled: 'bg-rose-100 text-rose-700 border-rose-300',
+      pending_refund:      'bg-amber-100 text-amber-700 border-amber-300',
+      expired:             'bg-slate-100 text-slate-500 border-slate-300',
+    };
+    const badgeCls = statusColors[ts] || 'bg-slate-100 text-slate-500 border-slate-300';
+    const statusLabel = ts.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
+    return (
+      <div className="rounded-xl border border-[#b6daf6] bg-gradient-to-br from-[#f0f8ff] to-[#e8f4fd] p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Ticket className="h-4 w-4 text-[#0f4c75]" />
+          <h3 className="text-sm font-bold text-[#0f4c75]">Ticket Verified</h3>
+          <span className={`ml-auto inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${badgeCls}`}>{statusLabel}</span>
+        </div>
+
+        {/* Ticket details */}
+        <div className="rounded-lg border border-[#b6daf6] bg-white p-3 space-y-1.5 text-xs">
+          <div className="flex justify-between gap-2">
+            <span className="text-slate-400 font-medium">Ticket #</span>
+            <span className="font-mono font-bold text-[#0f4c75]">{scannedTicket.ticketNumber}</span>
+          </div>
+          {scannedTicket.eventName ? (
+            <div className="flex justify-between gap-2">
+              <span className="text-slate-400 font-medium">Event</span>
+              <span className="font-semibold text-slate-700 text-right">{scannedTicket.eventName}</span>
+            </div>
+          ) : null}
+          {scannedTicket.category ? (
+            <div className="flex justify-between gap-2">
+              <span className="text-slate-400 font-medium">Category</span>
+              <span className="font-semibold text-slate-700">{scannedTicket.category}</span>
+            </div>
+          ) : null}
+          {scannedTicket.ticketSequence ? (
+            <div className="flex justify-between gap-2">
+              <span className="text-slate-400 font-medium">Seq.</span>
+              <span className="font-semibold text-slate-700">#{scannedTicket.ticketSequence}</span>
+            </div>
+          ) : null}
+          <hr className="border-slate-100" />
+          <div className="flex justify-between gap-2">
+            <span className="text-slate-400 font-medium">Buyer</span>
+            <span className="font-semibold text-slate-700 text-right">{scannedTicket.buyerName || scannedTicket.buyerEmail || 'Unknown'}</span>
+          </div>
+          {scannedTicket.buyerEmail && scannedTicket.buyerName ? (
+            <div className="flex justify-between gap-2">
+              <span className="text-slate-400 font-medium">Email</span>
+              <span className="text-slate-500 truncate max-w-[160px]">{scannedTicket.buyerEmail}</span>
+            </div>
+          ) : null}
+          {scannedTicket.ticketClaimedAt ? (
+            <div className="flex justify-between gap-2">
+              <span className="text-slate-400 font-medium">Claimed at</span>
+              <span className="text-slate-500">{new Date(scannedTicket.ticketClaimedAt).toLocaleString()}</span>
+            </div>
+          ) : null}
+        </div>
+
+        {/* Block message */}
+        {isBlocked ? (
+          <div className="flex items-start gap-2 rounded-lg bg-rose-50 border border-rose-200 px-3 py-2.5 text-xs font-semibold text-rose-700">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{nonClaimableMsg[ts] || 'This ticket is not valid for entry.'}</span>
+          </div>
+        ) : null}
+
+        {/* Action buttons */}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={reset}
+            className="flex-1 rounded-lg border border-[#0f4c75] px-3 py-2 text-sm font-bold text-[#0f4c75] transition hover:bg-[#0f4c75]/10"
+          >
+            Scan Again
+          </button>
+          {!isBlocked ? (
+            <button
+              type="button"
+              onClick={confirmClaim}
+              disabled={isClaiming}
+              className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-bold text-white transition hover:bg-emerald-500 disabled:opacity-60"
+            >
+              {isClaiming ? 'Claiming…' : <><CheckCircle2 className="h-4 w-4" /> Confirm Entry</>}
+            </button>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Step 1: scan / enter ─────────────────────────────────────────────────
   return (
     <div className="rounded-xl border border-[#b6daf6] bg-gradient-to-br from-[#f0f8ff] to-[#e8f4fd] p-4">
       <div className="mb-3 flex items-center gap-2">
@@ -29048,8 +29174,7 @@ const SellerTicketValidator = ({ onClaimTicket, userEmail }) => {
         <h3 className="text-sm font-bold text-[#0f4c75]">Validate Buyer Ticket</h3>
       </div>
       <p className="mb-3 text-xs text-slate-500">
-        Ask the buyer to show their QR code or read their ticket number.
-        Claimed tickets cannot be reused.
+        Scan the buyer&apos;s QR code or enter their ticket number. You&apos;ll see the ticket details before confirming entry.
       </p>
 
       {/* Camera scanner */}
@@ -29074,15 +29199,14 @@ const SellerTicketValidator = ({ onClaimTicket, userEmail }) => {
           onChange={(e) => { setInput(e.target.value.toUpperCase()); setStatus(null); }}
           placeholder="TKT-XXXXXXXX"
           maxLength={12}
-          disabled={isClaiming}
-          className="flex-1 min-w-0 rounded-lg border border-[#b6daf6] bg-white px-3 py-2 font-mono text-sm font-semibold text-[#0f4c75] placeholder-slate-300 outline-none focus:border-[#0f4c75] focus:ring-1 focus:ring-[#0f4c75] disabled:opacity-60"
+          className="flex-1 min-w-0 rounded-lg border border-[#b6daf6] bg-white px-3 py-2 font-mono text-sm font-semibold text-[#0f4c75] placeholder-slate-300 outline-none focus:border-[#0f4c75] focus:ring-1 focus:ring-[#0f4c75]"
         />
         <button
           type="submit"
-          disabled={isClaiming || !input.trim()}
+          disabled={!input.trim()}
           className="rounded-lg bg-[#0f4c75] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#0d3a5c] disabled:opacity-60"
         >
-          {isClaiming ? 'Claiming…' : 'Claim'}
+          Verify
         </button>
       </form>
 
@@ -29299,7 +29423,33 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
     // Intentionally excludes `orders` prop: it changes every 15s (parent polling)
     // and would trigger a full DB fetch each cycle. The seller's own fetch +
     // Supabase realtime subscription keeps the view fresh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, myListings.length, userEmail]);
+
+  // Lookup a ticket by raw QR value or manual ticket number.
+  // Returns ticket info for the preview card; does NOT claim the ticket.
+  const lookupTicket = useCallback((rawInput) => {
+    const ticketNumber = String(rawInput || '').replace(/^SVS-TICKET:/i, '').trim().toUpperCase();
+    if (!ticketNumber) return null;
+    const sourceOrders = hasLoadedSellerOrders ? sellerOrders : orders;
+    for (const order of sourceOrders) {
+      const item = (order.items || []).find((i) => i.ticketNumber === ticketNumber);
+      if (item) {
+        return {
+          ticketNumber: item.ticketNumber,
+          ticketStatus: item.ticketStatus || (item.ticketClaimed ? 'claimed' : 'active'),
+          ticketClaimed: Boolean(item.ticketClaimed),
+          ticketClaimedAt: item.ticketClaimedAt || null,
+          eventName: item.name || item.title || item.description || '',
+          category: item.selectedOption || item.variant || item.size || '',
+          ticketSequence: item.ticketSequence || null,
+          buyerName: order.customer?.fullName || '',
+          buyerEmail: order.customer?.email || order.ownerEmail || '',
+        };
+      }
+    }
+    return null;
+  }, [hasLoadedSellerOrders, sellerOrders, orders]);
 
   useEffect(() => {
     if (!editImageFiles.length) {
@@ -30439,7 +30589,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                   The ticket number is NEVER shown to the seller in order listings;
                   they can only claim it by scanning the buyer's QR or the buyer reading the number aloud. */}
               {onClaimTicket ? (
-                <SellerTicketValidator onClaimTicket={onClaimTicket} userEmail={userEmail} />
+                <SellerTicketValidator onClaimTicket={onClaimTicket} onLookupTicket={lookupTicket} userEmail={userEmail} />
               ) : null}
 
               {visibleOrders.length > 0 ? (
@@ -44682,7 +44832,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     } finally {
       setIsAgentReplying(false);
     }
-  }, [cardToReadableText, currentRole, currentUserEmail, loadRemoteChat, parseCardBody, resolveCounterparty]);
+  }, [cardToReadableText, currentRole, currentUserEmail, parseCardBody, resolveCounterparty]);
 
 
   const handleSendMessage = useCallback(async () => {
