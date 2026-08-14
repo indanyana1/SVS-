@@ -29098,7 +29098,7 @@ const SellerTicketValidator = ({ onClaimTicket, userEmail }) => {
   );
 };
 
-const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerItem, onToggleListingPaused, onUpdateOrderStatus, onClaimTicket, onOrganiserCancelOrder, initialView = 'listings' }) => {
+const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerItem, onToggleListingPaused, onUpdateOrderStatus, onClaimTicket, onOrganiserCancelOrder, onUpdateTicketStatus, initialView = 'listings' }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -29260,7 +29260,8 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
 
   useEffect(() => {
     if (!isAuthenticated || !hasSupabaseEnv || !supabase || myListings.length === 0) {
-      setSellerOrders(orders || []);
+      // Use functional setter so stale prop reference doesn't trigger re-runs.
+      setSellerOrders((current) => (current.length > 0 ? current : orders || []));
       setHasLoadedSellerOrders(true);
       setIsLoadingOrders(false);
       return;
@@ -29277,9 +29278,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
         .select('user_email, order_key, reference, order_created_at, customer, items, payment_method, payment_provider, payment_status, payment_reference, currency, subtotal, service_fee, total, status, status_history')
         .order('order_created_at', { ascending: false });
 
-      if (isCancelled) {
-        return;
-      }
+      if (isCancelled) return;
 
       if (error) {
         setOrderLoadError('');
@@ -29297,7 +29296,10 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
     return () => {
       isCancelled = true;
     };
-  }, [isAuthenticated, myListings.length, orders, userEmail]);
+    // Intentionally excludes `orders` prop: it changes every 15s (parent polling)
+    // and would trigger a full DB fetch each cycle. The seller's own fetch +
+    // Supabase realtime subscription keeps the view fresh.
+  }, [isAuthenticated, myListings.length, userEmail]);
 
   useEffect(() => {
     if (!editImageFiles.length) {
@@ -30607,6 +30609,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                                       pending_refund: { text: 'Refund Requested', cls: 'bg-amber-100 text-amber-700' },
                                       cancelled: { text: 'Cancelled', cls: 'bg-rose-100 text-rose-600' },
                                       organiser_cancelled: { text: 'Event Cancelled — 100% refund due', cls: 'bg-rose-100 text-rose-700' },
+                                      refund_paid: { text: 'Refund Paid', cls: 'bg-emerald-100 text-emerald-700' },
                                       expired: { text: 'Expired', cls: 'bg-slate-100 text-slate-400' },
                                     }[ts] || { text: ts, cls: 'bg-slate-100 text-slate-500' };
                                     const currSymbol = lineItem.unitPriceCurrency === 'USD' ? '$' : lineItem.unitPriceCurrency === 'EUR' ? '€' : lineItem.unitPriceCurrency === 'GBP' ? '£' : 'R';
@@ -30646,6 +30649,40 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                                             <p className="font-semibold">Full refund due to buyer: {currSymbol}{Number(lineItem.ticketRefundBuyerAmount || lineItem.unitPrice || 0).toFixed(2)} (100%)</p>
                                             <p className="text-rose-600">You keep nothing as the cancellation was organiser-initiated.</p>
                                           </div>
+                                        ) : null}
+                                        {ts === 'refund_paid' ? (
+                                          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-[10px] text-emerald-800">
+                                            <p className="font-semibold">Refund paid — {currSymbol}{Number(lineItem.ticketRefundBuyerAmount || 0).toFixed(2)} sent to buyer</p>
+                                          </div>
+                                        ) : null}
+                                        {/* Banking details — shown to seller when buyer has submitted them */}
+                                        {(ts === 'pending_refund' || ts === 'organiser_cancelled') ? (
+                                          lineItem.ticketRefundBankDetails ? (
+                                            <div className="rounded-lg border border-blue-200 bg-blue-50 px-2 py-1.5 text-[10px] text-blue-900 space-y-0.5">
+                                              <p className="font-semibold text-blue-800">Buyer banking details</p>
+                                              <p><span className="text-blue-500">Bank:</span> {lineItem.ticketRefundBankDetails.bankName}</p>
+                                              <p><span className="text-blue-500">Account holder:</span> {lineItem.ticketRefundBankDetails.accountHolder}</p>
+                                              <p><span className="text-blue-500">Account number:</span> {lineItem.ticketRefundBankDetails.accountNumber}</p>
+                                              {lineItem.ticketRefundBankDetails.branchCode ? (
+                                                <p><span className="text-blue-500">Branch code:</span> {lineItem.ticketRefundBankDetails.branchCode}</p>
+                                              ) : null}
+                                              <p><span className="text-blue-500">Account type:</span> {lineItem.ticketRefundBankDetails.accountType}</p>
+                                              <p className="font-semibold text-blue-700 pt-0.5">Amount to pay: {currSymbol}{Number(lineItem.ticketRefundBuyerAmount || lineItem.unitPrice || 0).toFixed(2)}</p>
+                                              {onUpdateTicketStatus ? (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => onUpdateTicketStatus(lineItem.ticketNumber, 'refund_paid', { ticketRefundPaidAt: new Date().toISOString() })}
+                                                  className="mt-1 w-full rounded-lg bg-emerald-500 px-2 py-1 text-[10px] font-bold text-white hover:bg-emerald-600"
+                                                >
+                                                  Mark refund paid
+                                                </button>
+                                              ) : null}
+                                            </div>
+                                          ) : (
+                                            <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-[10px] text-slate-500">
+                                              Awaiting banking details from buyer
+                                            </div>
+                                          )
                                         ) : null}
                                       </div>
                                     );
@@ -43290,6 +43327,10 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
   const businessCurrencySymbol = getCurrencyDefinition(businessCurrencyCode).symbol;
   const [threads, setThreads] = useState(() => getStoredSupportChatThreads(currentUserEmail));
   const [messages, setMessages] = useState(() => getStoredSupportChatMessages(currentUserEmail));
+  const messagesRef = useRef(messages);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+  const markedReadRef = useRef(new Set());
+  const markedDeliveredRef = useRef(new Set());
   const [selectedThreadId, setSelectedThreadId] = useState('');
   const [draftMessage, setDraftMessage] = useState(prefillDraftMessageFromState);
   const [issueType, setIssueType] = useState(prefillIssueTypeFromState || 'General Support');
@@ -43992,12 +44033,14 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
       setRecipientEmail('');
       return;
     }
-
-    if (!recipientOptions.some((option) => option.email === normalizeEmail(recipientEmail))) {
+    // Functional setter reads current value without needing it as a dep,
+    // avoiding the 2-iteration self-loop the previous implementation had.
+    setRecipientEmail((current) => {
+      if (recipientOptions.some((option) => option.email === normalizeEmail(current))) return current;
       const preferredOption = recipientOptions.find((option) => option.role !== 'admin') || recipientOptions[0];
-      setRecipientEmail(preferredOption.email);
-    }
-  }, [recipientEmail, recipientOptions]);
+      return preferredOption.email;
+    });
+  }, [recipientOptions]);
 
   const startChatCardTitle = currentRole === 'client' ? 'Start New Chat' : 'Start Conversation';
   const startChatRecipientLabel = 'Who do you want to contact?';
@@ -44380,10 +44423,9 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     });
   }, [activeThread, activeMessages, currentUserEmail]);
 
-  // Remote read receipts — when the active thread is on screen, stamp every
-  // message from the other party with our email under `metadata.readBy` so the
-  // sender sees the blue double-tick. Batched into a single upsert; naturally
-  // idempotent (skips messages already marked), so it won't loop.
+  // Remote read receipts — stamps `metadata.readBy` for messages visible in the
+  // active thread. Uses an optimistic local update + a ref to track in-progress
+  // marks so re-renders never re-trigger the DB write for the same message.
   useEffect(() => {
     if (!activeThread || !activeMessages.length) return;
     if (!getAuthState() || !currentUserEmail || !hasSupabaseEnv || !supabase) return;
@@ -44391,48 +44433,55 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     const toMark = activeMessages.filter((message) => (
       normalizeEmail(message.senderEmail || '') !== currentUserEmail
       && !(Array.isArray(message.metadata?.readBy) && message.metadata.readBy.includes(currentUserEmail))
+      && !markedReadRef.current.has(message.id)
     ));
     if (!toMark.length) return;
-    // Update only the `metadata` column per message — never the full row —
-    // so this background stamp can never overwrite a body edited (or
-    // deleted) concurrently elsewhere while this call was in flight.
-    let cancelled = false;
-    Promise.all(toMark.map((message) => supabase
-      .from(SUPPORT_CHAT_MESSAGES_TABLE)
-      .update({ metadata: { ...(message.metadata || {}), readBy: [...(message.metadata?.readBy || []), currentUserEmail] } })
-      .eq('message_key', message.id)))
-      .then(() => { if (!cancelled) loadRemoteChat(); });
-    return () => { cancelled = true; };
-  }, [activeThread, activeMessages, currentUserEmail, loadRemoteChat]);
+    toMark.forEach((m) => markedReadRef.current.add(m.id));
+    const toMarkIds = new Set(toMark.map((m) => m.id));
+    // Optimistic local update — no loadRemoteChat() to avoid the re-render loop.
+    setMessages((current) => current.map((msg) => {
+      if (!toMarkIds.has(msg.id)) return msg;
+      const existing = msg.metadata?.readBy || [];
+      if (existing.includes(currentUserEmail)) return msg;
+      return { ...msg, metadata: { ...(msg.metadata || {}), readBy: [...existing, currentUserEmail] } };
+    }));
+    // Fire-and-forget DB persistence.
+    toMark.forEach((message) => {
+      supabase
+        .from(SUPPORT_CHAT_MESSAGES_TABLE)
+        .update({ metadata: { ...(message.metadata || {}), readBy: [...(message.metadata?.readBy || []), currentUserEmail] } })
+        .eq('message_key', message.id)
+        .then(({ error }) => { if (error) markedReadRef.current.delete(message.id); });
+    });
+  }, [activeThread, activeMessages, currentUserEmail]);
 
-  // Remote delivery receipts — the moment a message from someone else lands in
-  // this signed-in user's client (across ANY of their threads, even while the
-  // chat is closed), stamp our email under `metadata.deliveredTo` so the sender
-  // sees the grey double-tick. This is the real "delivered" state: it does not
-  // require the recipient to open the thread (that becomes "read" instead).
-  // Idempotent — skips messages already marked — so it converges and won't loop.
+  // Remote delivery receipts — stamps `metadata.deliveredTo` the moment a
+  // message from someone else arrives. Same optimistic + ref pattern as above.
   useEffect(() => {
     if (!messages.length) return;
     if (!getAuthState() || !currentUserEmail || !hasSupabaseEnv || !supabase) return;
     const toMark = messages.filter((message) => (
       normalizeEmail(message.senderEmail || '') !== currentUserEmail
       && !(Array.isArray(message.metadata?.deliveredTo) && message.metadata.deliveredTo.includes(currentUserEmail))
+      && !markedDeliveredRef.current.has(message.id)
     ));
     if (!toMark.length) return;
-    // Same fix as the read-receipt effect above: touch only `metadata`.
-    let cancelled = false;
-    Promise.all(toMark.map((message) => supabase
-      .from(SUPPORT_CHAT_MESSAGES_TABLE)
-      .update({
-        metadata: {
-          ...(message.metadata || {}),
-          deliveredTo: [...(message.metadata?.deliveredTo || []), currentUserEmail],
-        },
-      })
-      .eq('message_key', message.id)))
-      .then(() => { if (!cancelled) loadRemoteChat(); });
-    return () => { cancelled = true; };
-  }, [messages, currentUserEmail, loadRemoteChat]);
+    toMark.forEach((m) => markedDeliveredRef.current.add(m.id));
+    const toMarkIds = new Set(toMark.map((m) => m.id));
+    setMessages((current) => current.map((msg) => {
+      if (!toMarkIds.has(msg.id)) return msg;
+      const existing = msg.metadata?.deliveredTo || [];
+      if (existing.includes(currentUserEmail)) return msg;
+      return { ...msg, metadata: { ...(msg.metadata || {}), deliveredTo: [...existing, currentUserEmail] } };
+    }));
+    toMark.forEach((message) => {
+      supabase
+        .from(SUPPORT_CHAT_MESSAGES_TABLE)
+        .update({ metadata: { ...(message.metadata || {}), deliveredTo: [...(message.metadata?.deliveredTo || []), currentUserEmail] } })
+        .eq('message_key', message.id)
+        .then(({ error }) => { if (error) markedDeliveredRef.current.delete(message.id); });
+    });
+  }, [messages, currentUserEmail]);
 
   // True when the active thread is the Biznisdil Agent / Support thread.
   // Must be defined before the scroll effect that references it.
@@ -44553,7 +44602,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     if (!updatedThread) return;
     setIsAgentReplying(true);
     try {
-      const threadMessages = messages
+      const threadMessages = messagesRef.current
         .filter((message) => message.threadId === updatedThread.id)
         .sort((left, right) => Date.parse(left.createdAt || '') - Date.parse(right.createdAt || ''));
       const agentHistory = threadMessages.slice(-8).map((message) => ({
@@ -44610,8 +44659,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
           .upsert([toSupportChatThreadRecord(syncedThread)], { onConflict: 'thread_key' })
           .then(() => supabase
             .from(SUPPORT_CHAT_MESSAGES_TABLE)
-            .upsert([toSupportChatMessageRecord(agentMessage)], { onConflict: 'message_key' }))
-          .then(() => { loadRemoteChat(); });
+            .upsert([toSupportChatMessageRecord(agentMessage)], { onConflict: 'message_key' }));
       }
     } catch (agentError) {
       const fallbackTimestamp = new Date().toISOString();
@@ -44634,7 +44682,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     } finally {
       setIsAgentReplying(false);
     }
-  }, [cardToReadableText, currentRole, currentUserEmail, loadRemoteChat, messages, parseCardBody, resolveCounterparty]);
+  }, [cardToReadableText, currentRole, currentUserEmail, loadRemoteChat, parseCardBody, resolveCounterparty]);
 
 
   const handleSendMessage = useCallback(async () => {
@@ -49403,9 +49451,105 @@ const TICKET_STATUS_CONFIG = {
     qrFilter: 'grayscale',
     showQr: false,
     showCopy: false,
-    footerNote: 'The organiser has cancelled this event. You are entitled to a full 100% refund. Our team will process your refund shortly.',
+    footerNote: 'The organiser has cancelled this event. You are entitled to a full 100% refund. Please submit your banking details below so the organiser can process your payment.',
     opacity: 'opacity-80',
   },
+  refund_paid: {
+    headerBg: 'bg-emerald-600',
+    cardBorder: 'border-emerald-200',
+    cardBg: 'bg-emerald-50',
+    headerLabel: 'Refund Paid',
+    badgeText: 'Refund Paid',
+    badgeClass: 'bg-emerald-500 text-white',
+    codeBg: 'bg-emerald-100 text-emerald-700',
+    qrFilter: 'grayscale',
+    showQr: false,
+    showCopy: false,
+    footerNote: 'Your refund has been processed by the organiser. Please allow 1–3 business days for the payment to reflect in your account.',
+    opacity: 'opacity-80',
+  },
+};
+
+// Bank details form shown on the buyer's ticket card when a refund is pending.
+const TicketRefundBankForm = ({ ticketNumber, currentStatus, onUpdateTicketStatus }) => {
+  const [fields, setFields] = useState({ bankName: '', accountHolder: '', accountNumber: '', accountType: 'cheque', branchCode: '' });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [done, setDone] = useState(false);
+
+  if (done) {
+    return (
+      <div className="mt-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-[10px] text-emerald-800">
+        <p className="font-semibold">Banking details submitted</p>
+        <p className="text-emerald-600 mt-0.5">The organiser will process your refund shortly.</p>
+      </div>
+    );
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!fields.bankName.trim() || !fields.accountHolder.trim() || !fields.accountNumber.trim()) {
+      setError('Please fill in Bank Name, Account Holder and Account Number.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    const result = await onUpdateTicketStatus(ticketNumber, currentStatus, { ticketRefundBankDetails: fields });
+    setSaving(false);
+    if (result?.error) { setError(result.error); }
+    else { setDone(true); }
+  };
+
+  return (
+    <div className="mt-2 rounded-xl border border-amber-200 bg-white px-3 py-2.5 text-xs">
+      <p className="font-semibold text-amber-900 mb-1.5">Submit your banking details to receive your refund</p>
+      {error ? <p className="mb-1.5 text-rose-600">{error}</p> : null}
+      <form onSubmit={handleSubmit} className="space-y-1.5">
+        <input
+          placeholder="Bank name *"
+          value={fields.bankName}
+          onChange={(e) => setFields((p) => ({ ...p, bankName: e.target.value }))}
+          className="w-full rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs text-[var(--svs-text)] outline-none focus:border-amber-400"
+        />
+        <input
+          placeholder="Account holder name *"
+          value={fields.accountHolder}
+          onChange={(e) => setFields((p) => ({ ...p, accountHolder: e.target.value }))}
+          className="w-full rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs text-[var(--svs-text)] outline-none focus:border-amber-400"
+        />
+        <div className="grid grid-cols-2 gap-1.5">
+          <input
+            placeholder="Account number *"
+            value={fields.accountNumber}
+            onChange={(e) => setFields((p) => ({ ...p, accountNumber: e.target.value }))}
+            className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs text-[var(--svs-text)] outline-none focus:border-amber-400"
+          />
+          <input
+            placeholder="Branch code"
+            value={fields.branchCode}
+            onChange={(e) => setFields((p) => ({ ...p, branchCode: e.target.value }))}
+            className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs text-[var(--svs-text)] outline-none focus:border-amber-400"
+          />
+        </div>
+        <select
+          value={fields.accountType}
+          onChange={(e) => setFields((p) => ({ ...p, accountType: e.target.value }))}
+          className="w-full rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs text-[var(--svs-text)] outline-none focus:border-amber-400"
+        >
+          <option value="cheque">Cheque / Current</option>
+          <option value="savings">Savings</option>
+          <option value="transmission">Transmission</option>
+        </select>
+        <button
+          type="submit"
+          disabled={saving}
+          className="w-full rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60"
+        >
+          {saving ? 'Saving…' : 'Submit banking details'}
+        </button>
+      </form>
+    </div>
+  );
 };
 
 // Time-based cancellation tiers (buyer-initiated). Ordered from most to least generous.
@@ -49553,6 +49697,17 @@ const TicketQrDisplay = ({ lineItem, onUpdateTicketStatus }) => {
                 </p>
               ) : null}
             </div>
+          ) : null}
+          {/* Banking details form — shown to buyer when refund is pending/organiser-cancelled so organiser can pay */}
+          {(status === 'pending_refund' || status === 'organiser_cancelled') && onUpdateTicketStatus ? (
+            lineItem.ticketRefundBankDetails ? (
+              <div className="mt-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-[10px] text-emerald-800">
+                <p className="font-semibold">Banking details submitted</p>
+                <p className="text-emerald-600 mt-0.5">The organiser will process your refund to the account you provided. You will be notified once paid.</p>
+              </div>
+            ) : (
+              <TicketRefundBankForm ticketNumber={ticketNumber} currentStatus={status} onUpdateTicketStatus={onUpdateTicketStatus} />
+            )
           ) : null}
           {/* Refund request — only for active tickets */}
           {status === 'active' && onUpdateTicketStatus ? (
@@ -55894,8 +56049,8 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/general-labour-market/:categorySlug" element={<GeneralLabourPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/general-labour-market/worker/:workerId" element={<GeneralLabourWorkerDetailPage sellerItems={sellerItems} onPushNotificationToUser={onPushNotificationToUser} />} />
     <Route path="/seller/upload" element={<SellerUploadPage onSellerItemCreated={onSellerItemCreated} />} />
-    <Route path="/seller/dashboard" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onToggleListingPaused={onToggleListingPaused} onUpdateOrderStatus={onUpdateOrderStatus} onClaimTicket={onClaimTicket} onOrganiserCancelOrder={onOrganiserCancelOrder} initialView="listings" />} />
-    <Route path="/seller/orders" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onToggleListingPaused={onToggleListingPaused} onUpdateOrderStatus={onUpdateOrderStatus} onClaimTicket={onClaimTicket} onOrganiserCancelOrder={onOrganiserCancelOrder} initialView="orders" />} />
+    <Route path="/seller/dashboard" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onToggleListingPaused={onToggleListingPaused} onUpdateOrderStatus={onUpdateOrderStatus} onClaimTicket={onClaimTicket} onOrganiserCancelOrder={onOrganiserCancelOrder} onUpdateTicketStatus={onUpdateTicketStatus} initialView="listings" />} />
+    <Route path="/seller/orders" element={<SellerDashboardPage orders={orders} onDeleteSellerItem={onDeleteSellerItem} onUpdateSellerItem={onUpdateSellerItem} onToggleListingPaused={onToggleListingPaused} onUpdateOrderStatus={onUpdateOrderStatus} onClaimTicket={onClaimTicket} onOrganiserCancelOrder={onOrganiserCancelOrder} onUpdateTicketStatus={onUpdateTicketStatus} initialView="orders" />} />
     <Route path="/seller/analytics" element={<SellerAnalyticsPage orders={orders} />} />
     <Route path="/seller/payouts" element={<SellerPayoutsPage orders={orders} />} />
     <Route path="/wallet" element={<WalletPage />} />
@@ -55960,6 +56115,8 @@ const App = () => {
   })));
 
   const [notifications, setNotifications] = useState(getStoredNotifications);
+  const notificationsRef = useRef(notifications);
+  useEffect(() => { notificationsRef.current = notifications; }, [notifications]);
   // Tracks the set of notification ids already seen so a chime only plays for
   // genuinely new arrivals, never on first load or when marking items read.
   const seenNotificationIdsRef = useRef(null);
@@ -56309,7 +56466,7 @@ const App = () => {
         typeof navigator !== 'undefined' &&
         navigator.serviceWorker?.controller
       ) {
-        const currentUnread = notifications.filter((n) => !n.read).length + 1;
+        const currentUnread = notificationsRef.current.filter((n) => !n.read).length + 1;
         navigator.serviceWorker.controller.postMessage({
           type: 'SVS_SHOW_NOTIFICATION',
           title: notification.title,
@@ -56375,7 +56532,7 @@ const App = () => {
     if (normalizedTargetEmail !== normalizeEmail(activeUserEmail)) {
       pushNotificationToStorage(normalizedTargetEmail, notification);
     }
-  }, [activeUserEmail, notifications]);
+  }, [activeUserEmail]);
 
   const handleClearNotifications = useCallback(async () => {
     setNotifications([]);
@@ -56402,12 +56559,8 @@ const App = () => {
   }, [activeUserEmail]);
 
   const markNotificationsAsRead = useCallback(() => {
-    const unreadIds = notifications.filter((notification) => !notification.read).map((notification) => notification.id);
-
-    setNotifications((currentNotifications) => currentNotifications.map((notification) => (
-      notification.read ? notification : { ...notification, read: true }
-    )));
-
+    const unreadIds = notificationsRef.current.filter((n) => !n.read).map((n) => n.id);
+    setNotifications((current) => current.map((n) => (n.read ? n : { ...n, read: true })));
     if (unreadIds.length && getAuthState() && activeUserEmail && hasSupabaseEnv && supabase) {
       supabase
         .from(NOTIFICATIONS_TABLE)
@@ -56415,25 +56568,16 @@ const App = () => {
         .eq('user_email', normalizeEmail(activeUserEmail))
         .in('notification_key', unreadIds);
     }
-  }, [activeUserEmail, notifications]);
+  }, [activeUserEmail]);
 
   const markNotificationAsRead = useCallback((notificationId) => {
     const normalizedNotificationId = String(notificationId || '').trim();
-
-    if (!normalizedNotificationId) {
-      return;
-    }
-
-    const targetNotification = notifications.find((notification) => notification.id === normalizedNotificationId);
-
-    if (!targetNotification || targetNotification.read) {
-      return;
-    }
-
-    setNotifications((currentNotifications) => currentNotifications.map((notification) => (
-      notification.id === normalizedNotificationId ? { ...notification, read: true } : notification
-    )));
-
+    if (!normalizedNotificationId) return;
+    const target = notificationsRef.current.find((n) => n.id === normalizedNotificationId);
+    if (!target || target.read) return;
+    setNotifications((current) => current.map((n) =>
+      n.id === normalizedNotificationId ? { ...n, read: true } : n
+    ));
     if (getAuthState() && activeUserEmail && hasSupabaseEnv && supabase) {
       supabase
         .from(NOTIFICATIONS_TABLE)
@@ -56441,7 +56585,7 @@ const App = () => {
         .eq('user_email', normalizeEmail(activeUserEmail))
         .eq('notification_key', normalizedNotificationId);
     }
-  }, [activeUserEmail, notifications]);
+  }, [activeUserEmail]);
 
   const removeNotification = useCallback((notificationId) => {
     const id = String(notificationId || '').trim();
