@@ -38,31 +38,7 @@ export const buildResetLink = (token) => {
 	return `${origin}/reset-password?token=${token}`;
 };
 
-const roleLabel = (role) => (role === 'seller' ? 'Seller Central' : 'Biznisdil');
-
-// Tries the local Express server first (full HTML, no dashboard dependency).
-// Falls back to EmailJS if the server is unreachable (e.g. static deploy).
 export const sendResetEmail = async (_supabase, { email, resetLink, role, fullName }) => {
-	const label = roleLabel(role);
-
-	// ── 1. Server-side nodemailer (preferred) ───────────────────────────
-	try {
-		const response = await fetch('/api/send-reset-email', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ email, resetLink, fullName: fullName || 'there', roleLabel: label }),
-		});
-		if (response.ok) return { delivered: true };
-		const err = await response.json().catch(() => ({}));
-		// If SMTP isn't configured the server returns 503 — fall through to EmailJS.
-		if (response.status !== 503) {
-			return { delivered: false, reason: err.error || `server-${response.status}` };
-		}
-	} catch {
-		// Server unreachable (static deploy) — fall through.
-	}
-
-	// ── 2. EmailJS browser fallback ─────────────────────────────────────
 	const serviceId = process.env.REACT_APP_EMAILJS_SERVICE_ID;
 	const templateId = process.env.REACT_APP_EMAILJS_TEMPLATE_ID;
 	const publicKey = process.env.REACT_APP_EMAILJS_PUBLIC_KEY;
@@ -71,13 +47,15 @@ export const sendResetEmail = async (_supabase, { email, resetLink, role, fullNa
 		return { delivered: false, reason: 'emailjs-not-configured' };
 	}
 
+	const roleLabel = role === 'seller' ? 'Seller Central' : 'Biznisdil';
+
 	try {
 		const emailjs = await import('@emailjs/browser');
 		await emailjs.send(serviceId, templateId, {
 			to_email: email,
 			to_name: fullName || 'there',
 			reset_link: resetLink,
-			role_label: label,
+			role_label: roleLabel,
 		}, { publicKey });
 		return { delivered: true };
 	} catch (err) {
