@@ -33624,7 +33624,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
       // If the draft was already published, start a fresh one.
       const draft = base.status === 'published' ? createEmptyBulkDraft() : base;
       const existing = draft.files || [];
-      // Cap at 4 photos — Groq vision call has a payload budget.
+      // Cap at 4 photos — Claude vision call has a payload budget.
       const room = Math.max(0, 4 - existing.length);
       const accepted = picked.slice(0, room).map((file) => ({
         file,
@@ -45537,7 +45537,8 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
           let finalTranscript = transcript;
           // Fallback: if the browser couldn't transcribe (no Web Speech API,
           // Firefox / Safari / Android stock browser, etc.) ask the server to
-          // transcribe via Groq Whisper so the AI can still understand it.
+          // transcribe via Groq Whisper (Claude has no speech-to-text API)
+          // so the AI can still understand it.
           if (!finalTranscript) {
             try {
               const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;

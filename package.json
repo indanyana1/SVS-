@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.117.1",
     "@emailjs/browser": "^4.4.1",
     "@simplewebauthn/browser": "^13.3.0",
     "@stripe/react-stripe-js": "^5.6.1",

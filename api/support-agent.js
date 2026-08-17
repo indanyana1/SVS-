@@ -1,4 +1,6 @@
-const DEFAULT_GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+const Anthropic = require('@anthropic-ai/sdk');
+
+const DEFAULT_CLAUDE_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5';
 
 const parseBody = (body) => {
   if (!body) return {};
@@ -186,9 +188,9 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: 'Method not allowed.' });
   }
 
-  if (!process.env.GROQ_API_KEY) {
+  if (!process.env.ANTHROPIC_API_KEY) {
     return res.status(500).json({
-      error: 'GROQ_API_KEY is not configured on the server.',
+      error: 'ANTHROPIC_API_KEY is not configured on the server.',
     });
   }
 
@@ -210,51 +212,39 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const payload = {
-      model: DEFAULT_GROQ_MODEL,
-      temperature: 0.2,
-      max_tokens: 900,
+    const client = new Anthropic();
+    const response = await client.messages.create({
+      model: DEFAULT_CLAUDE_MODEL,
+      max_tokens: 1024,
+      output_config: { effort: 'low' },
+      system: buildSystemPrompt(context),
       messages: [
-        { role: 'system', content: buildSystemPrompt(context) },
         ...history,
         { role: 'user', content: message },
       ],
-    };
-
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-      },
-      body: JSON.stringify(payload),
     });
 
-    const raw = await response.text();
-    let result = {};
-    try {
-      result = raw ? JSON.parse(raw) : {};
-    } catch (_error) {
-      result = {};
+    if (response.stop_reason === 'refusal') {
+      return res.status(200).json({
+        reply: 'I can\'t help with that. I can help with using SVS features — how to buy, sell, upload products, list property or livestock, track orders, and resolve payment or delivery issues.',
+        provider: 'anthropic',
+        model: response.model || DEFAULT_CLAUDE_MODEL,
+      });
     }
 
-    if (!response.ok) {
-      const detail = result?.error?.message || result?.message || 'Groq request failed.';
-      return res.status(response.status).json({ error: detail });
-    }
-
-    const reply = String(result?.choices?.[0]?.message?.content || '').trim();
+    const textBlock = response.content.find((block) => block.type === 'text');
+    const reply = String(textBlock?.text || '').trim();
     if (!reply) {
-      return res.status(502).json({ error: 'Groq returned an empty response.' });
+      return res.status(502).json({ error: 'Claude returned an empty response.' });
     }
 
     return res.status(200).json({
       reply: sanitizeReply(humaniseReply(reply)),
-      provider: 'groq',
-      model: result?.model || DEFAULT_GROQ_MODEL,
+      provider: 'anthropic',
+      model: response.model || DEFAULT_CLAUDE_MODEL,
     });
   } catch (error) {
-    return res.status(500).json({
+    return res.status(error?.status || 500).json({
       error: error?.message || 'Support agent request failed.',
     });
   }

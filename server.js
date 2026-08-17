@@ -2,6 +2,7 @@ require('dotenv').config({ quiet: true });
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
+const Anthropic = require('@anthropic-ai/sdk');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { rateLimit } = require('./server-utils/rate-limit');
 const logger = require('./server-utils/logger');
@@ -136,7 +137,7 @@ const fetchAddressJson = async (url, options = {}) => {
   return payload;
 };
 
-const DEFAULT_GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+const DEFAULT_CLAUDE_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5';
 
 const normalizeSupportAgentHistory = (history) => {
   if (!Array.isArray(history)) return [];
@@ -571,54 +572,44 @@ app.post('/api/support-agent', limits.ai, async (req, res) => {
     });
   }
 
-  if (!process.env.GROQ_API_KEY) {
-    return res.status(500).json({ error: 'GROQ_API_KEY is not configured on the server.' });
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(500).json({ error: 'ANTHROPIC_API_KEY is not configured on the server.' });
   }
 
   try {
-    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: DEFAULT_GROQ_MODEL,
-        temperature: 0.2,
-        max_tokens: 700,
-        messages: [
-          { role: 'system', content: buildSupportAgentSystemPrompt(context) },
-          ...history,
-          { role: 'user', content: message },
-        ],
-      }),
+    const client = new Anthropic();
+    const response = await client.messages.create({
+      model: DEFAULT_CLAUDE_MODEL,
+      max_tokens: 1024,
+      output_config: { effort: 'low' },
+      system: buildSupportAgentSystemPrompt(context),
+      messages: [
+        ...history,
+        { role: 'user', content: message },
+      ],
     });
 
-    const raw = await groqResponse.text();
-    let payload = {};
-    try {
-      payload = raw ? JSON.parse(raw) : {};
-    } catch (_error) {
-      payload = {};
+    if (response.stop_reason === 'refusal') {
+      return res.json({
+        reply: 'I can\'t help with that. I can help with using SVS features — how to buy, sell, upload products, list property or livestock, track orders, and resolve payment or delivery issues.',
+        provider: 'anthropic',
+        model: response.model || DEFAULT_CLAUDE_MODEL,
+      });
     }
 
-    if (!groqResponse.ok) {
-      const detail = payload?.error?.message || payload?.message || 'Groq request failed.';
-      return res.status(groqResponse.status).json({ error: detail });
-    }
-
-    const reply = String(payload?.choices?.[0]?.message?.content || '').trim();
+    const textBlock = response.content.find((block) => block.type === 'text');
+    const reply = String(textBlock?.text || '').trim();
     if (!reply) {
-      return res.status(502).json({ error: 'Groq returned an empty response.' });
+      return res.status(502).json({ error: 'Claude returned an empty response.' });
     }
 
     return res.json({
       reply: humaniseSupportReply(reply),
-      provider: 'groq',
-      model: payload?.model || DEFAULT_GROQ_MODEL,
+      provider: 'anthropic',
+      model: response.model || DEFAULT_CLAUDE_MODEL,
     });
   } catch (error) {
-    return res.status(500).json({ error: error?.message || 'Support agent request failed.' });
+    return res.status(error?.status || 500).json({ error: error?.message || 'Support agent request failed.' });
   }
 });
 
@@ -709,73 +700,54 @@ app.post('/api/transcribe-voice', limits.ai, express.json({ limit: '8mb' }), asy
 });
 
 // ── Vision model helper ───────────────────────────────────────────────
-// Prefers Gemini (free, reliable image understanding) when GEMINI_API_KEY
-// is set. Falls back to Groq when GROQ_VISION_MODEL is explicitly set to
-// a model that supports images. Throws with a clear message when neither
-// provider is configured so the caller can return a 503 to the client.
-const GEMINI_VISION_MODEL = process.env.GEMINI_VISION_MODEL || 'gemini-3.1-flash-lite';
-const GROQ_VISION_MODEL_ID = process.env.GROQ_VISION_MODEL || '';
+// Runs image understanding through Claude. `outputSchema` (when given) is
+// passed as output_config.format to guarantee valid, schema-conformant JSON
+// back instead of relying on prompt-based "return JSON only" instructions.
+const DEFAULT_VISION_MODEL = process.env.ANTHROPIC_VISION_MODEL || process.env.ANTHROPIC_MODEL || 'claude-sonnet-5';
 
-const callVisionChat = async ({ systemPrompt, userContent, maxTokens = 900 }) => {
-  const geminiKey = process.env.GEMINI_API_KEY;
-  const groqKey = process.env.GROQ_API_KEY;
-
-  let visionUrl, visionHeaders, visionModel;
-
-  if (geminiKey) {
-    visionUrl = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
-    visionHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${geminiKey}` };
-    visionModel = GEMINI_VISION_MODEL;
-  } else if (groqKey && GROQ_VISION_MODEL_ID) {
-    visionUrl = 'https://api.groq.com/openai/v1/chat/completions';
-    visionHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${groqKey}` };
-    visionModel = GROQ_VISION_MODEL_ID;
-  } else {
+const callVisionChat = async ({ systemPrompt, userContent, maxTokens = 900, outputSchema }) => {
+  if (!process.env.ANTHROPIC_API_KEY) {
     const err = new Error(
-      'AI photo analysis is not available. No vision API key is configured. '
-      + 'Get a free key at https://aistudio.google.com and add GEMINI_API_KEY to your .env file.',
+      'AI photo analysis is not available. ANTHROPIC_API_KEY is not configured on the server.',
     );
     err.statusCode = 503;
     throw err;
   }
 
-  const response = await fetch(visionUrl, {
-    method: 'POST',
-    headers: visionHeaders,
-    body: JSON.stringify({
-      model: visionModel,
-      temperature: 0.1,
+  const client = new Anthropic();
+  let response;
+  try {
+    response = await client.messages.create({
+      model: DEFAULT_VISION_MODEL,
       max_tokens: maxTokens,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userContent },
-      ],
-    }),
-  });
-
-  const raw = await response.text();
-  let payload = {};
-  try { payload = raw ? JSON.parse(raw) : {}; } catch (_e) { payload = {}; }
-
-  if (!response.ok) {
-    const detail = payload?.error?.message || payload?.message || `Vision API request failed (${response.status}).`;
-    const err = new Error(detail);
-    err.statusCode = response.status;
+      ...(outputSchema ? { output_config: { format: outputSchema } } : {}),
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userContent }],
+    });
+  } catch (error) {
+    const err = new Error(error?.message || 'Vision API request failed.');
+    err.statusCode = error?.status || 500;
     throw err;
   }
 
+  if (response.stop_reason === 'refusal') {
+    const err = new Error('Claude declined to analyse this image.');
+    err.statusCode = 502;
+    throw err;
+  }
+
+  const textBlock = response.content.find((block) => block.type === 'text');
   return {
-    content: String(payload?.choices?.[0]?.message?.content || '').trim(),
-    provider: geminiKey ? 'gemini' : 'groq',
-    model: payload?.model || visionModel,
+    content: String(textBlock?.text || '').trim(),
+    provider: 'anthropic',
+    model: response.model || DEFAULT_VISION_MODEL,
   };
 };
 
 // ---------------------------------------------------------------------
 // /api/ai-listing — Bulk product listing from a single product photo.
-// Uses callVisionChat (Gemini preferred, Groq fallback) and returns
-// strict JSON the seller upload page maps into listing fields.
+// Uses callVisionChat (Claude vision) and returns strict JSON the seller
+// upload page maps into listing fields.
 // ---------------------------------------------------------------------
 
 const SUPPORTED_LISTING_MARKET_KEYS = [
@@ -791,28 +763,45 @@ const buildAiListingSystemPrompt = (marketKeys) => (
     'You are SVS Listing Assistant. You look at one or more photos of a SINGLE product (e.g. front view, back view, tag, packaging close-up) and write ONE marketplace listing that fuses everything you see across all of them.',
     'IMPORTANT: All photos belong to the SAME product. Do not list each photo separately. Combine what you see (logo, tag, size label, material label, colour, condition) into one cohesive listing.',
     'Read any visible text on labels, tags, packaging or stickers and extract size, material, brand, model, country of origin, batch, etc.',
-    'Return STRICT JSON only. No prose, no markdown fences. Schema:',
-    '{',
-    '  "title": string (3-8 words, the product name + key descriptor, e.g. "Nike Hyverse Dri-Fit Training Jogger"),',
-    '  "description": string (2-4 short sentences describing what the product is, who it is for, and 3-5 key features you observed across the photos),',
-    '  "suggestedMarketKey": one of ' + JSON.stringify(marketKeys) + ',',
-    '  "suggestedPrice": number (a sensible retail price in the suggested currency, no currency symbol),',
-    '  "suggestedCurrency": ISO-4217 string (USD, ZAR, EUR, etc; default ZAR if local-looking African product, USD otherwise),',
-    '  "suggestedQuantity": integer (default 1; only set higher if a photo clearly shows multiple identical units, e.g. a stack of the same shirt),',
-    '  "category": short string (specific category like "Joggers", "Soft drinks", "Smartphones"),',
-    '  "brand": short string (only if a brand is clearly readable on any photo, otherwise empty string),',
-    '  "color": short string (dominant or named colour visible, e.g. "Black", "Navy blue"),',
-    '  "size": short string (size read from a tag/label, e.g. "M", "42", "500ml", "XL", empty if unknown),',
-    '  "material": short string (material read from a label, e.g. "100% Polyester", "Cotton", "Leather", empty if unknown),',
-    '  "condition": one of ["New", "Like new", "Used - good", "Used - fair", "For parts"] (default "New" if it looks new/packaged),',
-    '  "keyFeatures": array of 3-6 short bullet strings (each a single feature or selling point read off the photos, no leading dashes or asterisks),',
-    '  "confidence": number 0-1 (how confident you are this is a real listable product photo set)',
-    '}',
     'Pick the BEST single marketKey from the list. Do not invent keys.',
     'If you cannot tell what the product is, set confidence < 0.4 and still return your best guess for the rest.',
-    'Never include any text outside the JSON object.',
   ].join('\n')
 );
+
+const ALLOWED_LISTING_CONDITIONS = ['New', 'Like new', 'Used - good', 'Used - fair', 'For parts'];
+
+const buildAiListingOutputSchema = (marketKeys) => ({
+  type: 'json_schema',
+  schema: {
+    type: 'object',
+    properties: {
+      title: { type: 'string', description: '3-8 words, the product name + key descriptor, e.g. "Nike Hyverse Dri-Fit Training Jogger"' },
+      description: { type: 'string', description: '2-4 short sentences describing what the product is, who it is for, and 3-5 key features observed across the photos' },
+      suggestedMarketKey: { type: 'string', enum: marketKeys },
+      suggestedPrice: { type: 'number', description: 'a sensible retail price in the suggested currency, no currency symbol' },
+      suggestedCurrency: { type: 'string', description: 'ISO-4217 string (USD, ZAR, EUR, etc; default ZAR if local-looking African product, USD otherwise)' },
+      suggestedQuantity: { type: 'integer', description: 'default 1; only set higher if a photo clearly shows multiple identical units' },
+      category: { type: 'string', description: 'specific category like "Joggers", "Soft drinks", "Smartphones"' },
+      brand: { type: 'string', description: 'only if a brand is clearly readable on any photo, otherwise empty string' },
+      color: { type: 'string', description: 'dominant or named colour visible, e.g. "Black", "Navy blue"' },
+      size: { type: 'string', description: 'size read from a tag/label, empty if unknown' },
+      material: { type: 'string', description: 'material read from a label, empty if unknown' },
+      condition: { type: 'string', enum: ALLOWED_LISTING_CONDITIONS },
+      keyFeatures: {
+        type: 'array',
+        items: { type: 'string' },
+        description: '3-6 short bullet strings, each a single feature or selling point, no leading dashes or asterisks',
+      },
+      confidence: { type: 'number', description: 'how confident you are this is a real listable product photo set, 0-1' },
+    },
+    required: [
+      'title', 'description', 'suggestedMarketKey', 'suggestedPrice', 'suggestedCurrency',
+      'suggestedQuantity', 'category', 'brand', 'color', 'size', 'material', 'condition',
+      'keyFeatures', 'confidence',
+    ],
+    additionalProperties: false,
+  },
+});
 
 const safeJsonExtractListing = (text) => {
   const trimmed = String(text || '').trim();
@@ -829,8 +818,6 @@ const safeJsonExtractListing = (text) => {
   }
   return null;
 };
-
-const ALLOWED_LISTING_CONDITIONS = ['New', 'Like new', 'Used - good', 'Used - fair', 'For parts'];
 
 const normalizeListingResult = (parsed, allowedMarketKeys) => {
   const safe = parsed && typeof parsed === 'object' ? parsed : {};
@@ -874,8 +861,8 @@ const stripListingDataUrl = (input) => {
 };
 
 app.post('/api/ai-listing', limits.ai, express.json({ limit: '8mb' }), async (req, res) => {
-  if (!process.env.GROQ_API_KEY) {
-    return res.status(500).json({ error: 'GROQ_API_KEY is not configured on the server.' });
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(500).json({ error: 'ANTHROPIC_API_KEY is not configured on the server.' });
   }
 
   // Accept either a single-image payload (legacy) or images: [{imageBase64, mimeType}, ...]
@@ -911,19 +898,20 @@ app.post('/api/ai-listing', limits.ai, express.json({ limit: '8mb' }), async (re
       {
         type: 'text',
         text: images.length > 1
-          ? `Here are ${images.length} photos of the SAME product (different angles or close-ups). Fuse them into ONE listing JSON.`
-          : 'Look at this product photo and produce the listing JSON.',
+          ? `Here are ${images.length} photos of the SAME product (different angles or close-ups). Fuse them into ONE listing.`
+          : 'Look at this product photo and produce the listing.',
       },
       ...images.map((img) => ({
-        type: 'image_url',
-        image_url: { url: `data:${img.mimeType};base64,${img.base64}` },
+        type: 'image',
+        source: { type: 'base64', media_type: img.mimeType, data: img.base64 },
       })),
     ];
 
     const { content, provider, model } = await callVisionChat({
       systemPrompt: buildAiListingSystemPrompt(marketKeys),
       userContent,
-      maxTokens: 900,
+      maxTokens: 1024,
+      outputSchema: buildAiListingOutputSchema(marketKeys),
     });
 
     const parsed = safeJsonExtractListing(content);
@@ -947,19 +935,27 @@ app.post('/api/ai-listing', limits.ai, express.json({ limit: '8mb' }), async (re
 const buildDescribeMediaSystemPrompt = (context) => (
   [
     'You are SVS Vision Assistant. You look at a single image and describe what is visible so a chat AI agent can talk about it accurately.',
-    'Return STRICT JSON only (no markdown, no commentary). Schema:',
-    '{',
-    '  "summary": string (1-2 short sentences describing what the image shows, in plain language),',
-    '  "objects": array of short strings (the key visible items/subjects, max 8),',
-    '  "text": string (any clearly readable text visible in the image, or empty string),',
-    '  "scene": short string (e.g. "indoor kitchen", "outdoor street market", "product close-up", "selfie", "vehicle interior"),',
-    '  "tone": short string (e.g. "promotional", "casual snapshot", "evidence of damage", "ID document"),',
-    '  "warnings": array of short strings (only if you see sensitive content like exposed ID numbers, faces of minors, weapons, blood; otherwise [])',
-    '}',
-    'Never include any text outside the JSON object. Keep the summary factual and concise.',
+    'Keep the summary factual and concise.',
     context ? `Context from the user: ${String(context).slice(0, 240)}` : '',
   ].filter(Boolean).join('\n')
 );
+
+const DESCRIBE_MEDIA_OUTPUT_SCHEMA = {
+  type: 'json_schema',
+  schema: {
+    type: 'object',
+    properties: {
+      summary: { type: 'string', description: '1-2 short sentences describing what the image shows, in plain language' },
+      objects: { type: 'array', items: { type: 'string' }, description: 'the key visible items/subjects, max 8' },
+      text: { type: 'string', description: 'any clearly readable text visible in the image, or empty string' },
+      scene: { type: 'string', description: 'e.g. "indoor kitchen", "outdoor street market", "product close-up", "selfie", "vehicle interior"' },
+      tone: { type: 'string', description: 'e.g. "promotional", "casual snapshot", "evidence of damage", "ID document"' },
+      warnings: { type: 'array', items: { type: 'string' }, description: 'only if you see sensitive content like exposed ID numbers, faces of minors, weapons, blood; otherwise []' },
+    },
+    required: ['summary', 'objects', 'text', 'scene', 'tone', 'warnings'],
+    additionalProperties: false,
+  },
+};
 
 const normalizeDescribeMedia = (parsed) => {
   const safe = parsed && typeof parsed === 'object' ? parsed : {};
@@ -978,8 +974,8 @@ const normalizeDescribeMedia = (parsed) => {
 };
 
 app.post('/api/describe-media', limits.ai, express.json({ limit: '8mb' }), async (req, res) => {
-  if (!process.env.GROQ_API_KEY) {
-    return res.status(500).json({ error: 'GROQ_API_KEY is not configured on the server.' });
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(500).json({ error: 'ANTHROPIC_API_KEY is not configured on the server.' });
   }
 
   const imageInput = req.body?.imageBase64 || req.body?.image || req.body?.src || '';
@@ -996,14 +992,14 @@ app.post('/api/describe-media', limits.ai, express.json({ limit: '8mb' }), async
   }
 
   try {
-    const dataUrl = `data:${mimeType};base64,${base64}`;
     const { content, provider, model } = await callVisionChat({
       systemPrompt: buildDescribeMediaSystemPrompt(context),
       userContent: [
         { type: 'text', text: 'Describe this image so a chat assistant can reference it accurately.' },
-        { type: 'image_url', image_url: { url: dataUrl } },
+        { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 } },
       ],
-      maxTokens: 400,
+      maxTokens: 512,
+      outputSchema: DESCRIBE_MEDIA_OUTPUT_SCHEMA,
     });
 
     const parsed = safeJsonExtractListing(content);
@@ -1124,12 +1120,11 @@ app.post('/api/send-reset-email', rateLimit({ windowMs: 60_000, max: 10 }), asyn
 });
 
 app.get('/api/health', (_req, res) => {
-  const visionProvider = process.env.GEMINI_API_KEY
-    ? `gemini (${GEMINI_VISION_MODEL})`
-    : (process.env.GROQ_API_KEY && GROQ_VISION_MODEL_ID ? `groq (${GROQ_VISION_MODEL_ID})` : 'none');
+  const visionProvider = process.env.ANTHROPIC_API_KEY ? `anthropic (${DEFAULT_VISION_MODEL})` : 'none';
   res.json({
     status: 'ok',
     stripe: Boolean(process.env.STRIPE_SECRET_KEY),
+    anthropic: Boolean(process.env.ANTHROPIC_API_KEY),
     groq: Boolean(process.env.GROQ_API_KEY),
     vision: visionProvider,
     addressLookup: 'openstreetmap-nominatim',

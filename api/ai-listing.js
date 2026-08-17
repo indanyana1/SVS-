@@ -1,4 +1,6 @@
-const DEFAULT_VISION_MODEL = process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct';
+const Anthropic = require('@anthropic-ai/sdk');
+
+const DEFAULT_VISION_MODEL = process.env.ANTHROPIC_VISION_MODEL || process.env.ANTHROPIC_MODEL || 'claude-sonnet-5';
 
 const parseBody = (body) => {
   if (!body) return {};
@@ -29,45 +31,59 @@ const SUPPORTED_MARKET_KEYS = [
   'jewelleryAccessories', 'livestock', 'informalMarket',
 ];
 
+const ALLOWED_CONDITIONS = ['New', 'Like new', 'Used - good', 'Used - fair', 'For parts'];
+
 const buildSystemPrompt = (marketKeys) => (
   [
     'You are SVS Listing Assistant. You look at one or more photos of a SINGLE product (e.g. front view, back view, tag, packaging close-up) and write ONE marketplace listing that fuses everything you see across all of them.',
     'IMPORTANT: All photos belong to the SAME product. Do not list each photo separately. Combine what you see (logo, tag, size label, material label, colour, condition) into one cohesive listing.',
     'Read any visible text on labels, tags, packaging or stickers and extract size, material, brand, model, country of origin, batch, etc.',
-    'Return STRICT JSON only. No prose, no markdown fences. Schema:',
-    '{',
-    '  "title": string (3-8 words, the product name + key descriptor, e.g. "Nike Hyverse Dri-Fit Training Jogger"),',
-    '  "description": string (2-4 short sentences describing what the product is, who it is for, and 3-5 key features you observed across the photos),',
-    '  "suggestedMarketKey": one of ' + JSON.stringify(marketKeys) + ',',
-    '  "suggestedPrice": number (a sensible retail price in the suggested currency, no currency symbol),',
-    '  "suggestedCurrency": ISO-4217 string (USD, ZAR, EUR, etc; default ZAR if local-looking African product, USD otherwise),',
-    '  "suggestedQuantity": integer (default 1; only set higher if a photo clearly shows multiple identical units, e.g. a stack of the same shirt),',
-    '  "category": short string (specific category like "Joggers", "Soft drinks", "Smartphones"),',
-    '  "brand": short string (only if a brand is clearly readable on any photo, otherwise empty string),',
-    '  "color": short string (dominant or named colour visible, e.g. "Black", "Navy blue"),',
-    '  "size": short string (size read from a tag/label, e.g. "M", "42", "500ml", "XL", empty if unknown),',
-    '  "material": short string (material read from a label, e.g. "100% Polyester", "Cotton", "Leather", empty if unknown),',
-    '  "condition": one of ["New", "Like new", "Used - good", "Used - fair", "For parts"] (default "New" if it looks new/packaged),',
-    '  "keyFeatures": array of 3-6 short bullet strings (each a single feature or selling point read off the photos, no leading dashes or asterisks),',
-    '  "confidence": number 0-1 (how confident you are this is a real listable product photo set)',
-    '}',
     'Pick the BEST single marketKey from the list. Do not invent keys.',
     'If you cannot tell what the product is, set confidence < 0.4 and still return your best guess for the rest.',
-    'Never include any text outside the JSON object.',
   ].join('\n')
 );
+
+const buildOutputSchema = (marketKeys) => ({
+  type: 'json_schema',
+  schema: {
+    type: 'object',
+    properties: {
+      title: { type: 'string', description: '3-8 words, the product name + key descriptor, e.g. "Nike Hyverse Dri-Fit Training Jogger"' },
+      description: { type: 'string', description: '2-4 short sentences describing what the product is, who it is for, and 3-5 key features observed across the photos' },
+      suggestedMarketKey: { type: 'string', enum: marketKeys },
+      suggestedPrice: { type: 'number', description: 'a sensible retail price in the suggested currency, no currency symbol' },
+      suggestedCurrency: { type: 'string', description: 'ISO-4217 string (USD, ZAR, EUR, etc; default ZAR if local-looking African product, USD otherwise)' },
+      suggestedQuantity: { type: 'integer', description: 'default 1; only set higher if a photo clearly shows multiple identical units' },
+      category: { type: 'string', description: 'specific category like "Joggers", "Soft drinks", "Smartphones"' },
+      brand: { type: 'string', description: 'only if a brand is clearly readable on any photo, otherwise empty string' },
+      color: { type: 'string', description: 'dominant or named colour visible, e.g. "Black", "Navy blue"' },
+      size: { type: 'string', description: 'size read from a tag/label, empty if unknown' },
+      material: { type: 'string', description: 'material read from a label, empty if unknown' },
+      condition: { type: 'string', enum: ALLOWED_CONDITIONS },
+      keyFeatures: {
+        type: 'array',
+        items: { type: 'string' },
+        description: '3-6 short bullet strings, each a single feature or selling point, no leading dashes or asterisks',
+      },
+      confidence: { type: 'number', description: 'how confident you are this is a real listable product photo set, 0-1' },
+    },
+    required: [
+      'title', 'description', 'suggestedMarketKey', 'suggestedPrice', 'suggestedCurrency',
+      'suggestedQuantity', 'category', 'brand', 'color', 'size', 'material', 'condition',
+      'keyFeatures', 'confidence',
+    ],
+    additionalProperties: false,
+  },
+});
 
 const safeJsonExtract = (text) => {
   const trimmed = String(text || '').trim();
   if (!trimmed) return null;
-  // Try plain parse first.
   try { return JSON.parse(trimmed); } catch (_e) { /* continue */ }
-  // Strip markdown fences if any.
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
   if (fenced) {
     try { return JSON.parse(fenced[1]); } catch (_e) { /* continue */ }
   }
-  // Last resort: locate the first { ... } block.
   const start = trimmed.indexOf('{');
   const end = trimmed.lastIndexOf('}');
   if (start >= 0 && end > start) {
@@ -75,8 +91,6 @@ const safeJsonExtract = (text) => {
   }
   return null;
 };
-
-const ALLOWED_CONDITIONS = ['New', 'Like new', 'Used - good', 'Used - fair', 'For parts'];
 
 const normalizeResult = (parsed, allowedMarketKeys) => {
   const safe = parsed && typeof parsed === 'object' ? parsed : {};
@@ -117,8 +131,8 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: 'Method not allowed.' });
   }
 
-  if (!process.env.GROQ_API_KEY) {
-    return res.status(500).json({ error: 'GROQ_API_KEY is not configured on the server.' });
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(500).json({ error: 'ANTHROPIC_API_KEY is not configured on the server.' });
   }
 
   const body = parseBody(req.body);
@@ -153,48 +167,34 @@ module.exports = async (req, res) => {
     : SUPPORTED_MARKET_KEYS;
 
   try {
+    const client = new Anthropic();
     const userContent = [
       {
         type: 'text',
         text: images.length > 1
-          ? `Here are ${images.length} photos of the SAME product (different angles or close-ups). Fuse them into ONE listing JSON.`
-          : 'Look at this product photo and produce the listing JSON.',
+          ? `Here are ${images.length} photos of the SAME product (different angles or close-ups). Fuse them into ONE listing.`
+          : 'Look at this product photo and produce the listing.',
       },
       ...images.map((img) => ({
-        type: 'image_url',
-        image_url: { url: `data:${img.mimeType};base64,${img.base64}` },
+        type: 'image',
+        source: { type: 'base64', media_type: img.mimeType, data: img.base64 },
       })),
     ];
-    const payload = {
-      model: DEFAULT_VISION_MODEL,
-      temperature: 0.1,
-      max_tokens: 900,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: buildSystemPrompt(marketKeys) },
-        { role: 'user', content: userContent },
-      ],
-    };
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-      },
-      body: JSON.stringify(payload),
+    const response = await client.messages.create({
+      model: DEFAULT_VISION_MODEL,
+      max_tokens: 1024,
+      output_config: { format: buildOutputSchema(marketKeys) },
+      system: buildSystemPrompt(marketKeys),
+      messages: [{ role: 'user', content: userContent }],
     });
 
-    const raw = await response.text();
-    let result = {};
-    try { result = raw ? JSON.parse(raw) : {}; } catch (_e) { result = {}; }
-
-    if (!response.ok) {
-      const detail = result?.error?.message || result?.message || 'Groq vision request failed.';
-      return res.status(response.status).json({ error: detail });
+    if (response.stop_reason === 'refusal') {
+      return res.status(502).json({ error: 'Claude declined to analyse this image.' });
     }
 
-    const content = String(result?.choices?.[0]?.message?.content || '').trim();
+    const textBlock = response.content.find((block) => block.type === 'text');
+    const content = String(textBlock?.text || '').trim();
     const parsed = safeJsonExtract(content);
     if (!parsed) {
       return res.status(502).json({ error: 'AI returned an unparseable response.', raw: content.slice(0, 240) });
@@ -203,10 +203,10 @@ module.exports = async (req, res) => {
     const normalized = normalizeResult(parsed, marketKeys);
     return res.status(200).json({
       listing: normalized,
-      provider: 'groq',
-      model: result?.model || DEFAULT_VISION_MODEL,
+      provider: 'anthropic',
+      model: response.model || DEFAULT_VISION_MODEL,
     });
   } catch (error) {
-    return res.status(500).json({ error: error?.message || 'AI listing request failed.' });
+    return res.status(error?.status || 500).json({ error: error?.message || 'AI listing request failed.' });
   }
 };

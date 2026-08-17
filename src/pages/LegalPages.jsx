@@ -288,7 +288,7 @@ export const PrivacyPolicyPage = () => {
           items={[
             'Payment processors confirm whether a payment succeeded (we never receive your full card).',
             'Address autocomplete & geocoding providers return suggestions when you type an address.',
-            'AI services (Groq, etc.) process media you choose to send so we can transcribe or describe it.',
+            'AI services (Anthropic Claude, Groq) process media you choose to send so we can describe or transcribe it.',
           ]}
         />
       </Section>
