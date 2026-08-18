@@ -38,8 +38,11 @@ const normalizeFallbackReverseResult = (result) => {
     province,
     postalCode: '',
     country,
+    latitude: Number.isFinite(Number(result.latitude)) ? Number(result.latitude) : null,
+    longitude: Number.isFinite(Number(result.longitude)) ? Number(result.longitude) : null,
   };
 };
+
 
 const EMPTY_LOCATION = {
   formattedAddress: '',
@@ -49,7 +52,10 @@ const EMPTY_LOCATION = {
   province: '',
   postalCode: '',
   country: 'South Africa',
+  latitude: null,
+  longitude: null,
 };
+
 
 const fetchBigDataCloud = async (ip) => {
   const searchParams = new URLSearchParams({ localityLanguage: 'en' });
@@ -83,6 +89,9 @@ const fetchIpapiCo = async (ip) => {
     province: payload.region || '',
     postalCode: payload.postal || '',
     country: payload.country_name || 'South Africa',
+    latitude: Number.isFinite(Number(payload.latitude)) ? Number(payload.latitude) : null,
+    longitude: Number.isFinite(Number(payload.longitude)) ? Number(payload.longitude) : null,
+
   };
 };
 

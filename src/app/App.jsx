@@ -1045,7 +1045,17 @@ const createSellerListingFormState = () => ({
   availableDays: [],
   availabilityHours: {},
   unavailableDates: [],
+  // Delivery-radius markets (Fast Food, Groceries) capture where the item is
+  // collected from plus how far the seller delivers. Round-tripped for every
+  // market so saving through the generic dashboard modal can't drop them.
+  pickupAddress: '',
+  pickupCity: '',
+  pickupProvince: '',
+  latitude: '',
+  longitude: '',
+  deliveryMinutes: '',
   ...EMPTY_GROCERIES_LISTING_FIELDS,
+
   ...EMPTY_TICKETS_LISTING_FIELDS,
   ...EMPTY_BEVERAGES_LISTING_FIELDS,
   ...EMPTY_GENERIC_LISTING_FIELDS,
@@ -6290,6 +6300,354 @@ const getItemDetailSizeProps = (item = {}) => {
   };
 };
 
+// ── Trading hours ───────────────────────────────────────────────────────────
+// A listing can carry `availableDays` (['Monday', …]) plus `availabilityHours`
+// ({ Monday: { start: '08:00', end: '21:00' } }) — the same details_json shape
+// General Labour and Home-Care already persist for bookings. Fast Food and
+// Groceries read them as trading hours so an outlet that has closed for the day
+// cannot be ordered from. Only markets listed in TRADING_HOURS_MARKET_KEYS
+// enforce that block; every other market keeps treating the fields as booking
+// availability. A listing with no days selected has no schedule and stays
+// orderable.
+const TRADING_HOURS_MARKET_KEYS = new Set(['fastFood', 'groceries']);
+const TRADING_HOURS_MARKET_ROUTES = new Set(['/fast-food', '/groceries']);
+
+const DEFAULT_TRADING_HOURS = { start: '08:00', end: '21:00' };
+// Indexed to match Date#getDay() (0 = Sunday).
+const TRADING_WEEK_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+// Monday-first order for the seller picker and the buyer-facing summary.
+const TRADING_WEEK_DAYS_DISPLAY = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+const usesTradingHours = (item = {}) => {
+  if (TRADING_HOURS_MARKET_KEYS.has(item?.marketKey)) return true;
+  const route = String(item?.route || '');
+  // Groceries listings live under a per-category route (/groceries/fruit-veg),
+  // so match on the first path segment as well as the exact route.
+  return TRADING_HOURS_MARKET_ROUTES.has(route)
+    || TRADING_HOURS_MARKET_ROUTES.has(`/${route.split('/')[1] || ''}`);
+};
+
+
+// 'HH:MM' to minutes since midnight, or null when unparseable.
+const parseClockMinutes = (value) => {
+  const match = String(value ?? '').trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours > 23 || minutes > 59) return null;
+  return (hours * 60) + minutes;
+};
+
+const formatClockMinutes = (totalMinutes) => {
+  const safe = ((Math.round(Number(totalMinutes) || 0) % 1440) + 1440) % 1440;
+  return `${String(Math.floor(safe / 60)).padStart(2, '0')}:${String(safe % 60).padStart(2, '0')}`;
+};
+
+// The days a listing trades, normalised against the canonical week so stray
+// casing or unknown values in details_json cannot widen the schedule.
+const getListingTradingDays = (item = {}) => {
+  const raw = Array.isArray(item?.availableDays) ? item.availableDays : [];
+  const normalized = new Set(raw.map((entry) => String(entry || '').trim().toLowerCase()));
+  return TRADING_WEEK_DAYS_DISPLAY.filter((day) => normalized.has(day.toLowerCase()));
+};
+
+const hasListingTradingHours = (item = {}) => getListingTradingDays(item).length > 0;
+
+// The window for one day, or null when that day is not traded. A traded day
+// with no usable hours counts as open all day ({ start: 0, end: 0 }) rather
+// than closed, so incomplete legacy data never blocks a seller's orders.
+const getListingTradingWindow = (item = {}, day = '') => {
+  if (!getListingTradingDays(item).includes(day)) return null;
+  const hours = (item?.availabilityHours && typeof item.availabilityHours === 'object')
+    ? item.availabilityHours[day]
+    : null;
+  const start = parseClockMinutes(hours?.start);
+  const end = parseClockMinutes(hours?.end);
+  if (start === null || end === null) return { start: 0, end: 0 };
+  return { start, end };
+};
+
+const isAllDayTradingWindow = (window) => Boolean(window) && window.start === window.end;
+// A closing time at or before the opening time means the outlet trades past
+// midnight (e.g. 18:00 to 02:00); the tail of that session belongs to the day
+// it started on, which is why "yesterday" is checked separately below.
+const isOvernightTradingWindow = (window) => Boolean(window) && window.end < window.start;
+
+// Groups consecutive days that share the same window into a compact label,
+// e.g. "Mon–Fri 08:00–21:00 · Sat 09:00–23:00".
+const getTradingHoursLabel = (item = {}) => {
+  const days = getListingTradingDays(item);
+  if (!days.length) return '';
+  const describe = (window) => (isAllDayTradingWindow(window)
+    ? 'Open 24 hours'
+    : `${formatClockMinutes(window.start)}–${formatClockMinutes(window.end)}`);
+  const segments = [];
+  TRADING_WEEK_DAYS_DISPLAY.forEach((day) => {
+    const window = getListingTradingWindow(item, day);
+    if (!window) return;
+    const text = describe(window);
+    const previous = segments[segments.length - 1];
+    const isConsecutive = previous
+      && previous.text === text
+      && TRADING_WEEK_DAYS_DISPLAY.indexOf(day) === TRADING_WEEK_DAYS_DISPLAY.indexOf(previous.lastDay) + 1;
+    if (isConsecutive) {
+      previous.lastDay = day;
+      return;
+    }
+    segments.push({ firstDay: day, lastDay: day, text });
+  });
+  return segments
+    .map(({ firstDay, lastDay, text }) => {
+      const range = firstDay === lastDay
+        ? firstDay.slice(0, 3)
+        : `${firstDay.slice(0, 3)}–${lastDay.slice(0, 3)}`;
+      return `${range} ${text}`;
+    })
+    .join(' · ');
+};
+
+// Open/closed state for a listing right now. hasHours: false means the listing
+// carries no schedule at all, in which case it is always orderable.
+const getListingTradingStatus = (item = {}, now = new Date()) => {
+  if (!hasListingTradingHours(item)) {
+    return {
+      hasHours: false,
+      isOpen: true,
+      hoursLabel: '',
+      closesAtLabel: '',
+      nextOpenLabel: '',
+      statusLabel: '',
+    };
+  }
+
+  const nowMinutes = (now.getHours() * 60) + now.getMinutes();
+  const todayIndex = now.getDay();
+  const windowForOffset = (offset) => getListingTradingWindow(
+    item,
+    TRADING_WEEK_DAYS[(((todayIndex + offset) % 7) + 7) % 7],
+  );
+
+  const todayWindow = windowForOffset(0);
+  const yesterdayWindow = windowForOffset(-1);
+  const openToday = Boolean(todayWindow) && (
+    isAllDayTradingWindow(todayWindow)
+      ? true
+      : isOvernightTradingWindow(todayWindow)
+        ? nowMinutes >= todayWindow.start
+        : nowMinutes >= todayWindow.start && nowMinutes < todayWindow.end
+  );
+  // Still inside a session that opened yesterday and runs past midnight.
+  const openFromYesterday = Boolean(yesterdayWindow)
+    && isOvernightTradingWindow(yesterdayWindow)
+    && nowMinutes < yesterdayWindow.end;
+  const isOpen = openToday || openFromYesterday;
+
+  const closesAtLabel = (() => {
+    if (!isOpen) return '';
+    const activeWindow = openToday ? todayWindow : yesterdayWindow;
+    if (isAllDayTradingWindow(activeWindow)) return '';
+    return formatClockMinutes(activeWindow.end);
+  })();
+
+  const nextOpenLabel = (() => {
+    if (isOpen) return '';
+    for (let offset = 0; offset <= 7; offset += 1) {
+      const window = windowForOffset(offset);
+      if (!window) continue;
+      // Today only counts when the opening time is still ahead of us.
+      if (offset === 0 && !(!isAllDayTradingWindow(window) && nowMinutes < window.start)) continue;
+      const dayName = TRADING_WEEK_DAYS[(((todayIndex + offset) % 7) + 7) % 7];
+      const dayLabel = offset === 0 ? 'today' : offset === 1 ? 'tomorrow' : dayName;
+      const startLabel = isAllDayTradingWindow(window) ? '00:00' : formatClockMinutes(window.start);
+      return `${dayLabel} at ${startLabel}`;
+    }
+    return '';
+  })();
+
+  return {
+    hasHours: true,
+    isOpen,
+    hoursLabel: getTradingHoursLabel(item),
+    closesAtLabel,
+    nextOpenLabel,
+    statusLabel: isOpen
+      ? (closesAtLabel ? `Open until ${closesAtLabel}` : 'Open now')
+      : (nextOpenLabel ? `Closed · opens ${nextOpenLabel}` : 'Closed'),
+  };
+};
+
+// Returns the trading status only when it should block ordering, otherwise
+// null — the single check every buyer-side guard uses.
+const getListingClosedStatus = (item = {}, now = new Date()) => {
+  if (!usesTradingHours(item)) return null;
+  const status = getListingTradingStatus(item, now);
+  return status.hasHours && !status.isOpen ? status : null;
+};
+
+// ── Delivery radius ─────────────────────────────────────────────────────────
+// Fast Food and Groceries are delivered from the seller's own kitchen/store, so
+// a buyer should only be shown listings that can physically reach them in time.
+// Each listing carries `latitude`/`longitude` (captured from the seller's
+// address when listing) and `deliveryMinutes` (how far the seller is willing to
+// deliver, capped at MAX_DELIVERY_MINUTES by the platform).
+//
+// Travel time is estimated, not routed: straight-line distance is multiplied by
+// ROAD_DISTANCE_FACTOR to approximate real streets, divided by an average urban
+// delivery speed, then the listing's prep time is added. estimateDeliveryTime is
+// the single seam to swap in a real routing provider later.
+const DELIVERY_RADIUS_MARKET_KEYS = new Set(['fastFood', 'groceries']);
+const DELIVERY_RADIUS_MARKET_ROUTES = new Set(['/fast-food', '/groceries']);
+const MAX_DELIVERY_MINUTES = 60;
+const DEFAULT_DELIVERY_MINUTES = 30;
+const DELIVERY_MINUTE_OPTIONS = [15, 20, 30, 45, 60];
+const AVERAGE_DELIVERY_SPEED_KMH = 30;
+// Straight-line kilometres under-state real driving distance; 1.3 is the usual
+// urban detour ratio, so a 10 km hop is treated as 13 km of road.
+const ROAD_DISTANCE_FACTOR = 1.3;
+const EARTH_RADIUS_KM = 6371;
+
+const usesDeliveryRadius = (item = {}) => {
+  if (DELIVERY_RADIUS_MARKET_KEYS.has(item?.marketKey)) return true;
+  const route = String(item?.route || '');
+  return DELIVERY_RADIUS_MARKET_ROUTES.has(route)
+    || DELIVERY_RADIUS_MARKET_ROUTES.has(`/${route.split('/')[1] || ''}`);
+};
+
+// Accepts anything carrying coordinates (listing, saved buyer location, geocoder
+// payload) and returns a clean pair, or null when they're missing/unusable.
+// 0,0 is rejected: it's in the Atlantic and is what empty form fields collapse to.
+const getCoordinates = (source) => {
+  const latitude = Number(source?.latitude ?? source?.lat);
+  const longitude = Number(source?.longitude ?? source?.lng ?? source?.lon);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null;
+  if (latitude === 0 && longitude === 0) return null;
+  return { latitude, longitude };
+};
+
+const hasListingLocation = (item = {}) => Boolean(getCoordinates(item));
+
+const toRadians = (degrees) => (degrees * Math.PI) / 180;
+
+const getStraightLineKm = (from, to) => {
+  const a = getCoordinates(from);
+  const b = getCoordinates(to);
+  if (!a || !b) return null;
+  const deltaLat = toRadians(b.latitude - a.latitude);
+  const deltaLng = toRadians(b.longitude - a.longitude);
+  const h = (Math.sin(deltaLat / 2) ** 2)
+    + (Math.cos(toRadians(a.latitude)) * Math.cos(toRadians(b.latitude)) * (Math.sin(deltaLng / 2) ** 2));
+  return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(h)));
+};
+
+// The seller's own willingness to travel, clamped to the platform ceiling.
+const getListingDeliveryLimitMinutes = (item = {}) => {
+  const raw = Number(item?.deliveryMinutes);
+  if (!Number.isFinite(raw) || raw <= 0) return DEFAULT_DELIVERY_MINUTES;
+  return Math.min(Math.max(Math.round(raw), 5), MAX_DELIVERY_MINUTES);
+};
+
+// Fast Food listings carry a free-text prep time ("15 min", "1 hour"), which is
+// part of how long the buyer actually waits, so it counts toward the estimate.
+const getListingPrepMinutes = (item = {}) => {
+  const text = String(item?.prepTime || item?.preparationTime || '').trim();
+  if (!text) return 0;
+  const match = text.match(/(\d+(?:\.\d+)?)\s*(hours?|hrs?|h|minutes?|mins?|m)?/i);
+  if (!match) return 0;
+  const amount = Number(match[1]);
+  if (!Number.isFinite(amount) || amount <= 0) return 0;
+  const unit = String(match[2] || 'min').toLowerCase();
+  const minutes = unit.startsWith('h') ? amount * 60 : amount;
+  // Ignore absurd values from free text so one bad listing can't vanish.
+  return Math.min(Math.round(minutes), MAX_DELIVERY_MINUTES);
+};
+
+// Estimated door-to-door minutes for one listing/buyer pair, or null when either
+// side has no coordinates. Swap the body for a routing call to get real ETAs.
+const estimateDeliveryTime = (item, buyerLocation) => {
+  const straightKm = getStraightLineKm(item, buyerLocation);
+  if (straightKm === null) return null;
+  const roadKm = straightKm * ROAD_DISTANCE_FACTOR;
+  const travelMinutes = (roadKm / AVERAGE_DELIVERY_SPEED_KMH) * 60;
+  const prepMinutes = getListingPrepMinutes(item);
+  const totalMinutes = Math.max(1, Math.round(travelMinutes + prepMinutes));
+  const limitMinutes = getListingDeliveryLimitMinutes(item);
+  return {
+    straightKm,
+    roadKm,
+    travelMinutes: Math.round(travelMinutes),
+    prepMinutes,
+    totalMinutes,
+    limitMinutes,
+    isWithinRange: totalMinutes <= limitMinutes,
+    distanceLabel: roadKm < 10 ? `${roadKm.toFixed(1)} km` : `${Math.round(roadKm)} km`,
+    etaLabel: `~${totalMinutes} min`,
+  };
+};
+
+// Delivery state for one listing:
+//   not-applicable       — market doesn't use a delivery radius
+//   buyer-location-unset — buyer hasn't set a location yet
+//   listing-unlocated    — seller never saved an address (legacy listings)
+//   in-range / out-of-range
+const getListingDeliveryState = (item = {}, buyerLocation = null) => {
+  if (!usesDeliveryRadius(item)) return { status: 'not-applicable', estimate: null };
+  if (!hasListingLocation(item)) return { status: 'listing-unlocated', estimate: null };
+  if (!getCoordinates(buyerLocation)) return { status: 'buyer-location-unset', estimate: null };
+  const estimate = estimateDeliveryTime(item, buyerLocation);
+  if (!estimate) return { status: 'listing-unlocated', estimate: null };
+  return { status: estimate.isWithinRange ? 'in-range' : 'out-of-range', estimate };
+};
+
+// Splits a market's listings into what the buyer can be offered (nearest first),
+// what has no saved address (shown separately rather than hidden, so a seller's
+// older listings don't silently disappear), and what is simply too far.
+const partitionListingsByDelivery = (items = [], buyerLocation = null) => {
+  const inRange = [];
+  const unlocated = [];
+  const outOfRange = [];
+
+  items.forEach((item) => {
+    const state = getListingDeliveryState(item, buyerLocation);
+    const entry = { item, estimate: state.estimate, status: state.status };
+    if (state.status === 'in-range' || state.status === 'not-applicable' || state.status === 'buyer-location-unset') {
+      inRange.push(entry);
+    } else if (state.status === 'listing-unlocated') {
+      unlocated.push(entry);
+    } else {
+      outOfRange.push(entry);
+    }
+  });
+
+  inRange.sort((a, b) => {
+    const left = a.estimate?.totalMinutes;
+    const right = b.estimate?.totalMinutes;
+    if (left == null && right == null) return 0;
+    if (left == null) return 1;
+    if (right == null) return -1;
+    return left - right;
+  });
+
+  return { inRange, unlocated, outOfRange };
+};
+
+// Buyer-facing wording for a blocked order attempt.
+const getClosedListingNotice = (title, status) => {
+  const when = status?.nextOpenLabel ? `opens ${status.nextOpenLabel}` : 'currently outside trading hours';
+  const hours = status?.hoursLabel ? ` Trading hours: ${status.hoursLabel}.` : '';
+  return `${title || 'This item'} is closed right now — ${when}.${hours}`;
+};
+
+// The live seller listing behind a cart/order line, so guards read the
+// seller's current hours instead of a snapshot taken when it was added.
+const getSellerListingForItem = (sellerItems, candidateItem) => {
+  const listingDbId = getSellerListingIdFromItemKey(candidateItem?.sku || candidateItem?.id);
+  if (!listingDbId) return null;
+  return (sellerItems || []).find(
+    (entry) => String(entry.dbId || '') === listingDbId || entry.id === `seller-${listingDbId}`,
+  ) || null;
+};
+
 const naturalResourcesItems = [
   // ---- Precious Metals ----
   {
@@ -8590,7 +8948,22 @@ const buildSellerItemBaseDetailsJson = (formState) => {
     ...(Array.isArray(formState.availableDays) && formState.availableDays.length ? { availableDays: formState.availableDays } : {}),
     ...(formState.availabilityHours && typeof formState.availabilityHours === 'object' && Object.keys(formState.availabilityHours).length ? { availabilityHours: formState.availabilityHours } : {}),
     ...(Array.isArray(formState.unavailableDates) && formState.unavailableDates.length ? { unavailableDates: formState.unavailableDates } : {}),
+    // Pickup address + delivery reach. Coordinates are stored as numbers so the
+    // buyer-side distance maths doesn't have to re-parse them on every render.
+    ...(String(formState.pickupAddress || '').trim() ? { pickupAddress: String(formState.pickupAddress).trim() } : {}),
+    ...(String(formState.pickupCity || '').trim() ? { pickupCity: String(formState.pickupCity).trim() } : {}),
+    ...(String(formState.pickupProvince || '').trim() ? { pickupProvince: String(formState.pickupProvince).trim() } : {}),
+    ...(Number.isFinite(Number(formState.latitude)) && String(formState.latitude || '').trim()
+      ? { latitude: Number(formState.latitude) }
+      : {}),
+    ...(Number.isFinite(Number(formState.longitude)) && String(formState.longitude || '').trim()
+      ? { longitude: Number(formState.longitude) }
+      : {}),
+    ...(Number(formState.deliveryMinutes) > 0
+      ? { deliveryMinutes: Math.min(Math.round(Number(formState.deliveryMinutes)), MAX_DELIVERY_MINUTES) }
+      : {}),
   };
+
   if (formState.marketKey === 'groceries') {
     const categoryKey = String(formState.categoryKey || '').trim();
     const categoryTitle = getGroceriesCategoryTitle(categoryKey);
@@ -10998,6 +11371,231 @@ const AddressAutocompleteField = ({
           </div>
         </div>
       ) : null}
+    </div>
+  );
+};
+
+// Buyer delivery location, shared by every delivery market and remembered
+// across visits so it only has to be set once. Kept deliberately separate from
+// useNearbyLocation (which auto-detects an approximate city for the vendors
+// market): this is an explicit, precise choice the buyer makes, and it may be
+// somebody else's address when they are ordering on another person's behalf.
+const DELIVERY_LOCATION_STORAGE_KEY = 'svs-delivery-location';
+
+const readStoredDeliveryLocation = () => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(DELIVERY_LOCATION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const coordinates = getCoordinates(parsed);
+    if (!coordinates) return null;
+    return {
+      ...coordinates,
+      label: String(parsed.label || '').trim() || 'Saved location',
+      source: parsed.source === 'address' ? 'address' : 'device',
+      isForSomeoneElse: Boolean(parsed.isForSomeoneElse),
+    };
+  } catch (_error) {
+    return null;
+  }
+};
+
+const useDeliveryLocation = () => {
+  const [location, setLocation] = useState(readStoredDeliveryLocation);
+  const [isDetecting, setIsDetecting] = useState(false);
+  const [error, setError] = useState('');
+
+  const persist = useCallback((next) => {
+    setLocation(next);
+    if (typeof window === 'undefined') return;
+    try {
+      if (next) {
+        window.localStorage.setItem(DELIVERY_LOCATION_STORAGE_KEY, JSON.stringify(next));
+      } else {
+        window.localStorage.removeItem(DELIVERY_LOCATION_STORAGE_KEY);
+      }
+    } catch (_error) {
+      // Private browsing / quota — the in-memory value still works this session.
+    }
+  }, []);
+
+  const detectLocation = useCallback(() => {
+    setError('');
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setError('This device cannot share its location. Enter an address instead.');
+      return;
+    }
+    setIsDetecting(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const coordinates = {
+          latitude: Number(position.coords.latitude),
+          longitude: Number(position.coords.longitude),
+        };
+        let label = 'My current location';
+        // Reverse-geocode for a readable label. The coordinates are what the
+        // distance maths uses, so a failed lookup is cosmetic, not fatal.
+        try {
+          const response = await fetch('/api/address-reverse', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(coordinates),
+          });
+          if (response.ok) {
+            const payload = await response.json();
+            label = payload.formattedAddress
+              || [payload.address1, payload.address2, payload.city, payload.province].filter(Boolean).join(', ')
+              || label;
+          }
+        } catch (_lookupError) {
+          // Keep the generic label.
+        }
+        persist({ ...coordinates, label, source: 'device', isForSomeoneElse: false });
+        setIsDetecting(false);
+      },
+      (positionError) => {
+        setIsDetecting(false);
+        setError(positionError?.code === 1
+          ? 'Location permission was denied. Enter an address instead.'
+          : 'Could not read your location. Enter an address instead.');
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 120000 },
+    );
+  }, [persist]);
+
+  // Accepts the payload from AddressAutocomplete (or any geocoded address).
+  const setAddressLocation = useCallback((details, { isForSomeoneElse = false } = {}) => {
+    const coordinates = getCoordinates(details);
+    if (!coordinates) {
+      setError('That address has no map location. Pick a suggestion from the list.');
+      return false;
+    }
+    setError('');
+    const label = String(details.formattedAddress || '').trim()
+      || [details.address1, details.address2, details.city, details.province].filter(Boolean).join(', ')
+      || 'Chosen address';
+    persist({ ...coordinates, label, source: 'address', isForSomeoneElse });
+    return true;
+  }, [persist]);
+
+  const clearLocation = useCallback(() => {
+    setError('');
+    persist(null);
+  }, [persist]);
+
+  return { location, isDetecting, error, detectLocation, setAddressLocation, clearLocation };
+};
+
+// The location bar shown at the top of every delivery market.
+const DeliveryLocationBar = ({
+  location,
+  isDetecting,
+  error,
+  onDetect,
+  onSelectAddress,
+  onClear,
+  marketNoun = 'items',
+  nearbyCount = 0,
+  farCount = 0,
+  unlocatedCount = 0,
+}) => {
+  const [addressQuery, setAddressQuery] = useState('');
+  const [isForSomeoneElse, setIsForSomeoneElse] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const showPicker = !location || isEditing;
+
+  const handleSelectAddress = (details) => {
+    const applied = onSelectAddress(details, { isForSomeoneElse });
+    if (applied) {
+      setAddressQuery('');
+      setIsEditing(false);
+    }
+  };
+
+  return (
+    <div className="mb-5 rounded-2xl border border-[var(--svs-primary)]/30 bg-[var(--svs-cyan-surface)] p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-2 text-sm font-bold text-[var(--svs-primary-strong)]">
+            <MapPin className="h-4 w-4 shrink-0" />
+            {location ? 'Delivering to' : 'Where are we delivering?'}
+          </p>
+          {location ? (
+            <>
+              <p className="mt-1 truncate text-sm font-semibold text-[var(--svs-text)]" title={location.label}>
+                {location.label}
+              </p>
+              <p className="mt-0.5 text-xs text-[var(--svs-muted)]">
+                {location.source === 'device' ? 'Detected from your device' : 'Entered address'}
+                {location.isForSomeoneElse ? ' · ordering for someone else' : ''}
+                {' · '}
+                {nearbyCount} {marketNoun} within {MAX_DELIVERY_MINUTES} min
+                {farCount ? ` · ${farCount} too far to deliver` : ''}
+                {unlocatedCount ? ` · ${unlocatedCount} without a set address` : ''}
+              </p>
+            </>
+          ) : (
+            <p className="mt-1 text-xs text-[var(--svs-muted)]">
+              Set your location to see only {marketNoun} that can reach you in under {MAX_DELIVERY_MINUTES} minutes.
+              Ordering for someone else? Enter their address instead.
+            </p>
+          )}
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onDetect}
+            disabled={isDetecting}
+            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--svs-primary)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--svs-primary)] transition hover:bg-[var(--svs-primary-faint)] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <MapPin className="h-3.5 w-3.5" />
+            {isDetecting ? 'Detecting…' : 'Detect my location'}
+          </button>
+          {location ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setIsEditing((current) => !current)}
+                className="rounded-full border border-[var(--svs-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)]"
+              >
+                {isEditing ? 'Cancel' : 'Change address'}
+              </button>
+              <button
+                type="button"
+                onClick={onClear}
+                className="rounded-full border border-[var(--svs-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--svs-muted)] transition hover:border-rose-300 hover:text-rose-600"
+              >
+                Clear
+              </button>
+            </>
+          ) : null}
+        </div>
+      </div>
+
+      {showPicker ? (
+        <div className="mt-3 border-t border-[var(--svs-primary)]/20 pt-3">
+          <AddressAutocompleteField
+            label="Search or enter a delivery address"
+            value={addressQuery}
+            onChange={setAddressQuery}
+            onSelectAddress={handleSelectAddress}
+            inputClassName="w-full rounded-lg border border-[var(--svs-border)] bg-white px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none"
+            placeholder="Street number, suburb, or area"
+          />
+          <label className="mt-2 flex items-center gap-2 text-xs font-medium text-[var(--svs-text)]">
+            <input
+              type="checkbox"
+              checked={isForSomeoneElse}
+              onChange={(event) => setIsForSomeoneElse(event.target.checked)}
+              className="h-3.5 w-3.5 rounded border-[var(--svs-border)] text-[var(--svs-primary)]"
+            />
+            I'm ordering for someone else at this address
+          </label>
+        </div>
+      ) : null}
+
+      {error ? <p className="mt-2 text-xs font-semibold text-[#d94d4d]">{error}</p> : null}
     </div>
   );
 };
@@ -14984,25 +15582,51 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [marketItems, activeCategory, filters, buyerCurrencyCode]);
-  useListingFocusFromQuery(filteredMarketItems, onOpenItemDetails);
   const buildCartItem = (item) => {
     const itemCategoryKey = resolveGroceriesCategoryKey(item);
     return createCartItem({
       ...item,
+      id: String(item.id || '').replace(/::size-[a-z0-9-]+$/i, ''),
       route: itemCategoryKey ? `/groceries/${itemCategoryKey}` : '/groceries',
       marketName: t('markets.groceries'),
       details: getGroceriesListingDetailsText(item),
     });
   };
+
   const buildWishlistItem = (item) => {
     const itemCategoryKey = resolveGroceriesCategoryKey(item);
     return createWishlistItem({
       ...item,
+      id: String(item.id || '').replace(/::size-[a-z0-9-]+$/i, ''),
       route: itemCategoryKey ? `/groceries/${itemCategoryKey}` : '/groceries',
       marketName: t('markets.groceries'),
       details: getGroceriesListingDetailsText(item),
     });
   };
+
+  // Products with pack sizes are ordered through the shared detail modal, which
+  // clones `cartItemBase` per selected size. Passing the raw listing left that
+  // clone without the cart-item shape createCartItem adds (quantity, sku,
+  // unitPrice), so a sized product landed in the basket with an "undefined"
+  // quantity and a zero subtotal, and its per-size stock was never tracked.
+  const handleOpenDetails = (item) => {
+    if (!onOpenItemDetails) return;
+    const itemCategoryKey = resolveGroceriesCategoryKey(item);
+    onOpenItemDetails({
+      ...item,
+      images: item.images || (item.image ? [item.image] : []),
+      route: itemCategoryKey ? `/groceries/${itemCategoryKey}` : '/groceries',
+      marketName: t('markets.groceries'),
+      details: getGroceriesListingDetailsText(item),
+      priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
+      ...getItemDetailSizeProps(item),
+      cartItemBase: buildCartItem(item),
+      cartItem: buildCartItem(item),
+      wishlistItem: buildWishlistItem(item),
+    });
+  };
+
+  useListingFocusFromQuery(filteredMarketItems, handleOpenDetails);
 
   if (categoryKey && !activeCategory) {
     return <Navigate to="/groceries" replace />;
@@ -15083,6 +15707,10 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
                   const hasStockValue = item.availableQuantity !== null && item.availableQuantity !== undefined;
                   const availableQuantity = hasStockValue ? normalizeListingQuantity(item.availableQuantity, 0) : null;
                   const isOutOfStock = availableQuantity !== null && availableQuantity <= 0;
+                  // Trading hours: a closed store stays browsable but can't be ordered from.
+                  const tradingStatus = getListingTradingStatus(item);
+                  const isClosedNow = Boolean(getListingClosedStatus(item));
+                  const isUnorderable = isOutOfStock || isClosedNow;
                   return (
                     <article
                       key={item.id}
@@ -15090,16 +15718,22 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
                       className="flex flex-col overflow-hidden rounded-3xl border border-[#e0e7ef] bg-white shadow-lg hover:scale-[1.03] transition group"
                       role="button"
                       tabIndex={0}
-                      onClick={() => onOpenItemDetails?.(item)}
+                      onClick={() => handleOpenDetails(item)}
                       onKeyDown={(event) => {
                         if (event.key === 'Enter' || event.key === ' ') {
                           event.preventDefault();
-                          onOpenItemDetails?.(item);
+                          handleOpenDetails(item);
                         }
                       }}
                     >
                       <div className="relative">
                         <img src={item.image} alt={itemTitle} className="h-48 w-full object-cover rounded-t-3xl group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+                        {isClosedNow ? (
+                          <span className="absolute inset-x-0 bottom-0 bg-slate-900/75 px-2 py-1 text-center text-[10px] font-bold uppercase tracking-wide text-white">
+                            Closed{tradingStatus.nextOpenLabel ? ` · opens ${tradingStatus.nextOpenLabel}` : ''}
+                          </span>
+                        ) : null}
+
                         {onToggleWishlist ? (
                           <button
                             type="button"
@@ -15125,31 +15759,42 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
                             {isOutOfStock ? ' (Out of stock)' : ''}
                           </p>
                         ) : null}
+                        {tradingStatus.hasHours ? (
+                          <p className={`mb-2 flex items-start gap-1 text-xs font-semibold ${isClosedNow ? 'text-amber-700' : 'text-emerald-700'}`}>
+                            <Clock className="mt-0.5 h-3 w-3 shrink-0" />
+                            <span>{tradingStatus.statusLabel} · {tradingStatus.hoursLabel}</span>
+                          </p>
+                        ) : null}
                         <div className="mt-auto flex flex-col gap-2 sm:flex-row">
                           <button
                             type="button"
-                            disabled={isOutOfStock}
+                            disabled={isUnorderable}
                             onClick={(event) => {
                               event.stopPropagation();
-                              if (getItemSizeOptions(item).length > 0) onOpenItemDetails?.(item);
+                              if (getItemSizeOptions(item).length > 0) handleOpenDetails(item);
                               else onAddToCart(buildCartItem(item));
                             }}
                             className="rounded-full bg-[#0f6674] px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-[#33b9f2] disabled:bg-slate-400 disabled:cursor-not-allowed sm:px-5 sm:py-2 sm:text-base"
                           >
-                            {isOutOfStock ? 'Out of stock' : (getItemSizeOptions(item).length > 0 ? 'Select Size' : t('common.addToBasket'))}
+                            {isOutOfStock ? 'Out of stock' : isClosedNow ? 'Closed' : (getItemSizeOptions(item).length > 0 ? 'Select Size' : t('common.addToBasket'))}
                           </button>
                           <button
                             type="button"
-                            disabled={isOutOfStock}
+                            disabled={isUnorderable}
                             onClick={(event) => {
                               event.stopPropagation();
-                              onBuyNow?.(buildCartItem(item));
+                              // A sized product has no price or stock until a
+                              // pack size is picked, so route Buy Now through
+                              // the size picker instead of the base listing.
+                              if (getItemSizeOptions(item).length > 0) handleOpenDetails(item);
+                              else onBuyNow?.(buildCartItem(item));
                             }}
                             className="rounded-full border border-[#0f6674] bg-white px-3 py-1.5 text-xs font-semibold text-[#0f6674] shadow hover:bg-[#e0f7fa] disabled:bg-slate-400 disabled:cursor-not-allowed sm:px-5 sm:py-2 sm:text-base"
                           >
-                            Buy Now
+                            {isClosedNow ? 'Closed' : 'Buy Now'}
                           </button>
                         </div>
+
                       </div>
                     </article>
                   );
@@ -15771,14 +16416,38 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
 
   const buildSavedPayload = (item) => ({
     ...item,
+    id: String(item.id || '').replace(/::size-[a-z0-9-]+$/i, ''),
     route: item.route || '/fast-food',
     marketName: item.marketName || t('markets.fastFood'),
     details: item.details || item.subtitle || item.description || item.prepTime || item.sellerName || '',
   });
-  const handleAddToCart = (item) => { if (onAddToCart) onAddToCart(createCartItem(buildSavedPayload(item))); };
-  const handleBuyNow = (item) => { if (onBuyNow) onBuyNow(createCartItem(buildSavedPayload(item))); };
-  const handleToggleWishlist = (item) => { if (onToggleWishlist) onToggleWishlist(createWishlistItem(buildSavedPayload(item))); };
-  const handleOpenDetails = (item) => { if (onOpenItemDetails) onOpenItemDetails(item); };
+  const buildCartItem = (item) => createCartItem(buildSavedPayload(item));
+  const buildWishlistItem = (item) => createWishlistItem(buildSavedPayload(item));
+  const handleAddToCart = (item) => { if (onAddToCart) onAddToCart(buildCartItem(item)); };
+  const handleBuyNow = (item) => { if (onBuyNow) onBuyNow(buildCartItem(item)); };
+  const handleToggleWishlist = (item) => { if (onToggleWishlist) onToggleWishlist(buildWishlistItem(item)); };
+  // Meals with size/variant options are ordered through the shared detail
+  // modal, which clones `cartItemBase` per selected size. Passing the raw
+  // listing straight through left that clone without the cart-item shape
+  // createCartItem adds (quantity, sku, unitPrice), so a sized meal landed in
+  // the basket with an "undefined" quantity and a R0.00 subtotal, and its
+  // per-size stock was never tracked. Build the payload the same way the other
+  // seller markets do.
+  const handleOpenDetails = (item) => {
+    if (!onOpenItemDetails) return;
+    onOpenItemDetails({
+      ...item,
+      images: item.images || (item.image ? [item.image] : []),
+      route: item.route || '/fast-food',
+      marketName: item.marketName || t('markets.fastFood'),
+      details: buildSavedPayload(item).details,
+      priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
+      ...getItemDetailSizeProps(item),
+      cartItemBase: buildCartItem(item),
+      cartItem: buildCartItem(item),
+      wishlistItem: buildWishlistItem(item),
+    });
+  };
   const gridRef = useRef(null);
 
   // Filter state
@@ -16073,6 +16742,10 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
                 const hasStockValue = item.availableQuantity !== null && item.availableQuantity !== undefined;
                 const availableQuantity = hasStockValue ? normalizeListingQuantity(item.availableQuantity, 0) : null;
                 const isOutOfStock = availableQuantity !== null && availableQuantity <= 0;
+                // Trading hours: a closed outlet stays browsable but can't be ordered from.
+                const tradingStatus = getListingTradingStatus(item);
+                const isClosedNow = Boolean(getListingClosedStatus(item));
+                const isUnorderable = isOutOfStock || isClosedNow;
                 return (
                   <article
                     key={item.id}
@@ -16090,6 +16763,12 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
                       {item.dietary && item.dietary !== 'None' ? (
                         <span className="absolute bottom-2 left-2 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white shadow">{item.dietary}</span>
                       ) : null}
+                      {isClosedNow ? (
+                        <span className="absolute inset-x-0 bottom-0 bg-slate-900/75 px-2 py-1 text-center text-[10px] font-bold uppercase tracking-wide text-white">
+                          Closed{tradingStatus.nextOpenLabel ? ` · opens ${tradingStatus.nextOpenLabel}` : ''}
+                        </span>
+                      ) : null}
+
                       <button
                         type="button"
                         className={`absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border border-[var(--svs-border)] shadow ${wishlistItemIds.includes(item.id) ? 'bg-rose-50 text-rose-500' : 'bg-white/90 text-rose-400 hover:bg-rose-50'}`}
@@ -16119,26 +16798,40 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
                       {availableQuantity !== null ? (
                         <p className="mb-2 text-xs text-[var(--svs-muted)]">{isOutOfStock ? 'Out of stock' : `${availableQuantity} available`}</p>
                       ) : null}
+                      {tradingStatus.hasHours ? (
+                        <p className={`mb-2 flex items-start gap-1 text-xs font-medium ${isClosedNow ? 'text-amber-700' : 'text-emerald-700'}`}>
+                          <Clock className="mt-0.5 h-3 w-3 shrink-0" />
+                          <span>{tradingStatus.statusLabel} · {tradingStatus.hoursLabel}</span>
+                        </p>
+                      ) : null}
                       <div className="mt-auto flex gap-2">
                         <button
                           type="button"
-                          disabled={isOutOfStock}
+                          disabled={isUnorderable}
                           onClick={() => {
                             if (getItemSizeOptions(item).length > 0) handleOpenDetails(item);
                             else handleAddToCart(item);
                           }}
                           className="flex-1 rounded-xl bg-[var(--svs-primary)] px-2 py-1.5 text-xs font-semibold text-white transition hover:bg-[var(--svs-primary-strong)] disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          {isOutOfStock ? 'Out of stock' : (getItemSizeOptions(item).length > 0 ? 'Select Size' : 'Add to Cart')}
+                          {isOutOfStock ? 'Out of stock' : isClosedNow ? 'Closed' : (getItemSizeOptions(item).length > 0 ? 'Select Size' : 'Add to Cart')}
                         </button>
                         <button
                           type="button"
-                          disabled={isOutOfStock}
-                          onClick={() => handleBuyNow(item)}
+                          disabled={isUnorderable}
+
+                          onClick={() => {
+                            // A sized meal has no price/stock until a size is
+                            // picked, so route Buy Now through the size picker
+                            // instead of checking out the base listing.
+                            if (getItemSizeOptions(item).length > 0) handleOpenDetails(item);
+                            else handleBuyNow(item);
+                          }}
                           className="flex-1 rounded-xl border border-[var(--svs-primary)] px-2 py-1.5 text-xs font-semibold text-[var(--svs-primary)] transition hover:bg-[var(--svs-cyan-surface)] disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          Buy Now
+                          {isClosedNow ? 'Closed' : 'Buy Now'}
                         </button>
+
                       </div>
                     </div>
                   </article>
@@ -29546,6 +30239,13 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
       availableDays: Array.isArray(item.availableDays) ? item.availableDays : [],
       availabilityHours: (item.availabilityHours && typeof item.availabilityHours === 'object') ? item.availabilityHours : {},
       unavailableDates: Array.isArray(item.unavailableDates) ? item.unavailableDates : [],
+      pickupAddress: item.pickupAddress || '',
+      pickupCity: item.pickupCity || '',
+      pickupProvince: item.pickupProvince || '',
+      latitude: item.latitude === null || item.latitude === undefined ? '' : String(item.latitude),
+      longitude: item.longitude === null || item.longitude === undefined ? '' : String(item.longitude),
+      deliveryMinutes: item.deliveryMinutes ? String(item.deliveryMinutes) : '',
+
       // Generic per-market spec fields populated last so they take precedence
       // for spec-driven markets where the field name overlaps (e.g. brand).
       ...specSeed,
@@ -31051,6 +31751,27 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                   isCompact
                 />
               ) : null}
+              <ListingDeliveryFields
+                idPrefix={`edit-delivery-${editingItem.dbId}`}
+                marketKey={editForm.marketKey}
+                pickupAddress={editForm.pickupAddress}
+                pickupCity={editForm.pickupCity}
+                pickupProvince={editForm.pickupProvince}
+                latitude={editForm.latitude}
+                longitude={editForm.longitude}
+                deliveryMinutes={editForm.deliveryMinutes}
+                onChange={(next) => setEditForm((current) => ({ ...current, ...next }))}
+                isCompact
+              />
+              <TradingHoursEditor
+                idPrefix={`edit-hours-${editingItem.dbId}`}
+
+                marketKey={editForm.marketKey}
+                availableDays={editForm.availableDays}
+                availabilityHours={editForm.availabilityHours}
+                onChange={(next) => setEditForm((current) => ({ ...current, ...next }))}
+                isCompact
+              />
               <SizeVariantEditor
                 idPrefix={`edit-size-${editingItem.dbId}`}
                 marketKey={editForm.marketKey}
@@ -32992,6 +33713,361 @@ const SIZE_VARIANT_PRESETS = {
   },
 };
 
+// Trading-hours picker, rendered only for markets that enforce opening hours
+// (Fast Food). It writes the same `availableDays` / `availabilityHours` pair
+// General Labour and Home-Care already use, so the values round-trip through
+// details_json — buildSellerItemBaseDetailsJson persists them for every market
+// and the dashboard edit modal seeds them back — with no extra plumbing.
+const TradingHoursEditor = ({
+  idPrefix = 'trading-hours',
+  marketKey,
+  availableDays = [],
+  availabilityHours = {},
+  onChange,
+  isCompact = false,
+}) => {
+  if (!usesTradingHours({ marketKey })) {
+    return null;
+  }
+
+  const selectedDays = TRADING_WEEK_DAYS_DISPLAY.filter(
+    (day) => (Array.isArray(availableDays) ? availableDays : []).includes(day),
+  );
+  const hoursMap = (availabilityHours && typeof availabilityHours === 'object') ? availabilityHours : {};
+  const emit = (days, hours) => onChange?.({
+    availableDays: TRADING_WEEK_DAYS_DISPLAY.filter((day) => days.includes(day)),
+    availabilityHours: hours,
+  });
+
+  const handleToggleDay = (day) => {
+    const isOn = selectedDays.includes(day);
+    const nextHours = { ...hoursMap };
+    if (isOn) {
+      delete nextHours[day];
+    } else {
+      nextHours[day] = { ...(hoursMap[day] || DEFAULT_TRADING_HOURS) };
+    }
+    emit(isOn ? selectedDays.filter((entry) => entry !== day) : [...selectedDays, day], nextHours);
+  };
+
+  const handleHourChange = (day, field, value) => {
+    emit(selectedDays, {
+      ...hoursMap,
+      [day]: { ...(hoursMap[day] || DEFAULT_TRADING_HOURS), [field]: value },
+    });
+  };
+
+  const handleSelectPreset = (days) => {
+    const nextHours = {};
+    days.forEach((day) => { nextHours[day] = { ...(hoursMap[day] || DEFAULT_TRADING_HOURS) }; });
+    emit(days, nextHours);
+  };
+
+  const handleCopyToAllDays = (day) => {
+    const source = hoursMap[day] || DEFAULT_TRADING_HOURS;
+    const nextHours = {};
+    selectedDays.forEach((entry) => { nextHours[entry] = { ...source }; });
+    emit(selectedDays, nextHours);
+  };
+
+  const previewItem = { availableDays: selectedDays, availabilityHours: hoursMap };
+  const previewStatus = getListingTradingStatus(previewItem);
+  const containerClassName = isCompact
+    ? 'rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3'
+    : 'sm:col-span-2 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4';
+  const timeInputClassName = 'rounded-md border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2 py-1 text-xs text-[var(--svs-text)] outline-none';
+
+  return (
+    <div className={containerClassName}>
+      <h3 className={`${isCompact ? 'text-sm' : 'text-base'} font-bold text-[var(--svs-text)]`}>Trading hours</h3>
+      <p className="mt-1 text-xs text-[var(--svs-muted)]">
+        Pick the days you trade and the hours you are open on each one. Buyers cannot order this
+        item outside those hours. Leave every day unselected to stay orderable around the clock.
+      </p>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {TRADING_WEEK_DAYS_DISPLAY.map((day) => {
+          const isSelected = selectedDays.includes(day);
+          return (
+            <button
+              key={day}
+              type="button"
+              id={`${idPrefix}-day-${day.toLowerCase()}`}
+              onClick={() => handleToggleDay(day)}
+              aria-pressed={isSelected}
+              className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition ${isSelected ? 'border-[var(--svs-primary)] bg-[var(--svs-primary)] text-white' : 'border-[var(--svs-border)] bg-[var(--svs-surface)] text-[var(--svs-text)] hover:bg-[var(--svs-cyan-surface)]'}`}
+            >
+              {day.slice(0, 3)}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
+        <button
+          type="button"
+          onClick={() => handleSelectPreset(TRADING_WEEK_DAYS_DISPLAY)}
+          className="rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2.5 py-1 font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)]"
+        >
+          Every day
+        </button>
+        <button
+          type="button"
+          onClick={() => handleSelectPreset(TRADING_WEEK_DAYS_DISPLAY.slice(0, 5))}
+          className="rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2.5 py-1 font-semibold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)]"
+        >
+          Mon–Fri
+        </button>
+        {selectedDays.length ? (
+          <button
+            type="button"
+            onClick={() => handleSelectPreset([])}
+            className="rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2.5 py-1 font-semibold text-[var(--svs-muted)] transition hover:border-rose-300 hover:text-rose-600"
+          >
+            Clear (always open)
+          </button>
+        ) : null}
+      </div>
+
+      {selectedDays.length ? (
+        <div className="mt-3 space-y-2 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3">
+          {selectedDays.map((day) => {
+            const hours = hoursMap[day] || DEFAULT_TRADING_HOURS;
+            const window = getListingTradingWindow(previewItem, day);
+            return (
+              <div key={`${idPrefix}-hours-${day}`} className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="w-24 shrink-0 font-semibold text-[var(--svs-text)]">{day}</span>
+                <input
+                  type="time"
+                  aria-label={`${day} opening time`}
+                  value={hours.start || ''}
+                  onChange={(event) => handleHourChange(day, 'start', event.target.value)}
+                  className={timeInputClassName}
+                />
+                <span className="text-[var(--svs-muted)]">to</span>
+                <input
+                  type="time"
+                  aria-label={`${day} closing time`}
+                  value={hours.end || ''}
+                  onChange={(event) => handleHourChange(day, 'end', event.target.value)}
+                  className={timeInputClassName}
+                />
+                {isOvernightTradingWindow(window) ? (
+                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                    Closes after midnight
+                  </span>
+                ) : null}
+                {isAllDayTradingWindow(window) ? (
+                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                    Open 24 hours
+                  </span>
+                ) : null}
+                {selectedDays.length > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => handleCopyToAllDays(day)}
+                    className="ml-auto rounded-md border border-[var(--svs-border)] px-2 py-0.5 text-[10px] font-semibold text-[var(--svs-muted)] transition hover:border-[var(--svs-primary)] hover:text-[var(--svs-primary)]"
+                  >
+                    Copy to all days
+                  </button>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+
+      <p className="mt-2 text-[11px] text-[var(--svs-muted)]">
+        {selectedDays.length
+          ? `Buyers will see: ${previewStatus.hoursLabel} — right now this reads as "${previewStatus.statusLabel}".`
+          : 'No trading hours set — buyers can order this item at any time.'}
+      </p>
+    </div>
+  );
+};
+
+// Pickup address + delivery reach for markets that filter by distance (Fast
+// Food, Groceries). The coordinates saved here are what buyers' delivery-time
+// filters measure against, so a listing without them can't be matched to a
+// buyer and is shown in the market's "address not set" section instead.
+const ListingDeliveryFields = ({
+  idPrefix = 'listing-delivery',
+  marketKey,
+  pickupAddress = '',
+  pickupCity = '',
+  pickupProvince = '',
+  latitude = '',
+  longitude = '',
+  deliveryMinutes = '',
+  onChange,
+  isCompact = false,
+}) => {
+  const [isDetecting, setIsDetecting] = useState(false);
+  const [detectError, setDetectError] = useState('');
+
+  if (!usesDeliveryRadius({ marketKey })) {
+    return null;
+  }
+
+  const coordinates = getCoordinates({ latitude, longitude });
+  const limitMinutes = getListingDeliveryLimitMinutes({ deliveryMinutes });
+  // Straight-line equivalent of the chosen time, so the seller can sanity-check
+  // the reach against places they know.
+  const approximateRadiusKm = ((limitMinutes / 60) * AVERAGE_DELIVERY_SPEED_KMH) / ROAD_DISTANCE_FACTOR;
+
+  const applyAddress = (details) => {
+    const nextCoordinates = getCoordinates(details);
+    onChange?.({
+      pickupAddress: String(details.formattedAddress || '').trim()
+        || [details.address1, details.address2, details.city, details.province].filter(Boolean).join(', '),
+      pickupCity: details.city || '',
+      pickupProvince: details.province || '',
+      latitude: nextCoordinates ? String(nextCoordinates.latitude) : '',
+      longitude: nextCoordinates ? String(nextCoordinates.longitude) : '',
+    });
+    if (!nextCoordinates) {
+      setDetectError('That address could not be placed on the map. Try a nearby street or suburb.');
+    } else {
+      setDetectError('');
+    }
+    return Boolean(nextCoordinates);
+  };
+
+  const handleDetect = () => {
+    setDetectError('');
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setDetectError('This device cannot share its location. Search for your address instead.');
+      return;
+    }
+    setIsDetecting(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const nextLatitude = Number(position.coords.latitude);
+        const nextLongitude = Number(position.coords.longitude);
+        let resolved = null;
+        try {
+          const response = await fetch('/api/address-reverse', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ latitude: nextLatitude, longitude: nextLongitude }),
+          });
+          if (response.ok) resolved = await response.json();
+        } catch (_error) {
+          // Fall back to raw coordinates below — they're what matters.
+        }
+        onChange?.({
+          pickupAddress: String(resolved?.formattedAddress || '').trim()
+            || [resolved?.address1, resolved?.address2, resolved?.city, resolved?.province].filter(Boolean).join(', ')
+            || `${nextLatitude.toFixed(5)}, ${nextLongitude.toFixed(5)}`,
+          pickupCity: resolved?.city || '',
+          pickupProvince: resolved?.province || '',
+          latitude: String(nextLatitude),
+          longitude: String(nextLongitude),
+        });
+        setIsDetecting(false);
+      },
+      (positionError) => {
+        setIsDetecting(false);
+        setDetectError(positionError?.code === 1
+          ? 'Location permission was denied. Search for your address instead.'
+          : 'Could not read your location. Search for your address instead.');
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 120000 },
+    );
+  };
+
+  const containerClassName = isCompact
+    ? 'rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3'
+    : 'sm:col-span-2 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-4';
+
+  return (
+    <div className={containerClassName}>
+      <h3 className={`${isCompact ? 'text-sm' : 'text-base'} font-bold text-[var(--svs-text)]`}>
+        Pickup address &amp; delivery reach
+      </h3>
+      <p className="mt-1 text-xs text-[var(--svs-muted)]">
+        Buyers on this market only see items that can reach them in time, so tell us where you cook
+        or store this item and how far you deliver. Search your address or detect it — both save the
+        map position we measure from.
+      </p>
+
+      <div className="mt-3">
+        <AddressAutocompleteField
+          label="Where is this item collected from?"
+          value={pickupAddress}
+          onChange={(value) => onChange?.({ pickupAddress: value })}
+          onSelectAddress={applyAddress}
+          inputClassName="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2.5 text-sm text-[var(--svs-text)] outline-none"
+          placeholder="Street number, suburb, or area"
+        />
+      </div>
+
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          id={`${idPrefix}-detect`}
+          onClick={handleDetect}
+          disabled={isDetecting}
+          className="inline-flex items-center gap-1.5 rounded-full border border-[var(--svs-primary)] bg-[var(--svs-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--svs-primary)] transition hover:bg-[var(--svs-primary-faint)] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <MapPin className="h-3.5 w-3.5" />
+          {isDetecting ? 'Detecting…' : 'Use my current location'}
+        </button>
+        {coordinates ? (
+          <>
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Map position saved ({coordinates.latitude.toFixed(4)}, {coordinates.longitude.toFixed(4)})
+            </span>
+            <button
+              type="button"
+              onClick={() => onChange?.({ latitude: '', longitude: '' })}
+              className="rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2.5 py-1 text-[11px] font-semibold text-[var(--svs-muted)] transition hover:border-rose-300 hover:text-rose-600"
+            >
+              Clear position
+            </button>
+          </>
+        ) : (
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
+            <AlertTriangle className="h-3.5 w-3.5" />
+            No map position yet — buyers won't see this in their delivery range
+          </span>
+        )}
+      </div>
+
+      <div className="mt-3">
+        <label htmlFor={`${idPrefix}-minutes`} className="mb-1 block text-xs font-medium text-[var(--svs-text)]">
+          How long does delivery take at the furthest point you deliver to?
+        </label>
+        <select
+          id={`${idPrefix}-minutes`}
+          value={String(deliveryMinutes || DEFAULT_DELIVERY_MINUTES)}
+          onChange={(event) => onChange?.({ deliveryMinutes: event.target.value })}
+          className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none sm:w-auto"
+        >
+          {DELIVERY_MINUTE_OPTIONS.map((option) => (
+            <option key={option} value={String(option)}>
+              {option} minutes{option === MAX_DELIVERY_MINUTES ? ' (platform maximum)' : ''}
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-[11px] text-[var(--svs-muted)]">
+          Roughly {approximateRadiusKm < 10 ? approximateRadiusKm.toFixed(1) : Math.round(approximateRadiusKm)} km
+          around your address. Buyers further out won't see this item. The platform never shows items
+          over {MAX_DELIVERY_MINUTES} minutes away, and preparation time counts toward the estimate.
+        </p>
+      </div>
+
+      {pickupCity || pickupProvince ? (
+        <p className="mt-2 text-[11px] text-[var(--svs-muted)]">
+          Area: {[pickupCity, pickupProvince].filter(Boolean).join(', ')}
+        </p>
+      ) : null}
+      {detectError ? <p className="mt-2 text-xs font-semibold text-[#d94d4d]">{detectError}</p> : null}
+    </div>
+  );
+};
+
 const SizeVariantEditor = ({
   sizes = [],
   sizeStock = {},
@@ -34565,6 +35641,25 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
               {formData.marketKey && getMarketFieldSpec(formData.marketKey) ? (
                 <MarketSpecificFields formData={formData} onFieldChange={handleChange} prefix="seller-spec" marketKey={formData.marketKey} />
               ) : null}
+              <ListingDeliveryFields
+                idPrefix="seller-delivery"
+                marketKey={formData.marketKey}
+                pickupAddress={formData.pickupAddress}
+                pickupCity={formData.pickupCity}
+                pickupProvince={formData.pickupProvince}
+                latitude={formData.latitude}
+                longitude={formData.longitude}
+                deliveryMinutes={formData.deliveryMinutes}
+                onChange={(next) => setFormData((current) => ({ ...current, ...next }))}
+              />
+              <TradingHoursEditor
+                idPrefix="seller-hours"
+
+                marketKey={formData.marketKey}
+                availableDays={formData.availableDays}
+                availabilityHours={formData.availabilityHours}
+                onChange={(next) => setFormData((current) => ({ ...current, ...next }))}
+              />
               <SizeVariantEditor
                 idPrefix="seller-size"
                 marketKey={formData.marketKey}
@@ -41207,6 +42302,24 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
     return warnings;
   }, [checkoutItems, sellerItems]);
   const hasStockWarnings = stockWarnings.size > 0;
+  // Closed-outlet warnings, mirroring stockWarnings: a fast-food line whose
+  // outlet has shut since it was added blocks checkout with an explanation
+  // instead of failing at the payment step. Read from the live seller listing,
+  // so it reflects the seller's current trading hours.
+  const closedWarnings = useMemo(() => {
+    const warnings = new Map();
+    checkoutItems.forEach((item) => {
+      const listing = getSellerListingForItem(sellerItems, item);
+      const closedStatus = listing ? getListingClosedStatus(listing) : null;
+      if (closedStatus) {
+        warnings.set(item.id, closedStatus);
+      }
+    });
+    return warnings;
+  }, [checkoutItems, sellerItems]);
+  const hasClosedWarnings = closedWarnings.size > 0;
+  const hasCheckoutBlockers = hasStockWarnings || hasClosedWarnings;
+
   const [formState, setFormState] = useState({
     contact: typeof window === 'undefined' ? '' : (window.localStorage.getItem('svs-user-email') || ''),
     saveInformation: false,
@@ -41723,6 +42836,17 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
                         : `Only ${stockWarnings.get(item.id).available} left — reduce quantity to continue`}
                     </p>
                   ) : null}
+                  {closedWarnings.has(item.id) ? (
+                    <p className="mt-2 flex items-start gap-1.5 text-xs font-semibold text-amber-700">
+                      <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <span>
+                        {closedWarnings.get(item.id).statusLabel}
+                        {closedWarnings.get(item.id).hoursLabel
+                          ? ` · ${closedWarnings.get(item.id).hoursLabel}`
+                          : ''}
+                      </span>
+                    </p>
+                  ) : null}
                 </div>
                 <p className="shrink-0 text-sm font-semibold text-[var(--svs-text)] sm:text-base">
                   {formatCartItemAmount(item, linePrice)}
@@ -41764,15 +42888,23 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
               Some items in your cart are no longer available in the quantity you selected. Please update your cart before continuing.
             </p>
           ) : null}
+          {hasClosedWarnings ? (
+            <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm font-semibold text-amber-800">
+              <Clock className="mt-0.5 h-4 w-4 shrink-0" />
+              One or more sellers in your cart are closed right now. Remove those items or come back
+              during their trading hours to complete this order.
+
+            </p>
+          ) : null}
           <button
             type="button"
             onClick={handleContinueFromItems}
-            disabled={hasStockWarnings}
+            disabled={hasCheckoutBlockers}
             className={`${cudyBluePrimaryButtonClassName} w-full max-w-md rounded-xl bg-[var(--svs-primary)] px-6 py-3.5 text-sm font-bold uppercase tracking-wide text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50 sm:text-base`}
           >
             Proceed to Checkout
           </button>
-          {!hasStockWarnings ? (
+          {!hasCheckoutBlockers ? (
             <p className="text-center text-sm italic text-[var(--svs-primary-strong)]/80">
               Don't miss out—complete your purchase today.
             </p>
@@ -52882,6 +54014,11 @@ const ItemDetailsModal = ({
 
     const normalizedSize = sanitizeStorageSegment(selectedSize);
     const baseId = String(baseCartItem.id || '').replace(/::size-[a-z0-9-]+$/i, '');
+    // The size slug has to ride along on `sku` as well as `id`: every stock
+    // lookup (getSellerListingStock, and the order-time deduction) reads
+    // `sku || id`, so a sku without the slug resolves to the listing total and
+    // each size stops tracking its own quantity.
+    const baseSku = String(baseCartItem.sku || baseCartItem.id || '').replace(/::size-[a-z0-9-]+$/i, '');
     const existingDetails = String(baseCartItem.details || '').trim();
     const selectedSizeDetail = `Size ${selectedSize}`;
     const details = existingDetails.toLowerCase().includes(selectedSizeDetail.toLowerCase())
@@ -52909,6 +54046,8 @@ const ItemDetailsModal = ({
     return {
       ...baseCartItem,
       id: `${baseId}::size-${normalizedSize}`,
+      sku: `${baseSku}::size-${normalizedSize}`,
+      quantity: Math.max(Number(baseCartItem.quantity) || 0, 1),
       details,
       selectedSize,
       ...sizePriceOverride,
@@ -52962,6 +54101,11 @@ const ItemDetailsModal = ({
   const selectedSizeStock = itemHasSizeStock && selectedSize ? getItemSizeStock(item, selectedSize) : null;
   const selectedSizeCartFull = selectedSizeStock !== null && cartQtyForSelectedSize >= selectedSizeStock;
   const isModalOutOfStock = isPlainOutOfStock || selectedSizeSoldOut || allSizesSoldOut || selectedSizeCartFull;
+  // Trading hours (Fast Food): browsing stays open, ordering does not.
+  const modalTradingStatus = getListingTradingStatus(item);
+  const isModalClosed = Boolean(getListingClosedStatus(item));
+  const isModalUnorderable = isModalOutOfStock || isModalClosed;
+
   const isInformalMarketItem = item.marketKey === 'informalMarket' || String(item.marketName || '').toLowerCase().includes('informal market');
   const rawSellerName = String(
     actionCartItem?.sellerName
@@ -53827,6 +54971,44 @@ const ItemDetailsModal = ({
                   </div>
                 );
               })() : null}
+              {/* Meal Details — fast food items only. Surfaces the attributes the
+                  seller captured on the listing form (meal category, cuisine,
+                  outlet type, dietary tag, spice level, serving size, prep time,
+                  outlet/brand, availability) which otherwise never reached the
+                  buyer detail view. */}
+              {(item.marketKey === 'fastFood' || item.route === '/fast-food') ? (() => {
+                const mealRows = [
+                  item.category ? { Icon: Info, label: 'Category', value: item.category } : null,
+                  item.cuisine ? { Icon: Globe, label: 'Cuisine', value: item.cuisine } : null,
+                  item.outletType ? { Icon: Store, label: 'Outlet type', value: item.outletType } : null,
+                  item.drinkType ? { Icon: Info, label: 'Drink type', value: item.drinkType } : null,
+                  (item.dietary && item.dietary !== 'None') ? { Icon: ShieldCheck, label: 'Dietary', value: item.dietary } : null,
+                  item.spiceLevel ? { Icon: Sparkles, label: 'Spice level', value: item.spiceLevel } : null,
+                  item.volume ? { Icon: Package, label: 'Serving size', value: item.volume } : null,
+                  item.prepTime ? { Icon: Timer, label: 'Prep time', value: item.prepTime } : null,
+                  item.brand ? { Icon: Store, label: 'Outlet', value: item.brand } : null,
+                  item.availability ? { Icon: Clock, label: 'Availability', value: item.availability } : null,
+                  modalTradingStatus.hasHours
+                    ? { Icon: Clock, label: 'Open hours', value: `${modalTradingStatus.hoursLabel} (${modalTradingStatus.statusLabel})` }
+                    : null,
+                ].filter(Boolean);
+
+                if (!mealRows.length) return null;
+                return (
+                  <div className="mt-3 rounded-xl border border-[#b6daf6] bg-[#f0f8ff] px-4 py-3">
+                    <p className="mb-2.5 text-[10px] font-bold uppercase tracking-widest text-[#0f4c75]">Meal Details</p>
+                    <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
+                      {mealRows.map(({ Icon, label, value }) => (
+                        <div key={label} className="flex items-start gap-1.5 text-xs text-slate-700">
+                          <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#0f4c75]" />
+                          <span className="shrink-0 font-semibold text-[#0f4c75]">{label}:&nbsp;</span>
+                          <span className="leading-snug">{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })() : null}
               {/* Seller description — shown for non-rich-detail markets (rich variants show productOverview instead) */}
               {item.description && !isRichDetail ? (
                 <div>
@@ -53932,8 +55114,24 @@ const ItemDetailsModal = ({
                 })() : null}
               </div>
             ) : null}
+            {isModalClosed ? (
+              <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                <p className="flex items-center gap-2 font-bold">
+                  <Clock className="h-4 w-4 shrink-0" />
+                  {modalTradingStatus.statusLabel}
+                </p>
+                {modalTradingStatus.hoursLabel ? (
+                  <p className="mt-1 text-xs font-semibold">Trading hours: {modalTradingStatus.hoursLabel}</p>
+                ) : null}
+                <p className="mt-1 text-xs">
+                  Ordering is disabled until this seller opens again. You can still add it to your wishlist.
+
+                </p>
+              </div>
+            ) : null}
             {isInformalMarketItem ? (
               <div className="mt-6 rounded-lg border border-[#d6e6f5] bg-[#f8fbff] px-4 py-3 text-sm text-slate-600">
+
                 Informal market items are for in-person collection. Use chat to confirm location and meet the seller directly.
               </div>
             ) : null}
@@ -53942,19 +55140,20 @@ const ItemDetailsModal = ({
                 <>
                   <button
                     type="button"
-                    disabled={isModalOutOfStock}
+                    disabled={isModalUnorderable}
                     className="rounded-lg bg-[var(--svs-primary)] px-6 py-3 text-base font-semibold text-white shadow hover:bg-[var(--svs-primary-strong)] disabled:cursor-not-allowed disabled:bg-slate-400"
                     onClick={() => onAddToCart?.(actionCartItem)}
                   >
-                    {selectedSizeCartFull ? 'In basket' : isModalOutOfStock ? 'Out of stock' : 'Add to Basket'}
+                    {isModalClosed ? 'Closed' : selectedSizeCartFull ? 'In basket' : isModalOutOfStock ? 'Out of stock' : 'Add to Basket'}
                   </button>
                   <button
                     type="button"
-                    disabled={isModalOutOfStock}
+                    disabled={isModalUnorderable}
                     className="rounded-lg border border-[var(--svs-primary)] px-6 py-3 text-base font-semibold text-[var(--svs-primary)] hover:bg-[var(--svs-primary-faint)] disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400"
                     onClick={() => onBuyNow?.(actionCartItem)}
                   >
-                    {selectedSizeCartFull ? 'In basket' : isModalOutOfStock ? 'Out of stock' : 'Buy Now'}
+                    {isModalClosed ? 'Closed' : selectedSizeCartFull ? 'In basket' : isModalOutOfStock ? 'Out of stock' : 'Buy Now'}
+
                   </button>
                 </>
               ) : null}
@@ -57133,6 +58332,18 @@ const App = () => {
   }, [activeUserEmail]);
 
   const handleAddToCart = useCallback((cartItem) => {
+    // Trading-hours guard. Read from the live seller listing rather than the
+    // cart item so a basket built while the outlet was open can't be topped up
+    // after closing time, and so every entry point (market card, detail modal,
+    // wishlist, reorder) is covered by one check.
+    const addToCartListing = getSellerListingForItem(sellerItems, cartItem);
+    const addToCartClosedStatus = addToCartListing ? getListingClosedStatus(addToCartListing) : null;
+    if (addToCartClosedStatus) {
+      setActionNotice(getClosedListingNotice(cartItem.title, addToCartClosedStatus));
+      return;
+    }
+
+
     setCartItems((currentItems) => {
       const existingItem = currentItems.find((item) => item.id === cartItem.id);
       const availableStock = getSellerListingStock(sellerItems, cartItem);
@@ -57186,8 +58397,16 @@ const App = () => {
       return;
     }
 
+    const buyNowListing = getSellerListingForItem(sellerItems, cartItem);
+    const buyNowClosedStatus = buyNowListing ? getListingClosedStatus(buyNowListing) : null;
+    if (buyNowClosedStatus) {
+      setActionNotice(getClosedListingNotice(cartItem.title, buyNowClosedStatus));
+      return;
+    }
+
     const availableStock = getSellerListingStock(sellerItems, cartItem);
     if (availableStock !== null && availableStock <= 0) {
+
       setActionNotice(`${cartItem.title} is out of stock.`);
       return;
     }
@@ -57327,7 +58546,20 @@ const App = () => {
       return null;
     }
 
+    // Final trading-hours gate. The buyer may have sat on the checkout page
+    // until the outlet closed, so this re-checks the live listings at the
+    // moment the order is actually placed.
+    for (const item of sourceItems) {
+      const listing = getSellerListingForItem(sellerItems, item);
+      const closedStatus = listing ? getListingClosedStatus(listing) : null;
+      if (closedStatus) {
+        setActionNotice(getClosedListingNotice(item.title, closedStatus));
+        return null;
+      }
+    }
+
     const sellerStockLookup = sellerItems.reduce((lookup, sellerItem) => {
+
       lookup.set(String(sellerItem.dbId || ''), normalizeListingQuantity(sellerItem.availableQuantity, 0));
       return lookup;
     }, new Map());

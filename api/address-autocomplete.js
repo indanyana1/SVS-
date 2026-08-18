@@ -57,7 +57,10 @@ module.exports = async (req, res) => {
             ]
               .filter(Boolean)
               .join(', '),
+            latitude: Number.isFinite(Number(result.lat)) ? Number(result.lat) : null,
+            longitude: Number.isFinite(Number(result.lon)) ? Number(result.lon) : null,
           }))
+
           .filter((result) => result.placeId && result.fullText)
       : [];
 

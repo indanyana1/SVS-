@@ -285,8 +285,13 @@ const normalizeAddressResult = (result) => {
     province,
     postalCode,
     country,
+    // Coordinates power the delivery-radius filters on the Fast Food and
+    // Groceries markets, so they are carried through with the address.
+    latitude: Number.isFinite(Number(result.lat)) ? Number(result.lat) : null,
+    longitude: Number.isFinite(Number(result.lon)) ? Number(result.lon) : null,
   };
 };
+
 
 const normalizeFallbackReverseResult = (result) => {
   const city = String(
@@ -313,8 +318,11 @@ const normalizeFallbackReverseResult = (result) => {
     province,
     postalCode: '',
     country,
+    latitude: Number.isFinite(Number(result.latitude)) ? Number(result.latitude) : null,
+    longitude: Number.isFinite(Number(result.longitude)) ? Number(result.longitude) : null,
   };
 };
+
 
 const fetchFallbackReverseGeocode = async (latitude, longitude) => {
   const searchParams = new URLSearchParams({
@@ -455,6 +463,9 @@ app.post('/api/address-autocomplete', limits.address, async (req, res) => {
           result.address?.city || result.address?.town || result.address?.village || result.address?.municipality || result.address?.county,
           result.address?.state,
         ].filter(Boolean).join(', '),
+        latitude: Number.isFinite(Number(result.lat)) ? Number(result.lat) : null,
+        longitude: Number.isFinite(Number(result.lon)) ? Number(result.lon) : null,
+
       })).filter((result) => result.placeId && result.fullText)
       : [];
 

@@ -1,0 +1,3 @@
+      availableDays: Array.isArray(item.availableDays) ? item.availableDays : [],
+      availabilityHours: (item.availabilityHours && typeof item.availabilityHours === 'object') ? item.availabilityHours : {},
+      unavailableDates: Array.isArray(item.unavailableDates) ? item.unavailableDates : [],

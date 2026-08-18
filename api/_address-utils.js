@@ -56,8 +56,13 @@ const normalizeAddressResult = (result) => {
     province,
     postalCode,
     country,
+    // Coordinates power the delivery-radius filters on the Fast Food and
+    // Groceries markets, so they are carried through with the address.
+    latitude: Number.isFinite(Number(result.lat)) ? Number(result.lat) : null,
+    longitude: Number.isFinite(Number(result.lon)) ? Number(result.lon) : null,
   };
 };
+
 
 const parseBody = (req) => {
   if (!req.body) return {};

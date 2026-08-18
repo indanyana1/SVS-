@@ -26,8 +26,11 @@ const normalizeFallbackReverseResult = (result) => {
     province,
     postalCode: '',
     country,
+    latitude: Number.isFinite(Number(result.latitude)) ? Number(result.latitude) : null,
+    longitude: Number.isFinite(Number(result.longitude)) ? Number(result.longitude) : null,
   };
 };
+
 
 const fetchFallbackReverseGeocode = async (latitude, longitude) => {
   const searchParams = new URLSearchParams({

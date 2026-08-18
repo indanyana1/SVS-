@@ -6,6 +6,11 @@ const DEFAULT_LOCATION_STATE = {
   country: '',
   formattedAddress: '',
   locationLabel: '',
+  // Coordinates are kept alongside the readable location because the Fast Food
+  // and Groceries markets filter listings by delivery distance, which needs
+  // lat/lng rather than a city name.
+  latitude: null,
+  longitude: null,
   isLoading: true,
   error: '',
   hasApproximateLocation: false,
@@ -31,6 +36,8 @@ const resolveIpLocation = async () => {
     country: payload.country || '',
     formattedAddress: payload.formattedAddress || '',
     locationLabel,
+    latitude: Number.isFinite(Number(payload.latitude)) ? Number(payload.latitude) : null,
+    longitude: Number.isFinite(Number(payload.longitude)) ? Number(payload.longitude) : null,
     isLoading: false,
     error: '',
     hasApproximateLocation: true,
@@ -48,12 +55,14 @@ const useLocation = () => {
           return detectedState;
         })
         .catch(() => {
-          const fallbackState = {
-            city: '',
-            province: '',
-            country: '',
-            formattedAddress: '',
-            locationLabel: '',
+          const fallbackState = {
+            city: '',
+            province: '',
+            country: '',
+            formattedAddress: '',
+            locationLabel: '',
+            latitude: null,
+            longitude: null,
             isLoading: false,
             error: '',
             hasApproximateLocation: true,
@@ -86,12 +95,14 @@ const useLocation = () => {
                 return;
               }
 
-              const fallbackState = {
-                city: '',
-                province: '',
-                country: '',
-                formattedAddress: '',
-                locationLabel: '',
+              const fallbackState = {
+                city: '',
+                province: '',
+                country: '',
+                formattedAddress: '',
+                locationLabel: '',
+                latitude: null,
+                longitude: null,
                 isLoading: false,
                 error: '',
                 hasApproximateLocation: true,
@@ -110,6 +121,10 @@ const useLocation = () => {
               country: payload.country || '',
               formattedAddress: payload.formattedAddress || '',
               locationLabel: locationLabel || getFallbackLocationLabel(payload),
+              // Device coordinates are more precise than the geocoded result,
+              // which snaps to the matched street or suburb centroid.
+              latitude: Number(position.coords.latitude),
+              longitude: Number(position.coords.longitude),
               isLoading: false,
               error: '',
               hasApproximateLocation: false,
@@ -125,12 +140,14 @@ const useLocation = () => {
               return;
             }
 
-            const fallbackState = {
-              city: '',
-              province: '',
-              country: '',
-              formattedAddress: '',
-              locationLabel: '',
+            const fallbackState = {
+              city: '',
+              province: '',
+              country: '',
+              formattedAddress: '',
+              locationLabel: '',
+              latitude: null,
+              longitude: null,
               isLoading: false,
               error: '',
               hasApproximateLocation: true,
@@ -151,12 +168,14 @@ const useLocation = () => {
             return;
           }
 
-          const fallbackState = {
-            city: '',
-            province: '',
-            country: '',
-            formattedAddress: '',
-            locationLabel: '',
+          const fallbackState = {
+            city: '',
+            province: '',
+            country: '',
+            formattedAddress: '',
+            locationLabel: '',
+            latitude: null,
+            longitude: null,
             isLoading: false,
             error: '',
             hasApproximateLocation: true,

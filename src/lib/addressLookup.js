@@ -60,8 +60,12 @@ const normalizeNominatimResult = (result) => {
     province,
     postalCode,
     country,
+    // Coordinates feed the delivery-radius filters on Fast Food and Groceries.
+    latitude: Number.isFinite(Number(result.lat)) ? Number(result.lat) : null,
+    longitude: Number.isFinite(Number(result.lon)) ? Number(result.lon) : null,
   };
 };
+
 
 const fetchNominatimSuggestions = async ({ input, countryCode }) => {
   const params = new URLSearchParams({
@@ -92,7 +96,10 @@ const fetchNominatimSuggestions = async ({ input, countryCode }) => {
         result.address?.city || result.address?.town || result.address?.village || result.address?.municipality || result.address?.county,
         result.address?.state,
       ].filter(Boolean).join(', '),
+      latitude: Number.isFinite(Number(result.lat)) ? Number(result.lat) : null,
+      longitude: Number.isFinite(Number(result.lon)) ? Number(result.lon) : null,
     }))
+
     .filter((s) => s.placeId && s.fullText);
 };
 
@@ -164,8 +171,11 @@ export const lookupAddressDetails = async ({ placeId, sessionToken }) => {
     province,
     postalCode: payload.postalCode || '',
     country: payload.country || 'South Africa',
+    latitude: Number.isFinite(Number(payload.latitude)) ? Number(payload.latitude) : null,
+    longitude: Number.isFinite(Number(payload.longitude)) ? Number(payload.longitude) : null,
   };
 };
+
 
 // Suppress unused-warning (used implicitly via fall-through messages elsewhere).
 void createApiError;
