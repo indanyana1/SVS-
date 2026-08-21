@@ -1,3 +1,6 @@
-      availableDays: Array.isArray(item.availableDays) ? item.availableDays : [],
-      availabilityHours: (item.availabilityHours && typeof item.availabilityHours === 'object') ? item.availabilityHours : {},
-      unavailableDates: Array.isArray(item.unavailableDates) ? item.unavailableDates : [],
+                        {tradingStatus.hasHours ? (
+                          <p className={`mb-2 flex items-start gap-1 text-xs font-semibold ${isClosedNow ? 'text-amber-700' : 'text-emerald-700'}`}>
+                            <Clock className="mt-0.5 h-3 w-3 shrink-0" />
+                            <span>{tradingStatus.statusLabel} · {tradingStatus.hoursLabel}</span>
+                          </p>
+                        ) : null}

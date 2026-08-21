@@ -1,9 +1,17 @@
-      availableDays: Array.isArray(item.availableDays) ? item.availableDays : [],
-      availabilityHours: (item.availabilityHours && typeof item.availabilityHours === 'object') ? item.availabilityHours : {},
-      unavailableDates: Array.isArray(item.unavailableDates) ? item.unavailableDates : [],
-      pickupAddress: item.pickupAddress || '',
-      pickupCity: item.pickupCity || '',
-      pickupProvince: item.pickupProvince || '',
-      latitude: item.latitude === null || item.latitude === undefined ? '' : String(item.latitude),
-      longitude: item.longitude === null || item.longitude === undefined ? '' : String(item.longitude),
-      deliveryMinutes: item.deliveryMinutes ? String(item.deliveryMinutes) : '',
+                        {estimate ? (
+                          <p className="mb-2 flex items-center gap-1 text-xs font-semibold text-[#0f6674]">
+                            <MapPin className="h-3 w-3 shrink-0" />
+                            <span>{estimate.etaLabel} · {estimate.distanceLabel} away</span>
+                          </p>
+                        ) : entry.status === 'listing-unlocated' ? (
+                          <p className="mb-2 flex items-center gap-1 text-xs font-medium text-[#374151]">
+                            <MapPin className="h-3 w-3 shrink-0" />
+                            <span>Address not set by seller</span>
+                          </p>
+                        ) : null}
+                        {tradingStatus.hasHours ? (
+                          <p className={`mb-2 flex items-start gap-1 text-xs font-semibold ${isClosedNow ? 'text-amber-700' : 'text-emerald-700'}`}>
+                            <Clock className="mt-0.5 h-3 w-3 shrink-0" />
+                            <span>{tradingStatus.statusLabel} · {tradingStatus.hoursLabel}</span>
+                          </p>
+                        ) : null}
