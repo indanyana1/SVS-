@@ -1,6 +1,7 @@
 const {
   fetchAddressJson,
   normalizeAddressResult,
+  backfillPostalCode,
   parseBody,
 } = require('./_address-utils');
 
@@ -32,7 +33,7 @@ module.exports = async (req, res) => {
       return res.status(404).json({ error: 'Address details not found.' });
     }
 
-    return res.status(200).json(normalizeAddressResult(result));
+    return res.status(200).json(await backfillPostalCode(normalizeAddressResult(result)));
   } catch (error) {
     console.error('Address details error:', error.message);
     return res

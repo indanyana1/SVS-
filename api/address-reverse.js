@@ -1,4 +1,4 @@
-const { fetchAddressJson, normalizeAddressResult, parseBody } = require('./_address-utils');
+const { fetchAddressJson, normalizeAddressResult, backfillPostalCode, parseBody } = require('./_address-utils');
 
 const normalizeFallbackReverseResult = (result) => {
   const city = String(
@@ -87,10 +87,10 @@ module.exports = async (req, res) => {
         throw new Error('Address lookup request failed.');
       }
 
-      return res.status(200).json(normalizeAddressResult(payload));
+      return res.status(200).json(await backfillPostalCode(normalizeAddressResult(payload)));
     } catch (_primaryError) {
       const fallbackPayload = await fetchFallbackReverseGeocode(latitude, longitude);
-      return res.status(200).json(fallbackPayload);
+      return res.status(200).json(await backfillPostalCode(fallbackPayload));
     }
   } catch (error) {
     console.error('Address reverse error:', error.message);

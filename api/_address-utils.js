@@ -24,6 +24,30 @@ const buildOsmIdentifier = (result) => {
   return typePrefix && osmId ? `${typePrefix}${osmId}` : '';
 };
 
+// Nominatim's free-text search is an exact-ish match against how OpenStreetMap
+// contributors phrased the place — a real address can return zero results
+// just because the house number isn't mapped as its own point (common outside
+// major metros) or because a unit/complex name confuses the parser, even
+// though the street itself is well-mapped. Each variant drops a bit more
+// specificity so a genuine address isn't reported as "not found" only because
+// the exact text the buyer typed doesn't exist verbatim in OSM's data.
+const buildRelaxedAddressQueryVariants = (input) => {
+  const trimmed = String(input || '').trim();
+  const variants = [trimmed];
+
+  const withoutLeadingNumber = trimmed.replace(/^\d+[a-zA-Z]?\s+/, '').trim();
+  if (withoutLeadingNumber && withoutLeadingNumber !== trimmed) {
+    variants.push(withoutLeadingNumber);
+  }
+
+  const afterFirstComma = trimmed.includes(',') ? trimmed.split(',').slice(1).join(',').trim() : '';
+  if (afterFirstComma && !variants.includes(afterFirstComma)) {
+    variants.push(afterFirstComma);
+  }
+
+  return variants;
+};
+
 const normalizeAddressResult = (result) => {
   const address = result.address || {};
   const address1 =
@@ -56,13 +80,42 @@ const normalizeAddressResult = (result) => {
     province,
     postalCode,
     country,
-    // Coordinates power the delivery-radius filters on the Fast Food and
-    // Groceries markets, so they are carried through with the address.
+    // postalCode powers the delivery-coverage filters on the Fast Food and
+    // Groceries markets; coordinates are kept for map pins/labels.
     latitude: Number.isFinite(Number(result.lat)) ? Number(result.lat) : null,
     longitude: Number.isFinite(Number(result.lon)) ? Number(result.lon) : null,
   };
 };
 
+
+// Some places (small towns especially — Umkomaas is a real example) have
+// their postal code tagged only on an administrative boundary (ward/suburb),
+// not on the specific place/road node a normal search or reverse lookup
+// hits, so the primary result comes back with every other field filled in
+// except postcode. Zoom 14 (ward/suburb level) is where that boundary tends
+// to live, so retry there once before accepting "no postal code" as final.
+const backfillPostalCode = async (normalized) => {
+  if (normalized.postalCode || !Number.isFinite(normalized.latitude) || !Number.isFinite(normalized.longitude)) {
+    return normalized;
+  }
+  try {
+    const params = new URLSearchParams({
+      lat: String(normalized.latitude),
+      lon: String(normalized.longitude),
+      format: 'jsonv2',
+      addressdetails: '1',
+      zoom: '14',
+    });
+    const payload = await fetchAddressJson(`https://nominatim.openstreetmap.org/reverse?${params.toString()}`);
+    const postcode = payload?.address?.postcode;
+    if (postcode) {
+      return { ...normalized, postalCode: String(postcode) };
+    }
+  } catch (_error) {
+    // Keep the original result — postcode just stays unset, same as before.
+  }
+  return normalized;
+};
 
 const parseBody = (req) => {
   if (!req.body) return {};
@@ -79,6 +132,8 @@ const parseBody = (req) => {
 module.exports = {
   fetchAddressJson,
   buildOsmIdentifier,
+  buildRelaxedAddressQueryVariants,
   normalizeAddressResult,
+  backfillPostalCode,
   parseBody,
 };

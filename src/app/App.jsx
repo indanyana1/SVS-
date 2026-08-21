@@ -1046,14 +1046,16 @@ const createSellerListingFormState = () => ({
   availabilityHours: {},
   unavailableDates: [],
   // Delivery-radius markets (Fast Food, Groceries) capture where the item is
-  // collected from plus how far the seller delivers. Round-tripped for every
-  // market so saving through the generic dashboard modal can't drop them.
+  // collected from plus which postal codes the seller delivers to. Round-
+  // tripped for every market so saving through the generic dashboard modal
+  // can't drop them.
   pickupAddress: '',
   pickupCity: '',
   pickupProvince: '',
+  postalCode: '',
+  deliveryPostalCodes: '',
   latitude: '',
   longitude: '',
-  deliveryMinutes: '',
   ...EMPTY_GROCERIES_LISTING_FIELDS,
 
   ...EMPTY_TICKETS_LISTING_FIELDS,
@@ -2747,6 +2749,7 @@ const buildInformalSpecs = (item) => {
     : 'Daily — Monday to Saturday';
   return {
     'Product Type': category,
+    ...(item.brand ? { 'Trader / Stall': item.brand } : {}),
     Origin: sellerOrigin,
     Packaging: sellerVolume,
     'Minimum Order': minimumByCategory[category] || '1 unit',
@@ -6484,27 +6487,16 @@ const getListingClosedStatus = (item = {}, now = new Date()) => {
   return status.hasHours && !status.isOpen ? status : null;
 };
 
-// ── Delivery radius ─────────────────────────────────────────────────────────
+// ── Delivery coverage (postal code) ─────────────────────────────────────────
 // Fast Food and Groceries are delivered from the seller's own kitchen/store, so
-// a buyer should only be shown listings that can physically reach them in time.
-// Each listing carries `latitude`/`longitude` (captured from the seller's
-// address when listing) and `deliveryMinutes` (how far the seller is willing to
-// deliver, capped at MAX_DELIVERY_MINUTES by the platform).
-//
-// Travel time is estimated, not routed: straight-line distance is multiplied by
-// ROAD_DISTANCE_FACTOR to approximate real streets, divided by an average urban
-// delivery speed, then the listing's prep time is added. estimateDeliveryTime is
-// the single seam to swap in a real routing provider later.
+// a buyer should only be shown listings whose seller actually delivers to their
+// postal code. Coverage is the seller's own postal code (captured from their
+// pickup address) plus any extra postal codes they explicitly list — this
+// replaced an earlier straight-line km/minutes estimate, which was an
+// approximation of the real question buyers actually have: "do they deliver
+// to my area?" Postal code is a direct answer to that instead of a guess.
 const DELIVERY_RADIUS_MARKET_KEYS = new Set(['fastFood', 'groceries']);
 const DELIVERY_RADIUS_MARKET_ROUTES = new Set(['/fast-food', '/groceries']);
-const MAX_DELIVERY_MINUTES = 60;
-const DEFAULT_DELIVERY_MINUTES = 30;
-const DELIVERY_MINUTE_OPTIONS = [15, 20, 30, 45, 60];
-const AVERAGE_DELIVERY_SPEED_KMH = 30;
-// Straight-line kilometres under-state real driving distance; 1.3 is the usual
-// urban detour ratio, so a 10 km hop is treated as 13 km of road.
-const ROAD_DISTANCE_FACTOR = 1.3;
-const EARTH_RADIUS_KM = 6371;
 
 const usesDeliveryRadius = (item = {}) => {
   if (DELIVERY_RADIUS_MARKET_KEYS.has(item?.marketKey)) return true;
@@ -6516,6 +6508,8 @@ const usesDeliveryRadius = (item = {}) => {
 // Accepts anything carrying coordinates (listing, saved buyer location, geocoder
 // payload) and returns a clean pair, or null when they're missing/unusable.
 // 0,0 is rejected: it's in the Atlantic and is what empty form fields collapse to.
+// Coordinates no longer gate delivery coverage (postal code does), but they're
+// still captured for map pins and address labels.
 const getCoordinates = (source) => {
   const latitude = Number(source?.latitude ?? source?.lat);
   const longitude = Number(source?.longitude ?? source?.lng ?? source?.lon);
@@ -6525,83 +6519,46 @@ const getCoordinates = (source) => {
   return { latitude, longitude };
 };
 
-const hasListingLocation = (item = {}) => Boolean(getCoordinates(item));
+// South African postal codes are numeric strings; trimming/uppercasing keeps
+// "2196 " and "2196" (or stray lowercase input) matching as the same code.
+const normalizePostalCode = (value) => String(value ?? '').trim().toUpperCase();
 
-const toRadians = (degrees) => (degrees * Math.PI) / 180;
-
-const getStraightLineKm = (from, to) => {
-  const a = getCoordinates(from);
-  const b = getCoordinates(to);
-  if (!a || !b) return null;
-  const deltaLat = toRadians(b.latitude - a.latitude);
-  const deltaLng = toRadians(b.longitude - a.longitude);
-  const h = (Math.sin(deltaLat / 2) ** 2)
-    + (Math.cos(toRadians(a.latitude)) * Math.cos(toRadians(b.latitude)) * (Math.sin(deltaLng / 2) ** 2));
-  return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(h)));
-};
-
-// The seller's own willingness to travel, clamped to the platform ceiling.
-const getListingDeliveryLimitMinutes = (item = {}) => {
-  const raw = Number(item?.deliveryMinutes);
-  if (!Number.isFinite(raw) || raw <= 0) return DEFAULT_DELIVERY_MINUTES;
-  return Math.min(Math.max(Math.round(raw), 5), MAX_DELIVERY_MINUTES);
-};
-
-// Fast Food listings carry a free-text prep time ("15 min", "1 hour"), which is
-// part of how long the buyer actually waits, so it counts toward the estimate.
-const getListingPrepMinutes = (item = {}) => {
-  const text = String(item?.prepTime || item?.preparationTime || '').trim();
-  if (!text) return 0;
-  const match = text.match(/(\d+(?:\.\d+)?)\s*(hours?|hrs?|h|minutes?|mins?|m)?/i);
-  if (!match) return 0;
-  const amount = Number(match[1]);
-  if (!Number.isFinite(amount) || amount <= 0) return 0;
-  const unit = String(match[2] || 'min').toLowerCase();
-  const minutes = unit.startsWith('h') ? amount * 60 : amount;
-  // Ignore absurd values from free text so one bad listing can't vanish.
-  return Math.min(Math.round(minutes), MAX_DELIVERY_MINUTES);
-};
-
-// Estimated door-to-door minutes for one listing/buyer pair, or null when either
-// side has no coordinates. Swap the body for a routing call to get real ETAs.
-const estimateDeliveryTime = (item, buyerLocation) => {
-  const straightKm = getStraightLineKm(item, buyerLocation);
-  if (straightKm === null) return null;
-  const roadKm = straightKm * ROAD_DISTANCE_FACTOR;
-  const travelMinutes = (roadKm / AVERAGE_DELIVERY_SPEED_KMH) * 60;
-  const prepMinutes = getListingPrepMinutes(item);
-  const totalMinutes = Math.max(1, Math.round(travelMinutes + prepMinutes));
-  const limitMinutes = getListingDeliveryLimitMinutes(item);
-  return {
-    straightKm,
-    roadKm,
-    travelMinutes: Math.round(travelMinutes),
-    prepMinutes,
-    totalMinutes,
-    limitMinutes,
-    isWithinRange: totalMinutes <= limitMinutes,
-    distanceLabel: roadKm < 10 ? `${roadKm.toFixed(1)} km` : `${Math.round(roadKm)} km`,
-    etaLabel: `~${totalMinutes} min`,
-  };
+// A seller's delivery reach: their own pickup postal code, plus any extra
+// codes they've explicitly listed on the listing form (comma/newline
+// separated). A seller who hasn't listed extra codes still covers their own.
+const getListingDeliveryPostalCodes = (item = {}) => {
+  const codes = new Set();
+  const own = normalizePostalCode(item?.postalCode);
+  if (own) codes.add(own);
+  String(item?.deliveryPostalCodes || '')
+    .split(/[,\n]+/)
+    .map(normalizePostalCode)
+    .filter(Boolean)
+    .forEach((code) => codes.add(code));
+  return Array.from(codes);
 };
 
 // Delivery state for one listing:
-//   not-applicable       — market doesn't use a delivery radius
-//   buyer-location-unset — buyer hasn't set a location yet
-//   listing-unlocated    — seller never saved an address (legacy listings)
+//   not-applicable       — market doesn't use delivery coverage
+//   buyer-location-unset — buyer hasn't set a postal code yet
+//   listing-unlocated    — seller never saved a postal code (legacy listings)
 //   in-range / out-of-range
 const getListingDeliveryState = (item = {}, buyerLocation = null) => {
   if (!usesDeliveryRadius(item)) return { status: 'not-applicable', estimate: null };
-  if (!hasListingLocation(item)) return { status: 'listing-unlocated', estimate: null };
-  if (!getCoordinates(buyerLocation)) return { status: 'buyer-location-unset', estimate: null };
-  const estimate = estimateDeliveryTime(item, buyerLocation);
-  if (!estimate) return { status: 'listing-unlocated', estimate: null };
-  return { status: estimate.isWithinRange ? 'in-range' : 'out-of-range', estimate };
+  const coveredPostalCodes = getListingDeliveryPostalCodes(item);
+  if (!coveredPostalCodes.length) return { status: 'listing-unlocated', estimate: null };
+  const buyerPostalCode = normalizePostalCode(buyerLocation?.postalCode);
+  if (!buyerPostalCode) return { status: 'buyer-location-unset', estimate: null };
+  const isWithinRange = coveredPostalCodes.includes(buyerPostalCode);
+  return {
+    status: isWithinRange ? 'in-range' : 'out-of-range',
+    estimate: { isWithinRange, coveredPostalCodes, buyerPostalCode },
+  };
 };
 
-// Splits a market's listings into what the buyer can be offered (nearest first),
-// what has no saved address (shown separately rather than hidden, so a seller's
-// older listings don't silently disappear), and what is simply too far.
+// Splits a market's listings into what the buyer can be offered, what has no
+// saved postal code (shown separately rather than hidden, so a seller's older
+// listings don't silently disappear), and what's outside the seller's coverage.
 const partitionListingsByDelivery = (items = [], buyerLocation = null) => {
   const inRange = [];
   const unlocated = [];
@@ -6617,15 +6574,6 @@ const partitionListingsByDelivery = (items = [], buyerLocation = null) => {
     } else {
       outOfRange.push(entry);
     }
-  });
-
-  inRange.sort((a, b) => {
-    const left = a.estimate?.totalMinutes;
-    const right = b.estimate?.totalMinutes;
-    if (left == null && right == null) return 0;
-    if (left == null) return 1;
-    if (right == null) return -1;
-    return left - right;
   });
 
   return { inRange, unlocated, outOfRange };
@@ -7287,6 +7235,7 @@ const buildResourceDetailPayload = (item) => {
       'Metal Standard': seededVehiclePick(`${seed}:std`, ['LBMA Good Delivery', 'ISO 9001 Certified', 'London Platinum & Palladium Market Accredited']),
       'Available Weights': seededVehiclePick(`${seed}:weights`, ['1g, 10g, 50g, 100g, 1kg', '10g, 100g, 1kg, 5kg', '1kg, 5kg, 10kg']),
       'Metal Composition': `${purity} ${category}`,
+      ...(origin ? { Origin: origin } : {}),
       Certification: 'Assay certified with unique serial number',
       Finish: seededVehiclePick(`${seed}:finish`, ['Precision-cast', 'Minted', 'Cast and polished']),
       Packaging: 'Tamper-evident assay card or sealed protective case',
@@ -7303,6 +7252,7 @@ const buildResourceDetailPayload = (item) => {
       'Product Type': category,
       [qualityLabel]: purity,
       Composition: item.specification || `${category} — standard commercial grade`,
+      ...(origin ? { Origin: origin } : {}),
       Packaging: form,
       'Delivery Method': seededVehiclePick(`${seed}:delivery`, ['Bulk tanker / rail', 'Bulk vessel (FOB/CIF)', 'Containerised bulk bags']),
       Certification: 'Certificate of analysis (CoA) provided per batch',
@@ -7312,6 +7262,7 @@ const buildResourceDetailPayload = (item) => {
       'Product Type': `${category} (${form})`,
       [qualityLabel]: purity,
       'Composition / Source': item.specification || `${category} sourced from verified suppliers`,
+      ...(origin ? { Origin: origin } : {}),
       'Particle Size / Dimensions': seededVehiclePick(`${seed}:size`, ['Standard graded mix', 'Uniform graded sizing', 'Custom sizing on request']),
       Certification: 'Quality-tested before dispatch',
       Packaging: form,
@@ -8948,19 +8899,20 @@ const buildSellerItemBaseDetailsJson = (formState) => {
     ...(Array.isArray(formState.availableDays) && formState.availableDays.length ? { availableDays: formState.availableDays } : {}),
     ...(formState.availabilityHours && typeof formState.availabilityHours === 'object' && Object.keys(formState.availabilityHours).length ? { availabilityHours: formState.availabilityHours } : {}),
     ...(Array.isArray(formState.unavailableDates) && formState.unavailableDates.length ? { unavailableDates: formState.unavailableDates } : {}),
-    // Pickup address + delivery reach. Coordinates are stored as numbers so the
-    // buyer-side distance maths doesn't have to re-parse them on every render.
+    // Pickup address + delivery reach. Coordinates are stored as numbers so
+    // downstream code doesn't have to re-parse them on every render. postalCode
+    // is the seller's own delivery coverage; deliveryPostalCodes is any extra
+    // codes they've explicitly listed — see getListingDeliveryPostalCodes.
     ...(String(formState.pickupAddress || '').trim() ? { pickupAddress: String(formState.pickupAddress).trim() } : {}),
     ...(String(formState.pickupCity || '').trim() ? { pickupCity: String(formState.pickupCity).trim() } : {}),
     ...(String(formState.pickupProvince || '').trim() ? { pickupProvince: String(formState.pickupProvince).trim() } : {}),
+    ...(String(formState.postalCode || '').trim() ? { postalCode: String(formState.postalCode).trim() } : {}),
+    ...(String(formState.deliveryPostalCodes || '').trim() ? { deliveryPostalCodes: String(formState.deliveryPostalCodes).trim() } : {}),
     ...(Number.isFinite(Number(formState.latitude)) && String(formState.latitude || '').trim()
       ? { latitude: Number(formState.latitude) }
       : {}),
     ...(Number.isFinite(Number(formState.longitude)) && String(formState.longitude || '').trim()
       ? { longitude: Number(formState.longitude) }
-      : {}),
-    ...(Number(formState.deliveryMinutes) > 0
-      ? { deliveryMinutes: Math.min(Math.round(Number(formState.deliveryMinutes)), MAX_DELIVERY_MINUTES) }
       : {}),
   };
 
@@ -11388,10 +11340,12 @@ const readStoredDeliveryLocation = () => {
     const raw = window.localStorage.getItem(DELIVERY_LOCATION_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
+    const postalCode = normalizePostalCode(parsed.postalCode);
+    if (!postalCode) return null;
     const coordinates = getCoordinates(parsed);
-    if (!coordinates) return null;
     return {
-      ...coordinates,
+      ...(coordinates || {}),
+      postalCode,
       label: String(parsed.label || '').trim() || 'Saved location',
       source: parsed.source === 'address' ? 'address' : 'device',
       isForSomeoneElse: Boolean(parsed.isForSomeoneElse),
@@ -11434,8 +11388,10 @@ const useDeliveryLocation = () => {
           longitude: Number(position.coords.longitude),
         };
         let label = 'My current location';
-        // Reverse-geocode for a readable label. The coordinates are what the
-        // distance maths uses, so a failed lookup is cosmetic, not fatal.
+        let postalCode = '';
+        // Reverse-geocode for a readable label and, more importantly, the
+        // postal code — that's what delivery coverage is actually matched
+        // against now, not the raw coordinates.
         try {
           const response = await fetch('/api/address-reverse', {
             method: 'POST',
@@ -11447,12 +11403,17 @@ const useDeliveryLocation = () => {
             label = payload.formattedAddress
               || [payload.address1, payload.address2, payload.city, payload.province].filter(Boolean).join(', ')
               || label;
+            postalCode = normalizePostalCode(payload.postalCode);
           }
         } catch (_lookupError) {
           // Keep the generic label.
         }
-        persist({ ...coordinates, label, source: 'device', isForSomeoneElse: false });
         setIsDetecting(false);
+        if (!postalCode) {
+          setError('Could not read a postal code for your current location. Enter your address instead.');
+          return;
+        }
+        persist({ ...coordinates, postalCode, label, source: 'device', isForSomeoneElse: false });
       },
       (positionError) => {
         setIsDetecting(false);
@@ -11465,17 +11426,20 @@ const useDeliveryLocation = () => {
   }, [persist]);
 
   // Accepts the payload from AddressAutocomplete (or any geocoded address).
+  // Postal code is what delivery coverage is matched against, so it's the
+  // real requirement here — coordinates are kept only for the map label.
   const setAddressLocation = useCallback((details, { isForSomeoneElse = false } = {}) => {
-    const coordinates = getCoordinates(details);
-    if (!coordinates) {
-      setError('That address has no map location. Pick a suggestion from the list.');
+    const postalCode = normalizePostalCode(details?.postalCode);
+    if (!postalCode) {
+      setError('That address has no postal code on file. Pick a suggestion from the list, or try a nearby street or suburb.');
       return false;
     }
     setError('');
+    const coordinates = getCoordinates(details);
     const label = String(details.formattedAddress || '').trim()
       || [details.address1, details.address2, details.city, details.province].filter(Boolean).join(', ')
       || 'Chosen address';
-    persist({ ...coordinates, label, source: 'address', isForSomeoneElse });
+    persist({ ...(coordinates || {}), postalCode, label, source: 'address', isForSomeoneElse });
     return true;
   }, [persist]);
 
@@ -11515,8 +11479,8 @@ const DeliveryLocationBar = ({
 
   return (
     <div className="mb-5 rounded-2xl border border-[var(--svs-primary)]/30 bg-[var(--svs-cyan-surface)] p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:justify-between">
+        <div className="min-w-0 w-full sm:w-auto sm:flex-1">
           <p className="flex items-center gap-2 text-sm font-bold text-[var(--svs-primary-strong)]">
             <MapPin className="h-4 w-4 shrink-0" />
             {location ? 'Delivering to' : 'Where are we delivering?'}
@@ -11528,21 +11492,22 @@ const DeliveryLocationBar = ({
               </p>
               <p className="mt-0.5 text-xs text-[var(--svs-muted)]">
                 {location.source === 'device' ? 'Detected from your device' : 'Entered address'}
+                {' · postal code '}{location.postalCode}
                 {location.isForSomeoneElse ? ' · ordering for someone else' : ''}
                 {' · '}
-                {nearbyCount} {marketNoun} within {MAX_DELIVERY_MINUTES} min
-                {farCount ? ` · ${farCount} too far to deliver` : ''}
-                {unlocatedCount ? ` · ${unlocatedCount} without a set address` : ''}
+                {nearbyCount} {marketNoun} deliver to your area
+                {farCount ? ` · ${farCount} outside sellers' areas` : ''}
+                {unlocatedCount ? ` · ${unlocatedCount} without a set postal code` : ''}
               </p>
             </>
           ) : (
             <p className="mt-1 text-xs text-[var(--svs-muted)]">
-              Set your location to see only {marketNoun} that can reach you in under {MAX_DELIVERY_MINUTES} minutes.
+              Set your location to see only {marketNoun} whose seller delivers to your postal code.
               Ordering for someone else? Enter their address instead.
             </p>
           )}
         </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0">
           <button
             type="button"
             onClick={onDetect}
@@ -13689,6 +13654,14 @@ const ECommercePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
                 priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
                 category: item.category || '',
                 brand: item.brand || '',
+                ...((item.category || item.brand || item.color || item.condition) ? {
+                  detailsTable: {
+                    ...(item.category ? { Category: item.category } : {}),
+                    ...(item.brand ? { Brand: item.brand } : {}),
+                    ...(item.color ? { Colour: item.color } : {}),
+                    ...(item.condition ? { Condition: item.condition } : {}),
+                  },
+                } : {}),
                 cartItem: buildCartItem(item),
                 wishlistItem,
               });
@@ -15487,6 +15460,8 @@ const VotingProvidersPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlist
                     Condition: item.condition || 'Not specified',
                     Brand: item.brand || 'Not specified',
                     Audience: item.gender || 'Unisex',
+                    ...(item.color ? { Colour: item.color } : {}),
+                    ...(item.warranty ? { 'Authenticity / Warranty': item.warranty } : {}),
                   },
                   similarProducts: similar,
                   cartItem: buildCartItem(item),
@@ -15628,6 +15603,28 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
 
   useListingFocusFromQuery(filteredMarketItems, handleOpenDetails);
 
+  // Delivery coverage: groceries are delivered from the seller's own store, so
+  // only listings whose seller delivers to the buyer's postal code are
+  // offered. Listings with no saved postal code can't be matched, so they get
+  // their own section instead of disappearing.
+  const {
+    location: deliveryLocation,
+    isDetecting: isDetectingLocation,
+    error: deliveryLocationError,
+    detectLocation,
+    setAddressLocation,
+    clearLocation,
+  } = useDeliveryLocation();
+  const deliveryGroups = useMemo(
+    () => partitionListingsByDelivery(filteredMarketItems, deliveryLocation),
+    [filteredMarketItems, deliveryLocation],
+  );
+  const deliveryEntries = useMemo(
+    () => [...deliveryGroups.inRange, ...deliveryGroups.unlocated],
+    [deliveryGroups],
+  );
+
+
   if (categoryKey && !activeCategory) {
     return <Navigate to="/groceries" replace />;
   }
@@ -15700,9 +15697,22 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
                 <Search className="h-3.5 w-3.5" /> {isDesktopFiltersHidden ? 'Show Filters' : 'Hide Filters'}
               </button>
             </div>
-            {filteredMarketItems.length ? (
+            <DeliveryLocationBar
+              location={deliveryLocation}
+              isDetecting={isDetectingLocation}
+              error={deliveryLocationError}
+              onDetect={detectLocation}
+              onSelectAddress={setAddressLocation}
+              onClear={clearLocation}
+              marketNoun="products"
+              nearbyCount={deliveryGroups.inRange.length}
+              farCount={deliveryGroups.outOfRange.length}
+              unlocatedCount={deliveryGroups.unlocated.length}
+            />
+            {deliveryEntries.length ? (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-8 lg:grid-cols-3 xl:grid-cols-4">
-                {filteredMarketItems.map((item) => {
+                {deliveryEntries.map((entry, entryIndex) => {
+                  const { item, estimate } = entry;
                   const itemTitle = getTranslatedValue(t, item.titleKey, item.title);
                   const hasStockValue = item.availableQuantity !== null && item.availableQuantity !== undefined;
                   const availableQuantity = hasStockValue ? normalizeListingQuantity(item.availableQuantity, 0) : null;
@@ -15711,10 +15721,23 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
                   const tradingStatus = getListingTradingStatus(item);
                   const isClosedNow = Boolean(getListingClosedStatus(item));
                   const isUnorderable = isOutOfStock || isClosedNow;
+                  // First listing with no saved address opens the fallback section.
+                  const startsUnlocatedGroup = entry.status === 'listing-unlocated'
+                    && (entryIndex === 0 || deliveryEntries[entryIndex - 1].status !== 'listing-unlocated');
                   return (
+                    <Fragment key={item.id}>
+                    {startsUnlocatedGroup ? (
+                      <div className="col-span-full mt-2 rounded-xl border border-dashed border-[#e0e7ef] bg-[#f8fafc] px-4 py-3">
+                        <p className="text-sm font-bold text-[#0f6674]">Delivery area unknown</p>
+                        <p className="mt-0.5 text-xs text-[#374151]">
+                          These sellers haven't saved a postal code yet, so we can't confirm they deliver
+                          to you. Ask them before ordering.
+                        </p>
+                      </div>
+                    ) : null}
                     <article
-                      key={item.id}
                       id={`listing-${item.id}`}
+
                       className="flex flex-col overflow-hidden rounded-3xl border border-[#e0e7ef] bg-white shadow-lg hover:scale-[1.03] transition group"
                       role="button"
                       tabIndex={0}
@@ -15759,12 +15782,24 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
                             {isOutOfStock ? ' (Out of stock)' : ''}
                           </p>
                         ) : null}
+                        {estimate ? (
+                          <p className="mb-2 flex items-center gap-1 text-xs font-semibold text-[#0f6674]">
+                            <MapPin className="h-3 w-3 shrink-0" />
+                            <span>Delivers to your postal code</span>
+                          </p>
+                        ) : entry.status === 'listing-unlocated' ? (
+                          <p className="mb-2 flex items-center gap-1 text-xs font-medium text-[#374151]">
+                            <MapPin className="h-3 w-3 shrink-0" />
+                            <span>Address not set by seller</span>
+                          </p>
+                        ) : null}
                         {tradingStatus.hasHours ? (
                           <p className={`mb-2 flex items-start gap-1 text-xs font-semibold ${isClosedNow ? 'text-amber-700' : 'text-emerald-700'}`}>
                             <Clock className="mt-0.5 h-3 w-3 shrink-0" />
                             <span>{tradingStatus.statusLabel} · {tradingStatus.hoursLabel}</span>
                           </p>
                         ) : null}
+
                         <div className="mt-auto flex flex-col gap-2 sm:flex-row">
                           <button
                             type="button"
@@ -15797,14 +15832,24 @@ const GroceriesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemId
 
                       </div>
                     </article>
+                    </Fragment>
                   );
                 })}
+                {deliveryGroups.outOfRange.length ? (
+                  <p className="col-span-full text-center text-xs text-[#374151]">
+                    {deliveryGroups.outOfRange.length} more {deliveryGroups.outOfRange.length === 1 ? 'product is' : 'products are'} hidden
+                    because that seller doesn't deliver to your postal code.
+                  </p>
+                ) : null}
               </div>
             ) : (
               <div className="rounded-3xl border border-dashed border-[#e0e7ef] bg-[#f8fafc] px-6 py-12 text-lg text-[#0f6674]/70 text-center">
-                No items are available in {activeCategory.title} yet.
+                {filteredMarketItems.length === 0
+                  ? `No items are available in ${activeCategory.title} yet.`
+                  : `No ${activeCategory.title} sellers deliver to your postal code. Try another address, or clear your location to browse everything.`}
               </div>
             )}
+
           </div>
         </div>
       </PageFrame>
@@ -16596,6 +16641,27 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
 
   useListingFocusFromQuery(filteredItems, handleOpenDetails);
 
+  // Delivery coverage: only meals whose seller delivers to the buyer's postal
+  // code are offered. Listings whose seller never saved a postal code can't
+  // be matched, so they are shown in their own section rather than dropped.
+  const {
+    location: deliveryLocation,
+    isDetecting: isDetectingLocation,
+    error: deliveryLocationError,
+    detectLocation,
+    setAddressLocation,
+    clearLocation,
+  } = useDeliveryLocation();
+  const deliveryGroups = useMemo(
+    () => partitionListingsByDelivery(filteredItems, deliveryLocation),
+    [filteredItems, deliveryLocation],
+  );
+  const deliveryEntries = useMemo(
+    () => [...deliveryGroups.inRange, ...deliveryGroups.unlocated],
+    [deliveryGroups],
+  );
+
+
   const allActiveChips = [...selectedCategories, ...selectedDrinkTypes, ...selectedCuisines, ...selectedTypes, ...selectedDietary, ...selectedSpiceLevel, ...selectedBrands, ...selectedAvailability];
 
   // Reusable checkbox section for the sidebar
@@ -16736,9 +16802,23 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
               </div>
             ) : null}
 
+            <DeliveryLocationBar
+              location={deliveryLocation}
+              isDetecting={isDetectingLocation}
+              error={deliveryLocationError}
+              onDetect={detectLocation}
+              onSelectAddress={setAddressLocation}
+              onClear={clearLocation}
+              marketNoun="meals"
+              nearbyCount={deliveryGroups.inRange.length}
+              farCount={deliveryGroups.outOfRange.length}
+              unlocatedCount={deliveryGroups.unlocated.length}
+            />
+
             {/* Product grid */}
             <div ref={gridRef} className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
-              {filteredItems.map((item) => {
+              {deliveryEntries.map((entry, entryIndex) => {
+                const { item, estimate } = entry;
                 const hasStockValue = item.availableQuantity !== null && item.availableQuantity !== undefined;
                 const availableQuantity = hasStockValue ? normalizeListingQuantity(item.availableQuantity, 0) : null;
                 const isOutOfStock = availableQuantity !== null && availableQuantity <= 0;
@@ -16746,10 +16826,23 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
                 const tradingStatus = getListingTradingStatus(item);
                 const isClosedNow = Boolean(getListingClosedStatus(item));
                 const isUnorderable = isOutOfStock || isClosedNow;
+                // First listing with no saved address opens the fallback section.
+                const startsUnlocatedGroup = entry.status === 'listing-unlocated'
+                  && (entryIndex === 0 || deliveryEntries[entryIndex - 1].status !== 'listing-unlocated');
                 return (
+                  <Fragment key={item.id}>
+                  {startsUnlocatedGroup ? (
+                    <div className="col-span-full mt-2 rounded-xl border border-dashed border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-4 py-3">
+                      <p className="text-sm font-bold text-[var(--svs-text)]">Delivery area unknown</p>
+                      <p className="mt-0.5 text-xs text-[var(--svs-muted)]">
+                        These sellers haven't saved a postal code yet, so we can't confirm they deliver to
+                        you. Ask them before ordering.
+                      </p>
+                    </div>
+                  ) : null}
                   <article
-                    key={item.id}
                     id={`listing-${item.id}`}
+
                     className="group flex flex-col overflow-hidden rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] shadow-sm transition hover:shadow-md"
                   >
                     <div
@@ -16798,12 +16891,24 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
                       {availableQuantity !== null ? (
                         <p className="mb-2 text-xs text-[var(--svs-muted)]">{isOutOfStock ? 'Out of stock' : `${availableQuantity} available`}</p>
                       ) : null}
+                      {estimate ? (
+                        <p className="mb-2 flex items-center gap-1 text-xs font-semibold text-[var(--svs-primary-strong)]">
+                          <MapPin className="h-3 w-3 shrink-0" />
+                          <span>Delivers to your postal code</span>
+                        </p>
+                      ) : entry.status === 'listing-unlocated' ? (
+                        <p className="mb-2 flex items-center gap-1 text-xs font-medium text-[var(--svs-muted)]">
+                          <MapPin className="h-3 w-3 shrink-0" />
+                          <span>Address not set by seller</span>
+                        </p>
+                      ) : null}
                       {tradingStatus.hasHours ? (
                         <p className={`mb-2 flex items-start gap-1 text-xs font-medium ${isClosedNow ? 'text-amber-700' : 'text-emerald-700'}`}>
                           <Clock className="mt-0.5 h-3 w-3 shrink-0" />
                           <span>{tradingStatus.statusLabel} · {tradingStatus.hoursLabel}</span>
                         </p>
                       ) : null}
+
                       <div className="mt-auto flex gap-2">
                         <button
                           type="button"
@@ -16835,14 +16940,24 @@ const FastFoodPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds
                       </div>
                     </div>
                   </article>
+                  </Fragment>
                 );
               })}
-              {filteredItems.length === 0 ? (
+              {deliveryEntries.length === 0 ? (
                 <div className="col-span-full rounded-2xl border border-dashed border-[var(--svs-border)] py-16 text-center text-[var(--svs-muted)]">
-                  No items match your filters.
+                  {filteredItems.length === 0
+                    ? 'No items match your filters.'
+                    : 'No meal sellers deliver to your postal code. Try another address, or clear your location to browse everything.'}
                 </div>
               ) : null}
+              {deliveryGroups.outOfRange.length ? (
+                <p className="col-span-full text-center text-xs text-[var(--svs-muted)]">
+                  {deliveryGroups.outOfRange.length} more {deliveryGroups.outOfRange.length === 1 ? 'meal is' : 'meals are'} hidden
+                  because that seller doesn't deliver to your postal code.
+                </p>
+              ) : null}
             </div>
+
           </div>
 
         </div>
@@ -17915,6 +18030,7 @@ const TraditionalMedicinesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wis
                     'Part Used': item.partUsed || 'Not specified',
                     Form: item.formType || 'Not specified',
                     Origin: item.origin || 'Not specified',
+                    ...(item.volume ? { 'Pack Size / Volume': item.volume } : {}),
                   },
                   similarProducts: similar,
                   cartItem: buildCartItem(item),
@@ -18483,7 +18599,10 @@ const InformalMarketPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistI
 
   const normalizedItems = useMemo(() => allItems.map((item) => {
     const category = String(item.category || 'Other').trim() || 'Other';
-    const vendor = String(item.sellerName || item.provider || item.businessName || item.storeName || 'Local Trader').trim() || 'Local Trader';
+    // item.brand is the "Trader / Stall name" the seller typed on the listing
+    // form — it's the intentional shop name, so it should win over the
+    // account holder's real name or a generic fallback.
+    const vendor = String(item.brand || item.sellerName || item.provider || item.businessName || item.storeName || 'Local Trader').trim() || 'Local Trader';
     const location = String(
       item.location
       || item.fullAddress
@@ -20712,6 +20831,8 @@ const ConstructionToolsPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishli
         'Project Type': item.projectType || 'General',
         ...(packagingValue ? { 'Packaging Size': packagingValue } : {}),
         ...(item.specification ? { Specification: item.specification } : {}),
+        ...(item.warranty ? { Warranty: item.warranty } : {}),
+        ...(item.condition ? { Condition: item.condition } : {}),
       };
       const relatedPool = marketItems.filter((entry) => String(entry.id) !== String(item.id));
       const sameCategory = relatedPool.filter((entry) => (entry.category || '') === (item.category || ''));
@@ -21352,14 +21473,25 @@ const buildHardwareSoftwareDetailPayload = (item, t) => {
     ? item.technicalSpecs
     : (item.productType === 'Software'
       ? {
+        Category: item.category || 'Software',
+        Brand: item.brand || 'Generic',
+        ...(item.model ? { Model: item.model } : {}),
         'License Type': item.licenseType || 'Subscription',
         'Billing': item.priceUnit || 'per year',
         'Platform': item.platform || 'Windows / macOS / Web',
+        Availability: item.availability || 'In Stock',
+        ...(item.warranty ? { Warranty: item.warranty } : {}),
         'Updates': 'Continuous updates included',
         'Support': '24/7 priority support',
         'Activation': 'Single-user license key',
       }
       : {
+        Category: item.category || 'Hardware',
+        Brand: item.brand || 'Generic',
+        ...(item.model ? { Model: item.model } : {}),
+        Availability: item.availability || 'In Stock',
+        Condition: item.condition || 'Brand New',
+        ...(item.color ? { Colour: item.color } : {}),
         'Processor': item.processor || 'Latest generation high-performance chip',
         'Memory (RAM)': item.memory || '16GB - 64GB unified memory',
         'Storage': item.storage || '512GB - 2TB SSD',
@@ -22057,7 +22189,26 @@ const MobilityVehiclesPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlis
           sellerName: item.sellerName || vehicleDetail.dealer.name,
           similarProducts,
         };
-      })() : {}),
+      })() : (() => {
+        // Categories outside MOBILITY_RICH_DETAIL_CATEGORIES (e.g. Bakkie /
+        // Pickup, Scooter, Bicycle, Boat, Aircraft, Rail — the options the
+        // generic listing form actually offers) skip the car-oriented rich
+        // layout entirely, so without this the seller's real make/model/year/
+        // fuel/condition never reached the buyer at all. This is a plain
+        // fallback table, not the full rich treatment.
+        const detailsTable = {
+          ...(item.category ? { 'Vehicle type': item.category } : {}),
+          ...(item.brand ? { Make: item.brand } : {}),
+          ...(item.model ? { Model: item.model } : {}),
+          ...(item.year ? { Year: item.year } : {}),
+          ...(item.fuel ? { Fuel: item.fuel } : {}),
+          ...(item.transmission ? { Transmission: item.transmission } : {}),
+          ...(item.mileage ? { 'Mileage (km)': item.mileage } : {}),
+          ...(item.color ? { Colour: item.color } : {}),
+          ...(item.condition ? { Condition: item.condition } : {}),
+        };
+        return Object.keys(detailsTable).length ? { detailsTable } : {};
+      })()),
     });
   };
 
@@ -22460,8 +22611,15 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
   const [showAllRelated, setShowAllRelated] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState('');
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const variantTouchStartXRef = useRef(null);
   const productsSectionRef = useRef(null);
   const relatedSectionRef = useRef(null);
+
+  // Reset the gallery position whenever a different item's variant picker opens.
+  useEffect(() => {
+    setSelectedImageIndex(0);
+  }, [selectedItem]);
 
   // Auto-select the first in-stock size whenever the picker opens.
   useEffect(() => {
@@ -22634,6 +22792,41 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
   });
 
   // Variant picker state (mirrors nursery pattern).
+  const variantImages = (() => {
+    const rawImages = Array.isArray(selectedItem?.images) ? selectedItem.images : [];
+    const cleanImages = rawImages.filter((url) => typeof url === 'string' && url.trim());
+    if (cleanImages.length) return cleanImages;
+    return selectedItem?.image ? [selectedItem.image] : [];
+  })();
+  const hasMultipleVariantImages = variantImages.length > 1;
+  const currentVariantImage = variantImages[selectedImageIndex] || variantImages[0] || '';
+  const showPreviousVariantImage = () => {
+    if (!variantImages.length) return;
+    setSelectedImageIndex((current) => (current - 1 + variantImages.length) % variantImages.length);
+  };
+  const showNextVariantImage = () => {
+    if (!variantImages.length) return;
+    setSelectedImageIndex((current) => (current + 1) % variantImages.length);
+  };
+  const handleVariantTouchStart = (event) => {
+    variantTouchStartXRef.current = event.touches?.[0]?.clientX ?? null;
+  };
+  const handleVariantTouchEnd = (event) => {
+    const touchEndX = event.changedTouches?.[0]?.clientX ?? null;
+    const touchStartX = variantTouchStartXRef.current;
+    if (touchStartX === null || touchEndX === null || !hasMultipleVariantImages) {
+      variantTouchStartXRef.current = null;
+      return;
+    }
+    const deltaX = touchEndX - touchStartX;
+    const swipeThreshold = 35;
+    if (deltaX > swipeThreshold) {
+      showPreviousVariantImage();
+    } else if (deltaX < -swipeThreshold) {
+      showNextVariantImage();
+    }
+    variantTouchStartXRef.current = null;
+  };
   const variantSizeOptions = selectedItem ? getItemSizeOptions(selectedItem) : [];
   const variantPrice = selectedItem && selectedVariant ? getItemSizePrice(selectedItem, selectedVariant) : null;
   const variantSizeQty = selectedVariant && selectedItem ? getItemSizeStock(selectedItem, selectedVariant) : null;
@@ -23050,14 +23243,57 @@ const FashionStylePage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistIte
             >
               <X className="h-4 w-4" />
             </button>
-            <div className="grid max-h-[92vh] overflow-y-auto sm:grid-cols-2">
-              {/* Image */}
-              <div className="aspect-square w-full overflow-hidden bg-slate-100 sm:aspect-auto sm:h-full">
-                <img
-                  src={selectedItem.image}
-                  alt={selectedItem.title}
-                  className="h-full w-full object-cover"
-                />
+            <div className="flex max-h-[92vh] flex-col overflow-y-auto sm:grid sm:grid-cols-2">
+              {/* Image — flex-col (not grid) on mobile: a grid item with both
+                  aspect-ratio sizing and overflow-hidden doesn't contribute its
+                  full height to the row's auto-sizing, so the row collapses and
+                  the image spills into — and gets painted over by — the info
+                  panel below it. Flex's column-axis sizing doesn't have that
+                  quirk, and sm:grid restores the intended side-by-side layout. */}
+              <div
+                className="relative aspect-square w-full shrink-0 overflow-hidden bg-slate-100 sm:aspect-auto sm:h-full"
+                onTouchStart={handleVariantTouchStart}
+                onTouchEnd={handleVariantTouchEnd}
+              >
+                {currentVariantImage ? (
+                  <img
+                    key={currentVariantImage}
+                    src={currentVariantImage}
+                    alt={`${selectedItem.title} ${selectedImageIndex + 1}`}
+                    className="h-full w-full object-cover"
+                  />
+                ) : null}
+                {hasMultipleVariantImages ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={showPreviousVariantImage}
+                      aria-label="Previous image"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full border border-[var(--svs-border)] bg-white/90 p-1.5 text-[var(--svs-text)]"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={showNextVariantImage}
+                      aria-label="Next image"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full border border-[var(--svs-border)] bg-white/90 p-1.5 text-[var(--svs-text)]"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                    <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5">
+                      {variantImages.map((_, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => setSelectedImageIndex(index)}
+                          aria-label={`View image ${index + 1}`}
+                          className={`h-2 w-2 rounded-full ${index === selectedImageIndex ? 'bg-[var(--svs-primary)]' : 'bg-white/70'}`}
+                        />
+                      ))}
+                    </div>
+                  </>
+                ) : null}
               </div>
               {/* Info + size picker */}
               <div className="flex flex-col p-5 sm:p-6">
@@ -24178,9 +24414,14 @@ const buildWorkerDetailPayload = (item) => {
     Availability: availability,
     ...(schedulePreference ? { 'Schedule Preference': schedulePreference } : {}),
     ...(item.gender ? { Gender: item.gender } : {}),
-    'Languages Spoken': seededVehiclePick(`${seed}:lang`, ['English, Zulu', 'English, Sotho', 'English, Afrikaans', 'English, Xhosa', 'English']),
-    'Tools / Equipment': seededVehiclePick(`${seed}:tools`, ['Own basic toolkit provided', 'Own tools and safety gear provided', 'Tools provided by employer preferred']),
-    Certifications: seededVehiclePick(`${seed}:cert`, ['Trade-tested', 'Police clearance certificate available', 'References available on request']),
+    // Worker-typed answers win — these are what the seller actually entered
+    // on the listing form (`emptyGeneralLabourSellForm`'s languages/tools/
+    // certifications fields). The seeded picks are a last-resort fallback
+    // for older/catalog entries that never set them, not a substitute for
+    // real answers.
+    'Languages Spoken': item.languages || seededVehiclePick(`${seed}:lang`, ['English, Zulu', 'English, Sotho', 'English, Afrikaans', 'English, Xhosa', 'English']),
+    'Tools / Equipment': item.tools || seededVehiclePick(`${seed}:tools`, ['Own basic toolkit provided', 'Own tools and safety gear provided', 'Tools provided by employer preferred']),
+    Certifications: item.certifications || seededVehiclePick(`${seed}:cert`, ['Trade-tested', 'Police clearance certificate available', 'References available on request']),
   };
 
   const badges = item.badges || ['Verified Worker', 'Background Checked', 'Flexible Contracts'];
@@ -30242,9 +30483,21 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
       pickupAddress: item.pickupAddress || '',
       pickupCity: item.pickupCity || '',
       pickupProvince: item.pickupProvince || '',
+      postalCode: item.postalCode || '',
+      deliveryPostalCodes: item.deliveryPostalCodes || '',
       latitude: item.latitude === null || item.latitude === undefined ? '' : String(item.latitude),
       longitude: item.longitude === null || item.longitude === undefined ? '' : String(item.longitude),
-      deliveryMinutes: item.deliveryMinutes ? String(item.deliveryMinutes) : '',
+      // Without these, SizeVariantEditor always mounted with an empty sizes
+      // array, so a listing saved with multiple sized variants (and their own
+      // per-size stock/price) reopened as if it had never had any — silently
+      // collapsing it to the base price/quantity fields on the next save.
+      sizes: Array.isArray(item.sizes) ? item.sizes : [],
+      sizeStock: item.sizeStock && typeof item.sizeStock === 'object' ? item.sizeStock : {},
+      sizePrices: item.sizePrices && typeof item.sizePrices === 'object' ? item.sizePrices : {},
+      sizingMode: deriveSizeVariantMode(
+        Array.isArray(item.sizes) ? item.sizes : [],
+        item.sizeStock && typeof item.sizeStock === 'object' ? item.sizeStock : {},
+      ),
 
       // Generic per-market spec fields populated last so they take precedence
       // for spec-driven markets where the field name overlaps (e.g. brand).
@@ -31757,9 +32010,10 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                 pickupAddress={editForm.pickupAddress}
                 pickupCity={editForm.pickupCity}
                 pickupProvince={editForm.pickupProvince}
+                postalCode={editForm.postalCode}
+                deliveryPostalCodes={editForm.deliveryPostalCodes}
                 latitude={editForm.latitude}
                 longitude={editForm.longitude}
-                deliveryMinutes={editForm.deliveryMinutes}
                 onChange={(next) => setEditForm((current) => ({ ...current, ...next }))}
                 isCompact
               />
@@ -33886,19 +34140,20 @@ const TradingHoursEditor = ({
   );
 };
 
-// Pickup address + delivery reach for markets that filter by distance (Fast
-// Food, Groceries). The coordinates saved here are what buyers' delivery-time
-// filters measure against, so a listing without them can't be matched to a
-// buyer and is shown in the market's "address not set" section instead.
+// Pickup address + delivery coverage for markets that filter by postal code
+// (Fast Food, Groceries). The postal code saved here is what buyers' delivery
+// filters check against, so a listing without one can't be matched to a buyer
+// and is shown in the market's "address not set" section instead.
 const ListingDeliveryFields = ({
   idPrefix = 'listing-delivery',
   marketKey,
   pickupAddress = '',
   pickupCity = '',
   pickupProvince = '',
+  postalCode = '',
+  deliveryPostalCodes = '',
   latitude = '',
   longitude = '',
-  deliveryMinutes = '',
   onChange,
   isCompact = false,
 }) => {
@@ -33910,10 +34165,6 @@ const ListingDeliveryFields = ({
   }
 
   const coordinates = getCoordinates({ latitude, longitude });
-  const limitMinutes = getListingDeliveryLimitMinutes({ deliveryMinutes });
-  // Straight-line equivalent of the chosen time, so the seller can sanity-check
-  // the reach against places they know.
-  const approximateRadiusKm = ((limitMinutes / 60) * AVERAGE_DELIVERY_SPEED_KMH) / ROAD_DISTANCE_FACTOR;
 
   const applyAddress = (details) => {
     const nextCoordinates = getCoordinates(details);
@@ -33922,11 +34173,12 @@ const ListingDeliveryFields = ({
         || [details.address1, details.address2, details.city, details.province].filter(Boolean).join(', '),
       pickupCity: details.city || '',
       pickupProvince: details.province || '',
+      postalCode: details.postalCode || '',
       latitude: nextCoordinates ? String(nextCoordinates.latitude) : '',
       longitude: nextCoordinates ? String(nextCoordinates.longitude) : '',
     });
-    if (!nextCoordinates) {
-      setDetectError('That address could not be placed on the map. Try a nearby street or suburb.');
+    if (!details.postalCode) {
+      setDetectError('That address has no postal code on file. Try a nearby street or suburb, or enter your postal code manually below.');
     } else {
       setDetectError('');
     }
@@ -33961,10 +34213,14 @@ const ListingDeliveryFields = ({
             || `${nextLatitude.toFixed(5)}, ${nextLongitude.toFixed(5)}`,
           pickupCity: resolved?.city || '',
           pickupProvince: resolved?.province || '',
+          postalCode: resolved?.postalCode || '',
           latitude: String(nextLatitude),
           longitude: String(nextLongitude),
         });
         setIsDetecting(false);
+        if (!resolved?.postalCode) {
+          setDetectError('Your location was saved, but we could not read a postal code from it. Enter it manually below.');
+        }
       },
       (positionError) => {
         setIsDetecting(false);
@@ -33983,12 +34239,12 @@ const ListingDeliveryFields = ({
   return (
     <div className={containerClassName}>
       <h3 className={`${isCompact ? 'text-sm' : 'text-base'} font-bold text-[var(--svs-text)]`}>
-        Pickup address &amp; delivery reach
+        Pickup address &amp; delivery coverage
       </h3>
       <p className="mt-1 text-xs text-[var(--svs-muted)]">
-        Buyers on this market only see items that can reach them in time, so tell us where you cook
-        or store this item and how far you deliver. Search your address or detect it — both save the
-        map position we measure from.
+        Buyers on this market only see items whose seller delivers to their postal code, so tell us
+        where you cook or store this item. Search your address or detect it — both save your postal
+        code, which is what buyers are matched against.
       </p>
 
       <div className="mt-3">
@@ -34013,59 +34269,58 @@ const ListingDeliveryFields = ({
           <MapPin className="h-3.5 w-3.5" />
           {isDetecting ? 'Detecting…' : 'Use my current location'}
         </button>
-        {coordinates ? (
-          <>
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              Map position saved ({coordinates.latitude.toFixed(4)}, {coordinates.longitude.toFixed(4)})
-            </span>
-            <button
-              type="button"
-              onClick={() => onChange?.({ latitude: '', longitude: '' })}
-              className="rounded-full border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2.5 py-1 text-[11px] font-semibold text-[var(--svs-muted)] transition hover:border-rose-300 hover:text-rose-600"
-            >
-              Clear position
-            </button>
-          </>
+        {postalCode ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Postal code saved: {postalCode}
+          </span>
         ) : (
           <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
             <AlertTriangle className="h-3.5 w-3.5" />
-            No map position yet — buyers won't see this in their delivery range
+            No postal code yet — buyers won't be matched to this item
           </span>
         )}
       </div>
 
       <div className="mt-3">
-        <label htmlFor={`${idPrefix}-minutes`} className="mb-1 block text-xs font-medium text-[var(--svs-text)]">
-          How long does delivery take at the furthest point you deliver to?
+        <label htmlFor={`${idPrefix}-extra-codes`} className="mb-1 block text-xs font-medium text-[var(--svs-text)]">
+          Other postal codes you deliver to (optional)
         </label>
-        <select
-          id={`${idPrefix}-minutes`}
-          value={String(deliveryMinutes || DEFAULT_DELIVERY_MINUTES)}
-          onChange={(event) => onChange?.({ deliveryMinutes: event.target.value })}
-          className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none sm:w-auto"
-        >
-          {DELIVERY_MINUTE_OPTIONS.map((option) => (
-            <option key={option} value={String(option)}>
-              {option} minutes{option === MAX_DELIVERY_MINUTES ? ' (platform maximum)' : ''}
-            </option>
-          ))}
-        </select>
+        <input
+          id={`${idPrefix}-extra-codes`}
+          type="text"
+          value={deliveryPostalCodes}
+          onChange={(event) => onChange?.({ deliveryPostalCodes: event.target.value })}
+          placeholder="e.g. 2196, 2191, 2192"
+          className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none"
+        />
         <p className="mt-1 text-[11px] text-[var(--svs-muted)]">
-          Roughly {approximateRadiusKm < 10 ? approximateRadiusKm.toFixed(1) : Math.round(approximateRadiusKm)} km
-          around your address. Buyers further out won't see this item. The platform never shows items
-          over {MAX_DELIVERY_MINUTES} minutes away, and preparation time counts toward the estimate.
+          Comma-separated. You always cover your own postal code above — add more here if you deliver
+          further, e.g. neighbouring suburbs. Leave blank to only deliver within {postalCode || 'your own postal code'}.
         </p>
       </div>
 
       {pickupCity || pickupProvince ? (
         <p className="mt-2 text-[11px] text-[var(--svs-muted)]">
           Area: {[pickupCity, pickupProvince].filter(Boolean).join(', ')}
+          {coordinates ? ` · Map position saved (${coordinates.latitude.toFixed(4)}, ${coordinates.longitude.toFixed(4)})` : ''}
         </p>
       ) : null}
       {detectError ? <p className="mt-2 text-xs font-semibold text-[#d94d4d]">{detectError}</p> : null}
     </div>
   );
+};
+
+// Reconstructs which sizing UI mode a listing's saved sizes/stock data
+// implies. sizingMode itself is only ever local form state — it's never
+// persisted, so both the editor (on mount) and the edit-form loader (on
+// open) need to re-derive it the same way from the sizes/sizeStock that
+// *are* saved, or they disagree and the editor resets to "pick a mode".
+const deriveSizeVariantMode = (sizes = [], sizeStock = {}) => {
+  if (sizes.length > 1) return 'multi';
+  if (sizes.length === 1 && Object.keys(sizeStock).length === 0) return 'single';
+  if (sizes.length === 1) return 'multi';
+  return '';
 };
 
 const SizeVariantEditor = ({
@@ -34082,12 +34337,7 @@ const SizeVariantEditor = ({
 
   // Derive initial mode from existing data so the editor pre-fills correctly
   // when a seller edits an existing listing.
-  const deriveInitialMode = () => {
-    if (sizes.length > 1) return 'multi';
-    if (sizes.length === 1 && Object.keys(sizeStock).length === 0) return 'single';
-    if (sizes.length === 1) return 'multi';
-    return '';
-  };
+  const deriveInitialMode = () => deriveSizeVariantMode(sizes, sizeStock);
   const [mode, setMode] = useState(deriveInitialMode);
   const [singleValue, setSingleValue] = useState(
     sizes.length === 1 && Object.keys(sizeStock).length === 0 ? sizes[0] : '',
@@ -35647,9 +35897,10 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
                 pickupAddress={formData.pickupAddress}
                 pickupCity={formData.pickupCity}
                 pickupProvince={formData.pickupProvince}
+                postalCode={formData.postalCode}
+                deliveryPostalCodes={formData.deliveryPostalCodes}
                 latitude={formData.latitude}
                 longitude={formData.longitude}
-                deliveryMinutes={formData.deliveryMinutes}
                 onChange={(next) => setFormData((current) => ({ ...current, ...next }))}
               />
               <TradingHoursEditor
@@ -38766,8 +39017,12 @@ const NurseryHubPage = ({
             >
               <X className="h-4 w-4" />
             </button>
-            <div className="grid max-h-[92vh] grid-cols-1 overflow-y-auto md:grid-cols-2">
-              <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100 md:aspect-auto md:h-full">
+            <div className="flex max-h-[92vh] flex-col overflow-y-auto md:grid md:grid-cols-2">
+              {/* flex-col (not grid) on mobile: a grid item combining aspect-ratio
+                  sizing with overflow-hidden doesn't contribute its full height to
+                  the row's auto-sizing, so the row collapses and the image spills
+                  into — and gets painted over by — the panel below it. */}
+              <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden bg-slate-100 md:aspect-auto md:h-full">
                 <img
                   src={selectedItem.image}
                   alt={selectedItem.title}
@@ -39729,8 +39984,12 @@ const LivestockHubPage = ({
             >
               <X className="h-4 w-4" />
             </button>
-            <div className="grid max-h-[92vh] grid-cols-1 overflow-y-auto md:grid-cols-2">
-              <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100 md:aspect-auto md:h-full">
+            <div className="flex max-h-[92vh] flex-col overflow-y-auto md:grid md:grid-cols-2">
+              {/* flex-col (not grid) on mobile: a grid item combining aspect-ratio
+                  sizing with overflow-hidden doesn't contribute its full height to
+                  the row's auto-sizing, so the row collapses and the image spills
+                  into — and gets painted over by — the panel below it. */}
+              <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden bg-slate-100 md:aspect-auto md:h-full">
                 <img
                   src={selectedItem.image}
                   alt={selectedItem.title}
@@ -39775,6 +40034,24 @@ const LivestockHubPage = ({
                     <div>
                       <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Weight</dt>
                       <dd className="mt-0.5 font-medium">{selectedItem.weight}</dd>
+                    </div>
+                  ) : null}
+                  {selectedItem.gender ? (
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Gender</dt>
+                      <dd className="mt-0.5 font-medium">{selectedItem.gender}</dd>
+                    </div>
+                  ) : null}
+                  {selectedItem.purpose ? (
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Purpose</dt>
+                      <dd className="mt-0.5 font-medium">{selectedItem.purpose}</dd>
+                    </div>
+                  ) : null}
+                  {selectedItem.healthStatus ? (
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Health status</dt>
+                      <dd className="mt-0.5 font-medium">{selectedItem.healthStatus}</dd>
                     </div>
                   ) : null}
                   {selectedItem.location ? (
@@ -40114,6 +40391,8 @@ const SafetyPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds =
                   Audience: item.gender || 'Unisex',
                   Material: item.material || 'N/A',
                   'Safety Certification': item.safetyCertification || 'N/A',
+                  ...(item.color ? { Colour: item.color } : {}),
+                  ...(item.condition ? { Condition: item.condition } : {}),
                 },
                 similarProducts: similar,
                 cartItem: buildCartItem(item),
@@ -42527,6 +42806,34 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
     setFormState((current) => ({ ...current, [field]: value }));
   };
 
+  // Fast Food / Groceries lines only ever get filtered out of the browse grid
+  // when they're too far — a buyer who reached them another way (search,
+  // wishlist, a shared link) can still add them to the cart. This is the
+  // actual gate: it re-checks every such line against the live seller
+  // listing and the postal code just entered (the buyer's normal shipping
+  // postal code field — no separate geocoding step needed), so an
+  // unreachable item can't be paid for regardless of how it got into the cart.
+  const deliveryRadiusItems = useMemo(
+    () => checkoutItems.filter((item) => usesDeliveryRadius(item)),
+    [checkoutItems],
+  );
+  const buyerPostalCode = formState.postalCode;
+  const deliveryRangeWarnings = useMemo(() => {
+    const warnings = new Map();
+    if (!String(buyerPostalCode || '').trim()) return warnings;
+    deliveryRadiusItems.forEach((item) => {
+      const listing = getSellerListingForItem(sellerItems, item);
+      if (!listing) return;
+      const state = getListingDeliveryState(listing, { postalCode: buyerPostalCode });
+      if (state.status === 'out-of-range') {
+        warnings.set(item.id, state.estimate);
+      }
+    });
+    return warnings;
+  }, [deliveryRadiusItems, sellerItems, buyerPostalCode]);
+  const hasDeliveryRangeWarnings = deliveryRangeWarnings.size > 0;
+  const needsDeliveryPostalCode = deliveryRadiusItems.length > 0 && !String(buyerPostalCode || '').trim();
+
   // When the buyer changes their currency, automatically populate the country
   // (and phone dial code) tied to that currency so the delivery section
   // reflects where they are shopping from.
@@ -42575,6 +42882,14 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
 
     if (hasInvalidContactEmail) {
       return 'Enter a valid email address before paying.';
+    }
+
+    if (needsDeliveryPostalCode) {
+      return 'Enter your postal code so we can confirm the Fast Food or Groceries items in your cart can be delivered to you.';
+    }
+
+    if (hasDeliveryRangeWarnings) {
+      return 'One or more sellers in your cart don\'t deliver to your postal code. Remove those items or choose a different delivery address before paying.';
     }
 
     return '';
@@ -43242,6 +43557,27 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
               />
               <span>Save this address for future orders</span>
             </label>
+            {needsDeliveryPostalCode ? (
+              <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                Enter your postal code above so we can confirm the Fast Food or Groceries items in your cart can be delivered to you.
+              </p>
+            ) : hasDeliveryRangeWarnings ? (
+              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                <p className="flex items-start gap-2 font-semibold">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  These sellers don't deliver to postal code {buyerPostalCode}:
+                </p>
+                <ul className="ml-6 mt-2 list-disc space-y-1 text-xs">
+                  {deliveryRadiusItems
+                    .filter((item) => deliveryRangeWarnings.has(item.id))
+                    .map((item) => (
+                      <li key={item.id}>{item.title}</li>
+                    ))}
+                </ul>
+                <p className="mt-2 text-xs font-semibold">Remove these items or choose a different delivery address to continue.</p>
+              </div>
+            ) : null}
           </div>
         </section>
         )}
@@ -43309,7 +43645,7 @@ const CheckoutPage = ({ cartItems, buyNowCheckout, onUpdateCartQuantity, onRemov
           </button>
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || needsDeliveryPostalCode || hasDeliveryRangeWarnings}
             className={`${cudyBluePrimaryButtonClassName} w-full max-w-md rounded-xl bg-[var(--svs-primary)] px-6 py-3.5 text-sm font-bold uppercase tracking-wide text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto sm:text-base`}
           >
             {isSubmitting ? 'Processing...' : 'Complete Payment'}
@@ -54942,6 +55278,40 @@ const ItemDetailsModal = ({
                   </div>
                 );
               })() : null}
+              {/* Grocery Details — groceries items only. Surfaces the attributes
+                  the seller captured on GroceriesSellerFields (category, brand,
+                  pack size, freshness, origin, storage, expiry, offer badge)
+                  which otherwise never reached the buyer detail view. */}
+              {(item.marketKey === 'groceries' || String(item.route || '').startsWith('/groceries')) ? (() => {
+                const groceryRows = [
+                  item.category ? { Icon: Info, label: 'Category', value: item.category } : null,
+                  item.brand ? { Icon: Info, label: 'Brand', value: item.brand } : null,
+                  item.volume ? { Icon: Package, label: 'Pack size', value: item.volume } : null,
+                  item.freshness ? { Icon: ShieldCheck, label: 'Freshness', value: item.freshness } : null,
+                  item.origin ? { Icon: Globe, label: 'Origin', value: item.origin } : null,
+                  // Storage has its own dedicated section further down (shared
+                  // with other markets), so it's left out here to avoid showing
+                  // the same text twice.
+                  item.expiryDate ? { Icon: CalendarDays, label: 'Best before', value: formatListingDateLabel(item.expiryDate) } : null,
+                  item.discount ? { Icon: Info, label: 'Offer', value: item.discount } : null,
+                ].filter(Boolean);
+
+                if (!groceryRows.length) return null;
+                return (
+                  <div className="mt-3 rounded-xl border border-[#b6daf6] bg-[#f0f8ff] px-4 py-3">
+                    <p className="mb-2.5 text-[10px] font-bold uppercase tracking-widest text-[#0f4c75]">Grocery Details</p>
+                    <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
+                      {groceryRows.map(({ Icon, label, value }) => (
+                        <div key={label} className="flex items-start gap-1.5 text-xs text-slate-700">
+                          <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#0f4c75]" />
+                          <span className="shrink-0 font-semibold text-[#0f4c75]">{label}:&nbsp;</span>
+                          <span className="leading-snug">{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })() : null}
               {/* Event Details — ticket/bookings items only */}
               {(item.marketKey === 'tickets' || item.route === '/bookings-tickets') ? (() => {
                 const eventRows = [
@@ -56204,44 +56574,88 @@ const secondhandProductDetailData = {
   },
 };
 
-const getSecondhandDetailProduct = (itemId) => {
+const getSecondhandDetailProduct = (itemId, sellerItems = []) => {
   if (secondhandProductDetailData[itemId]) return secondhandProductDetailData[itemId];
   const shItem = secondhandItems.find((i) => i.id === itemId);
-  if (!shItem) return null;
+  if (shItem) {
+    return {
+      id: shItem.id,
+      title: shItem.title,
+      category: secondhandCategoryCards.find((c) => c.key === shItem.categoryKey)?.title || shItem.categoryKey,
+      brand: '',
+      price: shItem.price,
+      rating: 4.5,
+      ratingCount: 5,
+      overallRating: 4.5,
+      totalReviews: 0,
+      condition: shItem.condition || 'Pre-owned',
+      sellerType: 'Individual',
+      location: 'Nairobi (Kenya)',
+      availability: 'Available Now',
+      images: shItem.image ? [shItem.image] : [],
+      description: [shItem.description || ''],
+      highlights: [],
+      specs: [],
+      trustSafety: [
+        { icon: 'shield', text: 'Verified Seller' },
+        { icon: 'check', text: 'Device Quality Check' },
+        { icon: 'lock', text: 'Secure communication' },
+      ],
+      seller: { name: 'Seller', type: 'Individual', location: 'Nairobi (Kenya)', avatar: '' },
+      reviews: [],
+      ratingBreakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+      similarProducts: [],
+    };
+  }
+
+  // Real seller-submitted listing — the static lookups above only ever cover
+  // the demo catalog, so without this branch every seller's own item 404s on
+  // its own detail page the moment a buyer clicks through to it.
+  const sellerItem = (sellerItems || []).find((entry) => String(entry.id) === String(itemId) && entry.marketKey === 'secondhand');
+  if (!sellerItem) return null;
+  const images = Array.isArray(sellerItem.images) && sellerItem.images.length
+    ? sellerItem.images
+    : (sellerItem.image ? [sellerItem.image] : []);
+  const specs = [
+    sellerItem.category ? { label: 'Category', value: sellerItem.category } : null,
+    sellerItem.brand ? { label: 'Brand', value: sellerItem.brand } : null,
+    sellerItem.color ? { label: 'Colour', value: sellerItem.color } : null,
+    sellerItem.condition ? { label: 'Condition', value: sellerItem.condition } : null,
+  ].filter(Boolean);
   return {
-    id: shItem.id,
-    title: shItem.title,
-    category: secondhandCategoryCards.find((c) => c.key === shItem.categoryKey)?.title || shItem.categoryKey,
-    brand: '',
-    price: shItem.price,
-    rating: 4.5,
-    ratingCount: 5,
-    overallRating: 4.5,
+    id: sellerItem.id,
+    title: sellerItem.title,
+    category: sellerItem.category || 'SecondHand',
+    brand: sellerItem.brand || '',
+    price: sellerItem.price,
+    rating: 0,
+    ratingCount: 0,
+    overallRating: 0,
     totalReviews: 0,
-    condition: shItem.condition || 'Pre-owned',
+    condition: sellerItem.condition || 'Pre-owned',
     sellerType: 'Individual',
-    location: 'Nairobi (Kenya)',
-    availability: 'Available Now',
-    images: shItem.image ? [shItem.image] : [],
-    description: [shItem.description || ''],
+    location: [sellerItem.pickupCity, sellerItem.pickupProvince].filter(Boolean).join(', ') || 'Location on request',
+    availability: normalizeListingQuantity(sellerItem.availableQuantity, 0) > 0 ? 'Available Now' : 'Out of Stock',
+    images,
+    description: [sellerItem.description || ''],
     highlights: [],
-    specs: [],
+    specs,
     trustSafety: [
       { icon: 'shield', text: 'Verified Seller' },
       { icon: 'check', text: 'Device Quality Check' },
       { icon: 'lock', text: 'Secure communication' },
     ],
-    seller: { name: 'Seller', type: 'Individual', location: 'Nairobi (Kenya)', avatar: '' },
+    seller: { name: sellerItem.sellerName || 'Seller', type: 'Individual', location: [sellerItem.pickupCity, sellerItem.pickupProvince].filter(Boolean).join(', ') || '', avatar: '' },
     reviews: [],
     ratingBreakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
     similarProducts: [],
   };
 };
 
-const SecondHandProductDetailPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [] }) => {
+const SecondHandProductDetailPage = ({ onAddToCart, onBuyNow, onToggleWishlist, wishlistItemIds = [], sellerItems = [] }) => {
   const { itemId } = useParams();
   const navigate = useNavigate();
-  const product = getSecondhandDetailProduct(itemId);
+  const product = getSecondhandDetailProduct(itemId, sellerItems);
   const [selectedImage, setSelectedImage] = useState(0);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [visibleReviews, setVisibleReviews] = useState(3);

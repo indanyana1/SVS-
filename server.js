@@ -137,6 +137,30 @@ const fetchAddressJson = async (url, options = {}) => {
   return payload;
 };
 
+// Nominatim's free-text search is an exact-ish match against how OpenStreetMap
+// contributors phrased the place — a real address can return zero results
+// just because the house number isn't mapped as its own point (common outside
+// major metros) or because a unit/complex name confuses the parser, even
+// though the street itself is well-mapped. Each variant drops a bit more
+// specificity so a genuine address isn't reported as "not found" only because
+// the exact text the buyer typed doesn't exist verbatim in OSM's data.
+const buildRelaxedAddressQueryVariants = (input) => {
+  const trimmed = String(input || '').trim();
+  const variants = [trimmed];
+
+  const withoutLeadingNumber = trimmed.replace(/^\d+[a-zA-Z]?\s+/, '').trim();
+  if (withoutLeadingNumber && withoutLeadingNumber !== trimmed) {
+    variants.push(withoutLeadingNumber);
+  }
+
+  const afterFirstComma = trimmed.includes(',') ? trimmed.split(',').slice(1).join(',').trim() : '';
+  if (afterFirstComma && !variants.includes(afterFirstComma)) {
+    variants.push(afterFirstComma);
+  }
+
+  return variants;
+};
+
 const DEFAULT_CLAUDE_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5';
 
 const normalizeSupportAgentHistory = (history) => {
@@ -285,11 +309,40 @@ const normalizeAddressResult = (result) => {
     province,
     postalCode,
     country,
-    // Coordinates power the delivery-radius filters on the Fast Food and
-    // Groceries markets, so they are carried through with the address.
+    // postalCode powers the delivery-coverage filters on the Fast Food and
+    // Groceries markets; coordinates are kept for map pins/labels.
     latitude: Number.isFinite(Number(result.lat)) ? Number(result.lat) : null,
     longitude: Number.isFinite(Number(result.lon)) ? Number(result.lon) : null,
   };
+};
+
+// Some places (small towns especially — Umkomaas is a real example) have
+// their postal code tagged only on an administrative boundary (ward/suburb),
+// not on the specific place/road node a normal search or reverse lookup
+// hits, so the primary result comes back with every other field filled in
+// except postcode. Zoom 14 (ward/suburb level) is where that boundary tends
+// to live, so retry there once before accepting "no postal code" as final.
+const backfillPostalCode = async (normalized) => {
+  if (normalized.postalCode || !Number.isFinite(normalized.latitude) || !Number.isFinite(normalized.longitude)) {
+    return normalized;
+  }
+  try {
+    const params = new URLSearchParams({
+      lat: String(normalized.latitude),
+      lon: String(normalized.longitude),
+      format: 'jsonv2',
+      addressdetails: '1',
+      zoom: '14',
+    });
+    const payload = await fetchAddressJson(`https://nominatim.openstreetmap.org/reverse?${params.toString()}`);
+    const postcode = payload?.address?.postcode;
+    if (postcode) {
+      return { ...normalized, postalCode: String(postcode) };
+    }
+  } catch (_error) {
+    // Keep the original result — postcode just stays unset, same as before.
+  }
+  return normalized;
 };
 
 
@@ -405,11 +458,11 @@ app.post('/api/address-reverse', limits.address, async (req, res) => {
       if (!payload || (!payload.address && !payload.display_name)) {
         throw new Error('Address lookup request failed.');
       }
-      res.json(normalizeAddressResult(payload));
+      res.json(await backfillPostalCode(normalizeAddressResult(payload)));
       return;
     } catch (_primaryError) {
       const fallbackPayload = await fetchFallbackReverseGeocode(latitude, longitude);
-      res.json(fallbackPayload);
+      res.json(await backfillPostalCode(fallbackPayload));
       return;
     }
   } catch (error) {
@@ -441,33 +494,43 @@ app.post('/api/address-autocomplete', limits.address, async (req, res) => {
   }
 
   try {
-    const searchParams = new URLSearchParams({
-      q: input,
-      format: 'jsonv2',
-      addressdetails: '1',
-      limit: '5',
-      countrycodes: countryCode,
-    });
-    const payload = await fetchAddressJson(`https://nominatim.openstreetmap.org/search?${searchParams.toString()}`);
+    let suggestions = [];
+    for (const variant of buildRelaxedAddressQueryVariants(input)) {
+      const searchParams = new URLSearchParams({
+        q: variant,
+        format: 'jsonv2',
+        addressdetails: '1',
+        // 40 is Nominatim's documented ceiling for a single search request —
+        // above that it stops returning more regardless of what's asked for,
+        // and the public instance's usage policy discourages pushing it higher.
+        limit: '40',
+        countrycodes: countryCode,
+      });
+      // eslint-disable-next-line no-await-in-loop
+      const payload = await fetchAddressJson(`https://nominatim.openstreetmap.org/search?${searchParams.toString()}`);
 
-    const suggestions = Array.isArray(payload)
-      ? payload.map((result) => ({
-        placeId: buildOsmIdentifier(result),
-        fullText: result.display_name || '',
-        primaryText: [result.address?.house_number, result.address?.road].filter(Boolean).join(' ').trim()
-          || result.name
-          || result.display_name
-          || '',
-        secondaryText: [
-          result.address?.suburb || result.address?.neighbourhood || result.address?.residential || result.address?.quarter,
-          result.address?.city || result.address?.town || result.address?.village || result.address?.municipality || result.address?.county,
-          result.address?.state,
-        ].filter(Boolean).join(', '),
-        latitude: Number.isFinite(Number(result.lat)) ? Number(result.lat) : null,
-        longitude: Number.isFinite(Number(result.lon)) ? Number(result.lon) : null,
+      suggestions = Array.isArray(payload)
+        ? payload.map((result) => ({
+          placeId: buildOsmIdentifier(result),
+          fullText: result.display_name || '',
+          primaryText: [result.address?.house_number, result.address?.road].filter(Boolean).join(' ').trim()
+            || result.name
+            || result.display_name
+            || '',
+          secondaryText: [
+            result.address?.suburb || result.address?.neighbourhood || result.address?.residential || result.address?.quarter,
+            result.address?.city || result.address?.town || result.address?.village || result.address?.municipality || result.address?.county,
+            result.address?.state,
+          ].filter(Boolean).join(', '),
+          latitude: Number.isFinite(Number(result.lat)) ? Number(result.lat) : null,
+          longitude: Number.isFinite(Number(result.lon)) ? Number(result.lon) : null,
 
-      })).filter((result) => result.placeId && result.fullText)
-      : [];
+        })).filter((result) => result.placeId && result.fullText)
+        : [];
+
+      // Found something — no need to try a more relaxed variant.
+      if (suggestions.length) break;
+    }
 
     res.json({ suggestions });
   } catch (error) {
@@ -496,7 +559,7 @@ app.post('/api/address-details', limits.address, async (req, res) => {
       return res.status(404).json({ error: 'Address details not found.' });
     }
 
-    res.json(normalizeAddressResult(result));
+    res.json(await backfillPostalCode(normalizeAddressResult(result)));
   } catch (error) {
     console.error('Address details error:', error.message);
     res.status(400).json({ error: error.message || 'Unable to fetch address details.' });
