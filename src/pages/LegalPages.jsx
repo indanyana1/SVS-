@@ -430,7 +430,7 @@ export const RefundPolicyPage = () => {
             'Traditional medicines, herbs, supplements, and wellness products with broken seals.',
             'Personal care, intimate products, swimwear with hygiene strips removed.',
             'Customised, monogrammed or made-to-order items.',
-            'Downloadable codes, lottery tickets, digital vouchers once revealed.',
+            'Downloadable codes, digital vouchers once revealed.',
             'Live animals in the Livestock category (subject to provider rules).',
           ]}
         />

@@ -68,8 +68,7 @@
     "livestockHub": "Livestock Marketplace",
     "stationery": "Stationery at Books Market",
     "constructionTools": "Mga Tool sa Pagbuo at Konstruksyon",
-    "informalMarket": "Impormal na Palengke",
-    "bettingLotteryGames": "Mga Larong Pusta at Lottery"
+    "informalMarket": "Impormal na Palengke"
   },
   "footer": {
     "about": "About Us",
@@ -144,7 +143,6 @@
     "stationery": "Mamili ng mga panulat, libro, invoice book, notebook, at mga gamit sa opisina para sa paaralan o negosyo.",
     "constructionTools": "Mag-browse ng mga kagamitan sa gusali, mga tool sa kamay, at mga tool sa kapangyarihan para sa mga proyekto sa anumang laki.",
     "informalMarket": "Tuklasin ang mga street vendor, spaza shop, at impormal na nagtitinda na may totoong listahan, kategorya, at lokasyon ng nagtitinda na malapit sa iyo.",
-    "bettingLotteryGames": "Piliin ang iyong laro, pumili ng quick-pick o manual na numero, at ligtas na bumili ng mga tiket sa lottery para sa nangungunang internasyonal na guhitan.",
     "secondhand": "Bumili at magbenta ng de-kalidad na segunda manong telepono, laptop, fashion, muwebles, at iba pa — lahat sa hindi matutularang presyo."
   },
   "searchResults": {

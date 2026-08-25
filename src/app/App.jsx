@@ -1,4 +1,4 @@
-import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
+﻿import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import CategoryFilterSidebar from '../components/market/CategoryFilterSidebar';
 import {
   Bell,
@@ -922,7 +922,6 @@ const marketLinks = [
   { labelKey: 'markets.fashionStyle', href: '/fashion-style' },
   { labelKey: 'markets.mobilityVehicles', href: '/mobility-vehicles' },
   { labelKey: 'markets.votingClients', href: '/voting-clients' },
-  { labelKey: 'markets.bettingLotteryGames', href: '/betting-lottery-games' },
   { labelKey: 'markets.beverages', href: '/beverages-liquors' },
   { labelKey: 'markets.homeCare', href: '/home-care' },
   { labelKey: 'markets.tickets', href: '/tickets' },
@@ -950,7 +949,6 @@ const marketShortDescriptions = {
   '/fashion-style': 'Trending clothing, shoes & accessories',
   '/mobility-vehicles': 'Cars, bikes & mobility solutions',
   '/voting-clients': 'Beauty, fitness & sports essentials',
-  '/betting-lottery-games': 'Play, predict & win big',
   '/beverages-liquors': 'Wines, spirits & refreshing drinks',
   '/home-care': 'Book home cleaning, laundry & maintenance services',
   '/tickets': 'Events, travel & experience bookings',
@@ -1983,13 +1981,6 @@ const featureSlides = [
     title: 'Nursery',
     subtitle: 'Seeds, plants, herbs & gardening supplies',
     route: '/nursery-hub',
-  },
-  {
-    id: 'feat-17',
-    image: 'https://images.pexels.com/photos/6664248/pexels-photo-6664248.jpeg?auto=compress&cs=tinysrgb&w=1600',
-    title: 'Betting & Lottery',
-    subtitle: 'Play, predict & win big',
-    route: '/betting-lottery-games',
   },
   {
     id: 'feat-18',
@@ -4849,45 +4840,6 @@ const propertyListings = [
   },
 ];
 
-const lotteryGames = [
-  {
-    id: 'lg1',
-    title: 'EuroMillions Global Draw',
-    titleKey: 'internationalLotteryHub.items.lg1.title',
-    region: 'Europe',
-    regionKey: 'internationalLotteryHub.items.lg1.region',
-    drawDay: 'Friday',
-    drawDayKey: 'internationalLotteryHub.items.lg1.drawDay',
-    jackpot: '128 Million',
-    image:
-      'https://images.pexels.com/photos/2942085/pexels-photo-2942085.jpeg?auto=compress&cs=tinysrgb&w=1200',
-  },
-  {
-    id: 'lg2',
-    title: 'Powerball International',
-    titleKey: 'internationalLotteryHub.items.lg2.title',
-    region: 'North America',
-    regionKey: 'internationalLotteryHub.items.lg2.region',
-    drawDay: 'Wednesday',
-    drawDayKey: 'internationalLotteryHub.items.lg2.drawDay',
-    jackpot: '214 Million',
-    image:
-      'https://images.pexels.com/photos/7594069/pexels-photo-7594069.jpeg?auto=compress&cs=tinysrgb&w=1200',
-  },
-  {
-    id: 'lg3',
-    title: 'Pan-African Mega Millions',
-    titleKey: 'internationalLotteryHub.items.lg3.title',
-    region: 'Africa',
-    regionKey: 'internationalLotteryHub.items.lg3.region',
-    drawDay: 'Saturday',
-    drawDayKey: 'internationalLotteryHub.items.lg3.drawDay',
-    jackpot: '42 Million',
-    image:
-      'https://images.pexels.com/photos/8112194/pexels-photo-8112194.jpeg?auto=compress&cs=tinysrgb&w=1200',
-  },
-];
-
 const livestockCategories = [
   {
     id: 'cattle',
@@ -7437,19 +7389,6 @@ const searchableCatalog = [
       item.type,
       item.price,
       'property real estate apartment house office rental sale hub',
-    ]),
-  })),
-  ...lotteryGames.map((item) => ({
-    ...item,
-    section: 'Betting and Lottery Games',
-    sectionKey: 'markets.bettingLotteryGames',
-    route: '/betting-lottery-games',
-    searchText: buildSearchText([
-      item.title,
-      item.region,
-      item.drawDay,
-      item.jackpot,
-      'lottery lotto jackpot draw games international millions powerball betting predictions odds',
     ]),
   })),
   ...livestockItems.map((item) => ({
@@ -37344,690 +37283,6 @@ const MobilityVehicleSellPage = ({ sellerItems = [], onSellerItemCreated, onUpda
 
 const PropertyHubPage = () => <PropertyMarketPage />;
 
-const LOTTERY_TICKET_PRICE = 500;
-const LOTTERY_DELIVERY_FEE = 25;
-const LOTTERY_MAIN_BALL_COUNT = 5;
-const LOTTERY_MAIN_BALL_MAX = 70;
-const LOTTERY_POWER_BALL_MAX = 30;
-const LOTTERY_DRAW_DATE_LABEL = 'May 3, 2026, 10:59 PM EST';
-const LOTTERY_DRAW_TIME_LABEL = '10:59 PM';
-
-const generateLotteryQuickPick = () => {
-  const picks = new Set();
-  while (picks.size < LOTTERY_MAIN_BALL_COUNT) {
-    picks.add(Math.floor(Math.random() * LOTTERY_MAIN_BALL_MAX) + 1);
-  }
-  return {
-    main: [...picks].sort((a, b) => a - b),
-    powerball: Math.floor(Math.random() * LOTTERY_POWER_BALL_MAX) + 1,
-  };
-};
-
-const createEmptyManualTicket = (id) => ({
-  id: id || `t-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-  mode: 'manual',
-  main: [],
-  powerball: null,
-});
-
-const isTicketComplete = (ticket) => (
-  Array.isArray(ticket.main)
-  && ticket.main.length === LOTTERY_MAIN_BALL_COUNT
-  && Number.isFinite(ticket.powerball)
-);
-
-const BettingLotteryGamesPage = ({ onBuyNow }) => {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  useBuyerCurrency();
-  const [gameId, setGameId] = useState(lotteryGames[0].id);
-  const [gameMenuOpen, setGameMenuOpen] = useState(false);
-  const gameMenuRef = useRef(null);
-  const [tickets, setTickets] = useState(() => [createEmptyManualTicket('t1')]);
-  const [player, setPlayer] = useState({
-    name: '',
-    email: '',
-    country: '',
-    phone: '',
-  });
-  const [playerLoading, setPlayerLoading] = useState(true);
-  const [editingPlayer, setEditingPlayer] = useState(false);
-
-  const selectedGame = lotteryGames.find((g) => g.id === gameId) || lotteryGames[0];
-  const totalPrice = tickets.length * LOTTERY_TICKET_PRICE;
-  const allTicketsComplete = tickets.length > 0 && tickets.every(isTicketComplete);
-  const playerReady = Boolean(player.name && player.email && player.country && player.phone);
-  const canPay = allTicketsComplete && playerReady;
-
-  // Load player info from localStorage + Supabase account_users
-  useEffect(() => {
-    let cancelled = false;
-    const loadPlayer = async () => {
-      if (typeof window === 'undefined') {
-        setPlayerLoading(false);
-        return;
-      }
-      const cachedEmail = (window.localStorage.getItem('svs-user-email') || '').trim();
-      const cachedName = (window.localStorage.getItem('svs-user-name') || '').trim();
-      const cachedPhone = (window.localStorage.getItem('svs-user-contact') || '').trim();
-      const cachedCountry = (window.localStorage.getItem('svs-user-country') || '').trim();
-      if (!cancelled) {
-        setPlayer((prev) => ({
-          name: cachedName || prev.name,
-          email: cachedEmail || prev.email,
-          phone: cachedPhone || prev.phone,
-          country: cachedCountry || prev.country,
-        }));
-      }
-      if (!hasSupabaseEnv || !supabase || !cachedEmail) {
-        if (!cancelled) setPlayerLoading(false);
-        return;
-      }
-      try {
-        const { data } = await supabase
-          .from('account_users')
-          .select('full_name, email_address, contact_number')
-          .eq('email_address', cachedEmail)
-          .maybeSingle();
-        if (!cancelled && data) {
-          setPlayer((prev) => ({
-            name: data.full_name || prev.name,
-            email: data.email_address || prev.email,
-            phone: data.contact_number || prev.phone,
-            country: prev.country,
-          }));
-          if (data.full_name) window.localStorage.setItem('svs-user-name', data.full_name);
-          if (data.contact_number) window.localStorage.setItem('svs-user-contact', data.contact_number);
-        }
-      } catch (_err) {
-        /* ignore */
-      } finally {
-        if (!cancelled) setPlayerLoading(false);
-      }
-    };
-    loadPlayer();
-    return () => { cancelled = true; };
-  }, []);
-
-  useEffect(() => {
-    if (!gameMenuOpen) return undefined;
-    const handleClick = (event) => {
-      if (gameMenuRef.current && !gameMenuRef.current.contains(event.target)) setGameMenuOpen(false);
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [gameMenuOpen]);
-
-  const handleAddTicket = () => {
-    setTickets((prev) => [...prev, createEmptyManualTicket()]);
-  };
-
-  const handleSetMode = (ticketId, mode) => {
-    setTickets((prev) => prev.map((ticket) => {
-      if (ticket.id !== ticketId) return ticket;
-      if (mode === 'quick') {
-        return { ...ticket, mode: 'quick', ...generateLotteryQuickPick() };
-      }
-      return { ...ticket, mode: 'manual', main: [], powerball: null };
-    }));
-  };
-
-  const handleQuickPickReroll = (ticketId) => {
-    setTickets((prev) => prev.map((ticket) => (
-      ticket.id === ticketId ? { ...ticket, mode: 'quick', ...generateLotteryQuickPick() } : ticket
-    )));
-  };
-
-  const handleToggleMainNumber = (ticketId, number) => {
-    setTickets((prev) => prev.map((ticket) => {
-      if (ticket.id !== ticketId) return ticket;
-      const exists = ticket.main.includes(number);
-      let nextMain;
-      if (exists) {
-        nextMain = ticket.main.filter((value) => value !== number);
-      } else if (ticket.main.length >= LOTTERY_MAIN_BALL_COUNT) {
-        return ticket;
-      } else {
-        nextMain = [...ticket.main, number].sort((a, b) => a - b);
-      }
-      return { ...ticket, main: nextMain };
-    }));
-  };
-
-  const handleSetPowerball = (ticketId, number) => {
-    setTickets((prev) => prev.map((ticket) => {
-      if (ticket.id !== ticketId) return ticket;
-      return { ...ticket, powerball: ticket.powerball === number ? null : number };
-    }));
-  };
-
-  const handleClearTicket = (ticketId) => {
-    setTickets((prev) => prev.map((ticket) => (
-      ticket.id === ticketId ? { ...ticket, mode: 'manual', main: [], powerball: null } : ticket
-    )));
-  };
-
-  const handleRemoveTicket = (ticketId) => {
-    setTickets((prev) => (prev.length > 1 ? prev.filter((ticket) => ticket.id !== ticketId) : prev));
-  };
-
-  const handlePay = () => {
-    if (!canPay) return;
-    setEditingPlayer(false);
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem('svs-user-country', player.country);
-      window.localStorage.setItem('svs-user-name', player.name);
-      window.localStorage.setItem('svs-user-email', player.email);
-      window.localStorage.setItem('svs-user-contact', player.phone);
-    }
-    navigate('/betting-lottery-games/confirm', {
-      state: {
-        tickets,
-        player,
-        gameId: selectedGame.id,
-        totalPrice,
-      },
-    });
-  };
-
-  const playerFields = [
-    { key: 'name', label: 'Registered Name', type: 'text', autoComplete: 'name' },
-    { key: 'email', label: 'Email Address', type: 'email', autoComplete: 'email' },
-    { key: 'country', label: 'Country', type: 'text', autoComplete: 'country-name' },
-    { key: 'phone', label: 'Phone Number', type: 'tel', autoComplete: 'tel' },
-  ];
-
-  const mainNumbers = Array.from({ length: LOTTERY_MAIN_BALL_MAX }, (_, i) => i + 1);
-  const powerNumbers = Array.from({ length: LOTTERY_POWER_BALL_MAX }, (_, i) => i + 1);
-
-  return (
-    <PageFrame title="Select Your Ticket">
-      {/* Game info chips */}
-      <div className="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-[#eeeeee] bg-white p-3 shadow-[0_4px_8px_rgba(0,0,0,0.04)]">
-        <div className="relative" ref={gameMenuRef}>
-          <button
-            type="button"
-            onClick={() => setGameMenuOpen((open) => !open)}
-            className="inline-flex items-center gap-1.5 rounded-md border border-[#eeeeee] bg-white px-3 py-1.5 text-sm font-medium text-[var(--svs-text)] hover:bg-[#f8fdff]"
-            aria-haspopup="listbox"
-            aria-expanded={gameMenuOpen}
-          >
-            <Ticket className="h-3.5 w-3.5 text-[var(--svs-primary)]" />
-            {getTranslatedValue(t, selectedGame.titleKey, selectedGame.title)}
-            <ChevronDown className="h-3 w-3 text-slate-500" />
-          </button>
-          {gameMenuOpen ? (
-            <ul role="listbox" className="absolute left-0 top-full z-30 mt-1 w-64 overflow-hidden rounded-lg border border-[#eeeeee] bg-white py-1 shadow-xl">
-              {lotteryGames.map((game) => (
-                <li key={game.id}>
-                  <button
-                    type="button"
-                    onClick={() => { setGameId(game.id); setGameMenuOpen(false); }}
-                    className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-[#f8fdff] ${game.id === gameId ? 'bg-[var(--svs-cyan-surface)] font-semibold' : ''}`}
-                  >
-                    <span>{getTranslatedValue(t, game.titleKey, game.title)}</span>
-                    {game.id === gameId ? <Check className="h-3.5 w-3.5 text-[var(--svs-primary)]" /> : null}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-        <span className="inline-flex items-center gap-1.5 rounded-md border border-[#eeeeee] bg-white px-3 py-1.5 text-sm text-[var(--svs-text)]"><Globe className="h-3.5 w-3.5 text-[var(--svs-primary)]" />Global Lotteries</span>
-        <span className="inline-flex items-center gap-1.5 rounded-md border border-[#eeeeee] bg-white px-3 py-1.5 text-sm text-[var(--svs-text)]"><Hash className="h-3.5 w-3.5 text-[var(--svs-primary)]" />Number Draw</span>
-        <span className="inline-flex items-center gap-1.5 rounded-md border border-[#eeeeee] bg-white px-3 py-1.5 text-sm text-[var(--svs-text)]"><CalendarDays className="h-3.5 w-3.5 text-[var(--svs-primary)]" />Today</span>
-        <span className="inline-flex items-center gap-1.5 rounded-md border border-[#eeeeee] bg-white px-3 py-1.5 text-sm text-[var(--svs-text)]"><Clock className="h-3.5 w-3.5 text-[var(--svs-primary)]" />{LOTTERY_DRAW_TIME_LABEL}</span>
-      </div>
-
-      {/* Select Ticket card */}
-      <section className="mb-4 rounded-2xl border border-[#eeeeee] bg-white p-5 shadow-[0_4px_8px_rgba(0,0,0,0.05)]">
-        <h2 className="mb-5 text-center text-lg font-bold text-[var(--svs-text)]">Select Ticket</h2>
-        <h3 className="mb-3 text-sm font-bold text-[var(--svs-text)]">Select Numbers</h3>
-        <div className="space-y-3">
-          {tickets.map((ticket, idx) => {
-            const mainSelected = ticket.main;
-            const complete = isTicketComplete(ticket);
-            return (
-              <div key={ticket.id} className="rounded-xl bg-[#f4fbfd] p-3">
-                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs font-semibold text-[var(--svs-text)]">
-                    Ticket #{idx + 1}
-                    {ticket.mode === 'manual' && !complete ? (
-                      <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
-                        {mainSelected.length}/{LOTTERY_MAIN_BALL_COUNT} + {ticket.powerball ? '1' : '0'}/1
-                      </span>
-                    ) : null}
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <div className="inline-flex overflow-hidden rounded-md border border-[var(--svs-primary-strong)]">
-                      <button
-                        type="button"
-                        onClick={() => handleSetMode(ticket.id, 'manual')}
-                        className={`px-2.5 py-1 text-[11px] font-semibold ${ticket.mode === 'manual' ? 'bg-[var(--svs-primary-strong)] text-white' : 'bg-white text-[var(--svs-primary-strong)]'}`}
-                      >
-                        Manual
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => (ticket.mode === 'quick' ? handleQuickPickReroll(ticket.id) : handleSetMode(ticket.id, 'quick'))}
-                        className={`px-2.5 py-1 text-[11px] font-semibold ${ticket.mode === 'quick' ? 'bg-[var(--svs-primary-strong)] text-white' : 'bg-white text-[var(--svs-primary-strong)]'}`}
-                      >
-                        Quick Pick
-                      </button>
-                    </div>
-                    {ticket.mode === 'manual' && (mainSelected.length > 0 || ticket.powerball) ? (
-                      <button
-                        type="button"
-                        onClick={() => handleClearTicket(ticket.id)}
-                        className="rounded-md px-2 py-1 text-[11px] font-semibold text-slate-500 hover:bg-white hover:text-[var(--svs-primary-strong)]"
-                      >
-                        Clear
-                      </button>
-                    ) : null}
-                    {tickets.length > 1 ? (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveTicket(ticket.id)}
-                        aria-label="Remove ticket"
-                        className="rounded-md p-1 text-slate-400 hover:bg-white hover:text-red-500"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-
-                {/* Selected balls preview */}
-                <div className="flex flex-wrap items-center gap-2">
-                  {Array.from({ length: LOTTERY_MAIN_BALL_COUNT }).map((_, ballIdx) => {
-                    const value = mainSelected[ballIdx];
-                    return value != null ? (
-                      <span key={`${ticket.id}-m-${ballIdx}`} className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#d6f0f5] text-sm font-bold text-[var(--svs-primary-strong)]">{value}</span>
-                    ) : (
-                      <span key={`${ticket.id}-m-${ballIdx}`} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-dashed border-[var(--svs-primary)] bg-white text-sm font-bold text-slate-300">?</span>
-                    );
-                  })}
-                  {ticket.powerball != null ? (
-                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--svs-primary-strong)] text-sm font-bold text-white">{ticket.powerball}</span>
-                  ) : (
-                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-dashed border-[var(--svs-primary-strong)] bg-white text-sm font-bold text-slate-300">?</span>
-                  )}
-                </div>
-
-                {/* Manual picker grids */}
-                {ticket.mode === 'manual' ? (
-                  <div className="mt-3 space-y-3">
-                    <div>
-                      <p className="mb-1.5 text-[11px] font-semibold text-slate-500">
-                        Pick {LOTTERY_MAIN_BALL_COUNT} numbers (1 – {LOTTERY_MAIN_BALL_MAX})
-                      </p>
-                      <div className="grid grid-cols-10 gap-1.5">
-                        {mainNumbers.map((number) => {
-                          const isPicked = mainSelected.includes(number);
-                          const isFull = mainSelected.length >= LOTTERY_MAIN_BALL_COUNT && !isPicked;
-                          return (
-                            <button
-                              type="button"
-                              key={`${ticket.id}-pick-m-${number}`}
-                              onClick={() => handleToggleMainNumber(ticket.id, number)}
-                              disabled={isFull}
-                              className={`h-8 w-8 rounded-full text-[11px] font-bold transition ${
-                                isPicked
-                                  ? 'bg-[var(--svs-primary-strong)] text-white shadow'
-                                  : isFull
-                                  ? 'bg-white text-slate-300 ring-1 ring-[#eeeeee] cursor-not-allowed'
-                                  : 'bg-white text-[var(--svs-primary-strong)] ring-1 ring-[#d6f0f5] hover:bg-[#d6f0f5]'
-                              }`}
-                            >
-                              {number}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="mb-1.5 text-[11px] font-semibold text-slate-500">
-                        Pick 1 Powerball (1 – {LOTTERY_POWER_BALL_MAX})
-                      </p>
-                      <div className="grid grid-cols-10 gap-1.5">
-                        {powerNumbers.map((number) => {
-                          const isPicked = ticket.powerball === number;
-                          return (
-                            <button
-                              type="button"
-                              key={`${ticket.id}-pick-p-${number}`}
-                              onClick={() => handleSetPowerball(ticket.id, number)}
-                              className={`h-8 w-8 rounded-full text-[11px] font-bold transition ${
-                                isPicked
-                                  ? 'bg-[var(--svs-primary-strong)] text-white shadow'
-                                  : 'bg-white text-[var(--svs-primary-strong)] ring-1 ring-[#d6f0f5] hover:bg-[#d6f0f5]'
-                              }`}
-                            >
-                              {number}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-        <button
-          type="button"
-          onClick={handleAddTicket}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--svs-primary)] bg-white px-4 py-3 text-sm font-semibold text-[var(--svs-primary)] hover:bg-[#f4fbfd]"
-        >
-          <Plus className="h-4 w-4" />
-          Add More Tickets
-        </button>
-      </section>
-
-      {/* Draw Participation Details */}
-      <section className="mb-4 rounded-2xl border border-[#eeeeee] bg-white p-5 shadow-[0_4px_8px_rgba(0,0,0,0.05)]">
-        <h3 className="mb-4 text-base font-bold text-[var(--svs-text)]">Draw Participation Details</h3>
-        <div className="grid grid-cols-2 gap-y-4">
-          <div>
-            <p className="text-xs text-slate-500">Draw Date</p>
-            <p className="mt-0.5 text-sm font-semibold text-[var(--svs-text)]">{LOTTERY_DRAW_DATE_LABEL}</p>
-          </div>
-          <div>
-            <p className="text-xs text-slate-500">Ticket Quantity</p>
-            <p className="mt-0.5 text-sm font-semibold text-[var(--svs-text)]">{tickets.length} Tickets</p>
-          </div>
-          <div>
-            <p className="text-xs text-slate-500">Total Entries</p>
-            <p className="mt-0.5 text-sm font-semibold text-[var(--svs-text)]">{tickets.length} Entries</p>
-          </div>
-          <div>
-            <p className="text-xs text-slate-500">Estimated Win</p>
-            <p className="mt-0.5 text-sm font-semibold text-[var(--svs-text)]">Up to {selectedGame.jackpot}</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Player Information */}
-      <section className="mb-4 rounded-2xl border border-[#eeeeee] bg-white p-5 shadow-[0_4px_8px_rgba(0,0,0,0.05)]">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-base font-bold text-[var(--svs-text)]">Player Information</h3>
-          <button
-            type="button"
-            onClick={() => setEditingPlayer((open) => !open)}
-            aria-label={editingPlayer ? 'Done editing player information' : 'Edit player information'}
-            className="rounded-md p-1.5 text-[var(--svs-primary)] hover:bg-[#f4fbfd]"
-          >
-            {editingPlayer ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-          </button>
-        </div>
-        {playerLoading ? (
-          <p className="text-sm text-slate-500">Loading your profile…</p>
-        ) : editingPlayer ? (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {playerFields.map((field) => (
-              <label key={field.key} className="block">
-                <span className="mb-1 block text-xs text-slate-500">{field.label}</span>
-                <input
-                  type={field.type}
-                  autoComplete={field.autoComplete}
-                  value={player[field.key]}
-                  onChange={(event) => setPlayer((prev) => ({ ...prev, [field.key]: event.target.value }))}
-                  className="w-full rounded-md border border-[#eeeeee] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--svs-primary)]"
-                />
-              </label>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-y-4">
-            {playerFields.map((field) => (
-              <div key={field.key}>
-                <p className="text-xs text-slate-500">{field.label}</p>
-                <p className="mt-0.5 text-sm font-semibold text-[var(--svs-text)]">
-                  {player[field.key] || <span className="italic text-amber-600">Required</span>}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-        {!playerLoading && !playerReady && !editingPlayer ? (
-          <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700">
-            Complete every field above before paying.
-          </p>
-        ) : null}
-      </section>
-
-      <button
-        type="button"
-        onClick={handlePay}
-        disabled={!canPay}
-        className="w-full rounded-xl bg-[var(--svs-primary-strong)] px-6 py-3.5 text-base font-bold text-white shadow-lg hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {allTicketsComplete
-          ? (playerReady ? `Pay ${formatCheckoutAmount(totalPrice, 'ZAR')}` : 'Complete player info to pay')
-          : 'Pick all numbers to continue'}
-      </button>
-    </PageFrame>
-  );
-};
-
-const LotteryConfirmPage = () => {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const location = useLocation();
-  useBuyerCurrency();
-  const stateData = location.state || {};
-  const { tickets, player, gameId, totalPrice } = stateData;
-
-  const selectedGame = (gameId && lotteryGames.find((g) => g.id === gameId)) || lotteryGames[0];
-
-  useEffect(() => {
-    if (!tickets || !player) {
-      navigate('/betting-lottery-games', { replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  if (!tickets || !player) return null;
-
-  const ticketCount = tickets.length;
-  const ticketPriceTotal = Number(totalPrice) || ticketCount * LOTTERY_TICKET_PRICE;
-  const processingFee = LOTTERY_DELIVERY_FEE;
-  const taxAmount = Number((processingFee * 0.15).toFixed(2));
-  const finalAmount = Number((ticketPriceTotal + processingFee + taxAmount).toFixed(2));
-
-  const summary = tickets
-    .map((ticket, idx) => `T${idx + 1}: ${ticket.main.join('-')} | PB${ticket.powerball}`)
-    .join(' • ');
-
-  const allSelectedNumbers = tickets.flatMap((ticket) => [...ticket.main, ticket.powerball]);
-
-  const handleProceedToCheckout = () => {
-    const now = Date.now();
-    const itemId = `lottery-${selectedGame.id}-${now}`;
-    const lotteryCartItem = createCartItem({
-      id: itemId,
-      title: `${getTranslatedValue(t, selectedGame.titleKey, selectedGame.title)} · ${ticketCount} ticket${ticketCount === 1 ? '' : 's'}`,
-      price: ticketPriceTotal,
-      currency: 'ZAR',
-      route: '/betting-lottery-games',
-      marketName: t('markets.bettingLotteryGames'),
-      details: summary,
-      image: selectedGame.image,
-    });
-
-    const fullName = String(player?.name || '').trim();
-    const [firstName = '', ...lastNameParts] = fullName.split(/\s+/).filter(Boolean);
-    const lastName = lastNameParts.join(' ');
-    const normalizedEmail = normalizeEmail(String(player?.email || '').trim()) || 'guest@biznisdil.com';
-    const composedPhone = String(player?.phone || '').trim();
-    const feeTotal = Number((processingFee + taxAmount).toFixed(2));
-
-    const payfastSession = {
-      id: `payfast-${now}`,
-      createdAt: new Date().toISOString(),
-      mode: 'buy-now',
-      checkoutMode: 'buy-now',
-      customer: {
-        fullName,
-        firstName,
-        lastName,
-        email: normalizedEmail,
-        contact: normalizedEmail,
-        phone: composedPhone,
-        company: '',
-        address: player?.country || 'N/A',
-        country: player?.country || '',
-        province: '',
-        postalCode: '',
-        shippingAddress: {
-          country: player?.country || '',
-          firstName,
-          lastName,
-          company: '',
-          address1: 'N/A',
-          address2: '',
-          city: 'N/A',
-          province: '',
-          postalCode: '',
-          phone: composedPhone,
-          deliveryInstructions: 'Digital lottery ticket - no physical delivery required.',
-        },
-        billingAddress: {
-          country: player?.country || '',
-          firstName,
-          lastName,
-          company: '',
-          address1: 'N/A',
-          address2: '',
-          city: 'N/A',
-          province: '',
-          postalCode: '',
-        },
-        billingAddressMode: 'same',
-        shippingMethod: 'Digital delivery',
-        shippingFee: 0,
-        saveInformation: false,
-        marketingOptIn: false,
-        paymentMethod: PAYFAST_METHOD_OPTIONS[0].label,
-      },
-      checkoutOptions: {
-        items: [lotteryCartItem],
-        mode: 'buy-now',
-        feeTotal,
-        total: finalAmount,
-      },
-      prefillCheckout: null,
-      totals: {
-        subtotal: ticketPriceTotal,
-        serviceFee: feeTotal,
-        shippingFee: 0,
-        feeTotal,
-        total: finalAmount,
-        // Lottery tickets are always priced in ZAR regardless of the
-        // buyer's site-wide currency selection (see `currency: 'ZAR'` on
-        // the cart item above).
-        currency: 'ZAR',
-      },
-      contactEmail: normalizedEmail,
-    };
-
-    writePendingPayfastSession(payfastSession);
-    navigate('/checkout/payfast', {
-      state: {
-        payfastSession,
-        checkoutMode: 'buy-now',
-      },
-    });
-  };
-
-  return (
-    <PageFrame>
-      <section className="mx-auto w-full max-w-4xl rounded-2xl bg-white shadow-sm ring-1 ring-[#e6edf3]">
-        <div className="border-b border-[#d8e6ef] px-4 py-3 sm:px-6">
-          <button
-            type="button"
-            onClick={() => navigate('/betting-lottery-games')}
-            className="text-sm text-slate-500 hover:text-[var(--svs-primary-strong)]"
-          >
-            ←
-          </button>
-          <h1 className="-mt-4 text-center text-3xl font-black text-[var(--svs-primary-strong)]">Booking Summary</h1>
-        </div>
-
-        <div className="border-b border-[#d8e6ef] px-4 py-4 sm:px-6">
-          <div className="grid grid-cols-1 gap-2 rounded-lg border border-[#9fc5d9] bg-[#f8fcff] px-3 py-2 text-xs font-semibold text-[var(--svs-primary-strong)] sm:grid-cols-5 sm:gap-0 sm:divide-x sm:divide-[#c7dce9] sm:text-sm">
-            <span className="flex items-center justify-center gap-1.5"><Ticket className="h-3.5 w-3.5" />{getTranslatedValue(t, selectedGame.titleKey, selectedGame.title)}</span>
-            <span className="flex items-center justify-center gap-1.5"><Globe className="h-3.5 w-3.5" />Global Lotteries</span>
-            <span className="flex items-center justify-center gap-1.5"><Hash className="h-3.5 w-3.5" />Number Draw</span>
-            <span className="flex items-center justify-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" />Today</span>
-            <span className="flex items-center justify-center gap-1.5"><Clock className="h-3.5 w-3.5" />{LOTTERY_DRAW_TIME_LABEL}</span>
-          </div>
-        </div>
-
-        <div className="px-4 py-8 sm:px-6">
-          <h2 className="text-center text-2xl font-black text-[var(--svs-primary-strong)]">Selected Ticket</h2>
-
-          <div className="mx-auto mt-5 flex max-w-xl flex-wrap items-center justify-center gap-2">
-            {allSelectedNumbers.map((value, idx) => (
-              <span
-                key={`selected-${idx}-${value}`}
-                className="inline-flex h-10 min-w-10 items-center justify-center rounded-md bg-[var(--svs-primary-strong)] px-3 text-base font-bold text-white shadow"
-              >
-                {value}
-              </span>
-            ))}
-          </div>
-
-          <div className="mx-auto mt-8 w-full max-w-md border-t border-[#c9dce8] pt-4 text-sm text-[var(--svs-primary-strong)]">
-            <div className="flex items-center justify-between font-semibold">
-              <span>Total Ticket:</span>
-              <span>{ticketCount}</span>
-            </div>
-
-            <div className="mt-4 border-t border-[#c9dce8] pt-3">
-              <h3 className="text-sm font-bold text-[var(--svs-primary-strong)]">Price Details</h3>
-              <div className="mt-3 space-y-1.5 text-xs sm:text-sm">
-                <div className="flex items-center justify-between">
-                  <span>Ticket Price (x{ticketCount})</span>
-                  <span>{formatCheckoutAmount(ticketPriceTotal, 'ZAR')}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Processing Fee</span>
-                  <span>{formatCheckoutAmount(processingFee, 'ZAR')}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Tax (15%)</span>
-                  <span>{formatCheckoutAmount(taxAmount, 'ZAR')}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 border-t border-[#c9dce8] pt-3">
-              <div className="flex items-center justify-between text-base font-black text-[var(--svs-primary-strong)]">
-                <span>Total Amount</span>
-                <span>{formatCheckoutAmount(finalAmount, 'ZAR')}</span>
-              </div>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleProceedToCheckout}
-            className="mx-auto mt-8 block w-full max-w-sm rounded-xl bg-[var(--svs-primary-strong)] px-6 py-3.5 text-lg font-bold text-white shadow-lg hover:opacity-90"
-          >
-            Proceed to Checkout
-          </button>
-
-          <p className="mx-auto mt-5 max-w-xl text-center text-sm text-[var(--svs-primary-strong)]">
-            Lottery tickets once purchased cannot be canceled, changed, or refunded as per the lottery provider's policy.
-          </p>
-        </div>
-      </section>
-    </PageFrame>
-  );
-};
-
 const NURSERY_TRUST_BG = 'https://images.pexels.com/photos/931177/pexels-photo-931177.jpeg?auto=compress&cs=tinysrgb&w=1600';
 
 const NURSERY_CARE_LEVELS = ['Easy', 'Moderate', 'Expert'];
@@ -40779,7 +40034,6 @@ const MarketsPage = ({ sellerItems = [] }) => {
           const isGroceries = market.href === '/groceries';
           const isMobility = market.href === '/mobility-vehicles';
           const isEcommerce = market.href === '/e-commerce';
-          const isBetting = market.href === '/betting-lottery-games';
           const isConstruction = market.href === '/building-construction-tools';
           const isLivestock = market.href === '/livestock-hub';
           const isHomeCare = market.href === '/home-care';
@@ -40801,7 +40055,7 @@ const MarketsPage = ({ sellerItems = [] }) => {
             ? 'absolute inset-0 bg-gradient-to-t from-[#041a26]/80 via-[#0f6f84]/50 to-[#14b8a6]/20'
             : 'absolute inset-0 bg-gradient-to-t from-black/75 via-black/50 to-black/20';
           const marketTitleClassName = 'text-base font-bold leading-tight text-white drop-shadow line-clamp-3 sm:text-lg sm:line-clamp-none';
-          const hasHeroImage = isFastFood || isFashion || isBookings || isBeverages || isGroceries || isMobility || isEcommerce || isBetting || isConstruction || isLivestock || isHomeCare || isNaturalResources || isGeneralLabour || isWellness || isStationery || isProperty || isHerbs || isSecondhand || isBeautyFitnessSports || isToysKids || isJewelleryAccessories || isDirectLinks || isInformalMarket || isNursery;
+          const hasHeroImage = isFastFood || isFashion || isBookings || isBeverages || isGroceries || isMobility || isEcommerce || isConstruction || isLivestock || isHomeCare || isNaturalResources || isGeneralLabour || isWellness || isStationery || isProperty || isHerbs || isSecondhand || isBeautyFitnessSports || isToysKids || isJewelleryAccessories || isDirectLinks || isInformalMarket || isNursery;
           const heroImageUrl = isFastFood
             ? 'https://images.pexels.com/photos/2983101/pexels-photo-2983101.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isFashion
@@ -40819,8 +40073,6 @@ const MarketsPage = ({ sellerItems = [] }) => {
             : isEcommerce
             // Dark tech/device setup — rich navy & black tones
             ? 'https://images.pexels.com/photos/3861969/pexels-photo-3861969.jpeg?auto=compress&cs=tinysrgb&w=1200'
-            : isBetting
-            ? 'https://images.pexels.com/photos/6664248/pexels-photo-6664248.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isConstruction
             ? 'https://images.pexels.com/photos/1249611/pexels-photo-1249611.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isLivestock
@@ -43779,12 +43031,6 @@ const StripeCardPaymentPanel = ({
   );
 };
 
-const isBettingLotteryOrder = (order) => Boolean(
-  order
-  && Array.isArray(order.items)
-  && order.items.some((item) => item?.route === '/betting-lottery-games' || item?.marketName === 'Betting and Lottery Games'),
-);
-
 const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowCheckout }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -43846,8 +43092,8 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
   const walletCurrency = walletSnapshot?.currency || _fxState.buyerCurrency || 'USD';
   const walletBalance = walletSnapshot?.balance || 0;
   // `totals.currency` records what currency the order total is actually
-  // denominated in (the buyer's site-wide currency for normal checkouts,
-  // always ZAR for lottery tickets) — never assume a fixed currency here.
+  // denominated in (the buyer's site-wide currency) — never assume a fixed
+  // currency here.
   const totalCurrency = payfastSession?.totals?.currency || _fxState.buyerCurrency || 'ZAR';
   const walletNeedsConversion = Boolean(payfastSession && totalCurrency !== walletCurrency);
   const walletChargeAmount = payfastSession
@@ -43992,7 +43238,7 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
     }
 
     setIsSubmitting(false);
-    navigate(isBettingLotteryOrder(order) ? '/betting-ticket-tracking' : '/order-confirmation', {
+    navigate('/order-confirmation', {
       state: {
         order,
         guestCheckout: !getAuthState(),
@@ -44074,7 +43320,7 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
     }
 
     setIsWalletPaying(false);
-    navigate(isBettingLotteryOrder(order) ? '/betting-ticket-tracking' : '/order-confirmation', {
+    navigate('/order-confirmation', {
       state: {
         order,
         guestCheckout: !getAuthState(),
@@ -44102,7 +43348,7 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
       onClearBuyNowCheckout?.();
     }
 
-    navigate(isBettingLotteryOrder(order) ? '/betting-ticket-tracking' : '/order-confirmation', {
+    navigate('/order-confirmation', {
       state: {
         order,
         guestCheckout: !getAuthState(),
@@ -44284,267 +43530,6 @@ const PayfastCheckoutPage = ({ buyNowCheckout, onPlaceOrder, onClearBuyNowChecko
   );
 };
 
-const BettingTicketTrackingPage = ({ orders }) => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  useBuyerCurrency();
-
-  const stateOrder = location.state?.order || null;
-  const fallbackOrder = useMemo(() => {
-    if (stateOrder) return null;
-    if (!Array.isArray(orders) || !orders.length) return null;
-    return orders.find((candidate) => isBettingLotteryOrder(candidate)) || null;
-  }, [stateOrder, orders]);
-  const baseOrder = stateOrder || fallbackOrder;
-  const order = useMemo(() => {
-    if (!baseOrder) return null;
-    if (!Array.isArray(orders) || !orders.length) return baseOrder;
-    return orders.find((candidate) => candidate.id === baseOrder.id) || baseOrder;
-  }, [baseOrder, orders]);
-
-  useEffect(() => {
-    if (!order) {
-      navigate('/orders', { replace: true });
-    }
-  }, [order, navigate]);
-
-  const [nowMs, setNowMs] = useState(() => Date.now());
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      setNowMs(Date.now());
-    }, 30000);
-    return () => clearInterval(intervalId);
-  }, []);
-
-  if (!order) return null;
-
-  const ticketItems = Array.isArray(order.items) ? order.items : [];
-  const ticketCount = ticketItems.reduce((sum, item) => sum + Math.max(Number(item?.quantity) || 1, 1), 0) || 1;
-
-  const lotteryItem = ticketItems[0] || {};
-  const ticketDetailText = String(lotteryItem?.details || '');
-  const firstTicketMatch = ticketDetailText.match(/T1:\s*([0-9-]+)\s*\|\s*PB\s*([0-9]+)/i);
-  const parsedMainNumbers = firstTicketMatch
-    ? firstTicketMatch[1].split('-').map((value) => Number(value)).filter((value) => Number.isFinite(value))
-    : [];
-  const parsedPowerball = firstTicketMatch ? Number(firstTicketMatch[2]) : null;
-  const selectedNumbers = [
-    ...parsedMainNumbers,
-    ...(Number.isFinite(parsedPowerball) ? [parsedPowerball] : []),
-  ];
-
-  const ticketPriceTotal = Number(order?.subtotal) || ticketCount * LOTTERY_TICKET_PRICE;
-  const processingFee = LOTTERY_DELIVERY_FEE;
-  const taxAmount = Number((processingFee * 0.15).toFixed(2));
-  const totalAmount = Number(order?.total) || Number((ticketPriceTotal + processingFee + taxAmount).toFixed(2));
-  const orderPlacedAt = new Date(order.createdAt || Date.now());
-
-  const drawTimeMatch = String(LOTTERY_DRAW_TIME_LABEL || '').match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-  const drawHoursRaw = drawTimeMatch ? Number(drawTimeMatch[1]) : 10;
-  const drawMinutes = drawTimeMatch ? Number(drawTimeMatch[2]) : 59;
-  const drawMeridiem = drawTimeMatch ? String(drawTimeMatch[3]).toUpperCase() : 'PM';
-  const drawHours24 = ((drawHoursRaw % 12) + (drawMeridiem === 'PM' ? 12 : 0));
-  const drawDate = new Date(orderPlacedAt);
-  drawDate.setHours(drawHours24, drawMinutes, 0, 0);
-
-  const paymentVerified = Boolean(
-    normalizeOrderStatus(order.status) === 'Order Confirmed'
-    || normalizeOrderStatus(order.status) === 'Order Processing'
-    || String(order.paymentStatus || '').toLowerCase() === 'paid'
-    || order.paymentReference,
-  );
-  const ticketGenerated = paymentVerified && Boolean(selectedNumbers.length || ticketDetailText);
-  const ticketRegistered = ticketGenerated && Boolean(order.reference);
-  const readyForDraw = ticketRegistered && nowMs < drawDate.getTime();
-  const drawClosed = ticketRegistered && nowMs >= drawDate.getTime();
-
-  const liveStatusLabel = drawClosed
-    ? 'Draw closed - awaiting result'
-    : (readyForDraw ? 'Ready for draw' : (ticketRegistered ? 'Ticket registered' : (ticketGenerated ? 'Ticket generated' : 'Payment pending')));
-  const liveStatusColor = drawClosed
-    ? 'text-cyan-700'
-    : (readyForDraw ? 'text-emerald-600' : 'text-amber-600');
-
-  const trackingStages = [
-    {
-      key: 'payment',
-      reached: paymentVerified,
-      title: 'Payment verified',
-      detail: paymentVerified
-        ? 'Your payment was captured successfully.'
-        : 'Waiting for payment gateway confirmation.',
-    },
-    {
-      key: 'generated',
-      reached: ticketGenerated,
-      title: 'Ticket generated',
-      detail: ticketGenerated
-        ? 'Your ticket has been generated in our secure system.'
-        : 'Ticket payload is still being generated.',
-    },
-    {
-      key: 'registered',
-      reached: ticketRegistered,
-      title: 'Ticket registered',
-      detail: ticketRegistered
-        ? 'Entry registered for the next EuroMillions Global Draw.'
-        : 'Ticket registration is still pending.',
-    },
-    {
-      key: 'draw',
-      reached: readyForDraw || drawClosed,
-      title: 'Ready for draw',
-      detail: drawClosed
-        ? `Draw time (${LOTTERY_DRAW_TIME_LABEL}) has passed. Awaiting published results.`
-        : `Ticket is active for today's ${LOTTERY_DRAW_TIME_LABEL} draw.`,
-    },
-  ];
-  const currentStageIndex = trackingStages.findIndex((stage) => !stage.reached);
-  const activeStageIndex = currentStageIndex === -1 ? (trackingStages.length - 1) : currentStageIndex;
-
-  return (
-    <section className="relative overflow-hidden bg-[#061722] px-4 py-8 sm:py-12">
-      <div className="pointer-events-none absolute -left-16 top-8 h-48 w-48 rounded-full bg-[#08b3c7]/25 blur-3xl" />
-      <div className="pointer-events-none absolute -right-16 bottom-10 h-56 w-56 rounded-full bg-[#14e4d4]/20 blur-3xl" />
-
-      <div className="relative mx-auto w-full max-w-6xl space-y-6">
-        <div className="rounded-3xl border border-cyan-200/20 bg-gradient-to-r from-[#0d2a3e] via-[#113a56] to-[#0d2a3e] px-5 py-6 text-white shadow-[0_20px_45px_rgba(1,12,20,0.35)] sm:px-8">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200/90">Live Ticket Tracking</p>
-              <h1 className="mt-2 text-2xl font-black sm:text-4xl">EuroMillions Global Draw</h1>
-              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-cyan-100 sm:text-sm">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1"><Globe className="h-3.5 w-3.5" />Global Lotteries</span>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1"><Hash className="h-3.5 w-3.5" />Number Draw</span>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1"><CalendarDays className="h-3.5 w-3.5" />Today</span>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1"><Clock className="h-3.5 w-3.5" />{LOTTERY_DRAW_TIME_LABEL}</span>
-              </div>
-            </div>
-            <div className="min-w-[220px] rounded-2xl border border-cyan-100/30 bg-white/10 p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-100">Ticket Status</p>
-              <p className={`mt-2 flex items-center gap-2 text-lg font-bold ${liveStatusColor}`}>
-                <Circle className="h-3.5 w-3.5 animate-pulse fill-current" /> {liveStatusLabel}
-              </p>
-              <p className="mt-1 text-xs text-cyan-50/90">Order ID: {displayOrderRef(order.reference)}</p>
-              <p className="text-xs text-cyan-50/90">Purchased: {formatTimestampWithSeconds(orderPlacedAt)}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="rounded-3xl border border-cyan-100/20 bg-white p-5 shadow-[0_18px_36px_rgba(2,12,25,0.18)] sm:p-7">
-            <h2 className="text-center text-3xl font-black text-[#0e3850]">Booking Summary</h2>
-
-            <div className="mt-6">
-              <h3 className="text-center text-xl font-black text-[#0e3850]">Selected Ticket</h3>
-              <div className="mx-auto mt-4 flex max-w-xl flex-wrap items-center justify-center gap-2">
-                {selectedNumbers.length ? selectedNumbers.map((value, idx) => (
-                  <span
-                    key={`ticket-number-${idx}-${value}`}
-                    className="inline-flex h-11 min-w-11 items-center justify-center rounded-lg bg-[#0f5d86] px-3 text-base font-bold text-white shadow"
-                  >
-                    {value}
-                  </span>
-                )) : (
-                  <span className="rounded-lg bg-[#e9f4fb] px-4 py-2 text-sm font-semibold text-[#0f5d86]">
-                    Syncing ticket numbers from the confirmed order...
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="mx-auto mt-8 w-full max-w-md border-t border-[#d8e6ef] pt-4 text-[#0e3850]">
-              <div className="flex items-center justify-between text-sm font-semibold">
-                <span>Total Ticket:</span>
-                <span>{ticketCount}</span>
-              </div>
-
-              <div className="mt-4 border-t border-[#d8e6ef] pt-4">
-                <h4 className="text-sm font-black">Price Details</h4>
-                <div className="mt-3 space-y-2 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span>Ticket Price (x{ticketCount})</span>
-                    <span>{formatCheckoutAmount(ticketPriceTotal, 'ZAR')}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Processing Fee</span>
-                    <span>{formatCheckoutAmount(processingFee, 'ZAR')}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Tax (15%)</span>
-                    <span>{formatCheckoutAmount(taxAmount, 'ZAR')}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-4 border-t border-[#d8e6ef] pt-4">
-                <div className="flex items-center justify-between text-lg font-black">
-                  <span>Total Amount</span>
-                  <span>{formatCheckoutAmount(totalAmount, 'ZAR')}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => setNowMs(Date.now())}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#0f5d86] px-5 py-3 text-sm font-bold text-white transition hover:opacity-90"
-              >
-                <RefreshCw className="h-4 w-4" /> Refresh Live Status
-              </button>
-              <Link
-                to="/betting-lottery-games"
-                className="inline-flex items-center gap-2 rounded-xl border border-[#b9d7e8] bg-white px-5 py-3 text-sm font-bold text-[#0f5d86] transition hover:border-[#0f5d86]"
-              >
-                <Ticket className="h-4 w-4" /> Play Again
-              </Link>
-            </div>
-          </div>
-
-          <aside className="rounded-3xl border border-cyan-100/20 bg-[#0d1d2a] p-5 text-white shadow-[0_18px_36px_rgba(2,12,25,0.24)] sm:p-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-black">Ticket Journey</h2>
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold">
-                <Circle className="h-2.5 w-2.5 animate-pulse fill-emerald-400 text-emerald-400" /> LIVE
-              </span>
-            </div>
-
-            <div className="mt-5 space-y-4">
-              {trackingStages.map((stage, index) => {
-                const reached = stage.reached;
-                const isCurrent = index === activeStageIndex;
-                return (
-                  <div key={`stage-${stage.key}`} className={`rounded-xl border px-4 py-3 transition ${reached ? 'border-emerald-400/40 bg-emerald-400/10' : 'border-white/15 bg-white/5'}`}>
-                    <div className="flex items-start gap-3">
-                      <span className={`mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full ${reached ? 'bg-emerald-400 text-emerald-950' : 'bg-white/20 text-white/80'}`}>
-                        {reached ? <Check className="h-3.5 w-3.5" /> : <Circle className="h-2.5 w-2.5" />}
-                      </span>
-                      <div>
-                        <p className="text-sm font-bold">{stage.title}</p>
-                        <p className="mt-1 text-xs text-cyan-50/80">{stage.detail}</p>
-                        {isCurrent && !reached ? (
-                          <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-300">Updating...</p>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="mt-5 rounded-xl border border-cyan-100/20 bg-white/5 p-4 text-sm">
-              <p className="font-semibold text-cyan-100">Payment reference</p>
-              <p className="mt-1 text-white">{order.paymentReference || 'Pending confirmation from gateway'}</p>
-              <p className="mt-3 font-semibold text-cyan-100">Ticket line</p>
-              <p className="mt-1 text-cyan-50/90">{ticketDetailText || 'Ticket line is being synced from your placed order.'}</p>
-            </div>
-          </aside>
-        </div>
-      </div>
-    </section>
-  );
-};
 
 // Inline reply prefix — wraps a normal text/card message body with a tiny
 // JSON header so we don't need a new column on `support_chat_messages`.
@@ -44947,6 +43932,16 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
   const [messages, setMessages] = useState(() => getStoredSupportChatMessages(currentUserEmail));
   const messagesRef = useRef(messages);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
+  // `threads`/`messages` are already correctly seeded for the current user by
+  // the useState initializers above, so the sync effect below only needs to
+  // re-read storage when currentUserEmail actually changes (e.g. guest ->
+  // signed-in) — starting this at the current email means it skips that
+  // re-read on the effect's own first run. Without this guard, re-reading
+  // unconditionally on every run of that effect (which React intentionally
+  // invokes twice on mount under StrictMode, and would also invoke again on
+  // any real remount) can race a thread created in between and reset
+  // `threads` back to the pre-creation snapshot it read from storage.
+  const syncedForUserEmailRef = useRef(currentUserEmail);
   const markedReadRef = useRef(new Set());
   const markedDeliveredRef = useRef(new Set());
   const [selectedThreadId, setSelectedThreadId] = useState('');
@@ -45364,18 +44359,26 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
   useEffect(() => {
     let cancelled = false;
 
-    const localThreads = getStoredSupportChatThreads(currentUserEmail);
-    const localMessages = getStoredSupportChatMessages(currentUserEmail);
-    setThreads(localThreads);
-    setMessages(localMessages);
+    // Only re-read storage when the signed-in identity actually changed —
+    // see syncedForUserEmailRef above for why re-reading on every run of
+    // this effect is unsafe.
+    if (syncedForUserEmailRef.current !== currentUserEmail) {
+      setThreads(getStoredSupportChatThreads(currentUserEmail));
+      setMessages(getStoredSupportChatMessages(currentUserEmail));
+      syncedForUserEmailRef.current = currentUserEmail;
+    }
 
+    // Local state is already initialized from storage above — remote sync
+    // (below) only needs to layer fetched data on top when it succeeds. It
+    // must NOT re-apply this stale, pre-sync snapshot on failure: that used
+    // to clobber any thread created in the moments between this effect
+    // mounting and the (often-failing, e.g. for a signed-out guest) remote
+    // fetch resolving — e.g. a "Let's Talk For More Info" click bootstraps a
+    // thread synchronously right after this effect runs, and the old
+    // fallback here would silently wipe it back out, so every click looked
+    // like it started a brand-new conversation instead of reopening one.
     const sync = async () => {
-      const synced = await loadRemoteChat();
-      if (cancelled || synced) {
-        return;
-      }
-      setThreads(localThreads);
-      setMessages(localMessages);
+      await loadRemoteChat();
     };
 
     sync();
@@ -49884,11 +48887,6 @@ const OrderConfirmationPage = ({ orders }) => {
   const contactEmail = customer.email || customer.contact || '';
   const itemCount = order.items?.length || 0;
   const headlineItem = order.items?.[0] || null;
-  const isLotteryOrder = Boolean(
-    Array.isArray(order.items)
-    && order.items.some((item) => item?.route === '/betting-lottery-games' || item?.marketName === 'Betting and Lottery Games'),
-  );
-  const confirmationItems = Array.isArray(order.items) ? order.items : [];
 
   const deliveryLabel = estimatedDeliveryDate.toLocaleDateString('en-US', {
     year: 'numeric', month: 'long', day: 'numeric',
@@ -49903,8 +48901,7 @@ const OrderConfirmationPage = ({ orders }) => {
     [shipping.city, shipping.province, shipping.postalCode].filter(Boolean).join(', '),
     shipping.country,
   ].filter(Boolean);
-  const deliveryNote = shipping.deliveryInstructions
-    || (isLotteryOrder ? 'Digital lottery ticket - no physical delivery required.' : '');
+  const deliveryNote = shipping.deliveryInstructions || '';
 
   const handleDownloadInvoice = () => {
     if (typeof window === 'undefined') return;
@@ -50001,33 +48998,17 @@ const OrderConfirmationPage = ({ orders }) => {
                 </div>
               )}
               <div className="flex-1 space-y-2">
-                {isLotteryOrder ? (
-                  <>
-                    {confirmationItems.map((item, idx) => (
-                      <p key={`confirmed-item-${idx}-${item?.id || item?.title || idx}`} className="text-lg font-bold text-[var(--svs-primary-strong)]">
-                        {item?.title || 'Lottery Ticket'}
-                      </p>
-                    ))}
-                    <p className="text-sm font-semibold text-[var(--svs-primary-strong)]">{headlineItem.marketName || 'Betting and Lottery Games'}</p>
-                    <p className="text-sm text-[var(--svs-muted)]">Quantity: {headlineItem.quantity || 1}</p>
-                  </>
-                ) : (
-                  <>
-                    <h3 className="text-lg font-bold text-[var(--svs-primary-strong)]">{headlineItem.title}</h3>
-                    {(() => { const { displaySize: hiSize, displayDetails: hiDets } = getItemDisplayParts(headlineItem); return (<>
-                      {hiSize ? <span className="mt-1 inline-flex items-center rounded-full bg-[var(--svs-primary)]/10 px-2.5 py-0.5 text-xs font-semibold text-[var(--svs-primary)]">Size: {hiSize}</span> : null}
-                      {hiDets ? <p className="text-xs text-[var(--svs-muted)]">{hiDets}</p> : null}
-                    </>); })()}
-                    {headlineItem.category || headlineItem.marketName ? (
-                      <span className="inline-block rounded-full bg-[var(--svs-primary-strong)] px-3 py-1 text-xs font-semibold text-white">
-                        {headlineItem.category || headlineItem.marketName}
-                      </span>
-                    ) : null}
-                  </>
-                )}
-                {!isLotteryOrder ? (
-                  <p className="text-sm text-[var(--svs-muted)]">Quantity: {headlineItem.quantity || 1}{itemCount > 1 ? ` (+${itemCount - 1} more item${itemCount - 1 === 1 ? '' : 's'})` : ''}</p>
+                <h3 className="text-lg font-bold text-[var(--svs-primary-strong)]">{headlineItem.title}</h3>
+                {(() => { const { displaySize: hiSize, displayDetails: hiDets } = getItemDisplayParts(headlineItem); return (<>
+                  {hiSize ? <span className="mt-1 inline-flex items-center rounded-full bg-[var(--svs-primary)]/10 px-2.5 py-0.5 text-xs font-semibold text-[var(--svs-primary)]">Size: {hiSize}</span> : null}
+                  {hiDets ? <p className="text-xs text-[var(--svs-muted)]">{hiDets}</p> : null}
+                </>); })()}
+                {headlineItem.category || headlineItem.marketName ? (
+                  <span className="inline-block rounded-full bg-[var(--svs-primary-strong)] px-3 py-1 text-xs font-semibold text-white">
+                    {headlineItem.category || headlineItem.marketName}
+                  </span>
                 ) : null}
+                <p className="text-sm text-[var(--svs-muted)]">Quantity: {headlineItem.quantity || 1}{itemCount > 1 ? ` (+${itemCount - 1} more item${itemCount - 1 === 1 ? '' : 's'})` : ''}</p>
                 <p className="flex items-center gap-2 text-sm text-[var(--svs-primary-strong)]">
                   <CalendarDays className="h-4 w-4" />
                   Delivery {itemDeliveryShort}
@@ -53808,7 +52789,7 @@ const OFFERS_OPT_IN_KEY_PREFIX = 'svs-offers-opted-in-';
 const DIGEST_MARKET_LABELS = {
   ecommerce: 'Lifestyle Tech', groceries: 'Grocery', fastFood: 'Fast Food',
   fashionStyle: 'Apparel', mobilityVehicles: 'Automobility', votingClients: 'Wellness',
-  bettingLotteryGames: 'Games', beverages: 'Drinks', homeCare: 'Book Service',
+  beverages: 'Drinks', homeCare: 'Book Service',
   tickets: 'Book Ticket', constructionTools: 'Hardware', directLinks: 'Commerce Link',
   generalLabour: 'Workforce', informalMarket: 'Vendors', votingProviders: 'Jewelry',
   livestockHub: 'Livestock', nurseryHub: 'Nursery', naturalResources: 'Earth Resources', wellness: 'Pharmaceutics',
@@ -53818,7 +52799,7 @@ const DIGEST_MARKET_LABELS = {
 const DIGEST_MARKET_ROUTES = {
   ecommerce: '/e-commerce', groceries: '/groceries', fastFood: '/fast-food',
   fashionStyle: '/fashion-style', mobilityVehicles: '/mobility-vehicles', votingClients: '/voting-clients',
-  bettingLotteryGames: '/betting-lottery-games', beverages: '/beverages-liquors', homeCare: '/home-care',
+  beverages: '/beverages-liquors', homeCare: '/home-care',
   tickets: '/tickets', constructionTools: '/building-construction-tools', directLinks: '/retailer-direct-links',
   generalLabour: '/general-labour-market', informalMarket: '/informal-market', votingProviders: '/voting-providers',
   livestockHub: '/livestock-hub', nurseryHub: '/nursery-hub', naturalResources: '/natural-resources-minerals', wellness: '/wellness',
@@ -57771,8 +56752,6 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/orders/:orderId/exchange/track" element={<TrackExchangePage orders={orders} />} />
     <Route path="/orders/:orderId/cancel" element={<CancelOrderPage orders={orders} onCancelOrder={onCancelOrder} />} />
     <Route path="/order-confirmation" element={<OrderConfirmationPage orders={orders} />} />
-    <Route path="/betting-order-confirmation" element={<Navigate to="/betting-ticket-tracking" replace />} />
-    <Route path="/betting-ticket-tracking" element={<BettingTicketTrackingPage orders={orders} />} />
     <Route path="/wishlist" element={<WishlistPage wishlistItems={wishlistItems} onAddToCart={onAddToCart} onRemoveWishlistItem={onRemoveWishlistItem} onClearWishlist={onClearWishlist} onOpenItemDetails={onOpenItemDetails} sellerItems={sellerItems} />} />
     <Route path="/wishlist/share" element={<WishlistSharePage />} />
     <Route path="/checkout" element={<CheckoutPage cartItems={cartItems} buyNowCheckout={buyNowCheckout} onUpdateCartQuantity={onUpdateCartQuantity} onRemoveCartItem={onRemoveCartItem} onClearBuyNowCheckout={onClearBuyNowCheckout} sellerItems={sellerItems} />} />
@@ -57829,13 +56808,8 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/property-hub/listing/:listingId" element={<PropertyDetailPage />} />
     <Route path="/property-hub/visit/:listingId" element={<PropertyVisitStatusPage />} />
     <Route path="/property-hub/bookings" element={<PropertyBookingsPage />} />
-    <Route path="/betting-lottery-games" element={<BettingLotteryGamesPage onBuyNow={onBuyNow} />} />
-    <Route path="/betting-lottery-games/confirm" element={<LotteryConfirmPage onBuyNow={onBuyNow} />} />
-    <Route path="/international-lottery-games" element={<Navigate to="/betting-lottery-games" replace />} />
     <Route path="/livestock-hub" element={<LivestockHubPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} />} />
     <Route path="/nursery-hub" element={<NurseryHubPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} cartItems={cartItems} />} />
-    <Route path="/betting-hub" element={<Navigate to="/betting-lottery-games" replace />} />
-    <Route path="/betting-voting" element={<Navigate to="/betting-lottery-games" replace />} />
     <Route path="/safety" element={<SafetyPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
 
     <Route path="/signin" element={<SigninPage />} />

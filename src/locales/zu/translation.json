@@ -68,8 +68,7 @@
     "livestockHub": "Imakethe Yemfuyo",
     "stationery": "Imakethe Yezincwadi Zokubhala kanye Nezincwadi",
     "constructionTools": "Amathuluzi Okwakha Nokwakha",
-    "informalMarket": "Imakethe Engahleliwe",
-    "bettingLotteryGames": "Imidlalo Yokubheja Nelotho"
+    "informalMarket": "Imakethe Engahleliwe"
   },
   "footer": {
     "about": "About Us",
@@ -144,7 +143,6 @@
     "stationery": "Thenga amapeni, izincwadi, izincwadi zama-invoyisi, amanothibhuku, nezinto zasehhovisi zesikole noma zebhizinisi.",
     "constructionTools": "Phequlula izinto zokwakha, amathuluzi ezandla, namathuluzi kagesi amaphrojekthi anoma yimuphi usayizi.",
     "informalMarket": "Phequlula abathengisi basesitaladeni, izitolo zespaza, kanye nabathengisi abangahleliwe ngezohlu zangempela, izigaba, kanye nezindawo zabathengisi eziseduze nawe.",
-    "bettingLotteryGames": "Khetha umdlalo wakho, khetha izinombolo ezisheshayo noma ozikhethele wena, bese uthenga amathikithi elotho ngokuphepha emidlalweni emikhulu yamazwe ngamazwe.",
     "secondhand": "Thenga futhi uthengise amafoni, ama-laptop, imfashini, nefenisha okusethandiwe okusezingeni eliphezulu, kanye nokunye — konke ngamanani angenakuncintiswana nawo."
   },
   "searchResults": {

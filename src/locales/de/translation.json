@@ -69,8 +69,7 @@
     "livestockHub": "Viehmarkt",
     "stationery": "Schreibwaren- und Büchermarkt",
     "constructionTools": "Bau- und Konstruktionswerkzeuge",
-    "informalMarket": "Informeller Markt",
-    "bettingLotteryGames": "Wett- und Lotteriespiele"
+    "informalMarket": "Informeller Markt"
   },
   "footer": {
     "about": "Über uns",
@@ -147,7 +146,6 @@
     "stationery": "Kaufen Sie Stifte, Bücher, Rechnungsbücher, Notizbücher und Bürobedarf für Schule oder Unternehmen.",
     "constructionTools": "Durchsuchen Sie Baumaterialien, Handwerkzeuge und Elektrowerkzeuge für Projekte jeder Größe.",
     "informalMarket": "Durchsuchen Sie Straßenhändler, Spaza-Shops und informelle Verkäufer mit echten Angeboten, Kategorien und Verkäuferstandorten in Ihrer Nähe.",
-    "bettingLotteryGames": "Wählen Sie Ihr Spiel, entscheiden Sie sich für Schnellauswahl oder manuelle Zahlen und kaufen Sie sicher Lottoscheine für die wichtigsten internationalen Ziehungen.",
     "secondhand": "Kaufen und verkaufen Sie hochwertige gebrauchte Telefone, Laptops, Mode, Möbel und mehr — alles zu unschlagbaren Preisen."
   },
   "searchResults": {
@@ -206,29 +204,6 @@
         "title": "Hafen-Bürosuite",
         "location": "Durban Central",
         "type": "Gewerbeflächen"
-      }
-    }
-  },
-  "internationalLotteryHub": {
-    "notice": "Spielverfügbarkeit, Altersbeschränkungen und Auszahlungsregeln hängen vom ausgewählten Land und Anbieter ab.",
-    "regionLabel": "Region",
-    "drawDayLabel": "Tag der Auslosung",
-    "jackpotLabel": "Jackpot",
-    "items": {
-      "lg1": {
-        "title": "Globale EuroMillions-Ziehung",
-        "region": "Europa",
-        "drawDay": "Freitag"
-      },
-      "lg2": {
-        "title": "Powerball International",
-        "region": "Nordamerika",
-        "drawDay": "Mittwoch"
-      },
-      "lg3": {
-        "title": "Panafrikanische Mega Millions",
-        "region": "Afrika",
-        "drawDay": "Samstag"
       }
     }
   },

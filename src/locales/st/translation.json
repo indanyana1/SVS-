@@ -68,8 +68,7 @@
     "livestockHub": "Sebaka sa Maraka sa Leruo",
     "stationery": "'Maraka oa Libuka le Libuka",
     "constructionTools": "Lisebelisoa tsa Kaho le Kaho",
-    "informalMarket": "'Mmaraka o sa Reriloeng",
-    "bettingLotteryGames": "Lipapali tsa Ho Bea Chelete le Lottery"
+    "informalMarket": "'Mmaraka o sa Reriloeng"
   },
   "footer": {
     "about": "About Us",
@@ -144,7 +143,6 @@
     "stationery": "Reka lipene, libuka, libuka tsa invoice, libuka tsa ho ngolla, le lisebelisoa tsa ofisi bakeng sa sekolo kapa khoebo.",
     "constructionTools": "Batla lisebelisoa tsa kaho, lisebelisoa tsa letsoho, le lisebelisoa tsa motlakase bakeng sa merero ea boholo bofe kapa bofe.",
     "informalMarket": "Sheba bahoebi ba seterateng, mabenkele a spaza, le bahoebi ba sa hlophisoa ba nang le lethathamo la 'nete, mekgahlelo, le libaka tsa bahoebi haufi le uena.",
-    "bettingLotteryGames": "Khetha papali ea hau, khetha quick-pick kapa linomoro tsa hau, ebe oa reka litekete tsa lottery ka polokeho bakeng sa lihlopha tse kholo tsa machaba.",
     "secondhand": "Reka le ho rekisa mehala e sebelisitsoeng e nang le boleng, li-laptop, mokhoa oa apareloana, thepa ea ka tlung le tse ling — tsohle ka litheko tse hlollang."
   },
   "searchResults": {

@@ -68,8 +68,7 @@
     "livestockHub": "Chợ chăn nuôi",
     "stationery": "Chợ văn phòng phẩm và sách",
     "constructionTools": "Công cụ xây dựng và xây dựng",
-    "informalMarket": "Chợ Phi Chính Thức",
-    "bettingLotteryGames": "Trò Chơi Cá Cược và Xổ Số"
+    "informalMarket": "Chợ Phi Chính Thức"
   },
   "footer": {
     "about": "About Us",
@@ -144,7 +143,6 @@
     "stationery": "Mua sắm bút, sách, sổ hóa đơn, sổ ghi chép và đồ dùng văn phòng cho trường học hoặc doanh nghiệp.",
     "constructionTools": "Duyệt qua vật tư xây dựng, dụng cụ cầm tay và dụng cụ điện cho các dự án ở mọi quy mô.",
     "informalMarket": "Khám phá người bán hàng rong, cửa hàng spaza và người bán phi chính thức với danh sách, danh mục và vị trí người bán thực tế gần bạn.",
-    "bettingLotteryGames": "Chọn trò chơi của bạn, chọn số nhanh hoặc số tự chọn, và mua vé số một cách an toàn cho các kỳ quay số quốc tế hàng đầu.",
     "secondhand": "Mua va ban dien thoai, laptop, thoi trang, noi that cu chat luong va nhieu hon nua — tat ca voi gia khong the canh tranh."
   },
   "searchResults": {

@@ -69,8 +69,7 @@
     "livestockHub": "Mercado de ganado",
     "stationery": "Mercado de Papelería y Libros",
     "constructionTools": "Herramientas de edificación y construcción",
-    "informalMarket": "Mercado Informal",
-    "bettingLotteryGames": "Juegos de Apuestas y Lotería"
+    "informalMarket": "Mercado Informal"
   },
   "footer": {
     "about": "About Us",
@@ -147,7 +146,6 @@
     "stationery": "Compre bolígrafos, libros, libretas de facturas, cuadernos y material de oficina para la escuela o la empresa.",
     "constructionTools": "Busque materiales de construcción, herramientas manuales y eléctricas para proyectos de cualquier tamaño.",
     "informalMarket": "Explora vendedores ambulantes, tiendas spaza y vendedores informales con anuncios reales, categorías y ubicaciones de vendedores cerca de ti.",
-    "bettingLotteryGames": "Elige tu juego, escoge números rápidos o manuales, y compra de forma segura boletos de lotería para los principales sorteos internacionales.",
     "secondhand": "Compra y vende telefonos, portatiles, moda, muebles y mas de calidad usados, todo a precios imbatibles."
   },
   "searchResults": {
@@ -206,29 +204,6 @@
         "title": "Suite de oficina del puerto",
         "location": "Centro de Durban",
         "type": "Espacio Comercial"
-      }
-    }
-  },
-  "internationalLotteryHub": {
-    "notice": "La disponibilidad de los juegos, las restricciones de edad y las reglas de pago dependen del país y del proveedor seleccionados.",
-    "regionLabel": "Región",
-    "drawDayLabel": "Día del sorteo",
-    "jackpotLabel": "Bote",
-    "items": {
-      "lg1": {
-        "title": "Sorteo Global Euromillones",
-        "region": "Europa",
-        "drawDay": "Viernes"
-      },
-      "lg2": {
-        "title": "Powerball Internacional",
-        "region": "América del norte",
-        "drawDay": "Miércoles"
-      },
-      "lg3": {
-        "title": "Megamillones panafricanos",
-        "region": "África",
-        "drawDay": "Sábado"
       }
     }
   },

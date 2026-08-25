@@ -114,7 +114,6 @@
     "mobilityVehicles": "Buy and sell cars, motorcycles, bicycles, aircraft, and rail-ready vehicles in one transport-focused market.",
     "naturalResources": "Source minerals, aggregates, timber, stone, and bulk natural resource stock for commercial trade and project supply.",
     "generalLabour": "Find trusted skilled and unskilled workers for construction, maintenance, logistics, agriculture, and everyday services.",
-    "bettingLotteryGames": "Pick your game, choose quick-pick or manual numbers, and securely purchase lottery tickets for top international draws.",
     "propertyHub": "Browse rentals, homes for sale, and commercial spaces with rich location detail.",
     "livestockHub": "Buy and sell cattle, sheep, and goats with farm-ready listing details and seller locations.",
     "safety": "Toys, games, baby gear, and kids essentials from trusted sellers.",
@@ -139,29 +138,6 @@
         "title": "Harbour Office Suite",
         "location": "Durban Central",
         "type": "Commercial Space"
-      }
-    }
-  },
-  "internationalLotteryHub": {
-    "notice": "Game availability, age restrictions, and payout rules depend on the selected country and provider.",
-    "regionLabel": "Region",
-    "drawDayLabel": "Draw Day",
-    "jackpotLabel": "Jackpot",
-    "items": {
-      "lg1": {
-        "title": "EuroMillions Global Draw",
-        "region": "Europe",
-        "drawDay": "Friday"
-      },
-      "lg2": {
-        "title": "Powerball International",
-        "region": "North America",
-        "drawDay": "Wednesday"
-      },
-      "lg3": {
-        "title": "Pan-African Mega Millions",
-        "region": "Africa",
-        "drawDay": "Saturday"
       }
     }
   },
@@ -228,7 +204,6 @@
     "mobilityVehicles": "VEHICLES & MOBILITY",
     "naturalResources": "NATURAL RESOURCES",
     "generalLabour": "WORKFORCE",
-    "bettingLotteryGames": "BETTING & LOTTERY",
     "propertyHub": "PROPERTY",
     "livestockHub": "LIVESTOCK",
     "nurseryHub": "NURSERY",

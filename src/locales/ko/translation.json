@@ -68,8 +68,7 @@
     "livestockHub": "가축 시장",
     "stationery": "문구류 및 서적 시장",
     "constructionTools": "건축 및 건설 도구",
-    "informalMarket": "비정형 시장",
-    "bettingLotteryGames": "베팅 및 로또 게임"
+    "informalMarket": "비정형 시장"
   },
   "footer": {
     "about": "About Us",
@@ -144,7 +143,6 @@
     "stationery": "학교나 기업용 펜, 책, 청구서 책, 노트북, 사무용품을 쇼핑하세요.",
     "constructionTools": "모든 규모의 프로젝트에 적합한 건축 자재, 수공구 및 전동 공구를 찾아보세요.",
     "informalMarket": "실제 등록 정보, 카테고리, 판매자 위치와 함께 주변의 거리 상인, 스파자 상점, 비정형 판매자를 둘러보세요.",
-    "bettingLotteryGames": "게임을 선택하고 퀵픽 또는 직접 번호를 골라 주요 국제 추첨의 로또 티켓을 안전하게 구매하세요.",
     "secondhand": "품질 좋은 중고 휴대폰, 노트북, 패션, 가구 등을 사고팔 수 있습니다 — 모두 압도적인 가격으로."
   },
   "searchResults": {

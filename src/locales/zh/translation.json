@@ -68,8 +68,7 @@
     "livestockHub": "牲畜市场",
     "stationery": "文具及书籍市场",
     "constructionTools": "建筑和施工工具",
-    "informalMarket": "非正规市场",
-    "bettingLotteryGames": "博彩与彩票游戏"
+    "informalMarket": "非正规市场"
   },
   "footer": {
     "about": "About Us",
@@ -144,7 +143,6 @@
     "stationery": "为学校或企业购买钢笔、书籍、发票簿、笔记本和办公用品。",
     "constructionTools": "浏览适合任何规模项目的建筑用品、手动工具和电动工具。",
     "informalMarket": "浏览您附近的街头摊贩、Spaza小店和非正规卖家,查看真实的商品列表、分类和卖家位置。",
-    "bettingLotteryGames": "选择您的游戏,选择快速选号或手动选号,安全购买顶级国际开奖的彩票。",
     "secondhand": "购买和出售优质二手手机、笔记本电脑、时尚用品、家具等,价格无与伦比。"
   },
   "searchResults": {

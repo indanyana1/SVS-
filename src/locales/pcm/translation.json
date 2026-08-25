@@ -68,8 +68,7 @@
     "livestockHub": "Livestock Market",
     "stationery": "Stationery and Books Market",
     "constructionTools": "Building and Construction Tools",
-    "informalMarket": "Informal Market",
-    "bettingLotteryGames": "Betting and Lottery Games"
+    "informalMarket": "Informal Market"
   },
   "footer": {
     "about": "About Us",
@@ -144,7 +143,6 @@
     "stationery": "Shop pens, books, invoice books, notebooks, and office supplies for school or business.",
     "constructionTools": "Browse building supplies, hand tools, and power tools for projects of any size.",
     "informalMarket": "Waka through street sellers, spaza shops, and informal vendors wey dey near you, with real listings, categories, and seller location.",
-    "bettingLotteryGames": "Choose your game, pick quick-pick or your own numbers, then buy lottery ticket safe-safe for top international draws.",
     "secondhand": "Buy and sell quality second-hand phones, laptops, fashion, furniture, and more — all for price wey no get match."
   },
   "searchResults": {

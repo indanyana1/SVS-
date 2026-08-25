@@ -68,8 +68,7 @@
     "livestockHub": "Marché du bétail",
     "stationery": "Marché de la papeterie et du livre",
     "constructionTools": "Outils de construction et de construction",
-    "informalMarket": "Marché Informel",
-    "bettingLotteryGames": "Jeux de Paris et de Loterie"
+    "informalMarket": "Marché Informel"
   },
   "footer": {
     "about": "About Us",
@@ -144,7 +143,6 @@
     "stationery": "Achetez des stylos, des livres, des carnets de factures, des cahiers et des fournitures de bureau pour l'école ou l'entreprise.",
     "constructionTools": "Parcourez les matériaux de construction, les outils manuels et les outils électriques pour des projets de toute taille.",
     "informalMarket": "Parcourez les vendeurs de rue, les spazas et les vendeurs informels avec de vraies annonces, des catégories et les emplacements des vendeurs près de vous.",
-    "bettingLotteryGames": "Choisissez votre jeu, optez pour une sélection rapide ou des numéros manuels, et achetez en toute sécurité des billets de loterie pour les plus grands tirages internationaux.",
     "secondhand": "Achetez et vendez des telephones, ordinateurs portables, vetements, meubles doccasion de qualite et plus encore, a des prix imbattables."
   },
   "searchResults": {

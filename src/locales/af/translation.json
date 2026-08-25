@@ -69,8 +69,7 @@
     "livestockHub": "Veemark",
     "stationery": "Skryfbehoeftes en Boeke Mark",
     "constructionTools": "Bou- en konstruksiegereedskap",
-    "informalMarket": "Informele Mark",
-    "bettingLotteryGames": "Wedding en Lotteryspeletjies"
+    "informalMarket": "Informele Mark"
   },
   "footer": {
     "about": "Oor Ons",
@@ -147,7 +146,6 @@
     "stationery": "Winkelpenne, boeke, faktuurboeke, notaboeke en kantoorbenodigdhede vir skool of besigheid.",
     "constructionTools": "Blaai deur boubenodigdhede, handgereedskap en elektriese gereedskap vir projekte van enige grootte.",
     "informalMarket": "Blaai deur straathandelaars, spazawinkels en informele verkopers met regte lyste, kategorieë en verkoperliggings naby jou.",
-    "bettingLotteryGames": "Kies jou speletjie, kies kitskeuse of self gekose nommers, en koop veilig lotterykaartjies vir top internasionale trekkings.",
     "secondhand": "Koop en verkoop kwaliteit tweedehandse foone, skootrekenaars, mode, meubels en meer — alles teen onklopbare pryse."
   },
   "searchResults": {
@@ -206,29 +204,6 @@
         "title": "Harbour Office Suite",
         "location": "Durban Sentraal",
         "type": "Kommersiële Ruimte"
-      }
-    }
-  },
-  "internationalLotteryHub": {
-    "notice": "Speletjiebeskikbaarheid, ouderdomsbeperkings en uitbetalingsreëls hang af van die gekose land en verskaffer.",
-    "regionLabel": "Streek",
-    "drawDayLabel": "Trekkingsdag",
-    "jackpotLabel": "Boerpot",
-    "items": {
-      "lg1": {
-        "title": "EuroMillions Global Draw",
-        "region": "Europa",
-        "drawDay": "Vrydag"
-      },
-      "lg2": {
-        "title": "Powerball Internasionaal",
-        "region": "Noord-Amerika",
-        "drawDay": "Woensdag"
-      },
-      "lg3": {
-        "title": "Pan-Afrikaanse Mega Miljoene",
-        "region": "Afrika",
-        "drawDay": "Saterdag"
       }
     }
   },

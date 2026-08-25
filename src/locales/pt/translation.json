@@ -68,8 +68,7 @@
     "livestockHub": "Mercado de gado",
     "stationery": "Mercado de Papelaria e Livros",
     "constructionTools": "Ferramentas de construção e construção",
-    "informalMarket": "Mercado Informal",
-    "bettingLotteryGames": "Jogos de Apostas e Loteria"
+    "informalMarket": "Mercado Informal"
   },
   "footer": {
     "about": "About Us",
@@ -144,7 +143,6 @@
     "stationery": "Compre canetas, livros, livros de faturas, cadernos e material de escritório para escola ou empresa.",
     "constructionTools": "Procure materiais de construção, ferramentas manuais e elétricas para projetos de qualquer tamanho.",
     "informalMarket": "Explore vendedores ambulantes, lojas spaza e vendedores informais com anúncios reais, categorias e localizações de vendedores perto de você.",
-    "bettingLotteryGames": "Escolha o seu jogo, opte por números rápidos ou manuais, e compre com segurança bilhetes de loteria para os principais sorteios internacionais.",
     "secondhand": "Compre e venda telefones, laptops, moda, moveis usados de qualidade e muito mais, tudo a precos imbativeis."
   },
   "searchResults": {
