@@ -93,6 +93,7 @@ import {
   Camera,
   Leaf,
   Flower2,
+  Percent,
 } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -132,7 +133,7 @@ import SellerSigninPage from '../pages/SellerSigninPage';
 import SellerSignupPage from '../pages/SellerSignupPage';
 import SellerPendingApprovalPage from '../pages/SellerPendingApprovalPage';
 import AdminSigninPage from '../pages/AdminSigninPage';
-import { TermsOfServicePage, PrivacyPolicyPage, RefundPolicyPage, CookiePolicyPage } from '../pages/LegalPages';
+import { TermsOfServicePage, PrivacyPolicyPage, RefundPolicyPage, CookiePolicyPage, SellerTermsPage } from '../pages/LegalPages';
 import {
   PropertyMarketPage,
   PropertyCategoryPage,
@@ -1849,6 +1850,7 @@ const MARKET_DISPLAY_NAMES = {
   toysKids: 'Toys',
   traditionalMedicines: 'Ancient Remedies',
   hardwareSoftware: 'Electronics',
+  petCareSupplies: 'Pet Care',
 };
 
 const buildSellerAdSlides = (sellerItems) => {
@@ -8005,6 +8007,9 @@ const ORDER_AUTO_PROGRESS_MS = {
 };
 const ORDERS_TABLE = 'orders';
 const SELLER_ITEMS_TABLE = 'marketplace_items';
+const PLATFORM_SETTINGS_TABLE = 'platform_settings';
+const SELLER_FEE_PROMOTIONS_TABLE = 'seller_fee_promotions';
+const SELLER_FEE_CALCULATIONS_TABLE = 'seller_fee_calculations';
 const CART_ITEMS_TABLE = 'cart_items';
 const WISHLIST_ITEMS_TABLE = 'wishlist_items';
 const PRODUCT_REVIEWS_TABLE = 'product_reviews';
@@ -10633,6 +10638,74 @@ const toOrderRecord = (userEmail, order) => ({
   status: order.status,
   status_history: Array.isArray(order.statusHistory) ? order.statusHistory : [],
 });
+
+// ── Seller platform fee ─────────────────────────────────────────────────────
+// The fee % (and the first-100-sellers free-month promo) are entirely
+// backend-owned — see supabase/seller-platform-fee.sql. The frontend never
+// computes or overrides a fee value; it only calls compute_and_lock_seller_fees
+// once at checkout (the backend decides the rate and locks it permanently
+// against that order_key) and otherwise just reads back what the backend
+// already decided.
+const DEFAULT_PLATFORM_SETTINGS = {
+  buyer_fee_percent: 3,
+  seller_fee_enabled: true,
+  seller_fee_percent: 7,
+  seller_promo_enabled: true,
+  seller_promo_qualifying_count: 100,
+  seller_promo_free_days: 30,
+};
+
+const fetchPlatformSettings = async () => {
+  if (!hasSupabaseEnv || !supabase) return DEFAULT_PLATFORM_SETTINGS;
+  try {
+    const { data, error } = await supabase.from(PLATFORM_SETTINGS_TABLE).select('*').eq('id', 1).maybeSingle();
+    if (error || !data) return DEFAULT_PLATFORM_SETTINGS;
+    return data;
+  } catch (_error) {
+    return DEFAULT_PLATFORM_SETTINGS;
+  }
+};
+
+// Keyed by order_key -> that order's locked-in fee breakdown (one entry per
+// seller in the order). Fetched from the append-only ledger the backend
+// writes at checkout, never from anything the client could have written.
+const fetchSellerFeeCalculations = async (orderKeys = []) => {
+  const uniqueKeys = Array.from(new Set((orderKeys || []).filter(Boolean)));
+  if (!hasSupabaseEnv || !supabase || !uniqueKeys.length) return new Map();
+  try {
+    const { data, error } = await supabase
+      .from(SELLER_FEE_CALCULATIONS_TABLE)
+      .select('order_key, breakdown')
+      .in('order_key', uniqueKeys);
+    if (error || !data) return new Map();
+    return new Map(data.map((row) => [row.order_key, Array.isArray(row.breakdown) ? row.breakdown : []]));
+  } catch (_error) {
+    return new Map();
+  }
+};
+
+const getSellerFeeEntry = (breakdown, sellerEmail) => {
+  const normalized = normalizeEmail(sellerEmail);
+  return (Array.isArray(breakdown) ? breakdown : []).find(
+    (entry) => normalizeEmail(entry?.sellerEmail) === normalized,
+  ) || null;
+};
+
+const fetchSellerFeePromoStatus = async (sellerEmail) => {
+  const normalized = normalizeEmail(sellerEmail);
+  if (!hasSupabaseEnv || !supabase || !normalized) return null;
+  try {
+    const { data, error } = await supabase
+      .from(SELLER_FEE_PROMOTIONS_TABLE)
+      .select('*')
+      .eq('seller_email', normalized)
+      .maybeSingle();
+    if (error || !data) return null;
+    return data;
+  } catch (_error) {
+    return null;
+  }
+};
 
 const syncUserCollection = async ({ tableName, userEmail, records, removeMissing = true }) => {
   if (!records.length) {
@@ -29052,6 +29125,7 @@ const ADMIN_DASHBOARD_TABS = [
   { key: 'orders', label: 'Orders', icon: ClipboardList },
   { key: 'refunds', label: 'Refunds', icon: RefreshCw },
   { key: 'transactions', label: 'Transactions', icon: Wallet },
+  { key: 'sellerFees', label: 'Seller Fees', icon: Percent },
   { key: 'reports', label: 'Reports', icon: FileText },
 ];
 
@@ -29117,6 +29191,15 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
   const [adminActionLog, setAdminActionLog] = useState([]);
   const [globalAuditLog, setGlobalAuditLog] = useState([]);
   const [reportsLoaded, setReportsLoaded] = useState(false);
+
+  const [platformSettings, setPlatformSettings] = useState(DEFAULT_PLATFORM_SETTINGS);
+  const [sellerFeePromotions, setSellerFeePromotions] = useState([]);
+  const [sellerFeeCalculations, setSellerFeeCalculations] = useState([]);
+  const [sellerFeesLoaded, setSellerFeesLoaded] = useState(false);
+  const [feeSettingsDraft, setFeeSettingsDraft] = useState(null);
+  const [feeSettingsMessage, setFeeSettingsMessage] = useState('');
+  const [feeSettingsMessageType, setFeeSettingsMessageType] = useState('idle');
+  const [isSavingFeeSettings, setIsSavingFeeSettings] = useState(false);
 
   const [buyerSearch, setBuyerSearch] = useState('');
   const [sellerSearch, setSellerSearch] = useState('');
@@ -29246,6 +29329,89 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
       setReportsLoaded(true);
     })();
   }, [sessionState, activeTab, reportsLoaded, token]);
+
+  // Loaded for both the "Seller Fees" settings/promo tab and the "Reports"
+  // tab's fee totals, so whichever the admin opens first fetches it once.
+  useEffect(() => {
+    if (sessionState !== 'signed-in' || sellerFeesLoaded || !supabase) return;
+    if (activeTab !== 'sellerFees' && activeTab !== 'reports') return;
+
+    (async () => {
+      const [settings, promotionsRes, calculationsRes] = await Promise.all([
+        fetchPlatformSettings(),
+        supabase.from(SELLER_FEE_PROMOTIONS_TABLE).select('*').order('created_at', { ascending: false }),
+        supabase.from(SELLER_FEE_CALCULATIONS_TABLE).select('order_key, user_email, breakdown, created_at').order('created_at', { ascending: false }).limit(2000),
+      ]);
+      setPlatformSettings(settings);
+      setFeeSettingsDraft(settings);
+      setSellerFeePromotions(promotionsRes.data || []);
+      setSellerFeeCalculations(calculationsRes.data || []);
+      setSellerFeesLoaded(true);
+    })();
+  }, [sessionState, activeTab, sellerFeesLoaded]);
+
+  const handleSaveFeeSettings = async () => {
+    if (!feeSettingsDraft || !supabase) return;
+    setIsSavingFeeSettings(true);
+    setFeeSettingsMessage('');
+    setFeeSettingsMessageType('idle');
+
+    const { data, error } = await supabase.rpc('admin_update_seller_fee_settings', {
+      p_token: token,
+      p_seller_fee_enabled: Boolean(feeSettingsDraft.seller_fee_enabled),
+      p_seller_fee_percent: Number(feeSettingsDraft.seller_fee_percent),
+      p_seller_promo_enabled: Boolean(feeSettingsDraft.seller_promo_enabled),
+      p_seller_promo_qualifying_count: parseInt(feeSettingsDraft.seller_promo_qualifying_count, 10),
+      p_seller_promo_free_days: parseInt(feeSettingsDraft.seller_promo_free_days, 10),
+    });
+
+    if (error) {
+      setFeeSettingsMessage(error.message || 'Could not save settings.');
+      setFeeSettingsMessageType('error');
+    } else {
+      setPlatformSettings(data);
+      setFeeSettingsDraft(data);
+      setFeeSettingsMessage('Seller fee settings saved.');
+      setFeeSettingsMessageType('success');
+    }
+    setIsSavingFeeSettings(false);
+  };
+
+  const sellerFeeStats = useMemo(() => {
+    const now = new Date();
+    const qualified = sellerFeePromotions.filter((row) => row.qualified);
+    const inFreePeriod = qualified.filter((row) => row.free_period_expires_at && new Date(row.free_period_expires_at) > now);
+    const completed = qualified.filter((row) => !row.free_period_expires_at || new Date(row.free_period_expires_at) <= now);
+
+    let totalFeesCollected = 0;
+    let totalWaived = 0;
+    const bySeller = new Map();
+    const byDate = new Map();
+
+    sellerFeeCalculations.forEach((row) => {
+      const dateKey = String(row.created_at || '').slice(0, 10);
+      (Array.isArray(row.breakdown) ? row.breakdown : []).forEach((entry) => {
+        const feeAmount = Number(entry.feeAmount) || 0;
+        totalFeesCollected += feeAmount;
+        if (entry.promoApplied) {
+          totalWaived += (Number(entry.grossAmount) || 0) * (Number(entry.standardRatePercent) || 0) / 100;
+        }
+        const sellerKey = entry.sellerEmail || 'unknown';
+        bySeller.set(sellerKey, (bySeller.get(sellerKey) || 0) + feeAmount);
+        if (dateKey) byDate.set(dateKey, (byDate.get(dateKey) || 0) + feeAmount);
+      });
+    });
+
+    return {
+      qualifiedCount: qualified.length,
+      inFreePeriod,
+      completed,
+      totalFeesCollected,
+      totalWaived,
+      bySeller: Array.from(bySeller.entries()).sort((a, b) => b[1] - a[1]),
+      byDate: Array.from(byDate.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1)),
+    };
+  }, [sellerFeePromotions, sellerFeeCalculations]);
 
   const revealIdDocument = async () => {
     if (!sellerDetail?.id_document_path || !supabase) return;
@@ -30314,6 +30480,178 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                 </div>
               </div>
             </section>
+          ) : activeTab === 'sellerFees' ? (
+            <section className="space-y-6">
+              {!feeSettingsDraft ? (
+                <p className="text-sm text-[var(--svs-muted)]">Loading…</p>
+              ) : (
+                <>
+                  <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5">
+                    <h3 className="text-sm font-bold text-[var(--svs-text)]">Seller Platform Fee Settings</h3>
+                    <p className="mt-1 text-xs text-[var(--svs-muted)]">
+                      Sellers pay no monthly subscription — the platform only earns when a seller makes a sale. These settings apply to new orders going forward; orders already placed keep the fee that was locked in at the time.
+                    </p>
+
+                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                      <label className="flex items-center justify-between rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5">
+                        <span className="text-sm font-semibold text-[var(--svs-text)]">Seller fee — global control</span>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(feeSettingsDraft.seller_fee_enabled)}
+                          onChange={(e) => setFeeSettingsDraft((d) => ({ ...d, seller_fee_enabled: e.target.checked }))}
+                          className="h-5 w-5 rounded border-slate-300 text-[var(--svs-primary)] focus:ring-[var(--svs-primary)]"
+                        />
+                      </label>
+
+                      <label className="block rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5">
+                        <span className="text-xs font-semibold text-[var(--svs-muted)]">Seller fee percentage</span>
+                        <div className="mt-1 flex items-center gap-1">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.1"
+                            value={feeSettingsDraft.seller_fee_percent}
+                            onChange={(e) => setFeeSettingsDraft((d) => ({ ...d, seller_fee_percent: e.target.value }))}
+                            className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2 py-1.5 text-sm font-bold text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                          />
+                          <span className="text-sm font-bold text-[var(--svs-muted)]">%</span>
+                        </div>
+                      </label>
+
+                      <label className="flex items-center justify-between rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5">
+                        <span className="text-sm font-semibold text-[var(--svs-text)]">Introductory free-month promotion</span>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(feeSettingsDraft.seller_promo_enabled)}
+                          onChange={(e) => setFeeSettingsDraft((d) => ({ ...d, seller_promo_enabled: e.target.checked }))}
+                          className="h-5 w-5 rounded border-slate-300 text-[var(--svs-primary)] focus:ring-[var(--svs-primary)]"
+                        />
+                      </label>
+
+                      <label className="block rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5">
+                        <span className="text-xs font-semibold text-[var(--svs-muted)]">Qualifying sellers (first N)</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={feeSettingsDraft.seller_promo_qualifying_count}
+                          onChange={(e) => setFeeSettingsDraft((d) => ({ ...d, seller_promo_qualifying_count: e.target.value }))}
+                          className="mt-1 w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2 py-1.5 text-sm font-bold text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                        />
+                      </label>
+
+                      <label className="block rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2.5">
+                        <span className="text-xs font-semibold text-[var(--svs-muted)]">Free period length (days)</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={feeSettingsDraft.seller_promo_free_days}
+                          onChange={(e) => setFeeSettingsDraft((d) => ({ ...d, seller_promo_free_days: e.target.value }))}
+                          className="mt-1 w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] px-2 py-1.5 text-sm font-bold text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                        />
+                      </label>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={handleSaveFeeSettings}
+                        disabled={isSavingFeeSettings}
+                        className="rounded-lg bg-[var(--svs-primary)] px-5 py-2.5 text-sm font-bold text-white shadow transition hover:opacity-90 disabled:opacity-60"
+                      >
+                        {isSavingFeeSettings ? 'Saving…' : 'Save changes'}
+                      </button>
+                      <p className="text-xs text-[var(--svs-muted)]">
+                        Currently active: <strong className="text-[var(--svs-text)]">{platformSettings.seller_fee_enabled ? `${platformSettings.seller_fee_percent}% seller fee` : 'Seller fee OFF'}</strong>
+                        {' · '}
+                        Promo <strong className="text-[var(--svs-text)]">{platformSettings.seller_promo_enabled ? `ON (first ${platformSettings.seller_promo_qualifying_count} sellers, ${platformSettings.seller_promo_free_days} days free)` : 'OFF'}</strong>
+                      </p>
+                    </div>
+
+                    {feeSettingsMessage ? (
+                      <p className={`mt-3 rounded-lg border p-3 text-xs font-semibold ${feeSettingsMessageType === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-rose-200 bg-rose-50 text-rose-700'}`}>
+                        {feeSettingsMessage}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Promo slots used</p>
+                      <p className="mt-1 text-2xl font-extrabold text-[var(--svs-text)]">{sellerFeeStats.qualifiedCount} / {platformSettings.seller_promo_qualifying_count}</p>
+                    </div>
+                    <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Currently in free period</p>
+                      <p className="mt-1 text-2xl font-extrabold text-emerald-600">{sellerFeeStats.inFreePeriod.length}</p>
+                    </div>
+                    <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Free period completed</p>
+                      <p className="mt-1 text-2xl font-extrabold text-[var(--svs-text)]">{sellerFeeStats.completed.length}</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="mb-2 text-sm font-bold text-[var(--svs-text)]">Sellers currently in their free period</h3>
+                    <div className="overflow-x-auto rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)]">
+                      <table className="w-full text-left text-sm">
+                        <thead className="bg-[var(--svs-surface-soft)] text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                          <tr>
+                            <th className="px-4 py-3">Seller</th>
+                            <th className="px-4 py-3">Rank</th>
+                            <th className="px-4 py-3">Free period start</th>
+                            <th className="px-4 py-3">Free period expires</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[var(--svs-border)]">
+                          {sellerFeeStats.inFreePeriod.map((row) => (
+                            <tr key={row.id}>
+                              <td className="px-4 py-3 text-[var(--svs-text)]">{row.seller_email}</td>
+                              <td className="px-4 py-3 text-[var(--svs-muted)]">#{row.promo_rank}</td>
+                              <td className="px-4 py-3 text-[var(--svs-muted)]">{formatTimestampWithSeconds(row.free_period_starts_at)}</td>
+                              <td className="px-4 py-3 text-[var(--svs-muted)]">{formatTimestampWithSeconds(row.free_period_expires_at)}</td>
+                            </tr>
+                          ))}
+                          {sellerFeeStats.inFreePeriod.length === 0 ? (
+                            <tr><td colSpan={4} className="px-4 py-6 text-center text-[var(--svs-muted)]">No sellers currently in their free period.</td></tr>
+                          ) : null}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="mb-2 text-sm font-bold text-[var(--svs-text)]">Sellers who have completed their free period</h3>
+                    <div className="overflow-x-auto rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)]">
+                      <table className="w-full text-left text-sm">
+                        <thead className="bg-[var(--svs-surface-soft)] text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                          <tr>
+                            <th className="px-4 py-3">Seller</th>
+                            <th className="px-4 py-3">Rank</th>
+                            <th className="px-4 py-3">Free period start</th>
+                            <th className="px-4 py-3">Free period ended</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[var(--svs-border)]">
+                          {sellerFeeStats.completed.map((row) => (
+                            <tr key={row.id}>
+                              <td className="px-4 py-3 text-[var(--svs-text)]">{row.seller_email}</td>
+                              <td className="px-4 py-3 text-[var(--svs-muted)]">#{row.promo_rank}</td>
+                              <td className="px-4 py-3 text-[var(--svs-muted)]">{formatTimestampWithSeconds(row.free_period_starts_at)}</td>
+                              <td className="px-4 py-3 text-[var(--svs-muted)]">{formatTimestampWithSeconds(row.free_period_expires_at)}</td>
+                            </tr>
+                          ))}
+                          {sellerFeeStats.completed.length === 0 ? (
+                            <tr><td colSpan={4} className="px-4 py-6 text-center text-[var(--svs-muted)]">No sellers have completed their free period yet.</td></tr>
+                          ) : null}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
+            </section>
           ) : activeTab === 'reports' ? (
             <section className="space-y-6">
               <div className="relative max-w-sm">
@@ -30325,6 +30663,107 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                   placeholder="Search by email, value, action, or field..."
                   className="w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] py-2 pl-9 pr-3 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
                 />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between">
+                  <h3 className="mb-2 text-sm font-bold text-[var(--svs-text)]">Seller Platform Fees</h3>
+                  <button type="button" onClick={() => setActiveTab('sellerFees')} className="mb-2 text-xs font-semibold text-[var(--svs-primary)] hover:underline">Manage settings →</button>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-4">
+                  <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Total fees collected</p>
+                    <p className="mt-1 text-xl font-extrabold text-[var(--svs-text)]">{formatAmountInCurrency(sellerFeeStats.totalFeesCollected, 'USD')}</p>
+                  </div>
+                  <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Waived (intro promo)</p>
+                    <p className="mt-1 text-xl font-extrabold text-emerald-600">{formatAmountInCurrency(sellerFeeStats.totalWaived, 'USD')}</p>
+                  </div>
+                  <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Sellers used free period</p>
+                    <p className="mt-1 text-xl font-extrabold text-[var(--svs-text)]">{sellerFeeStats.qualifiedCount}</p>
+                  </div>
+                  <div className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Active seller fee</p>
+                    <p className="mt-1 text-xl font-extrabold text-[var(--svs-text)]">{platformSettings.seller_fee_enabled ? `${platformSettings.seller_fee_percent}%` : 'OFF'}</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                  <div>
+                    <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">Fees by seller</h4>
+                    <div className="max-h-64 overflow-y-auto overflow-x-auto rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)]">
+                      <table className="w-full text-left text-sm">
+                        <thead className="sticky top-0 bg-[var(--svs-surface-soft)] text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                          <tr><th className="px-4 py-2">Seller</th><th className="px-4 py-2">Fees paid</th></tr>
+                        </thead>
+                        <tbody className="divide-y divide-[var(--svs-border)]">
+                          {sellerFeeStats.bySeller.map(([email, total]) => (
+                            <tr key={email}><td className="px-4 py-2 text-[var(--svs-text)]">{email}</td><td className="px-4 py-2 font-semibold text-[var(--svs-text)]">{formatAmountInCurrency(total, 'USD')}</td></tr>
+                          ))}
+                          {sellerFeeStats.bySeller.length === 0 ? (
+                            <tr><td colSpan={2} className="px-4 py-6 text-center text-[var(--svs-muted)]">No seller fees recorded yet.</td></tr>
+                          ) : null}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">Fees by date</h4>
+                    <div className="max-h-64 overflow-y-auto overflow-x-auto rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)]">
+                      <table className="w-full text-left text-sm">
+                        <thead className="sticky top-0 bg-[var(--svs-surface-soft)] text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                          <tr><th className="px-4 py-2">Date</th><th className="px-4 py-2">Fees collected</th></tr>
+                        </thead>
+                        <tbody className="divide-y divide-[var(--svs-border)]">
+                          {sellerFeeStats.byDate.map(([date, total]) => (
+                            <tr key={date}><td className="px-4 py-2 text-[var(--svs-text)]">{date}</td><td className="px-4 py-2 font-semibold text-[var(--svs-text)]">{formatAmountInCurrency(total, 'USD')}</td></tr>
+                          ))}
+                          {sellerFeeStats.byDate.length === 0 ? (
+                            <tr><td colSpan={2} className="px-4 py-6 text-center text-[var(--svs-muted)]">No seller fees recorded yet.</td></tr>
+                          ) : null}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                <h4 className="mb-2 mt-4 text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">Fees by order</h4>
+                <div className="max-h-72 overflow-y-auto overflow-x-auto rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)]">
+                  <table className="w-full text-left text-sm">
+                    <thead className="sticky top-0 bg-[var(--svs-surface-soft)] text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                      <tr>
+                        <th className="px-4 py-2">Order</th>
+                        <th className="px-4 py-2">Seller</th>
+                        <th className="px-4 py-2">Order total</th>
+                        <th className="px-4 py-2">Fee</th>
+                        <th className="px-4 py-2">Payout</th>
+                        <th className="px-4 py-2">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--svs-border)]">
+                      {sellerFeeCalculations
+                        .flatMap((row) => (Array.isArray(row.breakdown) ? row.breakdown : []).map((entry) => ({ ...entry, orderKey: row.order_key, createdAt: row.created_at })))
+                        .filter((entry) => !reportSearch.trim() || `${entry.orderKey} ${entry.sellerEmail}`.toLowerCase().includes(reportSearch.trim().toLowerCase()))
+                        .slice(0, 200)
+                        .map((entry, index) => (
+                          <tr key={`${entry.orderKey}-${entry.sellerEmail}-${index}`}>
+                            <td className="px-4 py-2 font-mono text-xs text-[var(--svs-text)]">{entry.orderKey}</td>
+                            <td className="px-4 py-2 text-[var(--svs-text)]">{entry.sellerEmail}</td>
+                            <td className="px-4 py-2 text-[var(--svs-muted)]">{formatAmountInCurrency(entry.grossAmount, entry.currency || 'USD')}</td>
+                            <td className="px-4 py-2 text-[var(--svs-muted)]">
+                              {entry.promoApplied ? <span className="font-semibold text-emerald-600">Waived</span> : `${entry.feeRatePercent}% — ${formatAmountInCurrency(entry.feeAmount, entry.currency || 'USD')}`}
+                            </td>
+                            <td className="px-4 py-2 font-semibold text-[var(--svs-text)]">{formatAmountInCurrency(entry.payoutAmount, entry.currency || 'USD')}</td>
+                            <td className="px-4 py-2 text-[var(--svs-muted)]">{formatTimestampWithSeconds(entry.createdAt)}</td>
+                          </tr>
+                        ))}
+                      {sellerFeeCalculations.length === 0 ? (
+                        <tr><td colSpan={6} className="px-4 py-6 text-center text-[var(--svs-muted)]">No seller fees recorded yet.</td></tr>
+                      ) : null}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
               <div>
@@ -30673,6 +31112,7 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
   const [sellerOrders, setSellerOrders] = useState([]);
   const [hasLoadedSellerOrders, setHasLoadedSellerOrders] = useState(false);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+  const [feeCalculations, setFeeCalculations] = useState(new Map());
   const [orderLoadError, setOrderLoadError] = useState('');
   const [updatingOrderId, setUpdatingOrderId] = useState('');
   const [orderUpdateError, setOrderUpdateError] = useState('');
@@ -30843,6 +31283,21 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
     // Supabase realtime subscription keeps the view fresh.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, myListings.length, userEmail]);
+
+  // Real, backend-locked platform fee data for this seller's orders — fetched
+  // from its own ledger (never anything the client could have written), kept
+  // separate from the orders fetch above so a missing/failed lookup only
+  // leaves fee figures blank instead of breaking the order list.
+  useEffect(() => {
+    if (!isAuthenticated || !hasLoadedSellerOrders) return;
+    let isCancelled = false;
+    (async () => {
+      const calculations = await fetchSellerFeeCalculations(sellerOrders.map((order) => order.id));
+      if (isCancelled) return;
+      setFeeCalculations(calculations);
+    })();
+    return () => { isCancelled = true; };
+  }, [isAuthenticated, hasLoadedSellerOrders, userEmail, sellerOrders]);
 
   // Lookup a ticket by raw QR value or manual ticket number.
   // Returns ticket info for the preview card; does NOT claim the ticket.
@@ -31206,11 +31661,12 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
         ...order,
         sellerLineItems,
         sellerSubtotal,
+        sellerFeeEntry: getSellerFeeEntry(feeCalculations.get(order.id), userEmail),
       });
 
       return accumulator;
     }, []);
-  }, [hasLoadedSellerOrders, myListingIds, orders, sellerOrders, userEmail]);
+  }, [hasLoadedSellerOrders, myListingIds, orders, sellerOrders, userEmail, feeCalculations]);
 
   const totalStockUnits = useMemo(
     () => myListings.reduce((total, listing) => total + normalizeListingQuantity(listing.availableQuantity, 0), 0),
@@ -32136,6 +32592,29 @@ const SellerDashboardPage = ({ orders = [], onDeleteSellerItem, onUpdateSellerIt
                         );
                       })()}
 
+                      {order.sellerFeeEntry ? (
+                        <div className="mt-3 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[var(--svs-muted)]">Order total</span>
+                            <span className="font-semibold text-[var(--svs-text)]">{formatCheckoutAmount(order.sellerFeeEntry.grossAmount)}</span>
+                          </div>
+                          <div className="mt-1 flex items-center justify-between">
+                            <span className="text-[var(--svs-muted)]">
+                              {order.sellerFeeEntry.promoApplied
+                                ? 'Platform fee — Introductory offer'
+                                : `Platform fee (${Number(order.sellerFeeEntry.feeRatePercent)}%)`}
+                            </span>
+                            <span className={order.sellerFeeEntry.feeAmount > 0 ? 'font-semibold text-rose-600' : 'font-semibold text-emerald-600'}>
+                              {order.sellerFeeEntry.feeAmount > 0 ? `− ${formatCheckoutAmount(order.sellerFeeEntry.feeAmount)}` : formatCheckoutAmount(0)}
+                            </span>
+                          </div>
+                          <div className="mt-1 flex items-center justify-between border-t border-[var(--svs-border)] pt-1">
+                            <span className="font-bold text-[var(--svs-text)]">Your payout</span>
+                            <span className="font-bold text-emerald-700">{formatCheckoutAmount(order.sellerFeeEntry.payoutAmount)}</span>
+                          </div>
+                        </div>
+                      ) : null}
+
                       <div className="mt-3 rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-3">
                         <p className="text-xs font-semibold uppercase tracking-wide text-[var(--svs-muted)]">Your items in this order</p>
                         <div className="mt-2 space-y-3">
@@ -32896,7 +33375,6 @@ const SellerAnalyticsPage = ({ orders: buyerOrders = [] }) => {
 //  table yet. The admin team processes them manually for now; a future
 //  release wires this to a `seller_payout_requests` table + admin queue.
 // ────────────────────────────────────────────────────────────────────
-const PAYOUT_PLATFORM_FEE_RATE = 0.08;
 const PAYOUT_REQUESTS_STORAGE_KEY = 'svs-seller-payout-requests';
 
 const getStoredPayoutRequests = (sellerEmail) => {
@@ -34000,22 +34478,37 @@ const SellerPayoutsPage = ({ orders = [] }) => {
   const [submitMessage, setSubmitMessage] = useState('');
   const [submitMessageType, setSubmitMessageType] = useState('idle');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [feeCalculations, setFeeCalculations] = useState(new Map());
+  const [promoStatus, setPromoStatus] = useState(null);
+  const [platformSettings, setPlatformSettings] = useState(DEFAULT_PLATFORM_SETTINGS);
 
   useEffect(() => {
     if (!isAuthenticated || !hasSupabaseEnv || !supabase) return;
     let isCancelled = false;
     const load = async () => {
       setIsLoading(true);
-      const [listingsRes, ordersRes, profileRes] = await Promise.all([
+      const [listingsRes, ordersRes, profileRes, settings, promo] = await Promise.all([
         supabase.from(SELLER_ITEMS_TABLE).select('*').eq('seller_email', userEmail),
         supabase.from(ORDERS_TABLE).select('user_email, order_key, reference, order_created_at, customer, items, currency, total, status').order('order_created_at', { ascending: false }),
         supabase.from('seller_profiles').select('payout_account_holder, payout_bank_name, payout_account_number, payout_branch_code').eq('email', userEmail).maybeSingle(),
+        fetchPlatformSettings(),
+        fetchSellerFeePromoStatus(userEmail),
       ]);
       if (isCancelled) return;
+      const mappedOrders = ((ordersRes.data) || []).map(mapOrderRecord);
       setMyListings(((listingsRes.data) || []).map(mapSellerItemRecord));
-      setSellerOrders(((ordersRes.data) || []).map(mapOrderRecord));
+      setSellerOrders(mappedOrders);
       setProfile(profileRes.data || null);
+      setPlatformSettings(settings);
+      setPromoStatus(promo);
       setIsLoading(false);
+
+      // Fee data is fetched from its own ledger table (never from anything
+      // the client could have written) so a missing/failed lookup just
+      // leaves this seller's fee display empty rather than breaking the
+      // order list above.
+      const calculations = await fetchSellerFeeCalculations(mappedOrders.map((order) => order.id));
+      if (!isCancelled) setFeeCalculations(calculations);
     };
     load();
     return () => { isCancelled = true; };
@@ -34032,18 +34525,34 @@ const SellerPayoutsPage = ({ orders = [] }) => {
       const myItems = (order.items || []).filter((item) => doesLineItemBelongToSeller(item, userEmail, myListingIds));
       // Cart items store numeric price as `unitPrice`; guard with `price` fallback for older orders.
       const sellerSubtotal = myItems.reduce((sum, item) => sum + (Number(item.unitPrice ?? item.price) || 0) * Math.max(Number(item.quantity) || 1, 1), 0);
-      return { ...order, sellerSubtotal };
+      // The real, backend-locked fee for this seller on this order — falls
+      // back to null (shown as "pending") for orders placed before this
+      // migration was applied, or while the ledger lookup is still loading.
+      const feeEntry = getSellerFeeEntry(feeCalculations.get(order.id), userEmail);
+      return { ...order, sellerSubtotal, sellerFeeEntry: feeEntry };
     });
-  }, [myListings, sellerOrders, orders, userEmail]);
+  }, [myListings, sellerOrders, orders, userEmail, feeCalculations]);
 
-  const grossEarnings = useMemo(
-    () => visibleOrders
-      .filter((order) => getAutoOrderStatus(order) === 'Delivered')
-      .reduce((sum, order) => sum + (Number(order.sellerSubtotal) || 0), 0),
+  const deliveredOrders = useMemo(
+    () => visibleOrders.filter((order) => getAutoOrderStatus(order) === 'Delivered'),
     [visibleOrders],
   );
 
-  const platformFees = useMemo(() => grossEarnings * PAYOUT_PLATFORM_FEE_RATE, [grossEarnings]);
+  const grossEarnings = useMemo(
+    () => deliveredOrders.reduce((sum, order) => sum + (Number(order.sellerSubtotal) || 0), 0),
+    [deliveredOrders],
+  );
+
+  // Real fees, summed from each order's backend-locked breakdown (falls back
+  // to the current standard rate only for pre-migration orders that have no
+  // locked entry at all, so historical balances don't silently read as R0).
+  const platformFees = useMemo(
+    () => deliveredOrders.reduce((sum, order) => {
+      if (order.sellerFeeEntry) return sum + (Number(order.sellerFeeEntry.feeAmount) || 0);
+      return sum + (Number(order.sellerSubtotal) || 0) * (Number(platformSettings.seller_fee_percent) || 0) / 100;
+    }, 0),
+    [deliveredOrders, platformSettings],
+  );
   const netEarnings = useMemo(() => grossEarnings - platformFees, [grossEarnings, platformFees]);
 
   const totalRequested = useMemo(
@@ -34171,7 +34680,7 @@ const SellerPayoutsPage = ({ orders = [] }) => {
                 <dd className="font-semibold">{formatSellerAmount(grossEarnings, sellerCurrency)}</dd>
               </div>
               <div className="flex items-center justify-between">
-                <dt className="text-white/70">Platform fee ({Math.round(PAYOUT_PLATFORM_FEE_RATE * 100)}%)</dt>
+                <dt className="text-white/70">Platform fees</dt>
                 <dd className="font-semibold">− {formatSellerAmount(platformFees, sellerCurrency)}</dd>
               </div>
               <div className="flex items-center justify-between">
@@ -34199,6 +34708,35 @@ const SellerPayoutsPage = ({ orders = [] }) => {
                 <p className="font-semibold">No payout account on file.</p>
                 <button type="button" onClick={() => navigate('/sell/onboarding')} className="mt-2 inline-flex items-center gap-1 font-bold text-amber-900 underline">Add bank details</button>
               </div>
+            )}
+          </div>
+
+          {/* Platform fee status */}
+          <div className="mt-4 rounded-2xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+            <p className="text-xs font-bold uppercase tracking-wider text-[var(--svs-muted)]">Platform fee</p>
+            {promoStatus?.qualified && promoStatus.free_period_expires_at && new Date(promoStatus.free_period_expires_at) > new Date() ? (
+              <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
+                <p className="font-bold">🎉 Introductory offer active — 0% platform fee</p>
+                <p className="mt-1">
+                  Started {new Date(promoStatus.free_period_starts_at).toLocaleDateString()} · Ends {new Date(promoStatus.free_period_expires_at).toLocaleDateString()}
+                </p>
+                <p className="mt-1 text-emerald-700">
+                  After that, the standard {Number(platformSettings.seller_fee_percent)}% fee applies automatically.
+                </p>
+              </div>
+            ) : promoStatus?.qualified ? (
+              <div className="mt-3 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] p-3 text-xs text-[var(--svs-text)]">
+                <p className="font-semibold">Introductory offer completed</p>
+                <p className="mt-1 text-[var(--svs-muted)]">
+                  Your free first month ran {new Date(promoStatus.free_period_starts_at).toLocaleDateString()} – {new Date(promoStatus.free_period_expires_at).toLocaleDateString()}. The standard {Number(platformSettings.seller_fee_percent)}% fee now applies to your sales.
+                </p>
+              </div>
+            ) : platformSettings.seller_fee_enabled ? (
+              <p className="mt-3 text-sm text-[var(--svs-text)]">
+                A {Number(platformSettings.seller_fee_percent)}% platform fee applies per completed order. No monthly subscription — you only pay when you sell.
+              </p>
+            ) : (
+              <p className="mt-3 text-sm text-[var(--svs-text)]">Platform fees are currently switched off — you keep 100% of every sale.</p>
             )}
           </div>
         </section>
@@ -57391,6 +57929,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/help" element={<SimpleContentPage title={t('footer.help')} description={t('simplePages.help')} />} />
     <Route path="/contact" element={<SimpleContentPage title={t('footer.contact')} description={t('simplePages.contact')} />} />
     <Route path="/terms" element={<TermsOfServicePage />} />
+    <Route path="/sell/terms" element={<SellerTermsPage />} />
     <Route path="/privacy" element={<PrivacyPolicyPage />} />
     <Route path="/refunds" element={<RefundPolicyPage />} />
     <Route path="/refund-policy" element={<Navigate to="/refunds" replace />} />
@@ -58827,6 +59366,36 @@ const App = () => {
       if (orderSaveError) {
         setActionNotice(`Could not save your order record: ${orderSaveError.message || 'please try again.'}`);
         return null;
+      }
+
+      // Locks in the seller platform fee (rate, promo eligibility, payout)
+      // for this order — computed entirely server-side and permanent from
+      // this point on (see compute_and_lock_seller_fees in
+      // supabase/seller-platform-fee.sql). Best-effort: a failure here must
+      // never undo an order that was already saved successfully — the
+      // seller's payout page will simply show no fee breakdown for this
+      // order until it's reconciled.
+      const feeItemsRequest = orderItems
+        .filter((item) => item.sellerEmail && getSellerListingIdFromItemKey(item.sku || item.id))
+        .map((item) => ({
+          seller_email: item.sellerEmail,
+          amount: (Number(item.unitPrice) || 0) * Math.max(Number(item.quantity) || 1, 1),
+          currency: order.currency,
+        }));
+
+      if (feeItemsRequest.length) {
+        try {
+          const { data: feeResult, error: feeError } = await supabase.rpc('compute_and_lock_seller_fees', {
+            p_order_key: order.id,
+            p_user_email: orderOwnerEmail,
+            p_items: feeItemsRequest,
+          });
+          if (!feeError && feeResult?.breakdown) {
+            order.sellerFeeBreakdown = feeResult.breakdown;
+          }
+        } catch (_feeCallError) {
+          // Non-fatal — see comment above.
+        }
       }
     }
 

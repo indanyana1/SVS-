@@ -461,6 +461,8 @@ const SellerOnboardingPage = () => {
   const [messageType, setMessageType] = useState('idle');
   const [adminMessage, setAdminMessage] = useState('');
   const [flaggedSections, setFlaggedSections] = useState([]);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsError, setTermsError] = useState('');
 
   // A returning seller (resubmitting after a rejection or a changes-requested
   // note) shouldn't have to retype everything — pre-fill from their existing
@@ -564,6 +566,13 @@ const SellerOnboardingPage = () => {
       scrollToFirstError(errors);
       return;
     }
+
+    if (!termsAccepted) {
+      setTermsError('You must read and agree to the Seller Terms & Conditions to continue.');
+      document.getElementById('ob-terms-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    setTermsError('');
 
     if (!hasSupabaseEnv || !supabase) {
       setMessage(
@@ -757,6 +766,18 @@ const SellerOnboardingPage = () => {
       setMessageType('error');
       setIsSubmitting(false);
       return;
+    }
+
+    // Best-effort, separate write so an older database (before
+    // supabase/seller-terms-acceptance.sql has been applied) never breaks
+    // the onboarding submission above — this is just the audit timestamp.
+    try {
+      await supabase
+        .from('seller_profiles')
+        .update({ terms_accepted_at: new Date().toISOString() })
+        .eq('user_email', context.email.trim().toLowerCase());
+    } catch (_termsAcceptError) {
+      // Non-fatal — see comment above.
     }
 
     if (!data || !hasCompleteSellerProfile(payload)) {
@@ -1017,6 +1038,27 @@ const SellerOnboardingPage = () => {
                 <input id="ob-returnContactPhone" name="returnContactPhone" value={formData.returnContactPhone} onChange={handleChange} placeholder="Returns contact phone" className={inputClass('returnContactPhone')} aria-invalid={Boolean(fieldErrors.returnContactPhone)} aria-describedby={fieldErrors.returnContactPhone ? 'err-returnContactPhone' : undefined} />
                 <FieldError id="err-returnContactPhone" message={fieldErrors.returnContactPhone} />
               </div>
+            </div>
+
+            <div id="ob-terms-section" tabIndex={-1} className={`rounded-xl border p-4 ${termsError ? 'border-red-400 bg-red-50' : 'border-[var(--svs-border)] bg-[var(--svs-surface-soft)]'}`}>
+              <label className="flex items-start gap-3 text-sm text-[var(--svs-text)]">
+                <input
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={(event) => { setTermsAccepted(event.target.checked); if (event.target.checked) setTermsError(''); }}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-[var(--svs-primary)] focus:ring-[var(--svs-primary)]"
+                  aria-invalid={Boolean(termsError)}
+                  aria-describedby={termsError ? 'err-terms' : undefined}
+                />
+                <span>
+                  I have read and agree to the{' '}
+                  <Link to="/sell/terms" target="_blank" rel="noopener noreferrer" className="font-bold text-[var(--svs-primary)] hover:underline">
+                    Seller Terms &amp; Conditions
+                  </Link>
+                  , including the platform fee structure and the introductory free-month offer terms.
+                </span>
+              </label>
+              <FieldError id="err-terms" message={termsError} />
             </div>
 
             <button

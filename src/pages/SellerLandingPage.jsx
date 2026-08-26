@@ -176,6 +176,14 @@ const SellerLandingPage = () => {
 							Sign in to Seller Central
 						</Link>
 					</div>
+					<p className="mt-5 text-xs text-[var(--svs-muted)]">
+						No monthly subscription — you only pay a platform fee when you make a sale, and your first month is free
+						for our first 100 sellers. Read the full{' '}
+						<Link to="/sell/terms" className="font-semibold text-[var(--svs-primary)] hover:underline">
+							Seller Terms &amp; Conditions
+						</Link>
+						{' '}before you register.
+					</p>
 				</div>
 			</section>
 		</StandalonePageShell>

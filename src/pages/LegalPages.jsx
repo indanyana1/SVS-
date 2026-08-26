@@ -551,3 +551,126 @@ export const CookiePolicyPage = () => {
     </PageWrap>
   );
 };
+
+// ─────────────────────────────────────────────────────────────────────
+//  Seller Terms & Conditions
+//  Read alongside the general Terms of Service (which still governs the
+//  Platform as a whole) — this page spells out, specifically, what a
+//  seller signs up for: the marketplace conduct rules, and exactly how
+//  the platform fee and the first-100-sellers introductory promotion
+//  work. Sellers must acknowledge this page before their onboarding
+//  application can be submitted (see SellerOnboardingPage.jsx).
+// ─────────────────────────────────────────────────────────────────────
+export const SellerTermsPage = () => {
+  const toc = [
+    { id: 'seller-terms-acceptance', title: '1. Acceptance' },
+    { id: 'seller-terms-eligibility', title: '2. Becoming a seller' },
+    { id: 'seller-terms-conduct', title: '3. Listings & conduct' },
+    { id: 'seller-terms-fees', title: '4. Seller platform fees' },
+    { id: 'seller-terms-promo', title: '5. Introductory free-month offer' },
+    { id: 'seller-terms-payouts', title: '6. Payouts' },
+    { id: 'seller-terms-suspension', title: '7. Suspension & termination' },
+    { id: 'seller-terms-changes', title: '8. Changes to these terms' },
+    { id: 'seller-terms-contact', title: '9. Contact' },
+  ];
+  return (
+    <PageWrap
+      title="Seller Terms & Conditions"
+      subtitle={`Please read this before you register as a ${COMPANY_NAME} seller. It explains your obligations as a seller and, specifically, how our platform fee and introductory offer work.`}
+    >
+      <TocBlock items={toc} />
+
+      <Section id="seller-terms-acceptance" title="1. Acceptance">
+        <p>
+          These Seller Terms &amp; Conditions apply in addition to, not instead of, the general{' '}
+          <a className="text-[var(--svs-primary)] underline" href="/terms">Terms of Service</a>. By submitting a
+          seller application you confirm that you have read, understood and agreed to both.
+        </p>
+      </Section>
+
+      <Section id="seller-terms-eligibility" title="2. Becoming a seller">
+        <ListBlock
+          items={[
+            'You must complete seller verification (business details, identity document, and a live selfie) before your application is reviewed.',
+            'Applications are reviewed by our team and may be approved, rejected, or sent back requesting changes.',
+            'You must keep your business, contact and payout details accurate and up to date at all times.',
+            'One seller account per person or business — duplicate accounts created to re-qualify for the introductory offer are not permitted (see Section 5).',
+          ]}
+        />
+      </Section>
+
+      <Section id="seller-terms-conduct" title="3. Listings & conduct">
+        <ListBlock
+          items={[
+            'You may only list items you own or are authorised to sell, priced and described accurately.',
+            'You agree to fulfil confirmed orders promptly and to keep buyers updated via the in-app chat and order status.',
+            'You are solely responsible for tax, licensing, customs, and any regulatory obligations relating to your sales.',
+            'We may delist listings or restrict your account if you violate these terms or applicable law.',
+          ]}
+        />
+      </Section>
+
+      <Section id="seller-terms-fees" title="4. Seller platform fees">
+        <p>
+          There is no monthly subscription or listing fee to sell on {COMPANY_NAME} — we only earn a fee when you make
+          a sale.
+        </p>
+        <ListBlock
+          items={[
+            'A platform fee is charged as a percentage of the order amount on each completed order. The current rate is shown in your Seller Dashboard and Payouts page — as of this policy, the standard rate is 7%.',
+            'The fee is calculated automatically and shown on every order alongside your payout, e.g. an order of R1,870.00 at 7% shows a R130.90 fee and a R1,739.10 payout.',
+            'If we change the platform fee percentage, the new rate applies only to orders placed after the change. Orders already completed keep the fee rate that applied at the time — fees are never changed retroactively.',
+            'A separate, unrelated buyer service fee (currently 3%) is charged to buyers at checkout and never affects your payout.',
+          ]}
+        />
+      </Section>
+
+      <Section id="seller-terms-promo" title="5. Introductory free-month offer">
+        <p>
+          As an introductory offer, a limited number of the first sellers to start selling on {COMPANY_NAME} (currently
+          the first 100, shown in your Payouts page) pay a 0% platform fee for their first month of selling.
+        </p>
+        <ListBlock
+          items={[
+            'Your free period starts on the date of your first successful, completed sale — not the date you registered or were approved.',
+            'It automatically expires exactly one month (the exact number of days is shown in your Payouts page) after that first sale.',
+            'The offer is granted automatically if you qualify, and is shown in your Payouts page with its start and expiry date.',
+            'Each seller may receive this offer once only. It cannot be re-triggered by creating a new account, listing under a different email, or any other method.',
+            'Once your free period ends, the standard platform fee (Section 4) applies automatically to your future orders — no action is required from you.',
+            'This offer may be changed, limited, or withdrawn for sellers who have not yet qualified at our discretion; it does not affect a free period already granted.',
+          ]}
+        />
+      </Section>
+
+      <Section id="seller-terms-payouts" title="6. Payouts">
+        <p>
+          Your payout for each order is the order amount minus the platform fee that applied to that order (or the
+          full amount during an active free period). Payouts are requested from your Payouts page and disbursed to
+          your registered bank account, subject to verification and anti-fraud checks.
+        </p>
+      </Section>
+
+      <Section id="seller-terms-suspension" title="7. Suspension & termination">
+        <p>
+          We may suspend or terminate your seller account at any time, with or without notice, if we reasonably
+          believe you have breached these terms, the general Terms of Service, or applicable law. Termination does
+          not affect fees already charged or payouts already owed on completed orders.
+        </p>
+      </Section>
+
+      <Section id="seller-terms-changes" title="8. Changes to these terms">
+        <p>
+          We may update these Seller Terms &amp; Conditions from time to time. Material changes — including changes to
+          the platform fee or the introductory offer — will be notified by email or an in-app notice, and (per
+          Section 4) never apply retroactively to orders you have already completed.
+        </p>
+      </Section>
+
+      <Section id="seller-terms-contact" title="9. Contact">
+        <p>
+          Questions about selling on {COMPANY_NAME}? Email us at <a className="text-[var(--svs-primary)] underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> or <a className="font-semibold text-[var(--svs-primary)] underline" href="/support/chat">chat with the Biznisdil Agent</a>.
+        </p>
+      </Section>
+    </PageWrap>
+  );
+};
