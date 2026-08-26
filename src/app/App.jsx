@@ -44654,14 +44654,18 @@ const buildBodyWithReply = (replyTo, innerBody) => {
 // Edit / delete markers. Encoded inside the message body so the existing
 // `support_chat_messages` schema (single `body` column) stays unchanged.
 //   - A deleted-for-everyone message has body === DELETED_TOKEN.
-//   - An edited message is prefixed with EDITED_PREFIX (stripped at render).
+//   - An edited message is prefixed with `[svs-edited:<ISO timestamp>]`
+//     (stripped at render) so both the "edited" flag and *when* it was
+//     edited survive without a schema change.
 const DELETED_TOKEN = '[svs-deleted]';
-const EDITED_PREFIX = '[svs-edited]';
+const EDITED_MARKER_RE = /^\[svs-edited:([^\]]*)\]/;
+const buildEditedMarker = (editedAtIso) => `[svs-edited:${editedAtIso}]`;
 const isDeletedBody = (rawBody) => String(rawBody || '').trim() === DELETED_TOKEN;
 const extractEditedMeta = (rawBody) => {
   const raw = String(rawBody || '');
-  if (raw.startsWith(EDITED_PREFIX)) return { edited: true, body: raw.slice(EDITED_PREFIX.length) };
-  return { edited: false, body: raw };
+  const match = raw.match(EDITED_MARKER_RE);
+  if (match) return { edited: true, editedAt: match[1] || null, body: raw.slice(match[0].length) };
+  return { edited: false, editedAt: null, body: raw };
 };
 
 // `loadRemoteChat` fetches happen concurrently from several independent
@@ -45028,6 +45032,8 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
   const [messages, setMessages] = useState(() => getStoredSupportChatMessages(currentUserEmail));
   const messagesRef = useRef(messages);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
+  const threadsRef = useRef(threads);
+  useEffect(() => { threadsRef.current = threads; }, [threads]);
   // `threads`/`messages` are already correctly seeded for the current user by
   // the useState initializers above, so the sync effect below only needs to
   // re-read storage when currentUserEmail actually changes (e.g. guest ->
@@ -46465,6 +46471,13 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     }
 
     if (getAuthState() && currentUserEmail && hasSupabaseEnv && supabase) {
+      // Guards against a refetch (realtime, or this call's own trailing
+      // loadRemoteChat below) landing while this insert is still in
+      // flight and clobbering a since-applied edit — see the matching
+      // guard/comment in updateMessageBodyRemote for the full race this
+      // closes: without it, editing a message within moments of sending it
+      // can silently lose the edit.
+      markMessageWritePending(nextMessage.id);
       supabase
         .from(SUPPORT_CHAT_THREADS_TABLE)
         .upsert([toSupportChatThreadRecord(updatedThread)], { onConflict: 'thread_key' })
@@ -46473,8 +46486,13 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
             .from(SUPPORT_CHAT_MESSAGES_TABLE)
             .upsert([toSupportChatMessageRecord(nextMessage)], { onConflict: 'message_key' });
         })
-        .then(() => {
+        .then((result) => {
+          clearMessageWritePending(nextMessage.id);
           loadRemoteChat();
+          return result;
+        })
+        .catch(() => {
+          clearMessageWritePending(nextMessage.id);
         });
     }
 
@@ -46643,7 +46661,52 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
       .from(SUPPORT_CHAT_MESSAGES_TABLE)
       .update({ body: nextBody })
       .eq('message_key', messageId)
-      .then((result) => { clearMessageWritePending(messageId); return result; });
+      .select('message_key')
+      .then((result) => {
+        // A brand-new message can still be mid-flight from its own initial
+        // send (handleSendMessage's INSERT is a separate, independently
+        // timed network call fired the moment it was typed) when the user
+        // edits it — the row this UPDATE is looking for doesn't exist in
+        // the database yet. Postgrest doesn't treat "matched zero rows" as
+        // an error, so that update silently no-ops: the edit is never
+        // persisted, even though it looked successful. The next unrelated
+        // refetch then reads the still-original row and reverts the
+        // sender's own optimistic edit back to its pre-edit text, and the
+        // recipient never sees the edit at all, since it was never written
+        // anywhere. `.select()` above lets us see which rows actually
+        // changed, so on a zero-row match we fall back to inserting the row
+        // ourselves (with the edited body already applied) instead of
+        // silently losing the edit.
+        if (!result.error && (!result.data || result.data.length === 0)) {
+          return supabase
+            .from(SUPPORT_CHAT_MESSAGES_TABLE)
+            .upsert([toSupportChatMessageRecord(updatedRecord)], { onConflict: 'message_key' })
+            .then(async (fallbackResult) => {
+              // For a message in a thread that was *also* just created,
+              // the thread row can be in that same still-in-flight state
+              // (createThread's own upsert is a separate, independently
+              // timed call) — the message insert then fails on the
+              // thread_key foreign key. Ensure the parent thread exists
+              // from our own local copy of it and retry once rather than
+              // give up and lose the edit.
+              if (fallbackResult.error?.code === '23503') {
+                const parentThread = threadsRef.current.find((thread) => thread.id === updatedRecord.threadId);
+                if (parentThread) {
+                  await supabase
+                    .from(SUPPORT_CHAT_THREADS_TABLE)
+                    .upsert([toSupportChatThreadRecord(parentThread)], { onConflict: 'thread_key' });
+                  fallbackResult = await supabase
+                    .from(SUPPORT_CHAT_MESSAGES_TABLE)
+                    .upsert([toSupportChatMessageRecord(updatedRecord)], { onConflict: 'message_key' });
+                }
+              }
+              clearMessageWritePending(messageId);
+              return fallbackResult;
+            });
+        }
+        clearMessageWritePending(messageId);
+        return result;
+      });
 
     Promise.all([threadWrite, messageWrite])
       .then(([threadResult, messageResult]) => {
@@ -46857,7 +46920,7 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
     const rebuiltInner = replyMeta.replyTo
       ? buildBodyWithReply(replyMeta.replyTo, nextText)
       : nextText;
-    const nextBody = `${EDITED_PREFIX}${rebuiltInner}`;
+    const nextBody = `${buildEditedMarker(new Date().toISOString())}${rebuiltInner}`;
     setEditingMessageId('');
     setEditingDraft('');
     updateMessageBodyRemote(message.id, nextBody);
@@ -49047,7 +49110,11 @@ const SupportChatPage = ({ orders = [], onPushNotificationToUser, onDismissChatN
                           )}
                           <p className={`mt-1 flex items-center gap-1 text-[11px] ${mine ? 'flex-row-reverse text-cyan-100' : 'text-slate-400'}`}>
                             <span>{formatTimestampWithSeconds(message.createdAt || Date.now())}</span>
-                            {wasEdited ? <span className="italic opacity-90">· edited</span> : null}
+                            {wasEdited ? (
+                              <span className="italic opacity-90" title={editedMeta.editedAt ? `Edited ${formatTimestampWithSeconds(editedMeta.editedAt)}` : 'Edited'}>
+                                · edited{editedMeta.editedAt ? ` ${formatTimestampWithSeconds(editedMeta.editedAt)}` : ''}
+                              </span>
+                            ) : null}
                             {message.metadata?.forwarded ? (
                               <span className="inline-flex items-center gap-0.5 italic opacity-90">
                                 <Forward className="h-3 w-3" aria-hidden="true" /> forwarded
