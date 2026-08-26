@@ -748,6 +748,22 @@ const MARKET_FIELD_SPEC = {
       { name: 'highlights', label: 'Highlights (one per line)', type: 'textarea', placeholder: 'Freshly harvested daily\nNo preservatives or chemicals\nBulk discounts available', helper: 'Optional. Leave blank to use sensible defaults for your category.' },
     ],
   },
+  // Aligned with PetCareSuppliesPage filter facets: item.petType, item.category
+  // and item.brand drive the sidebar filters; lifeStage, flavor, weight and
+  // material populate the Product Details table on the listing's detail page.
+  petCareSupplies: {
+    title: 'Pet Care & Supplies Listing Details',
+    helper: 'Pick the pet type, category and brand so buyers can filter, then add life stage, flavour, pack size and material for the product details.',
+    fields: [
+      { name: 'petType', label: 'Pet type', type: 'select', required: true, options: ['Dog', 'Cat', 'Bird', 'Fish & Aquarium', 'Small Pet (Rabbit, Hamster, Guinea Pig)', 'Reptile', 'All Pets', 'Other'] },
+      { name: 'category', label: 'Category', type: 'select', required: true, options: ['Food & Treats', 'Toys', 'Grooming & Hygiene', 'Health & Wellness', 'Bedding & Housing', 'Collars, Leashes & Harnesses', 'Carriers & Travel', 'Aquarium & Tank Supplies', 'Training & Behaviour', 'Other'] },
+      { name: 'brand', label: 'Brand', type: 'text', required: true, placeholder: 'e.g. Royal Canin, Whiskas, KONG' },
+      { name: 'lifeStage', label: 'Life stage', type: 'select', options: ['Puppy / Kitten', 'Adult', 'Senior', 'All Life Stages'] },
+      { name: 'flavor', label: 'Flavour', type: 'text', placeholder: 'e.g. Chicken, Salmon, Beef' },
+      { name: 'weight', label: 'Pack size / Weight', type: 'text', placeholder: 'e.g. 2kg, 500ml, 10L' },
+      { name: 'material', label: 'Material', type: 'select', options: ['Rubber', 'Rope', 'Plush', 'Nylon', 'Stainless Steel', 'Plastic', 'Fabric', 'Other'] },
+    ],
+  },
 };
 
 // All distinct field names across the spec, used to seed empty form state
@@ -939,6 +955,7 @@ const marketLinks = [
   { labelKey: 'markets.stationery', href: '/stationery-office' },
   { labelKey: 'markets.safety', href: '/safety' },
   { labelKey: 'markets.traditionalMedicines', href: '/traditional-medicines-herbs' },
+  { labelKey: 'markets.petCareSupplies', href: '/pet-care-supplies' },
 ];
 
 // Short marketing taglines shown beneath the market name on the Markets page cards.
@@ -966,6 +983,7 @@ const marketShortDescriptions = {
   '/stationery-office': 'Office, school & creative supplies',
   '/safety': 'Toys, games & kids essentials',
   '/traditional-medicines-herbs': 'Authentic herbs & natural remedies',
+  '/pet-care-supplies': 'Food, toys & everyday essentials for your pets',
 };
 
 const sellerMarketOptions = [
@@ -991,6 +1009,7 @@ const sellerMarketOptions = [
   { key: 'stationery', labelKey: 'markets.stationery', route: '/stationery-office' },
   { key: 'toysKids', labelKey: 'markets.safety', route: '/safety' },
   { key: 'traditionalMedicines', labelKey: 'markets.traditionalMedicines', route: '/traditional-medicines-herbs' },
+  { key: 'petCareSupplies', labelKey: 'markets.petCareSupplies', route: '/pet-care-supplies' },
   { key: 'hardwareSoftware', labelKey: 'markets.hardwareSoftware', route: '/hardware-software', hidden: true },
 ];
 
@@ -2024,6 +2043,13 @@ const featureSlides = [
     subtitle: 'Toys, games & kids essentials',
     route: '/safety',
   },
+  {
+    id: 'feat-24',
+    image: 'https://images.pexels.com/photos/1490908/pexels-photo-1490908.jpeg?auto=compress&cs=tinysrgb&w=1600',
+    title: 'Pet Care & Supplies',
+    subtitle: 'Food, toys & everyday essentials for your pets',
+    route: '/pet-care-supplies',
+  },
 ];
 
 const groceriesCategoryCards = [
@@ -2604,6 +2630,114 @@ const buildStationeryDetailPayload = (item) => {
 
   return { productOverview, keyHighlights, technicalSpecs, specsTitle: 'Product Details' };
 };
+
+// Curated catalogue for the Pet Care & Supplies market. A couple of listings
+// (pc1, pc3, pc5) demonstrate per-size pricing via sizeOptions + sizePrices —
+// the same generic mechanism seller listings use (see getItemSizePriceMap) —
+// so a single product can be sold at different prices per pack size/variant.
+const petCareItems = [
+  {
+    id: 'pc1',
+    title: 'Royal Canin Adult Dog Dry Food',
+    petType: 'Dog',
+    category: 'Food & Treats',
+    brand: 'Royal Canin',
+    lifeStage: 'Adult',
+    flavor: 'Chicken',
+    description: 'Complete balanced nutrition formulated for adult dogs, supporting healthy digestion and a shiny coat.',
+    sizeOptions: ['2kg', '5kg', '10kg'],
+    sizePrices: { '2kg': '24.99', '5kg': '54.99', '10kg': '99.99' },
+    price: '24.99',
+    image: 'https://images.pexels.com/photos/1490908/pexels-photo-1490908.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'pc2',
+    title: 'Whiskas Adult Cat Food Pouches',
+    petType: 'Cat',
+    category: 'Food & Treats',
+    brand: 'Whiskas',
+    lifeStage: 'Adult',
+    flavor: 'Tuna',
+    weight: '12 x 85g pouches',
+    description: 'Tasty, nutritionally complete wet food pouches for adult cats, packed with real tuna.',
+    price: '18.99',
+    image: 'https://images.pexels.com/photos/209037/pexels-photo-209037.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'pc3',
+    title: 'KONG Classic Dog Chew Toy',
+    petType: 'Dog',
+    category: 'Toys',
+    brand: 'KONG',
+    material: 'Rubber',
+    description: 'Durable natural rubber chew toy that bounces unpredictably — great for fetch and treat-stuffing.',
+    sizeOptions: ['Small', 'Medium', 'Large'],
+    sizePrices: { Small: '9.99', Medium: '13.99', Large: '17.99' },
+    price: '9.99',
+    image: 'https://images.pexels.com/photos/4588001/pexels-photo-4588001.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'pc4',
+    title: 'Furminator Deshedding Grooming Brush',
+    petType: 'Dog',
+    category: 'Grooming & Hygiene',
+    brand: 'Furminator',
+    weight: 'One size',
+    description: 'Reduces loose undercoat shedding by up to 90% with a stainless-steel deshedding edge.',
+    price: '34.99',
+    image: 'https://images.pexels.com/photos/4587998/pexels-photo-4587998.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'pc5',
+    title: 'Premium Adjustable Pet Collar & Leash Set',
+    petType: 'Dog',
+    category: 'Collars, Leashes & Harnesses',
+    brand: 'Biznisdil Essentials',
+    material: 'Nylon',
+    description: 'Adjustable, reflective collar and matching leash set built for daily walks in any light.',
+    sizeOptions: ['Small', 'Medium', 'Large'],
+    sizePrices: { Small: '12.99', Medium: '14.99', Large: '16.99' },
+    price: '12.99',
+    image: 'https://images.pexels.com/photos/7788657/pexels-photo-7788657.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'pc6',
+    title: 'Cozy Plush Orthopedic Pet Bed',
+    petType: 'All Pets',
+    category: 'Bedding & Housing',
+    brand: 'PetComfort',
+    material: 'Plush',
+    weight: '60 x 45cm',
+    description: 'Supportive orthopedic foam base with a washable plush cover for a warm, restful sleep.',
+    price: '39.99',
+    image: 'https://images.pexels.com/photos/4588005/pexels-photo-4588005.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'pc7',
+    title: 'Pet First Aid & Wellness Kit',
+    petType: 'All Pets',
+    category: 'Health & Wellness',
+    brand: 'VetReady',
+    lifeStage: 'All Life Stages',
+    weight: 'One kit',
+    description: 'Compact first-aid kit with bandages, antiseptic wipes, and a digital thermometer for home pet care.',
+    price: '22.50',
+    image: 'https://images.pexels.com/photos/5731866/pexels-photo-5731866.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    id: 'pc8',
+    title: 'Puppy Training Treats (Soft Chews)',
+    petType: 'Dog',
+    category: 'Food & Treats',
+    brand: 'PawFirst',
+    lifeStage: 'Puppy / Kitten',
+    flavor: 'Beef',
+    weight: '250g',
+    description: 'Small, soft training treats puppies love — ideal for reward-based obedience training.',
+    price: '8.99',
+    image: 'https://images.pexels.com/photos/4588003/pexels-photo-4588003.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+];
 
 const informalMarketItems = [
   /* ── Street Food ── */
@@ -7339,6 +7473,21 @@ const searchableCatalog = [
       item.description,
       item.price,
       'stationery stationary pens pen books notebooks invoice books office school supplies',
+    ]),
+  })),
+  ...petCareItems.map((item) => ({
+    ...item,
+    section: 'Pet Care & Supplies',
+    sectionKey: 'markets.petCareSupplies',
+    route: '/pet-care-supplies',
+    searchText: buildSearchText([
+      item.title,
+      item.petType,
+      item.category,
+      item.brand,
+      item.description,
+      item.price,
+      'pet care supplies dog cat food treats toys grooming leash collar bed aquarium bird fish',
     ]),
   })),
   ...informalMarketItems.map((item) => ({
@@ -18472,6 +18621,402 @@ const StationeryPage = ({ onToggleWishlist, wishlistItemIds = [], sellerItems = 
         </div>
       </section>
     ) : null}
+  </MarketShowcase>
+  );
+};
+
+const PetCareSuppliesPage = ({ onToggleWishlist, wishlistItemIds = [], sellerItems = [], onOpenItemDetails, productReviewSummaryMap = {} }) => {
+  const { t } = useTranslation();
+  const { code: buyerCurrencyCode } = useBuyerCurrency();
+  const formatPriceCap = (amount) => formatAmountInCurrency(amount, buyerCurrencyCode);
+  const marketItems = useMemo(() => [
+    ...getSellerItemsForMarket(sellerItems, 'petCareSupplies'),
+    ...petCareItems,
+  ], [sellerItems]);
+
+  const buildCartItem = (item) => createCartItem({
+    ...item,
+    route: '/pet-care-supplies',
+    marketName: t('markets.petCareSupplies'),
+    details: [item.selectedSize && `Size: ${item.selectedSize}`, item.petType, item.category || 'Seller item', item.description || item.sellerName || 'Pet care essentials'].filter(Boolean).join(' • '),
+  });
+  const buildWishlistItem = (item) => createWishlistItem({
+    ...item,
+    route: '/pet-care-supplies',
+    marketName: t('markets.petCareSupplies'),
+    details: [item.selectedSize && `Size: ${item.selectedSize}`, item.petType, item.category || 'Seller item', item.sellerName || 'Pet care essentials'].filter(Boolean).join(' • '),
+  });
+
+  // Resolve every item's price into the buyer's selected currency (applying
+  // the same sale discount shown on the cards) so seller listings priced in
+  // ZAR/NGN/etc. sort and filter on equal footing with the demo catalogue.
+  const getItemPriceValue = useCallback(
+    (item) => getNumericPriceValue(item.price, getItemSaleDiscountRate(item), item.currency || null),
+    // Recompute when the buyer currency changes; getNumericPriceValue reads the
+    // active currency from module state, so the dependency isn't visible to lint.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [buyerCurrencyCode],
+  );
+
+  const orderOptions = (values, preferred) => {
+    const present = Array.from(new Set(values.filter(Boolean)));
+    const inPreferred = preferred.filter((option) => present.includes(option));
+    const extras = present.filter((option) => !preferred.includes(option)).sort((a, b) => a.localeCompare(b));
+    return [...inPreferred, ...extras];
+  };
+
+  const petTypeOptions = useMemo(() => orderOptions(
+    marketItems.map((item) => item.petType),
+    ['Dog', 'Cat', 'Bird', 'Fish & Aquarium', 'Small Pet (Rabbit, Hamster, Guinea Pig)', 'Reptile', 'All Pets'],
+  ), [marketItems]);
+  const categoryOptions = useMemo(() => orderOptions(
+    marketItems.map((item) => item.category),
+    ['Food & Treats', 'Toys', 'Grooming & Hygiene', 'Health & Wellness', 'Bedding & Housing', 'Collars, Leashes & Harnesses', 'Carriers & Travel', 'Aquarium & Tank Supplies', 'Training & Behaviour'],
+  ), [marketItems]);
+  const brandOptions = useMemo(() => orderOptions(marketItems.map((item) => item.brand), []), [marketItems]);
+
+  const priceCeiling = useMemo(() => {
+    const max = marketItems.reduce((highest, item) => Math.max(highest, getItemPriceValue(item)), 0);
+    return Math.max(50, Math.ceil(max / 10) * 10);
+  }, [marketItems, getItemPriceValue]);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPetTypes, setSelectedPetTypes] = useState([]);
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [selectedBrands, setSelectedBrands] = useState([]);
+  const [maxPrice, setMaxPrice] = useState(null);
+  const [sortBy, setSortBy] = useState('featured');
+  const [showFilters, setShowFilters] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const resultsRef = useRef(null);
+
+  const activePriceCap = maxPrice == null ? priceCeiling : maxPrice;
+
+  const toggleValue = (collection, setCollection, value) => {
+    setShowAll(false);
+    setCollection(collection.includes(value) ? collection.filter((entry) => entry !== value) : [...collection, value]);
+  };
+  const matchesGroup = (selection, value) => selection.length === 0 || selection.includes(value);
+
+  const filteredItems = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return marketItems.filter((item) => {
+      const matchesQuery = !query || [item.title, item.brand, item.petType, item.category, item.description, item.sellerName]
+        .some((field) => String(field || '').toLowerCase().includes(query));
+      return matchesQuery
+        && matchesGroup(selectedPetTypes, item.petType)
+        && matchesGroup(selectedCategories, item.category)
+        && matchesGroup(selectedBrands, item.brand)
+        && getItemPriceValue(item) <= activePriceCap;
+    });
+  }, [marketItems, searchQuery, selectedPetTypes, selectedCategories, selectedBrands, activePriceCap, getItemPriceValue]);
+
+  const getItemRating = useCallback((item) => getProductReviewSummary(
+    productReviewSummaryMap,
+    getCollectionItemId('/pet-care-supplies', item.id),
+  ).averageRating, [productReviewSummaryMap]);
+
+  const sortedItems = useMemo(() => {
+    const items = [...filteredItems];
+    switch (sortBy) {
+      case 'price-asc':
+        return items.sort((a, b) => getItemPriceValue(a) - getItemPriceValue(b));
+      case 'price-desc':
+        return items.sort((a, b) => getItemPriceValue(b) - getItemPriceValue(a));
+      case 'rating-desc':
+        return items.sort((a, b) => getItemRating(b) - getItemRating(a));
+      case 'name-asc':
+        return items.sort((a, b) => getTranslatedValue(t, a.titleKey, a.title)
+          .localeCompare(getTranslatedValue(t, b.titleKey, b.title)));
+      default:
+        return items;
+    }
+  }, [filteredItems, sortBy, getItemRating, getItemPriceValue, t]);
+
+  const visibleItems = showAll ? sortedItems : sortedItems.slice(0, 6);
+
+  const hasActiveFilters = Boolean(searchQuery)
+    || selectedPetTypes.length || selectedCategories.length || selectedBrands.length || maxPrice != null;
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setSelectedPetTypes([]);
+    setSelectedCategories([]);
+    setSelectedBrands([]);
+    setMaxPrice(null);
+    setSortBy('featured');
+    setShowAll(false);
+  };
+
+  const applyFilters = () => {
+    setShowFilters(false);
+    if (resultsRef.current) {
+      resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const openDetails = (item) => {
+    const similarProducts = marketItems
+      .filter((other) => other.id !== item.id
+        && (other.category === item.category || other.petType === item.petType || other.brand === item.brand))
+      .slice(0, 6)
+      .map((other) => ({
+        id: other.id,
+        title: getTranslatedValue(t, other.titleKey, other.title),
+        image: other.image,
+        price: getSalePrices(other.price, getItemSaleDiscountRate(other), other.currency).nowPrice,
+        petType: other.petType,
+        category: other.category,
+        brand: other.brand,
+        sellerName: other.sellerName,
+      }));
+    onOpenItemDetails?.({
+      title: getTranslatedValue(t, item.titleKey, item.title),
+      image: item.image,
+      images: item.images || (item.image ? [item.image] : []),
+      ...getItemDetailSizeProps(item),
+      availableQuantity: hasItemSizeStock(item) ? (item.availableQuantity ?? getSellerListingStock(sellerItems, item)) : getSellerListingStock(sellerItems, item),
+      marketName: t('markets.petCareSupplies'),
+      details: `${item.petType ? `${item.petType} • ` : ''}${item.category || 'Seller item'} • ${item.description || item.sellerName || 'Pet care essentials'}`,
+      description: item.description || '',
+      priceLabel: getSalePrices(item.price, getItemSaleDiscountRate(item), item.currency || null).nowPrice,
+      highlights: [
+        item.petType ? `Great for: ${item.petType}` : null,
+        item.lifeStage ? `Life stage: ${item.lifeStage}` : null,
+        item.flavor ? `Flavour: ${item.flavor}` : null,
+        item.material ? `Made from ${item.material}` : null,
+      ].filter(Boolean),
+      detailsTable: {
+        'Pet Type': item.petType || 'All Pets',
+        Category: item.category || 'Other',
+        Brand: item.brand || 'Generic',
+        'Life Stage': item.lifeStage || 'All Life Stages',
+        ...(item.flavor ? { Flavour: item.flavor } : {}),
+        ...(item.weight ? { 'Pack Size / Weight': item.weight } : {}),
+        ...(item.material ? { Material: item.material } : {}),
+      },
+      petType: item.petType,
+      category: item.category,
+      brand: item.brand,
+      sellerName: item.sellerName,
+      similarProducts,
+      cartItem: buildCartItem(item),
+      wishlistItem: buildWishlistItem(item),
+    });
+  };
+
+  // Open a listing's details automatically when arrived at via a ?focus= link
+  // (e.g. the trending hero on the Markets page or the recently-viewed strip).
+  useListingFocusFromQuery(filteredItems, openDetails);
+
+  const renderFilterGroup = (label, options, selection, setSelection) => (
+    <div>
+      <h3 className="mb-2 text-sm font-bold text-[#0f6674]">{label}</h3>
+      <div className="max-h-52 space-y-1.5 overflow-y-auto pr-1 [scrollbar-width:thin]">
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+          <input
+            type="checkbox"
+            checked={selection.length === 0}
+            onChange={() => { setShowAll(false); setSelection([]); }}
+            className="h-4 w-4 rounded border-slate-300 text-[#0f6674] focus:ring-[#0f6674]"
+          />
+          All
+        </label>
+        {options.map((option) => (
+          <label key={option} className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+            <input
+              type="checkbox"
+              checked={selection.includes(option)}
+              onChange={() => toggleValue(selection, setSelection, option)}
+              className="h-4 w-4 rounded border-slate-300 text-[#0f6674] focus:ring-[#0f6674]"
+            />
+            {option}
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderProductCard = (item) => {
+    const title = getTranslatedValue(t, item.titleKey, item.title);
+    const reviewKey = getCollectionItemId('/pet-care-supplies', item.id);
+    const reviewSummary = getProductReviewSummary(productReviewSummaryMap, reviewKey);
+    const hasReviews = reviewSummary.reviewCount > 0;
+    const ratingLabel = hasReviews ? reviewSummary.averageRating.toFixed(1) : '0.0';
+    const isWishlisted = wishlistItemIds.includes(reviewKey);
+    const metaLine = [item.petType, item.brand].filter(Boolean).join(' · ');
+
+    return (
+      <article
+        key={item.id}
+        id={`listing-${item.id}`}
+        role="button"
+        tabIndex={0}
+        onClick={() => openDetails(item)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openDetails(item); }
+        }}
+        className="group flex flex-col overflow-hidden rounded-2xl border border-[#e0e7ef] bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+      >
+        <div className="relative">
+          <img src={item.image} alt={title} loading="lazy" className="aspect-[4/3] w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+          <button
+            type="button"
+            onClick={(event) => { event.stopPropagation(); onToggleWishlist(buildWishlistItem(item)); }}
+            aria-pressed={isWishlisted}
+            aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+            className={`absolute right-2 top-2 rounded-full border border-[#e0e7ef] bg-white/90 p-1.5 text-[#e11d48] shadow transition ${isWishlisted ? 'bg-rose-50' : 'hover:bg-[#e0f7fa]'}`}
+          >
+            <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-current' : ''}`} />
+          </button>
+        </div>
+        <div className="flex flex-1 flex-col p-3 sm:p-4">
+          <h3 className="line-clamp-2 text-sm font-bold leading-tight text-[#0f6674] group-hover:text-[#33b9f2] sm:text-base">{title}</h3>
+          <div className="mt-1.5">
+            <SalePrice price={item.price} currency={item.currency} nowClassName="text-base" />
+          </div>
+          {metaLine ? (
+            <p className="mt-1.5 text-[11px] font-semibold text-slate-500 sm:text-xs">{metaLine}</p>
+          ) : null}
+          {hasReviews ? (
+            <div className="mt-1.5 flex items-center gap-1 text-[11px] text-slate-500 sm:text-xs">
+              <Star className="h-3.5 w-3.5 fill-current text-amber-500" />
+              <span className="font-semibold text-[#0f6674]">{ratingLabel}</span>
+              <span>({reviewSummary.reviewCount} review{reviewSummary.reviewCount === 1 ? '' : 's'})</span>
+            </div>
+          ) : null}
+          <button
+            type="button"
+            onClick={(event) => { event.stopPropagation(); openDetails(item); }}
+            className="mt-3 w-full rounded-full bg-[#0f6674] px-3 py-2 text-xs font-semibold text-white shadow transition hover:bg-[#33b9f2] sm:text-sm"
+          >
+            {t('common.viewDetails')}
+          </button>
+        </div>
+      </article>
+    );
+  };
+
+  return (
+  <MarketShowcase
+    marketKey="petCareSupplies"
+    title={t('markets.petCareSupplies')}
+    subtitle={t('pageSubtitles.petCareSupplies')}
+    eyebrow={t('markets.petCareSupplies')}
+    chips={['Dog & Cat Food', 'Toys & Accessories', 'Grooming & Wellness']}
+  >
+    {/* Search */}
+    <div className="relative mb-5">
+      <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+      <input
+        type="search"
+        value={searchQuery}
+        onChange={(event) => { setSearchQuery(event.target.value); setShowAll(false); }}
+        placeholder="Search pet food, toys, grooming, accessories…"
+        className="w-full rounded-full border border-[#e0e7ef] bg-white py-3 pl-12 pr-4 text-sm text-slate-700 shadow-sm outline-none transition focus:border-[#0f6674] focus:ring-2 focus:ring-[#0f6674]/20"
+      />
+    </div>
+
+    {/* Mobile filter toggle */}
+    <button
+      type="button"
+      onClick={() => setShowFilters((current) => !current)}
+      className="mb-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#0f6674] bg-white px-4 py-2.5 text-sm font-semibold text-[#0f6674] shadow-sm lg:hidden"
+    >
+      <Filter className="h-4 w-4" />
+      {showFilters ? 'Hide filters' : 'Show filters'}
+    </button>
+
+    <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
+      {/* Filter sidebar */}
+      <aside className={`${showFilters ? 'block' : 'hidden'} space-y-5 self-start rounded-2xl border border-[#e0e7ef] bg-white p-4 shadow-sm lg:block`}>
+        {renderFilterGroup('Pet Type', petTypeOptions, selectedPetTypes, setSelectedPetTypes)}
+        {renderFilterGroup('Category', categoryOptions, selectedCategories, setSelectedCategories)}
+        {renderFilterGroup('Brand', brandOptions, selectedBrands, setSelectedBrands)}
+
+        {/* Price Range */}
+        <div>
+          <h3 className="mb-2 text-sm font-bold text-[#0f6674]">Price Range</h3>
+          <input
+            type="range"
+            min={0}
+            max={priceCeiling}
+            step={1}
+            value={activePriceCap}
+            onChange={(event) => { setMaxPrice(Number(event.target.value)); setShowAll(false); }}
+            className="w-full accent-[#0f6674]"
+            aria-label="Maximum price"
+          />
+          <div className="mt-1 flex items-center justify-between text-[11px] font-semibold text-slate-500">
+            <span>{formatPriceCap(0)}</span>
+            <span>Up to {formatPriceCap(activePriceCap)}</span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={applyFilters}
+          className="w-full rounded-full bg-[#0f6674] px-4 py-2.5 text-sm font-bold text-white shadow transition hover:bg-[#33b9f2]"
+        >
+          Apply Filter
+        </button>
+        {hasActiveFilters ? (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="w-full rounded-full border border-[#e0e7ef] bg-white px-4 py-2 text-xs font-semibold text-slate-500 transition hover:border-[#0f6674] hover:text-[#0f6674]"
+          >
+            Clear all filters
+          </button>
+        ) : null}
+      </aside>
+
+      {/* Results */}
+      <div ref={resultsRef}>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs font-semibold text-slate-500">
+            Showing {visibleItems.length} of {filteredItems.length} product{filteredItems.length === 1 ? '' : 's'}
+          </p>
+          <label className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+            <span className="hidden sm:inline">Sort by</span>
+            <select
+              value={sortBy}
+              onChange={(event) => { setSortBy(event.target.value); setShowAll(false); }}
+              className="rounded-full border border-[#e0e7ef] bg-white py-1.5 pl-3 pr-7 text-xs font-semibold text-[#0f6674] shadow-sm outline-none transition focus:border-[#0f6674] focus:ring-2 focus:ring-[#0f6674]/20"
+              aria-label="Sort products"
+            >
+              <option value="featured">Featured</option>
+              <option value="price-asc">Price: Low to High</option>
+              <option value="price-desc">Price: High to Low</option>
+              <option value="rating-desc">Top Rated</option>
+              <option value="name-asc">Name: A to Z</option>
+            </select>
+          </label>
+        </div>
+        {filteredItems.length ? (
+          <>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              {visibleItems.map(renderProductCard)}
+            </div>
+            {filteredItems.length > 6 ? (
+              <div className="mt-6 flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => setShowAll((current) => !current)}
+                  className="rounded-full border border-[#0f6674] bg-white px-8 py-2.5 text-sm font-bold text-[#0f6674] shadow-sm transition hover:bg-[#0f6674] hover:text-white"
+                >
+                  {showAll ? 'Show less' : 'View All'}
+                </button>
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-[#e0e7ef] bg-[#f8fafc] px-6 py-12 text-center text-sm text-slate-500">
+            No products match your filters yet. Try clearing a filter or widening the price range.
+          </div>
+        )}
+      </div>
+    </div>
   </MarketShowcase>
   );
 };
@@ -33904,6 +34449,16 @@ const SIZE_VARIANT_PRESETS = {
       { label: 'Clothing', options: ['XS', 'S', 'M', 'L', 'XL', 'XXL'] },
     ],
   },
+  petCareSupplies: {
+    required: false,
+    placeholder: 'e.g. 2kg, 5kg, Small, Medium, Large',
+    contextNote: 'Add pack sizes for food/litter or S/M/L for toys, beds, and accessories — each can have its own price.',
+    groups: [
+      { label: 'Pack weight', options: ['500g', '1kg', '2kg', '5kg', '10kg', '15kg', '20kg'] },
+      { label: 'Volume', options: ['250ml', '500ml', '1L', '2L', '5L'] },
+      { label: 'Size', options: ['Extra Small', 'Small', 'Medium', 'Large', 'Extra Large', 'One Size'] },
+    ],
+  },
 };
 
 // Trading-hours picker, rendered only for markets that enforce opening hours
@@ -40050,12 +40605,13 @@ const MarketsPage = ({ sellerItems = [] }) => {
           const isDirectLinks = market.href === '/retailer-direct-links';
           const isInformalMarket = market.href === '/informal-market';
           const isNursery = market.href === '/nursery-hub';
+          const isPetCareSupplies = market.href === '/pet-care-supplies';
           const useBookingsPreset = isBookings;
           const overlayClassName = useBookingsPreset
             ? 'absolute inset-0 bg-gradient-to-t from-[#041a26]/80 via-[#0f6f84]/50 to-[#14b8a6]/20'
             : 'absolute inset-0 bg-gradient-to-t from-black/75 via-black/50 to-black/20';
           const marketTitleClassName = 'text-base font-bold leading-tight text-white drop-shadow line-clamp-3 sm:text-lg sm:line-clamp-none';
-          const hasHeroImage = isFastFood || isFashion || isBookings || isBeverages || isGroceries || isMobility || isEcommerce || isConstruction || isLivestock || isHomeCare || isNaturalResources || isGeneralLabour || isWellness || isStationery || isProperty || isHerbs || isSecondhand || isBeautyFitnessSports || isToysKids || isJewelleryAccessories || isDirectLinks || isInformalMarket || isNursery;
+          const hasHeroImage = isFastFood || isFashion || isBookings || isBeverages || isGroceries || isMobility || isEcommerce || isConstruction || isLivestock || isHomeCare || isNaturalResources || isGeneralLabour || isWellness || isStationery || isProperty || isHerbs || isSecondhand || isBeautyFitnessSports || isToysKids || isJewelleryAccessories || isDirectLinks || isInformalMarket || isNursery || isPetCareSupplies;
           const heroImageUrl = isFastFood
             ? 'https://images.pexels.com/photos/2983101/pexels-photo-2983101.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isFashion
@@ -40109,6 +40665,8 @@ const MarketsPage = ({ sellerItems = [] }) => {
             ? 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : isNursery
             ? 'https://images.pexels.com/photos/1005058/pexels-photo-1005058.jpeg?auto=compress&cs=tinysrgb&w=1200'
+            : isPetCareSupplies
+            ? 'https://images.pexels.com/photos/1490908/pexels-photo-1490908.jpeg?auto=compress&cs=tinysrgb&w=1200'
             : ''
           return hasHeroImage ? (
             <Link
@@ -52677,6 +53235,7 @@ const MARKET_THEMES = {
   livestock: 'https://images.pexels.com/photos/422218/pexels-photo-422218.jpeg?auto=compress&cs=tinysrgb&w=1600',
   nursery: 'https://images.pexels.com/photos/1005058/pexels-photo-1005058.jpeg?auto=compress&cs=tinysrgb&w=1600',
   safety: 'https://images.pexels.com/photos/3661193/pexels-photo-3661193.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  petCareSupplies: 'https://images.pexels.com/photos/1490908/pexels-photo-1490908.jpeg?auto=compress&cs=tinysrgb&w=1600',
 };
 
 const MARKET_TRUST_BADGES = [
@@ -52794,7 +53353,7 @@ const DIGEST_MARKET_LABELS = {
   generalLabour: 'Workforce', informalMarket: 'Vendors', votingProviders: 'Jewelry',
   livestockHub: 'Livestock', nurseryHub: 'Nursery', naturalResources: 'Earth Resources', wellness: 'Pharmaceutics',
   propertyHub: 'Property', secondhand: 'Used Items', stationery: 'Stationery',
-  safety: 'Toys', traditionalMedicines: 'Ancient Remedies',
+  safety: 'Toys', traditionalMedicines: 'Ancient Remedies', petCareSupplies: 'Pet Supplies',
 };
 const DIGEST_MARKET_ROUTES = {
   ecommerce: '/e-commerce', groceries: '/groceries', fastFood: '/fast-food',
@@ -52804,7 +53363,7 @@ const DIGEST_MARKET_ROUTES = {
   generalLabour: '/general-labour-market', informalMarket: '/informal-market', votingProviders: '/voting-providers',
   livestockHub: '/livestock-hub', nurseryHub: '/nursery-hub', naturalResources: '/natural-resources-minerals', wellness: '/wellness',
   propertyHub: '/property-hub', secondhand: '/secondhand-central', stationery: '/stationery-office',
-  safety: '/safety', traditionalMedicines: '/traditional-medicines-herbs',
+  safety: '/safety', traditionalMedicines: '/traditional-medicines-herbs', petCareSupplies: '/pet-care-supplies',
 };
 
 const sendProductDigestIfDue = async (userEmail) => {
@@ -56775,6 +57334,7 @@ const AppRoutes = ({ cartItems, wishlistItems, wishlistItemIds, orders, sellerIt
     <Route path="/traditional-medicines-herbs" element={<TraditionalMedicinesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/wellness" element={<WellnessPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/stationery-office" element={<StationeryPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
+    <Route path="/pet-care-supplies" element={<PetCareSuppliesPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/retailer-direct-links" element={<RetailerDirectLinksPage />} />
     <Route path="/informal-market" element={<InformalMarketPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />
     <Route path="/secondhand-central" element={<SecondHandPage onAddToCart={onAddToCart} onBuyNow={onBuyNow} onToggleWishlist={onToggleWishlist} wishlistItemIds={wishlistItemIds} sellerItems={sellerItems} onOpenItemDetails={onOpenItemDetails} productReviewSummaryMap={productReviewSummaryMap} />} />

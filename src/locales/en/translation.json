@@ -119,7 +119,8 @@
     "safety": "Toys, games, baby gear, and kids essentials from trusted sellers.",
     "directLinks": "Quick links to leading global retailers and brands—compare prices, browse catalogues, and shop direct.",
     "informalMarket": "Browse street traders, spaza shops, and informal vendors with real listings, categories, and seller locations near you.",
-    "secondhand": "Buy and sell quality pre-owned phones, laptops, fashion, furniture, and more — all at unbeatable prices."
+    "secondhand": "Buy and sell quality pre-owned phones, laptops, fashion, furniture, and more — all at unbeatable prices.",
+    "petCareSupplies": "Shop pet food, treats, toys, grooming, and everyday essentials for dogs, cats, and other pets."
   },
   "propertyHub": {
     "intro": "Verified property listings for residential and commercial buyers, renters, and investors.",
@@ -209,7 +210,8 @@
     "nurseryHub": "NURSERY",
     "safety": "TOYS & KIDS",
     "directLinks": "RETAIL LINKS",
-    "informalMarket": "VENDORS"
+    "informalMarket": "VENDORS",
+    "petCareSupplies": "PET CARE & SUPPLIES"
   },
   "marketsPage": {
     "title": "All Markets",
