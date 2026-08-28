@@ -42,6 +42,12 @@ const AdminSigninPage = () => {
   }, []);
 
   // ── Password login ───────────────────────────────────────────────────────
+  // Goes through /api/admin-login rather than calling the admin_login RPC
+  // straight from the browser — that endpoint is what attaches a
+  // trustworthy, server-detected IP to the attempt (a client-supplied IP
+  // would be trivially spoofable by exactly the attacker this exists to
+  // stop) and enforces the IP block list before a password is even
+  // checked. See api/admin-login.js / server.js for the matching logic.
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!hasSupabaseEnv || !supabase) {
@@ -53,12 +59,30 @@ const AdminSigninPage = () => {
     setIsSubmitting(true);
     setMessage('');
 
-    const { data, error } = await supabase.rpc('admin_login', {
-      p_email: formData.email.trim().toLowerCase(),
-      p_password: formData.password,
-    });
+    let data = null;
+    try {
+      const response = await fetch('/api/admin-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email.trim().toLowerCase(), password: formData.password }),
+      });
+      if (response.ok) {
+        data = await response.json();
+      } else {
+        const payload = await response.json().catch(() => ({}));
+        setMessage(payload.error || 'Invalid email or password.');
+        setMessageType('error');
+        setIsSubmitting(false);
+        return;
+      }
+    } catch (_networkError) {
+      setMessage('Could not reach the server. Check your connection and try again.');
+      setMessageType('error');
+      setIsSubmitting(false);
+      return;
+    }
 
-    if (error || !data?.token) {
+    if (!data?.token) {
       setMessage('Invalid email or password.');
       setMessageType('error');
       setIsSubmitting(false);

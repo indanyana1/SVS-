@@ -4,9 +4,19 @@ const express = require('express');
 const cors = require('cors');
 const Anthropic = require('@anthropic-ai/sdk');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const { createClient } = require('@supabase/supabase-js');
 const { rateLimit } = require('./server-utils/rate-limit');
 const logger = require('./server-utils/logger');
 const { initErrorMonitoring, captureError } = require('./server-utils/errorMonitoring');
+
+// Used only by routes below that need a trustworthy server-side identity
+// (currently just /api/admin-login) — everything else in this app talks to
+// Supabase directly from the browser. Same anon key the browser uses;
+// RLS/SECURITY DEFINER functions are what actually gate access, not this
+// key's privilege level.
+const supabase = (process.env.REACT_APP_SUPABASE_URL && process.env.REACT_APP_SUPABASE_ANON_KEY)
+  ? createClient(process.env.REACT_APP_SUPABASE_URL, process.env.REACT_APP_SUPABASE_ANON_KEY)
+  : null;
 
 initErrorMonitoring();
 // Defense-in-depth: catches anything that escapes Express entirely (e.g. a
@@ -66,7 +76,64 @@ const limits = {
   payments: rateLimit({ windowMs: 60_000, max: 20 }),
   ai: rateLimit({ windowMs: 60_000, max: 30 }),
   address: rateLimit({ windowMs: 60_000, max: 120 }),
+  adminLogin: rateLimit({ windowMs: 60_000, max: 20 }),
 };
+
+const getClientIp = (req) => {
+  const xff = req.headers['x-forwarded-for'];
+  if (xff) return String(xff).split(',')[0].trim();
+  return req.ip || req.connection?.remoteAddress || 'unknown';
+};
+
+// Local-dev/persistent-server mirror of api/admin-login.js — see that
+// file's header comment for why this proxies admin_login instead of
+// calling it straight from the browser (a trustworthy IP, not a
+// client-claimed one, is the whole point). Kept in sync manually since one
+// is Express/CommonJS and the other a Vercel serverless function; both
+// call the exact same Supabase RPCs so there's no behavior to drift.
+app.post('/api/admin-login', limits.adminLogin, async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: 'Supabase is not configured on the server.' });
+  }
+
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  const password = String(req.body?.password || '');
+  const ip = getClientIp(req);
+  const userAgent = String(req.headers['user-agent'] || '').slice(0, 500);
+
+  try {
+    const { data: isBlocked } = await supabase.rpc('admin_check_ip_block', { p_ip_address: ip });
+    if (isBlocked) {
+      return res.status(403).json({ error: 'Too many failed attempts from this network. Try again later.' });
+    }
+
+    const { data: loginResult, error: loginError } = await supabase.rpc('admin_login', {
+      p_email: email,
+      p_password: password,
+    });
+
+    const success = Boolean(loginResult?.token);
+
+    await supabase.rpc('admin_record_login_attempt', {
+      p_attempted_email: email,
+      p_ip_address: ip,
+      p_user_agent: userAgent,
+      p_method: 'password',
+      p_success: success,
+      p_failure_reason: success ? null : (loginError?.message || 'invalid_credentials'),
+    });
+
+    if (!success) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    return res.status(200).json(loginResult);
+  } catch (error) {
+    logger.error('[admin-login] failed', { error: error.message });
+    captureError(error, { source: 'admin-login' });
+    return res.status(500).json({ error: error.message || 'Login failed.' });
+  }
+});
 
 // ────────────────────────────────────────────────────────────────────
 //  Stripe webhook (local dev mirror)

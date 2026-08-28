@@ -33,6 +33,18 @@ Deno.serve(async (req) => {
 
   const supabase = createClient(supabaseUrl, serviceKey);
 
+  // Same IP block list the password login path (api/admin-login.js) checks
+  // — see supabase/admin-login-security.sql. Edge Functions sit behind
+  // Supabase's own edge, which appends the real connecting IP the same way
+  // Vercel's does, so this is just as trustworthy as the password path's.
+  // Checked on every call (both the 'options' and 'verify' steps) so a
+  // blocked IP can't even enumerate which credentials exist.
+  const clientIp = (req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown';
+  const { data: isBlocked } = await supabase.rpc('admin_check_ip_block', { p_ip_address: clientIp });
+  if (isBlocked) {
+    return err('Too many failed attempts from this network. Try again later.');
+  }
+
   const requestOrigin = req.headers.get('origin') ?? '';
   let rpID: string;
   let expectedOrigin: string;
@@ -85,6 +97,21 @@ Deno.serve(async (req) => {
 
   // ── Step 2: verify & issue session token ────────────────────────────────
   if (step === 'verify') {
+    // Records every outcome (success or fail, and why) to the same ledger
+    // the password login path writes to, keyed by the same IP already
+    // checked against the block list above — so the auto-block threshold
+    // in admin_record_login_attempt() catches a brute-force attempt
+    // regardless of which of the two login paths it comes through.
+    const recordAttempt = (success: boolean, reason?: string) =>
+      supabase.rpc('admin_record_login_attempt', {
+        p_attempted_email: (admin_email as string).toLowerCase(),
+        p_ip_address: clientIp,
+        p_user_agent: req.headers.get('user-agent') ?? null,
+        p_method: 'webauthn',
+        p_success: success,
+        p_failure_reason: success ? null : (reason ?? null),
+      });
+
     try {
       const { data: challengeRow } = await supabase
         .from('admin_webauthn_challenges')
@@ -96,7 +123,10 @@ Deno.serve(async (req) => {
         .limit(1)
         .maybeSingle();
 
-      if (!challengeRow) return err('Challenge expired. Try again.');
+      if (!challengeRow) {
+        await recordAttempt(false, 'challenge_expired');
+        return err('Challenge expired. Try again.');
+      }
 
       const credentialId = (authentication_response as Record<string, string>)?.id;
       const { data: stored, error: storedErr } = await supabase
@@ -106,8 +136,14 @@ Deno.serve(async (req) => {
         .eq('admin_email', (admin_email as string).toLowerCase())
         .maybeSingle();
 
-      if (storedErr) return err('DB error: ' + storedErr.message);
-      if (!stored) return err('Credential not found.');
+      if (storedErr) {
+        await recordAttempt(false, 'db_error');
+        return err('DB error: ' + storedErr.message);
+      }
+      if (!stored) {
+        await recordAttempt(false, 'credential_not_found');
+        return err('Credential not found.');
+      }
 
       const publicKeyBytes = Uint8Array.from(atob(stored.public_key), (c: string) => c.charCodeAt(0));
 
@@ -124,7 +160,10 @@ Deno.serve(async (req) => {
         requireUserVerification: false,
       });
 
-      if (!verification.verified) return err('Biometric authentication failed.');
+      if (!verification.verified) {
+        await recordAttempt(false, 'verification_failed');
+        return err('Biometric authentication failed.');
+      }
 
       await supabase
         .from('admin_webauthn_credentials')
@@ -137,10 +176,15 @@ Deno.serve(async (req) => {
         p_email: (admin_email as string).toLowerCase(),
       });
 
-      if (tokenErr || !tokenData) return err('Could not create session: ' + (tokenErr?.message ?? 'unknown'));
+      if (tokenErr || !tokenData) {
+        await recordAttempt(false, 'token_issue_failed');
+        return err('Could not create session: ' + (tokenErr?.message ?? 'unknown'));
+      }
 
+      await recordAttempt(true);
       return ok({ verified: true, ...tokenData });
     } catch (e) {
+      await recordAttempt(false, 'exception');
       return err('verify error: ' + (e instanceof Error ? e.message : String(e)));
     }
   }

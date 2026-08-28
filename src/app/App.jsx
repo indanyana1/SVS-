@@ -29130,6 +29130,7 @@ const ADMIN_DASHBOARD_TABS = [
   { key: 'transactions', label: 'Transactions', icon: Wallet },
   { key: 'sellerFees', label: 'Seller Fees', icon: Percent },
   { key: 'siteAnalytics', label: 'Site Analytics', icon: BarChart3 },
+  { key: 'loginSecurity', label: 'Login Security', icon: Lock },
   { key: 'reports', label: 'Reports', icon: FileText },
 ];
 
@@ -29208,6 +29209,14 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
   const [analyticsEvents, setAnalyticsEvents] = useState([]);
   const [analyticsLoaded, setAnalyticsLoaded] = useState(false);
   const [analyticsWindowDays, setAnalyticsWindowDays] = useState(30);
+
+  const [loginAttempts, setLoginAttempts] = useState([]);
+  const [ipBlocks, setIpBlocks] = useState([]);
+  const [loginSecurityLoaded, setLoginSecurityLoaded] = useState(false);
+  const [blockIpDraft, setBlockIpDraft] = useState({ ipAddress: '', reason: '', expiresInHours: '' });
+  const [ipActionMessage, setIpActionMessage] = useState('');
+  const [ipActionMessageType, setIpActionMessageType] = useState('idle');
+  const [isSavingIpBlock, setIsSavingIpBlock] = useState(false);
 
   const [buyerSearch, setBuyerSearch] = useState('');
   const [sellerSearch, setSellerSearch] = useState('');
@@ -29374,6 +29383,104 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
 
     return () => { isCancelled = true; };
   }, [sessionState, activeTab, token, analyticsWindowDays]);
+
+  useEffect(() => {
+    if (sessionState !== 'signed-in' || activeTab !== 'loginSecurity' || loginSecurityLoaded || !supabase) return;
+
+    (async () => {
+      const [attemptsRes, blocksRes] = await Promise.all([
+        supabase.rpc('admin_get_login_attempts', { p_token: token, p_limit: 500 }),
+        supabase.rpc('admin_get_ip_blocks', { p_token: token }),
+      ]);
+      setLoginAttempts(attemptsRes.data || []);
+      setIpBlocks(blocksRes.data || []);
+      setLoginSecurityLoaded(true);
+    })();
+  }, [sessionState, activeTab, loginSecurityLoaded, token]);
+
+  const refreshLoginSecurity = async () => {
+    const [attemptsRes, blocksRes] = await Promise.all([
+      supabase.rpc('admin_get_login_attempts', { p_token: token, p_limit: 500 }),
+      supabase.rpc('admin_get_ip_blocks', { p_token: token }),
+    ]);
+    setLoginAttempts(attemptsRes.data || []);
+    setIpBlocks(blocksRes.data || []);
+  };
+
+  const handleBlockIp = async (event) => {
+    event.preventDefault();
+    const ipAddress = blockIpDraft.ipAddress.trim();
+    if (!ipAddress) {
+      setIpActionMessage('Enter an IP address to block.');
+      setIpActionMessageType('error');
+      return;
+    }
+
+    setIsSavingIpBlock(true);
+    setIpActionMessage('');
+
+    const hours = parseFloat(blockIpDraft.expiresInHours);
+    const expiresAt = Number.isFinite(hours) && hours > 0
+      ? new Date(Date.now() + hours * 60 * 60 * 1000).toISOString()
+      : null;
+
+    const { error } = await supabase.rpc('admin_block_ip', {
+      p_token: token,
+      p_ip_address: ipAddress,
+      p_reason: blockIpDraft.reason.trim() || null,
+      p_expires_at: expiresAt,
+    });
+
+    if (error) {
+      setIpActionMessage(error.message || 'Could not block that IP.');
+      setIpActionMessageType('error');
+    } else {
+      setIpActionMessage(`${ipAddress} is now blocked.`);
+      setIpActionMessageType('success');
+      setBlockIpDraft({ ipAddress: '', reason: '', expiresInHours: '' });
+      await refreshLoginSecurity();
+    }
+    setIsSavingIpBlock(false);
+  };
+
+  const handleUnblockIp = async (ipAddress) => {
+    const { error } = await supabase.rpc('admin_unblock_ip', { p_token: token, p_ip_address: ipAddress });
+    if (error) {
+      setIpActionMessage(error.message || 'Could not unblock that IP.');
+      setIpActionMessageType('error');
+      return;
+    }
+    setIpActionMessage(`${ipAddress} has been unblocked.`);
+    setIpActionMessageType('success');
+    await refreshLoginSecurity();
+  };
+
+  const loginSecurityStats = useMemo(() => {
+    const failed = loginAttempts.filter((a) => !a.success);
+    const succeeded = loginAttempts.filter((a) => a.success);
+    const uniqueIps = new Set(loginAttempts.map((a) => a.ip_address));
+
+    const byIp = new Map();
+    loginAttempts.forEach((attempt) => {
+      const ip = attempt.ip_address || 'unknown';
+      const entry = byIp.get(ip) || { ip, total: 0, failed: 0, succeeded: 0, lastSeen: attempt.created_at };
+      entry.total += 1;
+      if (attempt.success) entry.succeeded += 1; else entry.failed += 1;
+      if (new Date(attempt.created_at) > new Date(entry.lastSeen)) entry.lastSeen = attempt.created_at;
+      byIp.set(ip, entry);
+    });
+
+    const activeBlocks = ipBlocks.filter((b) => !b.expires_at || new Date(b.expires_at) > new Date());
+
+    return {
+      totalAttempts: loginAttempts.length,
+      failedCount: failed.length,
+      succeededCount: succeeded.length,
+      uniqueIpCount: uniqueIps.size,
+      activeBlockCount: activeBlocks.length,
+      topIps: Array.from(byIp.values()).sort((a, b) => b.failed - a.failed).slice(0, 15),
+    };
+  }, [loginAttempts, ipBlocks]);
 
   const handleSaveFeeSettings = async () => {
     if (!feeSettingsDraft || !supabase) return;
@@ -30783,6 +30890,190 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                             ))}
                             {siteAnalyticsStats.topPages.length === 0 ? (
                               <tr><td colSpan={2} className="px-4 py-6 text-center text-[var(--svs-muted)]">No page views recorded yet in this window.</td></tr>
+                            ) : null}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </section>
+          ) : activeTab === 'loginSecurity' ? (
+            <section className="space-y-6">
+              <p className="text-xs text-[var(--svs-muted)]">
+                Every attempt to sign into this dashboard — password or biometric, successful or not — with the IP address it came from. An IP is auto-blocked for 1 hour after 10 failed attempts within 15 minutes, or you can block one yourself below.
+              </p>
+
+              {!loginSecurityLoaded ? (
+                <p className="text-sm text-[var(--svs-muted)]">Loading...</p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+                    {[
+                      { label: 'Total Attempts', value: loginSecurityStats.totalAttempts },
+                      { label: 'Failed', value: loginSecurityStats.failedCount },
+                      { label: 'Succeeded', value: loginSecurityStats.succeededCount },
+                      { label: 'Unique IPs', value: loginSecurityStats.uniqueIpCount },
+                      { label: 'Active Blocks', value: loginSecurityStats.activeBlockCount },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--svs-muted)]">{label}</p>
+                        <p className="mt-1 text-2xl font-bold text-[var(--svs-text)]">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <form onSubmit={handleBlockIp} className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4">
+                    <h4 className="text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">Block an IP manually</h4>
+                    <div className="mt-3 flex flex-wrap items-end gap-3">
+                      <div className="min-w-[160px] flex-1">
+                        <label className="text-xs font-semibold text-[var(--svs-muted)]" htmlFor="block-ip-address">IP address</label>
+                        <input
+                          id="block-ip-address"
+                          type="text"
+                          value={blockIpDraft.ipAddress}
+                          onChange={(e) => setBlockIpDraft((prev) => ({ ...prev, ipAddress: e.target.value }))}
+                          placeholder="203.0.113.7"
+                          className="mt-1 w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                        />
+                      </div>
+                      <div className="min-w-[200px] flex-1">
+                        <label className="text-xs font-semibold text-[var(--svs-muted)]" htmlFor="block-ip-reason">Reason (optional)</label>
+                        <input
+                          id="block-ip-reason"
+                          type="text"
+                          value={blockIpDraft.reason}
+                          onChange={(e) => setBlockIpDraft((prev) => ({ ...prev, reason: e.target.value }))}
+                          placeholder="e.g. Repeated brute-force attempts"
+                          className="mt-1 w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                        />
+                      </div>
+                      <div className="w-32">
+                        <label className="text-xs font-semibold text-[var(--svs-muted)]" htmlFor="block-ip-hours">Expires in (hrs)</label>
+                        <input
+                          id="block-ip-hours"
+                          type="number"
+                          min="0"
+                          value={blockIpDraft.expiresInHours}
+                          onChange={(e) => setBlockIpDraft((prev) => ({ ...prev, expiresInHours: e.target.value }))}
+                          placeholder="Never"
+                          className="mt-1 w-full rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface-soft)] px-3 py-2 text-sm text-[var(--svs-text)] outline-none focus:border-[var(--svs-primary)]"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={isSavingIpBlock}
+                        className="rounded-lg bg-[var(--svs-primary)] px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isSavingIpBlock ? 'Blocking...' : 'Block IP'}
+                      </button>
+                    </div>
+                    {ipActionMessage ? (
+                      <p className={`mt-3 text-xs font-semibold ${ipActionMessageType === 'error' ? 'text-rose-600' : 'text-emerald-600'}`}>{ipActionMessage}</p>
+                    ) : null}
+                  </form>
+
+                  <div>
+                    <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">Blocked IPs</h4>
+                    <div className="overflow-x-auto rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)]">
+                      <table className="w-full text-left text-sm">
+                        <thead className="bg-[var(--svs-surface-soft)] text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                          <tr>
+                            <th className="px-4 py-3">IP Address</th>
+                            <th className="px-4 py-3">Reason</th>
+                            <th className="px-4 py-3">Blocked By</th>
+                            <th className="px-4 py-3">Blocked At</th>
+                            <th className="px-4 py-3">Expires</th>
+                            <th className="px-4 py-3"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[var(--svs-border)]">
+                          {ipBlocks.map((block) => {
+                            const isActive = !block.expires_at || new Date(block.expires_at) > new Date();
+                            return (
+                              <tr key={block.id} className={isActive ? '' : 'opacity-50'}>
+                                <td className="px-4 py-3 font-mono text-[var(--svs-text)]">{block.ip_address}</td>
+                                <td className="px-4 py-3 text-[var(--svs-muted)]">{block.reason || '—'}</td>
+                                <td className="px-4 py-3 text-[var(--svs-muted)]">{block.auto_blocked ? 'Automatic' : (block.blocked_by || '—')}</td>
+                                <td className="px-4 py-3 text-[var(--svs-muted)]">{formatTimestampWithSeconds(block.blocked_at)}</td>
+                                <td className="px-4 py-3 text-[var(--svs-muted)]">{block.expires_at ? formatTimestampWithSeconds(block.expires_at) : 'Never'}</td>
+                                <td className="px-4 py-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUnblockIp(block.ip_address)}
+                                    className="rounded-lg border border-[var(--svs-border)] px-3 py-1.5 text-xs font-bold text-[var(--svs-text)] transition hover:border-[var(--svs-primary)]"
+                                  >
+                                    Unblock
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                          {ipBlocks.length === 0 ? (
+                            <tr><td colSpan={6} className="px-4 py-6 text-center text-[var(--svs-muted)]">No IPs are currently blocked.</td></tr>
+                          ) : null}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-6 lg:grid-cols-2">
+                    <div>
+                      <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">Top IPs by failed attempts</h4>
+                      <div className="max-h-80 overflow-y-auto rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)]">
+                        <table className="w-full text-left text-sm">
+                          <thead className="sticky top-0 bg-[var(--svs-surface-soft)] text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                            <tr><th className="px-4 py-2">IP</th><th className="px-4 py-2">Failed</th><th className="px-4 py-2">Total</th><th className="px-4 py-2"></th></tr>
+                          </thead>
+                          <tbody className="divide-y divide-[var(--svs-border)]">
+                            {loginSecurityStats.topIps.map((entry) => (
+                              <tr key={entry.ip}>
+                                <td className="px-4 py-2 font-mono text-[var(--svs-text)]">{entry.ip}</td>
+                                <td className="px-4 py-2 font-semibold text-rose-600">{entry.failed}</td>
+                                <td className="px-4 py-2 text-[var(--svs-muted)]">{entry.total}</td>
+                                <td className="px-4 py-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setBlockIpDraft((prev) => ({ ...prev, ipAddress: entry.ip }))}
+                                    className="text-xs font-bold text-[var(--svs-primary)] hover:underline"
+                                  >
+                                    Prefill block form
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                            {loginSecurityStats.topIps.length === 0 ? (
+                              <tr><td colSpan={4} className="px-4 py-6 text-center text-[var(--svs-muted)]">No login attempts recorded yet.</td></tr>
+                            ) : null}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">Recent attempts</h4>
+                      <div className="max-h-80 overflow-y-auto rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)]">
+                        <table className="w-full text-left text-sm">
+                          <thead className="sticky top-0 bg-[var(--svs-surface-soft)] text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                            <tr><th className="px-4 py-2">Time</th><th className="px-4 py-2">Email</th><th className="px-4 py-2">IP</th><th className="px-4 py-2">Method</th><th className="px-4 py-2">Result</th></tr>
+                          </thead>
+                          <tbody className="divide-y divide-[var(--svs-border)]">
+                            {loginAttempts.slice(0, 100).map((attempt) => (
+                              <tr key={attempt.id}>
+                                <td className="px-4 py-2 text-[var(--svs-muted)]">{formatTimestampWithSeconds(attempt.created_at)}</td>
+                                <td className="px-4 py-2 text-[var(--svs-text)]">{attempt.attempted_email || '—'}</td>
+                                <td className="px-4 py-2 font-mono text-[var(--svs-text)]">{attempt.ip_address}</td>
+                                <td className="px-4 py-2 text-[var(--svs-muted)]">{attempt.method}</td>
+                                <td className="px-4 py-2">
+                                  <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${attempt.success ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-rose-200 bg-rose-50 text-rose-700'}`}>
+                                    {attempt.success ? 'Success' : 'Failed'}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                            {loginAttempts.length === 0 ? (
+                              <tr><td colSpan={5} className="px-4 py-6 text-center text-[var(--svs-muted)]">No login attempts recorded yet.</td></tr>
                             ) : null}
                           </tbody>
                         </table>
