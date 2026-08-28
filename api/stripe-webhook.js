@@ -14,6 +14,9 @@
 //   STRIPE_WEBHOOK_SECRET    - signing secret from the Stripe dashboard
 
 import Stripe from 'stripe';
+import { initErrorMonitoring, captureError } from '../server-utils/errorMonitoring';
+
+initErrorMonitoring();
 
 export const config = {
   api: {
@@ -75,6 +78,7 @@ export default async function handler(req, res) {
     // keys + the unique event.id on our side keep duplicates safe.
     // eslint-disable-next-line no-console
     console.error('[stripe-webhook] dispatch failed:', err);
+    captureError(err, { source: 'stripe-webhook', eventType: event.type, eventId: event.id });
     return res.status(500).json({ error: err.message || 'Dispatch failed' });
   }
 }

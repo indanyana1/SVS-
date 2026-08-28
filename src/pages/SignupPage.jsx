@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import StandalonePageShell from '../components/layout/StandalonePageShell';
 import { hasSupabaseEnv, supabase } from '../lib/supabase';
+import { trackEvent } from '../lib/analytics';
 
 const generatePasswordHash = async (password) => {
 	const saltBytes = crypto.getRandomValues(new Uint8Array(16));
@@ -126,6 +127,7 @@ const SignupPage = () => {
 		window.localStorage.removeItem('svs-has-seller-access');
 		window.localStorage.removeItem('svs-seller-home-path');
 		window.dispatchEvent(new Event('svs-auth-changed'));
+		trackEvent('signup_completed', { metadata: { role: 'buyer' } });
 		setFormData({ name: '', email: '', contact: '', password: '' });
 		setIsSubmitting(false);
 

@@ -95,11 +95,15 @@ const fetchIpapiCo = async (ip) => {
   };
 };
 
+const { enforceRateLimit } = require('./_rate-limit');
+
 module.exports = async (req, res) => {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed.' });
   }
+
+  if (await enforceRateLimit(req, res, { name: 'address-ip', windowSeconds: 60, max: 120 })) return;
 
   const forwardedIp = String(req.headers['x-forwarded-for'] || '')
     .split(',')[0]

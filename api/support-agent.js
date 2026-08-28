@@ -1,4 +1,5 @@
 const Anthropic = require('@anthropic-ai/sdk');
+const { enforceRateLimit } = require('./_rate-limit');
 
 const DEFAULT_CLAUDE_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5';
 
@@ -187,6 +188,8 @@ module.exports = async (req, res) => {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed.' });
   }
+
+  if (await enforceRateLimit(req, res, { name: 'support-agent', windowSeconds: 60, max: 30 })) return;
 
   if (!process.env.ANTHROPIC_API_KEY) {
     return res.status(500).json({

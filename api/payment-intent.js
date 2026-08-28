@@ -1,10 +1,13 @@
 const Stripe = require('stripe');
+const { enforceRateLimit } = require('./_rate-limit');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed.' });
   }
+
+  if (await enforceRateLimit(req, res, { name: 'payment-intent', windowSeconds: 60, max: 20 })) return;
 
   if (!process.env.STRIPE_SECRET_KEY) {
     return res

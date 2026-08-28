@@ -5,11 +5,27 @@ import '../i18n';
 import App from './App';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 import reportWebVitals from '../lib/reportWebVitals';
+import { trackPageView } from '../lib/analytics';
+import { initErrorMonitoring, setErrorMonitoringUser } from '../lib/errorMonitoring';
+
+// Off unless REACT_APP_SENTRY_DSN is set — see src/lib/errorMonitoring.js.
+initErrorMonitoring();
+if (typeof window !== 'undefined') {
+	try {
+		setErrorMonitoringUser(window.localStorage.getItem('svs-user-email'));
+	} catch (_error) { /* storage unavailable — fine, just no user tag yet */ }
+	window.addEventListener('svs-auth-changed', () => {
+		try {
+			setErrorMonitoringUser(window.localStorage.getItem('svs-user-email'));
+		} catch (_error) { /* ignore */ }
+	});
+}
 
 function ScrollToTop() {
 	const { pathname } = useLocation();
 	useEffect(() => {
 		window.scrollTo(0, 0);
+		trackPageView(pathname);
 	}, [pathname]);
 	return null;
 }

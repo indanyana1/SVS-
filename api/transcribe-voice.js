@@ -1,3 +1,5 @@
+const { enforceRateLimit } = require('./_rate-limit');
+
 const DEFAULT_WHISPER_MODEL = process.env.GROQ_WHISPER_MODEL || 'whisper-large-v3-turbo';
 
 const parseBody = (body) => {
@@ -38,6 +40,8 @@ module.exports = async (req, res) => {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed.' });
   }
+
+  if (await enforceRateLimit(req, res, { name: 'transcribe-voice', windowSeconds: 60, max: 20 })) return;
 
   if (!process.env.GROQ_API_KEY) {
     return res.status(500).json({

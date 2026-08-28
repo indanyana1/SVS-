@@ -6,6 +6,22 @@ const Anthropic = require('@anthropic-ai/sdk');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { rateLimit } = require('./server-utils/rate-limit');
 const logger = require('./server-utils/logger');
+const { initErrorMonitoring, captureError } = require('./server-utils/errorMonitoring');
+
+initErrorMonitoring();
+// Defense-in-depth: catches anything that escapes Express entirely (e.g. a
+// thrown error inside an async handler that isn't awaited/caught anywhere).
+// Logged and reported, but intentionally does NOT exit the process — this
+// long-lived server would otherwise go down from a single bad request.
+process.on('uncaughtException', (error) => {
+  logger.error('[uncaughtException]', { error: error.message });
+  captureError(error, { source: 'uncaughtException' });
+});
+process.on('unhandledRejection', (reason) => {
+  const error = reason instanceof Error ? reason : new Error(String(reason));
+  logger.error('[unhandledRejection]', { error: error.message });
+  captureError(error, { source: 'unhandledRejection' });
+});
 
 const app = express();
 const PORT = process.env.SERVER_PORT || 5000;
@@ -112,6 +128,7 @@ app.post(
       return res.json({ received: true, type: event.type, id: event.id });
     } catch (err) {
       logger.error('stripe.dispatch.failed', err, { type: event.type });
+      captureError(err, { source: 'stripe-webhook', eventType: event.type, eventId: event.id });
       return res.status(500).json({ error: 'Dispatch failed' });
     }
   }
@@ -1203,6 +1220,18 @@ app.get('/api/health', (_req, res) => {
     vision: visionProvider,
     addressLookup: 'openstreetmap-nominatim',
   });
+});
+
+// Express error-handling middleware — recognized by its 4-arg signature,
+// must be registered last. Catches anything a route handler passed to
+// next(err) or threw synchronously (async throws still need their own
+// try/catch, same as always — Express doesn't catch those on its own).
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  logger.error('[unhandled route error]', { error: err.message, path: req.path });
+  captureError(err, { path: req.path, method: req.method });
+  if (res.headersSent) return;
+  res.status(500).json({ error: 'Internal server error.' });
 });
 
 app.listen(PORT, () => {

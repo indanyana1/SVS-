@@ -103,6 +103,7 @@ import { createAddressLookupSessionToken, lookupAddressDetails, lookupAddressSug
 import { DEFAULT_LANGUAGE_CODE, getLanguageByCode, isRtlLanguage, SUPPORTED_LANGUAGES } from '../lib/languages';
 import { embeddedCardCheckoutEnabled, getStripeInstance, startCardPayment, stripeCurrency } from '../lib/payments';
 import { hasSupabaseEnv, supabase } from '../lib/supabase';
+import { trackEvent } from '../lib/analytics';
 import { sendNotificationEmail } from '../lib/notificationEmail';
 import {
   getWalletSnapshot,
@@ -25945,6 +25946,7 @@ const NaturalResourcesSellPage = ({ sellerItems = [], onSellerItemCreated, onUpd
     }
 
     onSellerItemCreated(mapSellerItemRecord(data));
+    trackEvent('listing_created', { metadata: { marketKey: 'naturalResources' } });
     setMessage('Resource published successfully to the Natural & Mineral Resources Exchange.');
     setMessageType('success');
     resetForm();
@@ -27250,6 +27252,7 @@ const GeneralLabourSellPage = ({ sellerItems = [], onSellerItemCreated, onUpdate
     }
 
     onSellerItemCreated(mapSellerItemRecord(data));
+    trackEvent('listing_created', { metadata: { marketKey: 'generalLabour' } });
     setMessage('Profile published successfully to the General Labour Market.');
     setMessageType('success');
     resetForm();
@@ -29126,6 +29129,7 @@ const ADMIN_DASHBOARD_TABS = [
   { key: 'refunds', label: 'Refunds', icon: RefreshCw },
   { key: 'transactions', label: 'Transactions', icon: Wallet },
   { key: 'sellerFees', label: 'Seller Fees', icon: Percent },
+  { key: 'siteAnalytics', label: 'Site Analytics', icon: BarChart3 },
   { key: 'reports', label: 'Reports', icon: FileText },
 ];
 
@@ -29200,6 +29204,10 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
   const [feeSettingsMessage, setFeeSettingsMessage] = useState('');
   const [feeSettingsMessageType, setFeeSettingsMessageType] = useState('idle');
   const [isSavingFeeSettings, setIsSavingFeeSettings] = useState(false);
+
+  const [analyticsEvents, setAnalyticsEvents] = useState([]);
+  const [analyticsLoaded, setAnalyticsLoaded] = useState(false);
+  const [analyticsWindowDays, setAnalyticsWindowDays] = useState(30);
 
   const [buyerSearch, setBuyerSearch] = useState('');
   const [sellerSearch, setSellerSearch] = useState('');
@@ -29350,6 +29358,23 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
     })();
   }, [sessionState, activeTab, sellerFeesLoaded]);
 
+  // Re-fetches whenever the selected window changes, not just once — an
+  // admin picking a wider window expects it to actually load that range.
+  useEffect(() => {
+    if (sessionState !== 'signed-in' || activeTab !== 'siteAnalytics' || !supabase) return;
+
+    let isCancelled = false;
+    (async () => {
+      const since = new Date(Date.now() - analyticsWindowDays * 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await supabase.rpc('admin_get_site_analytics', { p_token: token, p_since: since });
+      if (isCancelled) return;
+      if (!error) setAnalyticsEvents(data || []);
+      setAnalyticsLoaded(true);
+    })();
+
+    return () => { isCancelled = true; };
+  }, [sessionState, activeTab, token, analyticsWindowDays]);
+
   const handleSaveFeeSettings = async () => {
     if (!feeSettingsDraft || !supabase) return;
     setIsSavingFeeSettings(true);
@@ -29412,6 +29437,40 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
       byDate: Array.from(byDate.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1)),
     };
   }, [sellerFeePromotions, sellerFeeCalculations]);
+
+  const siteAnalyticsStats = useMemo(() => {
+    const pageViews = analyticsEvents.filter((event) => event.event_name === 'page_view');
+    const uniqueSessions = new Set(analyticsEvents.map((event) => event.session_id).filter(Boolean));
+
+    const byDate = new Map();
+    pageViews.forEach((event) => {
+      const dateKey = String(event.created_at || '').slice(0, 10);
+      if (!dateKey) return;
+      byDate.set(dateKey, (byDate.get(dateKey) || 0) + 1);
+    });
+
+    const topPages = new Map();
+    pageViews.forEach((event) => {
+      const path = event.page_path || '(unknown)';
+      topPages.set(path, (topPages.get(path) || 0) + 1);
+    });
+
+    const eventCounts = new Map();
+    analyticsEvents.forEach((event) => {
+      eventCounts.set(event.event_name, (eventCounts.get(event.event_name) || 0) + 1);
+    });
+
+    return {
+      totalPageViews: pageViews.length,
+      uniqueSessions: uniqueSessions.size,
+      signedInSessions: new Set(analyticsEvents.filter((e) => e.user_email).map((e) => e.session_id)).size,
+      byDate: Array.from(byDate.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1)),
+      topPages: Array.from(topPages.entries()).sort((a, b) => b[1] - a[1]).slice(0, 15),
+      signups: eventCounts.get('signup_completed') || 0,
+      listingsCreated: eventCounts.get('listing_created') || 0,
+      ordersPlaced: eventCounts.get('order_placed') || 0,
+    };
+  }, [analyticsEvents]);
 
   const revealIdDocument = async () => {
     if (!sellerDetail?.id_document_path || !supabase) return;
@@ -30647,6 +30706,87 @@ const AdminDashboardPage = ({ onPushNotificationToUser }) => {
                           ) : null}
                         </tbody>
                       </table>
+                    </div>
+                  </div>
+                </>
+              )}
+            </section>
+          ) : activeTab === 'siteAnalytics' ? (
+            <section className="space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs text-[var(--svs-muted)]">
+                  Self-hosted, privacy-friendly usage data — recorded straight into your own Supabase project (see supabase/site-analytics.sql), never shared with a third party.
+                </p>
+                <div className="flex items-center gap-1 rounded-lg border border-[var(--svs-border)] bg-[var(--svs-surface)] p-1">
+                  {[7, 30, 90].map((days) => (
+                    <button
+                      key={days}
+                      type="button"
+                      onClick={() => { setAnalyticsWindowDays(days); setAnalyticsLoaded(false); }}
+                      className={`rounded-md px-3 py-1.5 text-xs font-bold transition ${analyticsWindowDays === days ? 'bg-[var(--svs-primary)] text-white' : 'text-[var(--svs-muted)] hover:text-[var(--svs-text)]'}`}
+                    >
+                      {days}d
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {!analyticsLoaded ? (
+                <p className="text-sm text-[var(--svs-muted)]">Loading...</p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+                    {[
+                      { label: 'Page Views', value: siteAnalyticsStats.totalPageViews },
+                      { label: 'Unique Sessions', value: siteAnalyticsStats.uniqueSessions },
+                      { label: 'Signups', value: siteAnalyticsStats.signups },
+                      { label: 'Listings Created', value: siteAnalyticsStats.listingsCreated },
+                      { label: 'Orders Placed', value: siteAnalyticsStats.ordersPlaced },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)] p-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--svs-muted)]">{label}</p>
+                        <p className="mt-1 text-2xl font-bold text-[var(--svs-text)]">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="grid gap-6 lg:grid-cols-2">
+                    <div>
+                      <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">Page views by day</h4>
+                      <div className="max-h-80 overflow-y-auto rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)]">
+                        <table className="w-full text-left text-sm">
+                          <thead className="sticky top-0 bg-[var(--svs-surface-soft)] text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                            <tr><th className="px-4 py-2">Date</th><th className="px-4 py-2">Views</th></tr>
+                          </thead>
+                          <tbody className="divide-y divide-[var(--svs-border)]">
+                            {siteAnalyticsStats.byDate.map(([date, count]) => (
+                              <tr key={date}><td className="px-4 py-2 text-[var(--svs-text)]">{date}</td><td className="px-4 py-2 font-semibold text-[var(--svs-text)]">{count}</td></tr>
+                            ))}
+                            {siteAnalyticsStats.byDate.length === 0 ? (
+                              <tr><td colSpan={2} className="px-4 py-6 text-center text-[var(--svs-muted)]">No page views recorded yet in this window.</td></tr>
+                            ) : null}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">Top pages</h4>
+                      <div className="max-h-80 overflow-y-auto rounded-xl border border-[var(--svs-border)] bg-[var(--svs-surface)]">
+                        <table className="w-full text-left text-sm">
+                          <thead className="sticky top-0 bg-[var(--svs-surface-soft)] text-xs font-bold uppercase tracking-wide text-[var(--svs-muted)]">
+                            <tr><th className="px-4 py-2">Path</th><th className="px-4 py-2">Views</th></tr>
+                          </thead>
+                          <tbody className="divide-y divide-[var(--svs-border)]">
+                            {siteAnalyticsStats.topPages.map(([path, count]) => (
+                              <tr key={path}><td className="px-4 py-2 text-[var(--svs-text)]">{path}</td><td className="px-4 py-2 font-semibold text-[var(--svs-text)]">{count}</td></tr>
+                            ))}
+                            {siteAnalyticsStats.topPages.length === 0 ? (
+                              <tr><td colSpan={2} className="px-4 py-6 text-center text-[var(--svs-muted)]">No page views recorded yet in this window.</td></tr>
+                            ) : null}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
                 </>
@@ -36288,6 +36428,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
       }
 
       onSellerItemCreated(mapSellerItemRecord(data));
+      trackEvent('listing_created', { metadata: { marketKey: market.key } });
       updateBulkDraft({ status: 'published', error: '' });
       setBulkMessage(`Published in ${t(market.labelKey)}. Hit "List another item" to add the next product.`);
       // Take the seller straight to the buyer view of the market they just
@@ -36450,6 +36591,7 @@ const SellerUploadPage = ({ onSellerItemCreated }) => {
     }
 
     onSellerItemCreated(mapSellerItemRecord(data));
+    trackEvent('listing_created', { metadata: { marketKey: formData.marketKey } });
     setMessage(`Item uploaded successfully to ${t(selectedMarket.labelKey)}.`);
     setMessageType('success');
     setFormData(createSellerListingFormState());
@@ -37390,6 +37532,7 @@ const HomeCareSellPage = ({ sellerItems = [], onSellerItemCreated, onPushNotific
     }
 
     onSellerItemCreated(mapSellerItemRecord(data));
+    trackEvent('listing_created', { metadata: { marketKey: 'homeCare' } });
     setMessage('Service published successfully to Book @ Home-Care Services.');
     setMessageType('success');
     setFormData({
@@ -38121,6 +38264,7 @@ const MobilityVehicleSellPage = ({ sellerItems = [], onSellerItemCreated, onUpda
     }
 
     onSellerItemCreated(mapSellerItemRecord(data));
+    trackEvent('listing_created', { metadata: { marketKey: 'mobilityVehicles' } });
     setMessage('Vehicle published successfully to Mobility and Vehicles Exchange.');
     setMessageType('success');
     resetForm();
@@ -59467,6 +59611,7 @@ const App = () => {
     }
 
     setOrders((currentOrders) => [order, ...currentOrders]);
+    trackEvent('order_placed', { metadata: { currency: order.currency, total: order.total, itemCount: orderItems.length } });
 
     const sellerEmails = Array.from(new Set(
       orderItems

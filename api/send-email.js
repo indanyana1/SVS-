@@ -14,12 +14,18 @@ const {
   passwordResetEmail,
   payoutRequestedEmail,
 } = require('../server-utils/email');
+const { enforceRateLimit } = require('./_rate-limit');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // Tighter than the other limits: this endpoint accepts an arbitrary `to`
+  // with no auth (see the file header comment), so it's the one most
+  // exposed to being used as a spam/harassment relay if left unbounded.
+  if (await enforceRateLimit(req, res, { name: 'send-email', windowSeconds: 60, max: 10 })) return;
 
   const { type, to, payload } = req.body || {};
   if (!type || !to) {

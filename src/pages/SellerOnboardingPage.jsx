@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AlertTriangle, ArrowLeft, Camera, Check, RotateCcw, ShieldCheck, SwitchCamera, X } from 'lucide-react';
 import StandalonePageShell from '../components/layout/StandalonePageShell';
 import { hasSupabaseEnv, supabase } from '../lib/supabase';
+import { trackEvent } from '../lib/analytics';
 import { clearPendingSellerSignupDraft, getPendingSellerSignupDraft } from './sellerSignupDraft';
 
 const SELLER_VERIFICATION_BUCKET = 'seller-verification';
@@ -789,6 +790,7 @@ const SellerOnboardingPage = () => {
 
     setMessage('Seller profile submitted. Your application is now pending admin approval...');
     setMessageType('success');
+    trackEvent('signup_completed', { metadata: { role: 'seller' } });
 
     if (context.pendingSignupDraft) {
       window.localStorage.setItem('svs-authenticated', 'true');

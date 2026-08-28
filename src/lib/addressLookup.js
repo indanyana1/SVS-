@@ -227,9 +227,13 @@ export const lookupAddressDetails = async ({ placeId, sessionToken }) => {
   // (e.g. a stale deploy, or a proxy hiccup that returns a partial body) —
   // that's indistinguishable from "no location" for the caller, so retry
   // against Nominatim directly rather than surfacing a dead end.
+  // `payload.latitude != null` matters because Number(null) is 0, which
+  // Number.isFinite treats as a valid coordinate — without this check a
+  // response with an explicit `latitude: null` would be misread as real
+  // coordinates at (0, 0) instead of triggering the Nominatim fallback below.
   const hasCoordinates = payload
-    && Number.isFinite(Number(payload.latitude))
-    && Number.isFinite(Number(payload.longitude));
+    && payload.latitude != null && Number.isFinite(Number(payload.latitude))
+    && payload.longitude != null && Number.isFinite(Number(payload.longitude));
   if (!hasCoordinates) {
     payload = await fetchNominatimDetails({ placeId });
   }

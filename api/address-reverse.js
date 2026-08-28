@@ -1,4 +1,5 @@
 const { fetchAddressJson, normalizeAddressResult, backfillPostalCode, parseBody } = require('./_address-utils');
+const { enforceRateLimit } = require('./_rate-limit');
 
 const normalizeFallbackReverseResult = (result) => {
   const city = String(
@@ -61,6 +62,8 @@ module.exports = async (req, res) => {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed.' });
   }
+
+  if (await enforceRateLimit(req, res, { name: 'address-reverse', windowSeconds: 60, max: 120 })) return;
 
   const body = parseBody(req);
   const latitude = Number(body.latitude);
