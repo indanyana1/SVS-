@@ -192,10 +192,10 @@ const fetchNominatimDetails = async ({ placeId }) => {
 export const lookupAddressSuggestions = async ({ input, sessionToken, countryCode = 'za' }) => {
   // Try the local API first (lets the server attach a proper User-Agent / can be swapped for Google later).
   try {
-    const response = await fetch('/api/address-autocomplete', {
+    const response = await fetch('/api/address', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ input, sessionToken, countryCode }),
+      body: JSON.stringify({ type: 'autocomplete', input, sessionToken, countryCode }),
     });
     if (response.ok) {
       const payload = await response.json();
@@ -211,10 +211,10 @@ export const lookupAddressSuggestions = async ({ input, sessionToken, countryCod
 export const lookupAddressDetails = async ({ placeId, sessionToken }) => {
   let payload = null;
   try {
-    const response = await fetch('/api/address-details', {
+    const response = await fetch('/api/address', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ placeId, sessionToken }),
+      body: JSON.stringify({ type: 'details', placeId, sessionToken }),
     });
     if (response.ok) {
       payload = await response.json();

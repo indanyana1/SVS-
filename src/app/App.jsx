@@ -11555,10 +11555,10 @@ const useDeliveryLocation = () => {
         // postal code — that's what delivery coverage is actually matched
         // against now, not the raw coordinates.
         try {
-          const response = await fetch('/api/address-reverse', {
+          const response = await fetch('/api/address', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(coordinates),
+            body: JSON.stringify({ type: 'reverse', ...coordinates }),
           });
           if (response.ok) {
             const payload = await response.json();
@@ -35661,10 +35661,10 @@ const ListingDeliveryFields = ({
         const nextLongitude = Number(position.coords.longitude);
         let resolved = null;
         try {
-          const response = await fetch('/api/address-reverse', {
+          const response = await fetch('/api/address', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ latitude: nextLatitude, longitude: nextLongitude }),
+            body: JSON.stringify({ type: 'reverse', latitude: nextLatitude, longitude: nextLongitude }),
           });
           if (response.ok) resolved = await response.json();
         } catch (_error) {

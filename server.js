@@ -521,7 +521,7 @@ const fetchIpDetectedLocation = async (requestIp = '') => {
   return normalizeFallbackReverseResult(payload);
 };
 
-app.post('/api/address-reverse', limits.address, async (req, res) => {
+const handleAddressReverse = async (req, res) => {
   const latitude = Number(req.body?.latitude);
   const longitude = Number(req.body?.longitude);
 
@@ -553,9 +553,9 @@ app.post('/api/address-reverse', limits.address, async (req, res) => {
     console.error('Address reverse error:', error.message);
     res.status(400).json({ error: error.message || 'Unable to resolve current location.' });
   }
-});
+};
 
-app.get('/api/address-ip', limits.address, async (req, res) => {
+const handleAddressIp = async (req, res) => {
   const forwardedIp = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
   const socketIp = String(req.socket?.remoteAddress || '').trim();
   const candidateIp = forwardedIp || socketIp;
@@ -567,9 +567,9 @@ app.get('/api/address-ip', limits.address, async (req, res) => {
     console.error('IP location lookup error:', error.message);
     res.status(400).json({ error: error.message || 'Unable to detect location from IP.' });
   }
-});
+};
 
-app.post('/api/address-autocomplete', limits.address, async (req, res) => {
+const handleAddressAutocomplete = async (req, res) => {
   const input = String(req.body?.input || '').trim();
   const countryCode = String(req.body?.countryCode || 'za').trim().toLowerCase();
 
@@ -621,9 +621,9 @@ app.post('/api/address-autocomplete', limits.address, async (req, res) => {
     console.error('Address autocomplete error:', error.message);
     res.status(400).json({ error: error.message || 'Unable to fetch address suggestions.' });
   }
-});
+};
 
-app.post('/api/address-details', limits.address, async (req, res) => {
+const handleAddressDetails = async (req, res) => {
   const placeId = String(req.body?.placeId || '').trim();
 
   if (!placeId) {
@@ -647,6 +647,27 @@ app.post('/api/address-details', limits.address, async (req, res) => {
   } catch (error) {
     console.error('Address details error:', error.message);
     res.status(400).json({ error: error.message || 'Unable to fetch address details.' });
+  }
+};
+
+app.post('/api/address-reverse', limits.address, handleAddressReverse);
+app.get('/api/address-ip', limits.address, handleAddressIp);
+app.post('/api/address-autocomplete', limits.address, handleAddressAutocomplete);
+app.post('/api/address-details', limits.address, handleAddressDetails);
+
+// Consolidated endpoint — matches api/address.js on Vercel, which merges
+// these 4 routes into one serverless function (see that file's header
+// comment: Vercel's Hobby plan caps a deployment at 12 functions, and
+// api/admin-login.js pushed the old 4-separate-files count over that).
+// The 4 routes above are left in place for any old client still pointing
+// at them, but the app itself now calls this one.
+app.get('/api/address', limits.address, handleAddressIp);
+app.post('/api/address', limits.address, (req, res) => {
+  switch (req.body?.type) {
+    case 'autocomplete': return handleAddressAutocomplete(req, res);
+    case 'details': return handleAddressDetails(req, res);
+    case 'reverse': return handleAddressReverse(req, res);
+    default: return res.status(400).json({ error: 'Unknown or missing "type".' });
   }
 });
 

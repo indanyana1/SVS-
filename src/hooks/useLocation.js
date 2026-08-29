@@ -22,7 +22,7 @@ const getFallbackLocationLabel = (state) => {
 };
 
 const resolveIpLocation = async () => {
-  const response = await fetch('/api/address-ip');
+  const response = await fetch('/api/address');
   if (!response.ok) {
     throw new Error('Unable to detect location from API.');
   }
@@ -55,12 +55,12 @@ const useLocation = () => {
           return detectedState;
         })
         .catch(() => {
-          const fallbackState = {
-            city: '',
-            province: '',
-            country: '',
-            formattedAddress: '',
-            locationLabel: '',
+          const fallbackState = {
+            city: '',
+            province: '',
+            country: '',
+            formattedAddress: '',
+            locationLabel: '',
             latitude: null,
             longitude: null,
             isLoading: false,
@@ -78,10 +78,11 @@ const useLocation = () => {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           try {
-            const response = await fetch('/api/address-reverse', {
+            const response = await fetch('/api/address', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
+                type: 'reverse',
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude,
               }),
@@ -95,12 +96,12 @@ const useLocation = () => {
                 return;
               }
 
-              const fallbackState = {
-                city: '',
-                province: '',
-                country: '',
-                formattedAddress: '',
-                locationLabel: '',
+              const fallbackState = {
+                city: '',
+                province: '',
+                country: '',
+                formattedAddress: '',
+                locationLabel: '',
                 latitude: null,
                 longitude: null,
                 isLoading: false,
@@ -140,12 +141,12 @@ const useLocation = () => {
               return;
             }
 
-            const fallbackState = {
-              city: '',
-              province: '',
-              country: '',
-              formattedAddress: '',
-              locationLabel: '',
+            const fallbackState = {
+              city: '',
+              province: '',
+              country: '',
+              formattedAddress: '',
+              locationLabel: '',
               latitude: null,
               longitude: null,
               isLoading: false,
@@ -168,12 +169,12 @@ const useLocation = () => {
             return;
           }
 
-          const fallbackState = {
-            city: '',
-            province: '',
-            country: '',
-            formattedAddress: '',
-            locationLabel: '',
+          const fallbackState = {
+            city: '',
+            province: '',
+            country: '',
+            formattedAddress: '',
+            locationLabel: '',
             latitude: null,
             longitude: null,
             isLoading: false,

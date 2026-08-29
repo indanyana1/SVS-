@@ -38,7 +38,8 @@ describe('lookupAddressSuggestions', () => {
     const result = await lookupAddressSuggestions({ input: '1 Main Rd', sessionToken: 'tok' });
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
-    expect(global.fetch.mock.calls[0][0]).toBe('/api/address-autocomplete');
+    expect(global.fetch.mock.calls[0][0]).toBe('/api/address');
+    expect(JSON.parse(global.fetch.mock.calls[0][1].body).type).toBe('autocomplete');
     expect(result).toEqual([{ placeId: 'N1', fullText: '1 Main Rd, Cape Town' }]);
   });
 
